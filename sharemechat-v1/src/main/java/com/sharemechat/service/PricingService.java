@@ -101,7 +101,11 @@ public class PricingService {
         }
         if (tier == null) {
             // Fallback: T0 vigente si no hay snapshot todavia.
-            List<ModelPricingTier> vigentes = pricingTierRepository.findAllCurrentAsc();
+            // ADR-056: PricingService actual sirve /api/models/me/economics
+            // (endpoint modelo autoservicio). Regimen fijo INDIVIDUAL — el
+            // dashboard Master de S3/S5 tendra su propio servicio.
+            List<ModelPricingTier> vigentes = pricingTierRepository
+                    .findAllCurrentByTargetTypeAsc("INDIVIDUAL");
             tier = vigentes.isEmpty() ? null : vigentes.get(0);
             dto.billedGrossEur30d = BigDecimal.ZERO.setScale(2);
             dto.proStatusEligible = false;
@@ -198,7 +202,10 @@ public class PricingService {
 
     private ModelPricingTier findNextTier(ModelPricingTier current) {
         if (current == null) return null;
-        List<ModelPricingTier> vigentes = pricingTierRepository.findAllCurrentAsc();
+        // ADR-056: findNextTier se usa en el dashboard economico del
+        // endpoint modelo autoservicio, regimen INDIVIDUAL siempre.
+        List<ModelPricingTier> vigentes = pricingTierRepository
+                .findAllCurrentByTargetTypeAsc("INDIVIDUAL");
         for (ModelPricingTier t : vigentes) {
             if (t.getMinBilledGrossEur30d().compareTo(current.getMinBilledGrossEur30d()) > 0) {
                 return t; // primer tramo por encima del actual

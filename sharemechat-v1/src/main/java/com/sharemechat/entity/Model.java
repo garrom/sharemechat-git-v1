@@ -39,6 +39,17 @@ public class Model {
     @Column(name = "streaming_banned_until")
     private LocalDateTime streamingBannedUntil;
 
+    /**
+     * ADR-056 (2026-07-29): FK al Master bajo cuyo umbrella opera esta
+     * modelo. NULL = modelo individual (regimen INDIVIDUAL). NOT NULL =
+     * modelo bajo Master (regimen MASTER, escalado agregado, STREAM_EARNING
+     * al Master). Ver D1 y D4 del ADR-056. Sin @ManyToOne para evitar
+     * dependencia ciclica con el modulo master/entity; se persiste como
+     * Long y se resuelve via MasterRepository cuando hace falta.
+     */
+    @Column(name = "master_user_id")
+    private Long masterUserId;
+
     // Relación uno a uno con User
     @OneToOne
     @MapsId
@@ -115,5 +126,13 @@ public class Model {
 
     public void setStreamingBannedUntil(LocalDateTime streamingBannedUntil) {
         this.streamingBannedUntil = streamingBannedUntil;
+    }
+
+    public Long getMasterUserId() {
+        return masterUserId;
+    }
+
+    public void setMasterUserId(Long masterUserId) {
+        this.masterUserId = masterUserId;
     }
 }

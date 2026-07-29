@@ -115,7 +115,7 @@ class PricingServiceTest {
         when(snapshotRepository.findByModelIdAndSnapshotDate(any(), any()))
                 .thenReturn(Optional.of(snap("4000.00", 2L, "T1", true)));
         when(pricingTierRepository.findById(2L)).thenReturn(Optional.of(T1));
-        when(pricingTierRepository.findAllCurrentAsc()).thenReturn(List.of(T0, T1, T3));
+        when(pricingTierRepository.findAllCurrentByTargetTypeAsc("INDIVIDUAL")).thenReturn(List.of(T0, T1, T3));
 
         ModelEconomicsDTO dto = service.getEconomics(10L);
 
@@ -142,7 +142,7 @@ class PricingServiceTest {
         when(snapshotRepository.findByModelIdAndSnapshotDate(any(), any()))
                 .thenReturn(Optional.of(snap("500.00", 1L, "T0", false)));
         when(pricingTierRepository.findById(1L)).thenReturn(Optional.of(T0));
-        when(pricingTierRepository.findAllCurrentAsc()).thenReturn(List.of(T0, T1, T3));
+        when(pricingTierRepository.findAllCurrentByTargetTypeAsc("INDIVIDUAL")).thenReturn(List.of(T0, T1, T3));
 
         ModelEconomicsDTO dto = service.getEconomics(10L);
 
@@ -160,7 +160,7 @@ class PricingServiceTest {
         when(snapshotRepository.findByModelIdAndSnapshotDate(any(), any()))
                 .thenReturn(Optional.of(snap("7000.00", 4L, "T3", true)));
         when(pricingTierRepository.findById(4L)).thenReturn(Optional.of(T3));
-        when(pricingTierRepository.findAllCurrentAsc()).thenReturn(List.of(T0, T1, T3));
+        when(pricingTierRepository.findAllCurrentByTargetTypeAsc("INDIVIDUAL")).thenReturn(List.of(T0, T1, T3));
 
         ModelEconomicsDTO dto = service.getEconomics(10L);
 
@@ -176,7 +176,7 @@ class PricingServiceTest {
         when(userRepository.findById(10L)).thenReturn(Optional.of(user));
         when(snapshotRepository.findByModelIdAndSnapshotDate(any(), any()))
                 .thenReturn(Optional.empty());
-        when(pricingTierRepository.findAllCurrentAsc()).thenReturn(List.of(T0, T1, T3));
+        when(pricingTierRepository.findAllCurrentByTargetTypeAsc("INDIVIDUAL")).thenReturn(List.of(T0, T1, T3));
 
         ModelEconomicsDTO dto = service.getEconomics(10L);
 
@@ -207,7 +207,7 @@ class PricingServiceTest {
         when(snapshotRepository.findByModelIdAndSnapshotDate(any(), any()))
                 .thenReturn(Optional.of(snap("4000.00", 2L, "T1", true)));
         when(pricingTierRepository.findById(2L)).thenReturn(Optional.of(T1));
-        when(pricingTierRepository.findAllCurrentAsc()).thenReturn(List.of(T0, T1, T3));
+        when(pricingTierRepository.findAllCurrentByTargetTypeAsc("INDIVIDUAL")).thenReturn(List.of(T0, T1, T3));
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         ModelEconomicsDTO dto = service.updateChosenRate(10L, new BigDecimal("2.50"));
@@ -225,7 +225,7 @@ class PricingServiceTest {
         when(snapshotRepository.findByModelIdAndSnapshotDate(any(), any()))
                 .thenReturn(Optional.of(snap("4000.00", 2L, "T1", true)));
         when(pricingTierRepository.findById(2L)).thenReturn(Optional.of(T1));
-        when(pricingTierRepository.findAllCurrentAsc()).thenReturn(List.of(T0, T1, T3));
+        when(pricingTierRepository.findAllCurrentByTargetTypeAsc("INDIVIDUAL")).thenReturn(List.of(T0, T1, T3));
 
         assertThrows(IllegalArgumentException.class,
                 () -> service.updateChosenRate(10L, new BigDecimal("5.00")));
@@ -258,7 +258,7 @@ class PricingServiceTest {
         when(snapshotRepository.findByModelIdAndSnapshotDate(any(), any()))
                 .thenReturn(Optional.of(snap("4000.00", 2L, "T1", true)));
         when(pricingTierRepository.findById(2L)).thenReturn(Optional.of(T1));
-        when(pricingTierRepository.findAllCurrentAsc()).thenReturn(List.of(T0, T1, T3));
+        when(pricingTierRepository.findAllCurrentByTargetTypeAsc("INDIVIDUAL")).thenReturn(List.of(T0, T1, T3));
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         ModelEconomicsDTO dto = service.updateProAcceptsTrial(10L, Boolean.FALSE);

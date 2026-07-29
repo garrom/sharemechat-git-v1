@@ -46,6 +46,27 @@ public class PayoutRequest {
     // programa de afiliadas ([ADR-052 §D11] + V38 drop columna
     // payout_requests.payout_type).
 
+    /**
+     * ADR-056 D12 (2026-07-29): rail multi-canal por el que se pagara la
+     * solicitud. Denormalizado desde payout_methods.rail para reporting
+     * eficiente sin JOIN. Valores validos (CHECK constraint en BD):
+     * PAXUM | YOURSAFE | NOWPAYMENTS_CRYPTO | SEPA_MANUAL.
+     * NULL en filas legacy pre-V42 (SEPA manual off-platform sin
+     * seleccion explicita de rail).
+     */
+    @Column(name = "rail", length = 30)
+    private String rail;
+
+    /**
+     * ADR-056 D12: FK opcional al PayoutMethod concreto de la fila
+     * payout_methods elegido por el user. Se persiste como Long para
+     * evitar dependencia ciclica entity <-> payout/entity; se resuelve
+     * via PayoutMethodRepository cuando hace falta. NULL en filas
+     * legacy pre-V42.
+     */
+    @Column(name = "payout_method_id")
+    private Long payoutMethodId;
+
     public PayoutRequest() {}
 
     public Long getId() { return id; }
@@ -76,4 +97,10 @@ public class PayoutRequest {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+
+    public String getRail() { return rail; }
+    public void setRail(String rail) { this.rail = rail; }
+
+    public Long getPayoutMethodId() { return payoutMethodId; }
+    public void setPayoutMethodId(Long payoutMethodId) { this.payoutMethodId = payoutMethodId; }
 }

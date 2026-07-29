@@ -309,12 +309,13 @@ UPDATE model_pricing_tiers
    SET effective_to = CURRENT_TIMESTAMP
  WHERE effective_to IS NULL;
 
--- Añadir columna target_type y desactivar UNIQUE previo.
+-- Añadir columna target_type y desactivar UNIQUE previo (nombre real
+-- V39: uq_mpt_code_effective, verificado en el fichero fuente V39).
 ALTER TABLE model_pricing_tiers
     ADD COLUMN target_type VARCHAR(15) NOT NULL DEFAULT 'INDIVIDUAL' AFTER tier_code,
-    DROP INDEX uk_mpt_tier_code_from,
+    DROP INDEX uq_mpt_code_effective,
     ADD CONSTRAINT chk_mpt_target_type CHECK (target_type IN ('INDIVIDUAL','MASTER')),
-    ADD CONSTRAINT uk_mpt_target_tier_from UNIQUE (target_type, tier_code, effective_from);
+    ADD CONSTRAINT uq_mpt_target_code_effective UNIQUE (target_type, tier_code, effective_from);
 
 -- Seed 4 filas régimen INDIVIDUAL post-ADR-056.
 INSERT INTO model_pricing_tiers

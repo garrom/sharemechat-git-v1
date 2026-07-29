@@ -99,7 +99,11 @@ public class ModelTierService {
         }
         if (snap == null || snap.getPricingTierId() == null) {
             // Fallback: primer tramo vigente (T0)
-            List<ModelPricingTier> vigentes = pricingTierRepository.findAllCurrentAsc();
+            // ADR-056: por ahora este servicio siempre resuelve regimen
+            // INDIVIDUAL. En S3 se extendera para soportar target Master
+            // agregando bruto del equipo. Explicito para claridad.
+            List<ModelPricingTier> vigentes = pricingTierRepository
+                    .findAllCurrentByTargetTypeAsc("INDIVIDUAL");
             return vigentes.isEmpty() ? null : vigentes.get(0);
         }
         return pricingTierRepository.findById(snap.getPricingTierId()).orElse(null);
@@ -136,7 +140,11 @@ public class ModelTierService {
         ModelPricingTier tier = pricingTierRepository
                 .findCurrentByBilledGross(billedGross)
                 .orElseGet(() -> {
-                    List<ModelPricingTier> vigentes = pricingTierRepository.findAllCurrentAsc();
+                    // ADR-056: por ahora este servicio siempre resuelve regimen
+            // INDIVIDUAL. En S3 se extendera para soportar target Master
+            // agregando bruto del equipo. Explicito para claridad.
+            List<ModelPricingTier> vigentes = pricingTierRepository
+                    .findAllCurrentByTargetTypeAsc("INDIVIDUAL");
                     return vigentes.isEmpty() ? null : vigentes.get(0);
                 });
         if (tier == null) return null;

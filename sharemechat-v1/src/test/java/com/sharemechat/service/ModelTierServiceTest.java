@@ -111,7 +111,7 @@ class ModelTierServiceTest {
                 .thenReturn(BigDecimal.ZERO);
         when(pricingTierRepository.findCurrentByBilledGross(any()))
                 .thenReturn(Optional.of(T0));
-        when(pricingTierRepository.findAllCurrentAsc())
+        when(pricingTierRepository.findAllCurrentByTargetTypeAsc("INDIVIDUAL"))
                 .thenReturn(List.of(T0, T1, T2, T3));
         when(snapshotRepository.findByModelIdAndSnapshotDate(any(), any()))
                 .thenReturn(Optional.empty());

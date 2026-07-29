@@ -29,6 +29,27 @@ public class User {
     @Column(name = "password", nullable = false)
     private String password;
 
+    /**
+     * ADR-056 D7 (2026-07-29): flag que fuerza cambio de password al primer
+     * login antes de firmar contrato / iniciar KYC. Se pone a 1 cuando el
+     * Master crea una modelo bajo su umbrella (la fila users se crea sin
+     * password funcional, la modelo la establece via email de activacion).
+     * Elimina el vector de coaccion GDPR (Master controla credenciales al
+     * momento de firmar). Se resetea a 0 cuando el user cambia password
+     * por primera vez.
+     */
+    @Column(name = "password_temporary", nullable = false)
+    private boolean passwordTemporary = false;
+
+    /**
+     * ADR-056 D7: auditoria. Instante en que el user cambio password por
+     * primera vez. NULL para usuarios legacy (pre-V42) y para usuarios
+     * que aun no han cambiado nunca. Poblado por el flujo de first-login
+     * password change.
+     */
+    @Column(name = "first_password_change_at")
+    private java.time.LocalDateTime firstPasswordChangeAt;
+
     @Column(name = "role", nullable = false)
     private String role;
 
@@ -197,6 +218,12 @@ public class User {
 
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
+
+    public boolean isPasswordTemporary() { return passwordTemporary; }
+    public void setPasswordTemporary(boolean passwordTemporary) { this.passwordTemporary = passwordTemporary; }
+
+    public java.time.LocalDateTime getFirstPasswordChangeAt() { return firstPasswordChangeAt; }
+    public void setFirstPasswordChangeAt(java.time.LocalDateTime firstPasswordChangeAt) { this.firstPasswordChangeAt = firstPasswordChangeAt; }
 
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }

@@ -47,6 +47,17 @@ public class Transaction {
     @Column(name = "ticket_id")
     private Long ticketId;
 
+    /**
+     * ADR-056 (2026-07-29): cuando el reparto va al Master (modelo bajo
+     * umbrella), esta Transaction tiene user_id = master y
+     * attributedModelUserId = modelo que origino el ingreso. Trazabilidad
+     * para reporting agregado por Master y auditoria. NULL en Transactions
+     * legacy (individual, sin Master) y en tipos no-reparto (STREAM_CHARGE
+     * cliente, MANUAL_REFUND, etc.).
+     */
+    @Column(name = "attributed_model_user_id")
+    private Long attributedModelUserId;
+
     public Transaction() {}
 
     public Long getId() { return id; }
@@ -73,4 +84,7 @@ public class Transaction {
 
     public Long getTicketId() { return ticketId; }
     public void setTicketId(Long ticketId) { this.ticketId = ticketId; }
+
+    public Long getAttributedModelUserId() { return attributedModelUserId; }
+    public void setAttributedModelUserId(Long attributedModelUserId) { this.attributedModelUserId = attributedModelUserId; }
 }

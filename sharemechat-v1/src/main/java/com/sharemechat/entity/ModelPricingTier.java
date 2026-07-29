@@ -36,6 +36,16 @@ public class ModelPricingTier {
     @Column(name = "tier_code", nullable = false, length = 4)
     private String tierCode;
 
+    /**
+     * ADR-056 (2026-07-29): regimen del tramo. Los % del reparto dependen
+     * de si aplica a modelo individual o a Master (misma tabla, doble seed).
+     * Valores validos: 'INDIVIDUAL' | 'MASTER' (CHECK constraint en BD).
+     * Legacy: filas pre-V42 se marcaron todas como INDIVIDUAL en la
+     * migracion (comportamiento previo a la dualidad).
+     */
+    @Column(name = "target_type", nullable = false, length = 15)
+    private String targetType = "INDIVIDUAL";
+
     @Column(name = "min_billed_gross_eur_30d", nullable = false, precision = 10, scale = 2)
     private BigDecimal minBilledGrossEur30d;
 
@@ -60,6 +70,9 @@ public class ModelPricingTier {
 
     public String getTierCode() { return tierCode; }
     public void setTierCode(String tierCode) { this.tierCode = tierCode; }
+
+    public String getTargetType() { return targetType; }
+    public void setTargetType(String targetType) { this.targetType = targetType; }
 
     public BigDecimal getMinBilledGrossEur30d() { return minBilledGrossEur30d; }
     public void setMinBilledGrossEur30d(BigDecimal v) { this.minBilledGrossEur30d = v; }

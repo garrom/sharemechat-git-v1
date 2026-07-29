@@ -15,6 +15,11 @@ public class Constants {
         // bot conversacional. NO se le concede acceso a endpoints protegidos.
         // Solo existe como user pasivo en users + como peer favorito.
         public static final String SUPPORT_BOT = "SUPPORT_BOT";
+        // ADR-056 (2026-07-29): rol MASTER (estudios de webcam). Persona
+        // fisica que gestiona modelos bajo su umbrella. NO streamea. Regimen
+        // economico dual: STREAM_EARNING de sus modelos va al MASTER en el
+        // ledger; el reparto Master <-> modelo es opaco al motor (D10).
+        public static final String MASTER = "MASTER";
 
         private Roles() {}
     }
@@ -24,6 +29,9 @@ public class Constants {
         public static final String FORM_MODEL = "FORM_MODEL";
         public static final String INTERNAL = "INTERNAL";
         public static final String BOT = "BOT";
+        // ADR-056: user_type de un Master recien registrado (aun sin
+        // promocion role=MASTER). Analogo a FORM_MODEL/FORM_CLIENT.
+        public static final String FORM_MASTER = "FORM_MASTER";
 
         private UserTypes() {}
     }
@@ -135,6 +143,11 @@ public class Constants {
         // a V9) quedan MODEL automaticamente.
         public static final String MODEL = "MODEL";
         public static final String CLIENT = "CLIENT";
+        // ADR-056 (2026-07-29): sesion KYC del MASTER persona fisica. Mismo
+        // flujo Didit que MODEL pero con workflow_id distinto (property
+        // kyc.didit.master-workflow-id). NO tiene age estimation (a
+        // diferencia de CLIENT).
+        public static final String MASTER = "MASTER";
 
         private SessionTypes() {}
     }
