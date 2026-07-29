@@ -268,32 +268,37 @@ Reemplaza parcialmente ADR-052 §D1 (%reparto) y §D5 (umbrales tramos). Resto A
 
 Secuencia técnica planificada (8 fases, cada una desplegable):
 
-1. **Fase S1 — backend base** — PENDIENTE
-   - Migration V42 completa (10 bloques SQL: rol MASTER, tabla masters, master_user_id FK, master_model_splits, master_contract_acceptances, refactor model_pricing_tiers con target_type + seed 8 filas post-ADR, extensión snapshots, atribución STREAM_EARNING, password_temporary, payout_methods).
-   - Entities + repositorios + `Constants.Roles.MASTER` + `UserTypes.FORM_MASTER` + `KycSessionTypes.MASTER`.
-   - Refactor `ModelPricingTierRepository.findCurrentByBilledGross` con parámetro `targetType`.
+1. **Fase S1 — backend base** — COMPLETADA 2026-07-29 (`394b907`)
+   - Migration V42 aplicada TEST (10 bloques SQL). Nota operativa: el nombre real del UNIQUE index en `model_pricing_tiers` es `uq_mpt_code_effective` (no el que dio ADR-056); cerrada vigencia previa T1-T4 y sembradas 8 filas dual (4 INDIVIDUAL + 4 MASTER) con umbrales L1/L3/L5/L7 en EUR.
+   - Entities + repositorios (módulos `master/` y `payout/`, patrón simétrico a `support/psp/streammoderation/content` con sub-packages `config/controller/dto/entity/repository/service`) + `Constants.Roles.MASTER` + `UserTypes.FORM_MASTER` + `KycSessionTypes.MASTER`.
+   - Refactor `ModelPricingTierRepository` con parámetro `targetType`; sobrecargas legacy delegan a `'INDIVIDUAL'` para no romper callers preexistentes.
 
-2. **Fase S2 — KYC + contrato Master** — PENDIENTE
-   - `MasterContractService` + `MasterContractManifestService` (patrón simétrico modelo).
-   - Generación PDF `master_contract_v1_2026-XX-XX.pdf` + manifest S3.
-   - Extensión `KycSessionService.startDiditMasterSession` + workflow ID Didit dedicado.
-   - Endpoints `POST /api/masters/register` + `POST /api/masters/me/contract/accept` + `POST /api/masters/me/kyc/didit`.
+2. **Fase S2 — KYC + contrato Master** — COMPLETADA 2026-07-29 (`4300f80`)
+   - `MasterContractService` + `MasterContractManifestService` idempotentes (patrón simétrico modelo con verificación SHA-256 contra S3).
+   - Draft contrato `sharemechat-v1/docs/01-business/master-contract-v1-draft.md` (redactado entre operador y Claude, sin abogado externo por decisión explícita del operador — mismo patrón versionado que modelo v4). PDF pendiente de generar antes de aceptación real en PROD.
+   - Extensión `KycSessionService.startDiditMasterSession` + property `kyc.didit.master-workflow-id` (workflow ID Didit dedicado para persona física Master).
+   - Endpoints `POST /api/masters/register` + `GET|POST /api/masters/me/contract` + `POST /api/masters/me/kyc/didit`.
 
-3. **Fase S3 — motor reparto extendido** — PENDIENTE
-   - Refactor `ModelTierService.resolveEffectiveTierForPayout` con contexto Master (agregación bruto).
-   - Refactor `StreamService.endSession` para detectar `master_user_id`, resolver tier apropiado, atribuir `STREAM_EARNING` al Master con `attributed_model_user_id` set.
-   - Tests exhaustivos de reparto en 4 escenarios (individual T1/T4, Master T1/T4).
+3. **Fase S3 — motor reparto extendido** — COMPLETADA 2026-07-29 (`8ccd05e`)
+   - `ModelTierService.resolveEffectiveTierForPayout(modelId)` detecta `master_user_id` y delega en `resolveEffectiveTierForMasterPayout(masterUserId)`, que resuelve por bruto agregado 30d de todas las modelos activas del Master.
+   - Query dedicada `TransactionRepository.sumStreamChargeGrossForMasterWindow` (subquery sobre `Model.masterUserId`).
+   - `StreamService.endSession` y `UserTrialService.closeTrialStreamAndSettle` atribuyen `STREAM_EARNING` / `TRIAL_EARNING` al Master cuando aplica, con `attributed_model_user_id` set apuntando a la modelo real.
+   - Tests exhaustivos: 4 escenarios (INDIVIDUAL T1, INDIVIDUAL T4, MASTER agregado T2, MASTER agregado T4) verificando que la modelo bajo Master no cobra directamente y que `attributed_model_user_id` queda registrado.
 
-4. **Fase S4 — endpoints Master gestión modelos** — PENDIENTE
-   - `POST /api/masters/me/models` (crear + email activación con token).
-   - `GET /api/masters/me/models` + `PATCH /{id}/active|pricing|internal-share`.
-   - Flujo activación email modelo (`AuthActivationController` extensión).
-   - Tests MockMvc.
+4. **Fase S4 — endpoints Master gestión modelos** — COMPLETADA 2026-07-29 (`ed6f9b9`)
+   - `POST /api/masters/me/models` (`MasterModelInvitationService`): valida email/nickname, crea `User` con `password_temporary=1` y placeholder aleatorio (nadie conoce la password inicial), crea fila `Model` con `master_user_id`, emite token via `EmailVerificationService.issueVerification(..., "MASTER_MODEL_INVITATION")`. Idempotente sobre email existente del mismo Master (reemite token); rechaza si el email pertenece a otro Master o a otro user individual.
+   - `GET /api/masters/me/models` + `GET /{id}` + `PATCH /{id}/active` + `PATCH /{id}/internal-share` (`MasterModelManagementService`, guard ownership por `master_user_id`, proyección `MasterModelViewDTO` sin PII cumpliendo D9).
+   - Endpoint público `POST /api/masters/models/activate/{token}` — la modelo genera su propia password (min 10 chars, sin espacios). Marca `password_temporary=false` + `first_password_change_at=now`, exige `password_temporary=true` previo (defensa contra reuso).
+   - Tests unitarios + MockMvc: happy path invite, idempotencia mismo Master, rechazo otro Master, rechazo nickname duplicado, activate happy, rechazo reuse, rechazo password corta.
 
-5. **Fase S5 — frontend Master** — PENDIENTE
-   - Nuevo dashboard `/master` con: overview económico consolidado, listado modelos, gestión CRUD, formulario nueva modelo, botón payout, historial.
-   - Nuevo login flow modelo activation via email.
-   - i18n `master.*` ES+EN.
+5. **Fase S5 — frontend Master** — EN CURSO
+   - **S5.a — dashboard Master post-login `/master`** — PENDIENTE. Overview económico consolidado, listado modelos operativo, formulario nueva modelo, botón payout, historial, i18n `masterDashboard.*`.
+   - **S5.b — captación pública Master (Opción A landing dedicada)** — COMPLETADA 2026-07-29. Basado en análisis UX previo (LiveJasmin sector-estándar: `/become-a-studio` separado del registro de modelos independientes para evitar canibalización).
+     - `MasterLanding.jsx` en `/for-studios` con SEO bilingüe ES/EN, hero + cómo funciona en 3 pasos + tabla económica Master vs Individual con umbrales L1/L3/L5/L7 + comparativa contra LiveJasmin + FAQ + CTA final. Estilos inline patrón `Safety.jsx`. `PublicNavbar` + `Footer` estándar.
+     - `RegisterMasterModalContent.jsx` alineado con `RegisterMasterRequestDTO`: email + password (≥10, sin espacios) + nickname + dateOfBirth + confirAdult + acceptedTerm + uiLocale; opcional `companyName/companyRegistrationNumber/companyCountry` (ISO alpha-2). Integrado en `LoginModalContent` como vista `register-master`, invocable via `openLoginModal({ initialView: 'register-master' })`.
+     - `MasterModelActivationPage.jsx` en `/master/invite/activate/:token` (path param + fallback `?token=`) que consume `POST /api/masters/models/activate/{token}`.
+     - Enlace footer "For studios" (desktop + móvil) + 3er CTA "Traigo un estudio / I bring a studio" en `BlogContent.CTABox`.
+     - i18n `forStudios.*`, `auth.registerMaster.*`, `auth.masterActivation.*`, `seo.forStudios.*` en ES+EN + `blog:cta.registerMaster` ES+EN.
 
 6. **Fase S6 — payouts multi-rail** — PENDIENTE
    - Nueva tabla `payout_methods` + endpoints CRUD.

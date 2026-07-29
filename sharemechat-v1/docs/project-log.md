@@ -8,6 +8,47 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-07-29 — ADR-056 Fases S1-S4 backend + S5.b frontend captación pública (materialización parcial)
+
+Sesión de materialización tras cerrar el ADR-056 el mismo día. Objetivo: dejar operativa toda la cadena backend + captación pública en TEST antes de abordar el dashboard operativo post-login.
+
+**Fases backend cerradas en TEST y desplegadas por commits secuenciales**:
+
+- **S1** (`394b907`): Migration V42 aplicada en TEST (10 bloques SQL). Módulos `master/` y `payout/` creados siguiendo el patrón simétrico a `support/psp/streammoderation/content` (sub-packages `config/controller/dto/entity/repository/service`) — decisión explícita del operador para no inventar estructura nueva. Refactor `ModelPricingTierRepository` con `targetType` manteniendo sobrecargas legacy que delegan a `'INDIVIDUAL'` para no tocar callers preexistentes.
+- **S2** (`4300f80`): `MasterContractService` + `MasterContractManifestService` idempotentes (SHA-256 verificación S3). `KycSessionService.startDiditMasterSession` + property `kyc.didit.master-workflow-id` (workflow Didit dedicado persona física). Endpoints `POST /api/masters/register` público + `GET|POST /api/masters/me/contract` + `POST /api/masters/me/kyc/didit`. Draft contrato Master v1 en `docs/01-business/master-contract-v1-draft.md` — redactado entre operador y Claude sin abogado externo por decisión del operador ("los abogados se equivocan también y te hacen perder dinero"), mismo patrón versionado que modelo v4.
+- **S3** (`8ccd05e`): Motor de reparto extendido. `ModelTierService.resolveEffectiveTierForPayout(modelId)` detecta `master_user_id` y delega en `resolveEffectiveTierForMasterPayout(masterUserId)` que resuelve tramo por bruto agregado 30d de todas las modelos del Master. `StreamService.endSession` y `UserTrialService.closeTrialStreamAndSettle` atribuyen `STREAM_EARNING` / `TRIAL_EARNING` al Master cuando aplica, con `attributed_model_user_id` set. Tests exhaustivos 4 escenarios (individual T1/T4 + Master agregado T2/T4).
+- **S4** (`ed6f9b9`): Gestión modelos bajo umbrella. `MasterModelInvitationService` crea `User` con `password_temporary=1` + placeholder aleatorio (nadie conoce la password inicial), emite token via `EmailVerificationService.issueVerification(..., "MASTER_MODEL_INVITATION")`. Idempotente sobre email del mismo Master (reemite token), rechaza email de otro Master u otro user individual. `MasterModelManagementService` con guard ownership y proyección `MasterModelViewDTO` sin PII (cumple D9). Endpoint público `POST /api/masters/models/activate/{token}` — la modelo genera su propia password (min 10, sin espacios), exige `password_temporary=true` previo como defensa contra reuso.
+
+**Incidencias operativas resueltas durante la ejecución**:
+
+- Migration V42 primera ejecución falló: nombre real del UNIQUE index en `model_pricing_tiers` era `uq_mpt_code_effective`, no lo asumido en el ADR. Cleanup manual en BD TEST (DROP masters + tablas dependientes + DELETE de la fila V42 en `flyway_schema_history`) sin destruir datos legacy; segundo deploy exitoso en 2s. Aprendizaje: verificar el nombre real de índices en `information_schema` antes de asumirlo desde el statement de creación original.
+- Refactor S1 rompió mocks preexistentes en `PricingServiceTest` (cambio de firma repo). Fix: `replace_all` en el test file + una ocurrencia adicional olvidada en `PricingService.java:205` (`findNextTier`).
+- Constructores S2/S3 rompieron 3 test files que instanciaban `KycSessionService` y `ModelTierService` directamente. Fix: pasar `null` como dependencia extra en los `new(...)` de test — no se recompusieron los tests porque no cubrían el nuevo comportamiento.
+- MySQL RDS: `sudo bash -c` con vars no expandía la password correctamente por SSH. Adoptado patrón `--defaults-extra-file` con `printf "[client]\npassword=%s\n" "$PW" > /root/.mycnf.tmp` + `shred -u` después, alineado con higiene de credenciales del CLAUDE.md (nunca argv ni disco persistente).
+
+**Fase S5.b — captación pública Master (Opción A)** decidida tras análisis UX previo:
+
+- Análisis con agent Explore + web research: LiveJasmin separa `/become-a-studio` del registro de modelos independientes (evita canibalización y confusión). Se descartaron variantes con formulario dentro de la home o dentro del blog. Se descartó también reutilizar `register-gender` (male/female) sin ampliar — es una taxonomía cliente/modelo, no un canal B2B.
+- Materialización S5.b completa y desplegada en TEST:
+  - `MasterLanding.jsx` en `/for-studios` — SEO bilingüe ES/EN, hero + cómo funciona en 3 pasos + tabla económica Master vs Individual (0/1000/4000/15000 EUR umbrales L1/L3/L5/L7) + comparativa contra LiveJasmin + FAQ + CTA final. Estilos inline patrón `Safety.jsx`.
+  - `RegisterMasterModalContent.jsx` alineado 1:1 con `RegisterMasterRequestDTO`: campos personales obligatorios (email, password ≥10 sin espacios, nickname, dateOfBirth, confirAdult, acceptedTerm) + sección empresa opcional (`companyName`, `companyRegistrationNumber`, `companyCountry` ISO alpha-2). Integrado en `LoginModalContent` como nueva vista `register-master`, invocable con `openLoginModal({ initialView: 'register-master' })`.
+  - `MasterModelActivationPage.jsx` en `/master/invite/activate/:token` — la modelo invitada genera su propia password (fallback `?token=` si viene por querystring en vez de path param, defensa robusta contra links viejos).
+  - Enlace footer "For studios" (desktop + móvil) + 3er CTA en `BlogContent.CTABox` ("Traigo un estudio / I bring a studio" → navega a `/for-studios`).
+  - i18n `forStudios.*` + `auth.registerMaster.*` + `auth.masterActivation.*` + `seo.forStudios.*` en ES+EN + `blog:cta.registerMaster` ES+EN.
+
+**Correcciones de i18n durante la materialización**: mi primera versión de `auth.registerMaster` usaba `fullName` + `country` (invento). El DTO real (`RegisterMasterRequestDTO`) usa `nickname` + `dateOfBirth` + opcional `companyName/companyRegistrationNumber/companyCountry`. Reescrito el bloque completo para alinear frontend con backend.
+
+**Deploy TEST completo con smoke 200 en `/for-studios` y `/master/invite/activate/:token`** (CloudFront SPA fallback). Bundles: product `main.9b46b36e.js`, admin `main.ad74a887.js`. Manifests actualizados. Drift ALERT auto-confirmado en ambos surfaces (frontend ahead del backend por commits legítimos S1-S4 ya desplegados en el mismo backend).
+
+**Pendiente en el frente Master antes de PROD**:
+
+- **S5.a** — dashboard Master post-login `/master` con overview económico consolidado + listado modelos operativo + formulario nueva modelo + botón payout + historial + i18n `masterDashboard.*`.
+- **S6** — payouts multi-rail (Paxum primero, `PayoutMethod` entity + endpoints CRUD ya listos S1, adapter pendiente).
+- **S7** — frontend admin Masters + suspensión D11.
+- **S8** — nivelación AUDIT + PROD (bloqueado: AUDIT caído desde 2026-07-25, PROD requiere Flyway V42 aplicada + secretos Didit workflow Master + eventual PDF contrato firmable).
+
+---
+
 ## 2026-07-29 — ADR-056: sistema Master/Studio + pivote captación estudios colombianos
 
 Sesión disparada por 6 meses de captación fallida de modelos individuales. Análisis del operador: **el problema NO es económico** (SharemeChat ofrece 75-79% desde ADR-052, 2× lo que da LiveJasmin al broadcaster individual top). El problema es **de acceso** — llegar a modelos independientes vía canales adult adyacentes (Coomeet, r/adultwork, agregadores talent) genera desconfianza sistemática ("¿es moderador de otra plataforma haciendo trampa? ¿scam?"). Prueba directa: registro como cliente en Coomeet + oferta a modelos → 0 conversiones.
