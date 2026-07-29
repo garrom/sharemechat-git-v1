@@ -79,6 +79,66 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
                 .add(trialEarning != null ? trialEarning : java.math.BigDecimal.ZERO);
     }
 
+    // ============================================================
+    // ADR-056 S3: agregacion bruto por MASTER
+    // ============================================================
+    // Suma sobre TODAS las modelos bajo umbrella del Master
+    // (models.master_user_id = :masterId). Se usa para calcular el
+    // tramo MASTER en model_tier_daily_snapshots + para el dashboard
+    // consolidado economico del Master.
+
+    /**
+     * ADR-056 S3: STREAM_CHARGE bruto agregado del equipo de un Master.
+     * Suma sobre todas las modelos con models.master_user_id = :masterId
+     * en la ventana temporal. Devuelve valor positivo (bruto pagado por
+     * clientes a cualquier modelo del Master).
+     */
+    @Query("SELECT COALESCE(SUM(-t.amount), 0) FROM Transaction t " +
+           "WHERE t.operationType = 'STREAM_CHARGE' " +
+           "  AND t.streamRecord.model.id IN (" +
+           "      SELECT m.userId FROM Model m WHERE m.masterUserId = :masterId) " +
+           "  AND t.timestamp >= :windowStart " +
+           "  AND t.timestamp < :windowEnd")
+    BigDecimal sumStreamChargeGrossForMasterWindow(
+            @Param("masterId") Long masterId,
+            @Param("windowStart") LocalDateTime windowStart,
+            @Param("windowEnd") LocalDateTime windowEnd);
+
+    /**
+     * ADR-056 S3: TRIAL_EARNING agregado del equipo del Master. Suma
+     * TRIAL_EARNING de todas las modelos bajo umbrella. Nota importante:
+     * si el trial se atribuye al Master (D3 del ADR-056), el TRIAL_EARNING
+     * fila puede tener user=master + attributed_model_user_id=modelo. La
+     * query cubre ambos casos: legacy (t.user=modelo) y post-ADR-056
+     * (t.attributed_model_user_id=modelo) usando OR sobre ambos campos.
+     */
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t " +
+           "WHERE t.operationType = 'TRIAL_EARNING' " +
+           "  AND (" +
+           "      t.user.id IN (SELECT m.userId FROM Model m WHERE m.masterUserId = :masterId)" +
+           "   OR t.attributedModelUserId IN (SELECT m.userId FROM Model m WHERE m.masterUserId = :masterId)" +
+           "  ) " +
+           "  AND t.timestamp >= :windowStart " +
+           "  AND t.timestamp < :windowEnd")
+    BigDecimal sumTrialEarningsForMasterWindow(
+            @Param("masterId") Long masterId,
+            @Param("windowStart") LocalDateTime windowStart,
+            @Param("windowEnd") LocalDateTime windowEnd);
+
+    /**
+     * ADR-056 S3: bruto agregado del Master = suma STREAM_CHARGE +
+     * TRIAL_EARNING de todas sus modelos bajo umbrella en la ventana.
+     * Base para resolver el tier MASTER T1-T4.
+     */
+    default BigDecimal sumGrossBillingForMasterWindow(Long masterId,
+                                                       LocalDateTime windowStart,
+                                                       LocalDateTime windowEnd) {
+        BigDecimal streamCharge = sumStreamChargeGrossForMasterWindow(masterId, windowStart, windowEnd);
+        BigDecimal trialEarning = sumTrialEarningsForMasterWindow(masterId, windowStart, windowEnd);
+        return (streamCharge != null ? streamCharge : java.math.BigDecimal.ZERO)
+                .add(trialEarning != null ? trialEarning : java.math.BigDecimal.ZERO);
+    }
+
     /**
      * Historial de transacciones del cliente (2026-07-19, Fase 1 vista
      * "Historial" del dashboard cliente). Filtro opcional por

@@ -60,10 +60,12 @@ class ModelTierServiceTest {
         transactionRepository = mock(TransactionRepository.class);
         userRepository = mock(UserRepository.class);
 
-        // Self reference — devolvemos el mismo service para simplificar
+        // ADR-056 S3: constructor extendido con ModelRepository (null aqui
+        // porque estos tests solo cubren regimen INDIVIDUAL; los del
+        // regimen MASTER viven en ModelTierServiceMasterTest).
         service = new ModelTierService(
                 pricingTierRepository, snapshotRepository, transactionRepository, userRepository,
-                null, new BigDecimal("1500"));
+                null, null, new BigDecimal("1500"));
 
         T0 = tier(1L, "T0", "0", "75.00", "1.00", "1.00");
         T1 = tier(2L, "T1", "3500", "77.00", "1.00", "3.00");

@@ -82,6 +82,22 @@ public class ModelTierDailySnapshot {
     @Column(name = "pro_status_active")
     private Boolean proStatusActive;
 
+    /**
+     * ADR-056 S3 (V42): regimen del snapshot. INDIVIDUAL para modelos
+     * individuales (modelId=userId modelo). MASTER para snapshots
+     * agregados del equipo (modelId=userId Master + masterUserId set).
+     * NULL en snapshots legacy pre-V42.
+     */
+    @Column(name = "target_type", length = 15)
+    private String targetType;
+
+    /**
+     * ADR-056 S3 (V42): user_id del Master cuyo bruto agregado se computo,
+     * presente solo si targetType=MASTER. NULL para snapshots INDIVIDUAL.
+     */
+    @Column(name = "master_user_id")
+    private Long masterUserId;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -139,6 +155,12 @@ public class ModelTierDailySnapshot {
 
     public Boolean getProStatusActive() { return proStatusActive; }
     public void setProStatusActive(Boolean v) { this.proStatusActive = v; }
+
+    public String getTargetType() { return targetType; }
+    public void setTargetType(String targetType) { this.targetType = targetType; }
+
+    public Long getMasterUserId() { return masterUserId; }
+    public void setMasterUserId(Long masterUserId) { this.masterUserId = masterUserId; }
 
     public LocalDateTime getCreatedAt(){ return createdAt; }
 }

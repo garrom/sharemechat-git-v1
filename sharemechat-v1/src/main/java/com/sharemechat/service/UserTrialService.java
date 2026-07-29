@@ -391,40 +391,66 @@ public class UserTrialService {
             return;
         }
 
-        // 4) ===== MODELO: Transaction + Balance + models =====
+        // 4) ===== MODELO o MASTER: Transaction + Balance =====
+        // ADR-056 D4: si la modelo esta bajo Master, atribuir TRIAL_EARNING
+        // al Master con attributedModelUserId=modelId. Ledger va al Master.
+        // Model.saldoActual/totalIngresos NO se tocan (dinero del Master).
+        Long masterUserIdOfModel = modelEntity.getMasterUserId();
+        Long earningRecipientId;
+        User earningRecipient;
+        if (masterUserIdOfModel != null) {
+            earningRecipientId = masterUserIdOfModel;
+            earningRecipient = userRepository.findById(masterUserIdOfModel)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Master no encontrado para trial modelId=" + modelId
+                                    + " masterUserId=" + masterUserIdOfModel));
+        } else {
+            earningRecipientId = modelId;
+            earningRecipient = modelUser;
+        }
+
         Transaction txModel = new Transaction();
-        txModel.setUser(modelUser);
+        txModel.setUser(earningRecipient);
         txModel.setAmount(modelEarning);
         txModel.setOperationType("TRIAL_EARNING");
         txModel.setStreamRecord(null); // no se asocia a stream_records de pago normal
-        txModel.setDescription("Ganancia trial de " + seconds + " segundos");
+        if (masterUserIdOfModel != null) {
+            txModel.setAttributedModelUserId(modelId);
+            txModel.setDescription("Ganancia trial de " + seconds
+                    + " segundos (modeloId=" + modelId + ")");
+        } else {
+            txModel.setDescription("Ganancia trial de " + seconds + " segundos");
+        }
         Transaction savedTxModel = transactionRepository.save(txModel);
 
         BigDecimal lastModelBalance = balanceRepository
-                .findTopByUserIdOrderByTimestampDesc(modelId)
+                .findTopByUserIdOrderByTimestampDesc(earningRecipientId)
                 .map(Balance::getBalance)
                 .orElse(BigDecimal.ZERO);
         BigDecimal newModelBalance = lastModelBalance.add(modelEarning);
 
         Balance balModel = new Balance();
-        balModel.setUserId(modelId);
+        balModel.setUserId(earningRecipientId);
         balModel.setTransactionId(savedTxModel.getId());
         balModel.setOperationType("TRIAL_EARNING");
         balModel.setAmount(modelEarning);
         balModel.setBalance(newModelBalance);
-        balModel.setDescription("Ganancia trial de " + seconds + " segundos");
+        balModel.setDescription(txModel.getDescription());
         balanceRepository.save(balModel);
 
-        // streaming_hours: añadimos el tiempo trial como horas (puedes cambiarlo si no quieres que cuente)
-        BigDecimal mSaldo = modelEntity.getSaldoActual() != null ? modelEntity.getSaldoActual() : BigDecimal.ZERO;
-        BigDecimal mTotal = modelEntity.getTotalIngresos() != null ? modelEntity.getTotalIngresos() : BigDecimal.ZERO;
+        // streaming_hours: siempre se acumulan en la modelo (metrica operativa),
+        // aunque el dinero vaya al Master. Saldo/ingresos solo si es individual.
         BigDecimal mHours = modelEntity.getStreamingHours() != null ? modelEntity.getStreamingHours() : BigDecimal.ZERO;
         BigDecimal hours  = BigDecimal.valueOf(seconds)
                 .divide(BigDecimal.valueOf(3600), 2, java.math.RoundingMode.HALF_UP);
-
-        modelEntity.setSaldoActual(mSaldo.add(modelEarning));
-        modelEntity.setTotalIngresos(mTotal.add(modelEarning));
         modelEntity.setStreamingHours(mHours.add(hours));
+
+        if (masterUserIdOfModel == null) {
+            BigDecimal mSaldo = modelEntity.getSaldoActual() != null ? modelEntity.getSaldoActual() : BigDecimal.ZERO;
+            BigDecimal mTotal = modelEntity.getTotalIngresos() != null ? modelEntity.getTotalIngresos() : BigDecimal.ZERO;
+            modelEntity.setSaldoActual(mSaldo.add(modelEarning));
+            modelEntity.setTotalIngresos(mTotal.add(modelEarning));
+        }
         modelRepository.save(modelEntity);
 
         // 5) ===== PLATAFORMA: coste trial (negativo) =====

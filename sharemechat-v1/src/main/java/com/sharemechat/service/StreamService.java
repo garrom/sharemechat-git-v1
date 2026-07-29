@@ -772,49 +772,86 @@ public class StreamService {
             );
             clientRepository.save(clientEntity);
 
-            // 10) MODELO
-            Transaction txModel = new Transaction();
-            txModel.setUser(modelUser);
-            txModel.setAmount(modelEarning);
-            txModel.setOperationType("STREAM_EARNING");
-            txModel.setStreamRecord(session);
-            txModel.setDescription("Ganancia por streaming de " + seconds + " segundos");
-            Transaction savedTxModel = transactionRepository.save(txModel);
-
-            BigDecimal lastModelBalance = balanceRepository
-                    .findTopByUserIdOrderByTimestampDesc(modelId)
-                    .map(Balance::getBalance)
-                    .orElse(BigDecimal.ZERO);
-
-            Balance balModel = new Balance();
-            balModel.setUserId(modelId);
-            balModel.setTransactionId(savedTxModel.getId());
-            balModel.setOperationType("STREAM_EARNING");
-            balModel.setAmount(modelEarning);
-            balModel.setBalance(lastModelBalance.add(modelEarning));
-            balModel.setDescription("Ganancia por streaming de " + seconds + " segundos");
-            balanceRepository.save(balModel);
-
+            // 10) MODELO o MASTER (ADR-056 D4)
+            // Detectar si la modelo esta bajo Master. Si si, atribuir el
+            // STREAM_EARNING al Master (user_id=master) con
+            // attributed_model_user_id=modelId para trazabilidad. Ledger
+            // y saldo cache van al Master. Model.saldoActual/totalIngresos
+            // NO se tocan (el dinero es del Master, no de la modelo).
             Model modelEntity = modelRepository.findById(modelId).orElseGet(() -> {
                 Model m = new Model();
                 m.setUser(modelUser);
                 m.setUserId(modelId);
                 return m;
             });
+            Long masterUserIdOfModel = modelEntity.getMasterUserId();
+            Long earningRecipientId;
+            User earningRecipient;
+            if (masterUserIdOfModel != null) {
+                earningRecipientId = masterUserIdOfModel;
+                earningRecipient = userRepository.findById(masterUserIdOfModel)
+                        .orElseThrow(() -> new IllegalStateException(
+                                "Master no encontrado para modelId=" + modelId
+                                        + " masterUserId=" + masterUserIdOfModel));
+            } else {
+                earningRecipientId = modelId;
+                earningRecipient = modelUser;
+            }
 
-            modelEntity.setSaldoActual(
-                    (modelEntity.getSaldoActual() != null ? modelEntity.getSaldoActual() : BigDecimal.ZERO)
-                            .add(modelEarning)
-            );
-            modelEntity.setTotalIngresos(
-                    (modelEntity.getTotalIngresos() != null ? modelEntity.getTotalIngresos() : BigDecimal.ZERO)
-                            .add(modelEarning)
-            );
-            modelEntity.setStreamingHours(
-                    (modelEntity.getStreamingHours() != null ? modelEntity.getStreamingHours() : BigDecimal.ZERO)
-                            .add(hoursAsBigDecimal)
-            );
-            modelRepository.save(modelEntity);
+            Transaction txModel = new Transaction();
+            txModel.setUser(earningRecipient);
+            txModel.setAmount(modelEarning);
+            txModel.setOperationType("STREAM_EARNING");
+            txModel.setStreamRecord(session);
+            if (masterUserIdOfModel != null) {
+                // Trazabilidad: modelo original que genero el ingreso.
+                txModel.setAttributedModelUserId(modelId);
+                txModel.setDescription("Ganancia por streaming de " + seconds
+                        + " segundos (modeloId=" + modelId + ")");
+            } else {
+                txModel.setDescription("Ganancia por streaming de " + seconds + " segundos");
+            }
+            Transaction savedTxModel = transactionRepository.save(txModel);
+
+            BigDecimal lastModelBalance = balanceRepository
+                    .findTopByUserIdOrderByTimestampDesc(earningRecipientId)
+                    .map(Balance::getBalance)
+                    .orElse(BigDecimal.ZERO);
+
+            Balance balModel = new Balance();
+            balModel.setUserId(earningRecipientId);
+            balModel.setTransactionId(savedTxModel.getId());
+            balModel.setOperationType("STREAM_EARNING");
+            balModel.setAmount(modelEarning);
+            balModel.setBalance(lastModelBalance.add(modelEarning));
+            balModel.setDescription(txModel.getDescription());
+            balanceRepository.save(balModel);
+
+            if (masterUserIdOfModel == null) {
+                // Solo modelo individual: actualizar caches Model.
+                modelEntity.setSaldoActual(
+                        (modelEntity.getSaldoActual() != null ? modelEntity.getSaldoActual() : BigDecimal.ZERO)
+                                .add(modelEarning)
+                );
+                modelEntity.setTotalIngresos(
+                        (modelEntity.getTotalIngresos() != null ? modelEntity.getTotalIngresos() : BigDecimal.ZERO)
+                                .add(modelEarning)
+                );
+                modelEntity.setStreamingHours(
+                        (modelEntity.getStreamingHours() != null ? modelEntity.getStreamingHours() : BigDecimal.ZERO)
+                                .add(hoursAsBigDecimal)
+                );
+                modelRepository.save(modelEntity);
+            } else {
+                // Modelo bajo Master: solo actualizamos horas de streaming (metrica
+                // operativa de la modelo). Saldo/ingresos son del Master, viven en
+                // el ledger + tabla masters (deuda cache).
+                modelEntity.setStreamingHours(
+                        (modelEntity.getStreamingHours() != null ? modelEntity.getStreamingHours() : BigDecimal.ZERO)
+                                .add(hoursAsBigDecimal)
+                );
+                modelRepository.save(modelEntity);
+            }
 
             // Hook al motor de comisiones de afiliadas retirado el 2026-07-24
             // junto con el resto del programa ([ADR-052 §D11]).

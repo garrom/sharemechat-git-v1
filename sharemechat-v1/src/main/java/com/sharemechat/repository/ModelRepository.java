@@ -12,4 +12,14 @@ public interface ModelRepository extends JpaRepository<Model, Long> {
 
     @org.springframework.data.jpa.repository.Query("SELECT m.userId FROM Model m")
     java.util.List<Long> findAllModelUserIds();
+
+    /**
+     * ADR-056 S3: lookup del master_user_id de una modelo por su userId.
+     * Devuelve NULL si es modelo individual (sin Master). Devuelve el
+     * userId del Master si la modelo esta bajo umbrella.
+     */
+    @org.springframework.data.jpa.repository.Query(
+        "SELECT m.masterUserId FROM Model m WHERE m.userId = :modelUserId")
+    Optional<Long> findMasterUserIdByModelUserId(
+        @org.springframework.data.repository.query.Param("modelUserId") Long modelUserId);
 }
