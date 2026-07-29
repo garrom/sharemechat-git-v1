@@ -93,16 +93,9 @@ El Master declara y garantiza:
 
 ## 5. Régimen económico
 
-5.1. **Porcentaje sobre ingreso bruto**: el importe generado por cada stream de las modelos bajo umbrella del Master se reparte según la tabla vigente `model_pricing_tiers` (régimen `MASTER`) publicada por SharemeChat. En el momento de la aceptación de este contrato, la tabla vigente es:
+5.1. **Porcentaje sobre ingreso bruto**: el importe generado por cada stream de las modelos bajo umbrella del Master se reparte según la tabla de tramos vigente `model_pricing_tiers` (régimen `MASTER`) publicada por SharemeChat en el **Dashboard Master** del titular (sección "Régimen económico") y **consultable en todo momento tras autenticación**. La tabla vigente es la fuente única de referencia; el Master declara haberla consultado antes de aceptar el presente contrato.
 
-| Tramo | Facturación bruta agregada 30d del Master | % que recibe el Master | % SharemeChat |
-|---|---|---|---|
-| T1 | 0 € | 50 % | 50 % |
-| T2 | 1.000 € | 60 % | 40 % |
-| T3 | 4.000 € | 65 % | 35 % |
-| T4 | 15.000 € | 70 % | 30 % |
-
-El tramo se calcula sobre la **facturación bruta agregada** de todas las modelos activas bajo el umbrella del Master en los últimos 30 días naturales (rolling window). SharemeChat se reserva el derecho a modificar los umbrales y porcentajes con preaviso mínimo de 30 días naturales, mediante publicación de una versión superior del presente contrato y notificación al Master vía email.
+El tramo se calcula sobre la **facturación bruta agregada** de todas las modelos activas bajo el umbrella del Master en los últimos 30 días naturales (rolling window). SharemeChat se reserva el derecho a modificar los umbrales y porcentajes de dicha tabla con preaviso mínimo de 30 días naturales, mediante notificación al Master vía email al correo de contacto registrado; la modificación no requiere nueva versión del presente contrato salvo que también altere las cláusulas 5.2–5.5 u otras condiciones sustantivas.
 
 5.2. **Reparto interno Master ↔ modelo**: es acuerdo privado entre el Master y cada modelo. SharemeChat NO participa en dicho reparto y NO regula el porcentaje interno. El Master está obligado a registrar en la plataforma el porcentaje pactado con cada modelo (`master_model_splits.internal_share_pct`) como referencia auditable en caso de disputa futura.
 

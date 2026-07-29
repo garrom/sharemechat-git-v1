@@ -3682,90 +3682,48 @@
   "forStudios": {
     "seo": {
       "title": "SharemeChat para estudios · Programa Master",
-      "description": "Programa Master de SharemeChat: da de alta modelos bajo tu umbrella, escala tramos por volumen agregado y cobra vía Paxum, Yoursafe o cripto."
+      "description": "Programa Master de SharemeChat: da de alta modelos bajo tu umbrella, escala por volumen agregado y cobra vía Paxum, Yoursafe o cripto. Sin fees de plataforma para el Master."
     },
     "hero": {
       "eyebrow": "Programa Master · Para estudios webcam",
       "title": "Trae tus modelos. Escala más rápido.",
-      "subtitle": "Nuestro programa Master está diseñado para estudios profesionales. Das de alta a tus modelos, se agregan sus ingresos y desbloqueáis juntos tramos económicos superiores. Sin barreras de entrada.",
+      "subtitle": "SharemeChat ofrece un programa dedicado para estudios profesionales. Das de alta a tus modelos, se agregan sus ingresos y desbloqueáis juntos mejores condiciones. Sin barreras de entrada.",
       "ctaPrimary": "Registrarme como Master",
-      "ctaSecondary": "Ver tramos económicos"
+      "ctaSecondary": "Cómo funciona"
     },
     "howItWorks": {
       "title": "Cómo funciona",
       "step1": {
         "title": "1. Te registras como Master",
-        "text": "Como persona física. Firmas Contrato de Master, superas KYC (mismo proveedor que las modelos) y accedes a tu panel."
+        "text": "Como persona física. Firmas Contrato de Master, superas KYC y accedes a tu panel privado con el detalle económico y operativo de tu estudio."
       },
       "step2": {
         "title": "2. Invitas a tus modelos",
-        "text": "Introduces su email y nickname. La modelo recibe un email para crear su propia contraseña (tú nunca la conoces). Firma su contrato y pasa KYC bajo su control."
+        "text": "Introduces su email y nickname. La modelo recibe un email para crear su propia contraseña, firmar su contrato y superar KYC bajo su control."
       },
       "step3": {
         "title": "3. Cobras tu porcentaje",
-        "text": "SharemeChat te paga a ti todo lo devengado por tus modelos. Tú les repartes según lo pactado. Payouts a Paxum, Yoursafe o cripto desde 100 EUR."
+        "text": "SharemeChat te paga a ti todo lo devengado por tus modelos. Tú les repartes según lo pactado internamente. Payouts a Paxum, Yoursafe o cripto."
       }
     },
-    "tiers": {
-      "title": "Tramos económicos Master vs Individual",
-      "subtitle": "Los mismos umbrales que en los grandes portales (referencia LiveJasmin), aplicados sobre la facturación bruta agregada de todas tus modelos.",
-      "colVolume": "Volumen bruto 30d (EUR)",
-      "colIndividual": "% modelo individual",
-      "colMaster": "% Master",
-      "rows": {
-        "t1": {
-          "range": "0 – 999",
-          "individual": "50%",
-          "master": "50%"
+    "benefits": {
+      "title": "Qué ofrece el programa Master",
+      "items": {
+        "b1": {
+          "title": "0 EUR de fees de plataforma",
+          "text": "No cobramos cuota de registro, cuota mensual, fee por modelo activa ni fee por transacción."
         },
-        "t2": {
-          "range": "1.000 – 3.999",
-          "individual": "54%",
-          "master": "60%"
+        "b2": {
+          "title": "Escalado por volumen agregado",
+          "text": "Los ingresos de todas tus modelos activas suman y desbloquean tramos de revenue share superiores. El detalle exacto lo consultas en tu Dashboard Master tras registro."
         },
-        "t3": {
-          "range": "4.000 – 14.999",
-          "individual": "57%",
-          "master": "65%"
+        "b3": {
+          "title": "Payouts multi-rail",
+          "text": "Prioridad Paxum, luego Yoursafe, luego cripto. Umbral mínimo bajo, cierres quincenales de referencia."
         },
-        "t4": {
-          "range": "≥ 15.000",
-          "individual": "60%",
-          "master": "70%"
-        }
-      },
-      "note": "El % Master aplica sobre el bruto agregado de todas tus modelos activas en la ventana de 30 días. Ejemplo: 5 modelos facturando 4.000 EUR cada una = 20.000 EUR agregados → tramo T4 (70%)."
-    },
-    "compare": {
-      "title": "Comparativa rápida",
-      "colFeature": "Aspecto",
-      "colSharemechat": "SharemeChat",
-      "colLivejasmin": "LiveJasmin (referencia)",
-      "rows": {
-        "fees": {
-          "feature": "Comisión al Master",
-          "sharemechat": "0 EUR",
-          "livejasmin": "0 EUR"
-        },
-        "tiers": {
-          "feature": "Escalado por volumen",
-          "sharemechat": "Sí, agregado del estudio",
-          "livejasmin": "Sí, agregado del estudio"
-        },
-        "kyc": {
-          "feature": "KYC Master",
-          "sharemechat": "Persona física (Didit)",
-          "livejasmin": "Persona física"
-        },
-        "payouts": {
-          "feature": "Rails de pago",
-          "sharemechat": "Paxum · Yoursafe · Cripto",
-          "livejasmin": "Paxum · Transferencia · Cripto"
-        },
-        "min": {
-          "feature": "Mínimo payout",
-          "sharemechat": "100 EUR",
-          "livejasmin": "100 USD"
+        "b4": {
+          "title": "Compliance de serie",
+          "text": "KYC persona física con Didit, contrato Master versionado, política GDPR alineada con estándar del sector."
         }
       }
     },
@@ -3774,29 +3732,21 @@
       "items": {
         "q1": {
           "q": "¿Necesito registrar una empresa?",
-          "a": "No. El Master se registra como persona física. Firma el Contrato de Master y supera KYC (mismo proveedor Didit que las modelos)."
+          "a": "No. El Master se registra como persona física. Firmas el Contrato de Master y superas KYC (mismo proveedor Didit que las modelos). Si operas bajo una sociedad puedes declararla en el formulario de registro como información opcional."
         },
         "q2": {
-          "q": "¿Veo los datos personales de mis modelos?",
-          "a": "No. Solo ves datos operativos (nickname, estado KYC, actividad, ganancias bajo tu umbrella). No exponemos email ni documento de la modelo, alineado con LiveJasmin y con nuestra política GDPR."
+          "q": "¿Cuándo cobro y cómo?",
+          "a": "Payouts on-demand con cierre quincenal de referencia. Prioridad de rails: Paxum, Yoursafe y cripto (NOWPayments). Los umbrales operativos vigentes los consultas en tu Dashboard Master tras el registro."
         },
         "q3": {
-          "q": "¿Qué pasa si una modelo se va del estudio?",
-          "a": "La modelo mantiene su cuenta como modelo individual. Cobra directamente en su tramo individual. No hay bloqueos ni penalizaciones."
-        },
-        "q4": {
-          "q": "¿Cuándo cobro?",
-          "a": "Quincenal. Puedes retirar cuando acumules 100 EUR en tu balance. Prioridad de rails: Paxum → Yoursafe → cripto."
-        },
-        "q5": {
-          "q": "¿Y si SharemeChat me suspende como Master?",
-          "a": "Tus modelos quedan liberadas como individuales y siguen operando en la plataforma. Tú dejas de percibir su cuota. Lo detallamos en el Contrato de Master."
+          "q": "¿Desde qué países puedo operar?",
+          "a": "El programa Master está abierto internacionalmente. Los canales de payout disponibles y los requisitos KYC específicos se validan durante el registro."
         }
       }
     },
     "ctaFinal": {
       "title": "¿Listo para escalar tu estudio con SharemeChat?",
-      "subtitle": "El registro es gratuito. En 24 h te confirmamos la aceptación del Contrato de Master y podrás invitar a tus primeras modelos.",
+      "subtitle": "El registro es gratuito. Tras KYC y aceptación del Contrato de Master accedes a tu Dashboard con el detalle económico completo y podrás invitar a tus primeras modelos.",
       "ctaPrimary": "Registrarme como Master",
       "ctaSecondary": "Volver al inicio"
     },

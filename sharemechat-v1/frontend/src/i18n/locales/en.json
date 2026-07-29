@@ -3682,90 +3682,48 @@
   "forStudios": {
     "seo": {
       "title": "SharemeChat for studios · Master Program",
-      "description": "SharemeChat Master Program: onboard your models under your umbrella, unlock higher tiers on aggregated volume, cash out via Paxum, Yoursafe or crypto."
+      "description": "SharemeChat Master Program: onboard your models under your umbrella, scale on aggregated volume, cash out via Paxum, Yoursafe or crypto. No Master platform fees."
     },
     "hero": {
       "eyebrow": "Master Program · For webcam studios",
       "title": "Bring your models. Scale faster.",
-      "subtitle": "Our Master Program is built for professional studios. You onboard your models, their revenue aggregates, and together you unlock better tiers. No entry barriers.",
+      "subtitle": "SharemeChat offers a dedicated program for professional studios. You onboard your models, their revenue aggregates, and together you unlock better conditions. No entry barriers.",
       "ctaPrimary": "Sign up as Master",
-      "ctaSecondary": "See tiers"
+      "ctaSecondary": "How it works"
     },
     "howItWorks": {
       "title": "How it works",
       "step1": {
         "title": "1. Sign up as Master",
-        "text": "As a natural person. Sign the Master Contract, pass KYC (same provider as models) and log into your dashboard."
+        "text": "As a natural person. Sign the Master Contract, pass KYC and access your private panel with the full economic and operational detail of your studio."
       },
       "step2": {
         "title": "2. Invite your models",
-        "text": "Provide email and nickname. Your model receives an email to set her own password (you never see it). She signs her contract and passes KYC under her sole control."
+        "text": "Provide email and nickname. Your model receives an email to set her own password, sign her contract and pass KYC under her sole control."
       },
       "step3": {
         "title": "3. Get paid",
-        "text": "SharemeChat pays you the full amount earned by your models. You split with them as agreed. Payouts via Paxum, Yoursafe or crypto from 100 EUR."
+        "text": "SharemeChat pays you the full amount earned by your models. You split with them as privately agreed. Payouts via Paxum, Yoursafe or crypto."
       }
     },
-    "tiers": {
-      "title": "Master vs Individual tiers",
-      "subtitle": "Same thresholds as the big portals (LiveJasmin reference), applied to the aggregated gross revenue of all your models.",
-      "colVolume": "Gross volume 30d (EUR)",
-      "colIndividual": "% individual model",
-      "colMaster": "% Master",
-      "rows": {
-        "t1": {
-          "range": "0 – 999",
-          "individual": "50%",
-          "master": "50%"
+    "benefits": {
+      "title": "What the Master Program offers",
+      "items": {
+        "b1": {
+          "title": "0 EUR platform fees",
+          "text": "No sign-up fee, no monthly fee, no per-model fee and no per-transaction fee."
         },
-        "t2": {
-          "range": "1,000 – 3,999",
-          "individual": "54%",
-          "master": "60%"
+        "b2": {
+          "title": "Aggregated-volume tiers",
+          "text": "Your active models' revenue adds up and unlocks higher revenue-share tiers. Exact figures are available in your Master Dashboard after sign-up."
         },
-        "t3": {
-          "range": "4,000 – 14,999",
-          "individual": "57%",
-          "master": "65%"
+        "b3": {
+          "title": "Multi-rail payouts",
+          "text": "Priority order: Paxum, then Yoursafe, then crypto. Low minimum, bi-weekly reference close-outs."
         },
-        "t4": {
-          "range": "≥ 15,000",
-          "individual": "60%",
-          "master": "70%"
-        }
-      },
-      "note": "The Master % applies to the aggregated gross of all your active models in the 30-day window. Example: 5 models billing 4,000 EUR each = 20,000 EUR aggregated → tier T4 (70%)."
-    },
-    "compare": {
-      "title": "Quick comparison",
-      "colFeature": "Aspect",
-      "colSharemechat": "SharemeChat",
-      "colLivejasmin": "LiveJasmin (reference)",
-      "rows": {
-        "fees": {
-          "feature": "Master fee",
-          "sharemechat": "0 EUR",
-          "livejasmin": "0 EUR"
-        },
-        "tiers": {
-          "feature": "Volume-based scaling",
-          "sharemechat": "Yes, studio-aggregated",
-          "livejasmin": "Yes, studio-aggregated"
-        },
-        "kyc": {
-          "feature": "Master KYC",
-          "sharemechat": "Natural person (Didit)",
-          "livejasmin": "Natural person"
-        },
-        "payouts": {
-          "feature": "Payout rails",
-          "sharemechat": "Paxum · Yoursafe · Crypto",
-          "livejasmin": "Paxum · Wire · Crypto"
-        },
-        "min": {
-          "feature": "Minimum payout",
-          "sharemechat": "EUR 100",
-          "livejasmin": "USD 100"
+        "b4": {
+          "title": "Compliance out-of-the-box",
+          "text": "Natural-person KYC with Didit, versioned Master Contract, GDPR policy aligned with industry standard."
         }
       }
     },
@@ -3774,29 +3732,21 @@
       "items": {
         "q1": {
           "q": "Do I need to register a company?",
-          "a": "No. The Master signs up as a natural person. You sign the Master Contract and pass KYC (same Didit provider as models)."
+          "a": "No. The Master signs up as a natural person. You sign the Master Contract and pass KYC (same Didit provider as models). If you operate under a legal entity you can declare it as optional info in the sign-up form."
         },
         "q2": {
-          "q": "Do I see my models' personal data?",
-          "a": "No. You only see operational data (nickname, KYC status, activity, earnings under your umbrella). We do not expose email or ID, aligned with LiveJasmin and our GDPR policy."
+          "q": "When and how do I get paid?",
+          "a": "On-demand payouts with a bi-weekly reference close. Rail priority: Paxum, Yoursafe and crypto (NOWPayments). Current thresholds are shown in your Master Dashboard after sign-up."
         },
         "q3": {
-          "q": "What if a model leaves the studio?",
-          "a": "The model keeps her account as an individual. She earns her individual tier directly. No blocks, no penalties."
-        },
-        "q4": {
-          "q": "When do I get paid?",
-          "a": "Bi-weekly. You can request a payout when your balance reaches 100 EUR. Rail priority: Paxum → Yoursafe → crypto."
-        },
-        "q5": {
-          "q": "What if SharemeChat suspends me as Master?",
-          "a": "Your models are released and keep operating as individuals. You stop earning their share. Full detail in the Master Contract."
+          "q": "Which countries can I operate from?",
+          "a": "The Master Program is open internationally. Available payout channels and specific KYC requirements are validated during sign-up."
         }
       }
     },
     "ctaFinal": {
       "title": "Ready to scale your studio with SharemeChat?",
-      "subtitle": "Sign-up is free. Within 24h we confirm your Master Contract acceptance and you can invite your first models.",
+      "subtitle": "Sign-up is free. After KYC and Master Contract acceptance you access your Dashboard with the full economic detail and can invite your first models.",
       "ctaPrimary": "Sign up as Master",
       "ctaSecondary": "Back to home"
     },
