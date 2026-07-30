@@ -299,6 +299,8 @@ Secuencia técnica planificada (8 fases, cada una desplegable):
      - `MasterModelActivationPage.jsx` en `/master/invite/activate/:token` (path param + fallback `?token=`) que consume `POST /api/masters/models/activate/{token}`.
      - Enlace footer "For studios" (desktop + móvil) + 3er CTA "Traigo un estudio / I bring a studio" en `BlogContent.CTABox`.
      - i18n `forStudios.*`, `auth.registerMaster.*`, `auth.masterActivation.*`, `seo.forStudios.*` en ES+EN + `blog:cta.registerMaster` ES+EN.
+     - **S5.b.7 rediseño alineado con sector opaco** (2026-07-29): tras análisis crítico se retiró tabla T1-T4 con % + umbrales EUR, comparativa nominal vs LiveJasmin y FAQ sensibles (PII, suspensión). Sustituido por bullets cualitativos y FAQ neutra. Alineado con LiveJasmin/Stripchat/BongaCams (ninguno publica cifras en su landing pública).
+     - **S5.b.8 pulido texto por texto + navbar fix** (2026-07-30): rewrite completo de los 11 textos de la landing (hero.title/subtitle, howItWorks 3 pasos, benefits reducido a 3 items sin duplicar step 3, FAQ 3 preguntas, ctaFinal.title/subtitle). Aplicado feedback estable: tono no-posesivo con modelos ("administra modelos bajo cuenta Master" en vez de "trae tus modelos"), voz institucional B2B ("la plataforma X" > "tú haces X"), conceptual no procedimental, evitar anglicismos en ES (retiro/comisiones/cumplimiento normativo/canales en vez de payout/fees/compliance/rails). `MasterLanding.jsx` navbar fix: props `onGoVideochat/onGoFavorites/onLogin/onBuy` cableados a `openLoginModal` (visitante no logado); `onGoBlog` navega a `/blog`; brand click a `/`.
 
 6. **Fase S6 — payouts multi-rail** — PENDIENTE
    - Nueva tabla `payout_methods` + endpoints CRUD.
