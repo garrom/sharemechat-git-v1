@@ -46,16 +46,33 @@ export default function MasterLanding() {
   const t = (k) => i18n.t(`forStudios.${k}`);
 
   const openRegister = () => openLoginModal({ initialView: 'register-master' });
+  const openRegisterClient = () => openLoginModal({ initialView: 'register-gender' });
+  const goLogin = () => openLoginModal();
+  const goBlog = () => history.push('/blog');
   const goHowItWorks = () => {
     const el = document.getElementById('how-it-works');
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
   const goHome = () => history.push('/');
+  const handleBrandClick = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    history.push('/');
+  };
 
   return (
     <>
       <Seo pageKey="forStudios" urlPath="/for-studios" localeAware />
-      <PublicNavbar />
+      <PublicNavbar
+        activeTab={null}
+        onBrandClick={handleBrandClick}
+        onGoVideochat={goLogin}
+        onGoFavorites={goLogin}
+        onGoBlog={goBlog}
+        onBuy={openRegisterClient}
+        onLogin={goLogin}
+        showLocaleSwitcher={true}
+        showBottomNav={true}
+      />
       <div style={Page}>
         <FooterInner>
           <div style={Container}>
@@ -88,7 +105,7 @@ export default function MasterLanding() {
             <section style={Section}>
               <h2 style={SectionTitle}>{t('benefits.title')}</h2>
               <div style={CardsGrid}>
-                {['b1', 'b2', 'b3', 'b4'].map((k) => (
+                {['b1', 'b2', 'b3'].map((k) => (
                   <div key={k} style={Card}>
                     <h3 style={CardTitle}>{t(`benefits.items.${k}.title`)}</h3>
                     <p style={CardText}>{t(`benefits.items.${k}.text`)}</p>

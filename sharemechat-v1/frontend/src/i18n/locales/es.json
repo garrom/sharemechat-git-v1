@@ -3686,44 +3686,40 @@
     },
     "hero": {
       "eyebrow": "Programa Master · Para estudios webcam",
-      "title": "Trae tus modelos. Escala más rápido.",
-      "subtitle": "SharemeChat ofrece un programa dedicado para estudios profesionales. Das de alta a tus modelos, se agregan sus ingresos y desbloqueáis juntos mejores condiciones. Sin barreras de entrada.",
+      "title": "Todo tu estudio en una cuenta Master.",
+      "subtitle": "Cuenta Master para administrar modelos de forma sencilla. Cero costes, sin suscripción, sin exclusividad. Condiciones de retorno superiores al estándar del sector desde la primera facturación.",
       "ctaPrimary": "Registrarme como Master",
       "ctaSecondary": "Cómo funciona"
     },
     "howItWorks": {
       "title": "Cómo funciona",
       "step1": {
-        "title": "1. Te registras como Master",
-        "text": "Como persona física. Firmas Contrato de Master, superas KYC y accedes a tu panel privado con el detalle económico y operativo de tu estudio."
+        "title": "1. Alta como Master",
+        "text": "Alta como Master en minutos, sin necesidad de empresa. La plataforma completa la verificación y habilita tu cuenta operativa."
       },
       "step2": {
-        "title": "2. Invitas a tus modelos",
-        "text": "Introduces su email y nickname. La modelo recibe un email para crear su propia contraseña, firmar su contrato y superar KYC bajo su control."
+        "title": "2. Alta de modelos",
+        "text": "Da de alta a modelos con un simple email. La plataforma gestiona autónomamente la incorporación."
       },
       "step3": {
-        "title": "3. Cobras tu porcentaje",
-        "text": "SharemeChat te paga a ti todo lo devengado por tus modelos. Tú les repartes según lo pactado internamente. Payouts a Paxum, Yoursafe o cripto."
+        "title": "3. Retiros multi-canal",
+        "text": "Cobros vía Paxum, Yoursafe o criptomonedas. Sin exclusividad de canal — cada Master elige el suyo."
       }
     },
     "benefits": {
       "title": "Qué ofrece el programa Master",
       "items": {
         "b1": {
-          "title": "0 EUR de fees de plataforma",
-          "text": "No cobramos cuota de registro, cuota mensual, fee por modelo activa ni fee por transacción."
+          "title": "0 EUR de comisiones",
+          "text": "El programa Master opera sin cuotas de registro, sin mensualidades ni comisiones por modelo o transacción."
         },
         "b2": {
-          "title": "Escalado por volumen agregado",
-          "text": "Los ingresos de todas tus modelos activas suman y desbloquean tramos de revenue share superiores. El detalle exacto lo consultas en tu Dashboard Master tras registro."
+          "title": "Panel operativo unificado",
+          "text": "El programa Master consolida en una sola cuenta la gestión de todas las modelos del estudio y sus métricas económicas."
         },
         "b3": {
-          "title": "Payouts multi-rail",
-          "text": "Prioridad Paxum, luego Yoursafe, luego cripto. Umbral mínimo bajo, cierres quincenales de referencia."
-        },
-        "b4": {
-          "title": "Compliance de serie",
-          "text": "KYC persona física con Didit, contrato Master versionado, política GDPR alineada con estándar del sector."
+          "title": "Cumplimiento normativo de serie",
+          "text": "SharemeChat integra verificación de identidad, contrato Master versionado y política GDPR alineada con el estándar del sector."
         }
       }
     },
@@ -3732,21 +3728,21 @@
       "items": {
         "q1": {
           "q": "¿Necesito registrar una empresa?",
-          "a": "No. El Master se registra como persona física. Firmas el Contrato de Master y superas KYC (mismo proveedor Didit que las modelos). Si operas bajo una sociedad puedes declararla en el formulario de registro como información opcional."
+          "a": "No. El programa Master admite persona física, con verificación de identidad estándar. Si operas bajo sociedad, puedes declararla como dato opcional en el registro."
         },
         "q2": {
           "q": "¿Cuándo cobro y cómo?",
-          "a": "Payouts on-demand con cierre quincenal de referencia. Prioridad de rails: Paxum, Yoursafe y cripto (NOWPayments). Los umbrales operativos vigentes los consultas en tu Dashboard Master tras el registro."
+          "a": "Retiros a petición con cierre quincenal de referencia. Los canales habilitados y los umbrales aplicables se detallan en el Panel Master tras el registro."
         },
         "q3": {
           "q": "¿Desde qué países puedo operar?",
-          "a": "El programa Master está abierto internacionalmente. Los canales de payout disponibles y los requisitos KYC específicos se validan durante el registro."
+          "a": "El programa Master es internacional. Los canales de retiro y los requisitos de verificación se ajustan al país durante el registro."
         }
       }
     },
     "ctaFinal": {
-      "title": "¿Listo para escalar tu estudio con SharemeChat?",
-      "subtitle": "El registro es gratuito. Tras KYC y aceptación del Contrato de Master accedes a tu Dashboard con el detalle económico completo y podrás invitar a tus primeras modelos.",
+      "title": "¿Listo para comenzar con la cuenta Master?",
+      "subtitle": "Registro gratuito y sin compromiso. Empieza a operar el programa Master en pocos días.",
       "ctaPrimary": "Registrarme como Master",
       "ctaSecondary": "Volver al inicio"
     },
