@@ -4,6 +4,7 @@ import i18n from './i18n';
 import RequireRole from './components/RequireRole';
 import DashboardClient from './pages/dashboard/DashboardClient';
 import DashboardModel from './pages/dashboard/DashboardModel';
+import DashboardMaster from './pages/dashboard/DashboardMaster';
 import DashboardUserClient from './pages/dashboard/DashboardUserClient';
 import DashboardUserModel from './pages/dashboard/DashboardUserModel';
 import DashboardAdmin from './pages/admin/DashboardAdmin';
@@ -200,6 +201,7 @@ function App() {
 
                     <Route path="/client" render={() => (<RequireRole role="CLIENT"><DashboardClient /></RequireRole>)} />
                     <Route path="/model" render={() => (<RequireRole role="MODEL"><DashboardModel /></RequireRole>)} />
+                    <Route path="/master" render={() => (<RequireRole role="MASTER"><DashboardMaster /></RequireRole>)} />
                     <Route path="/dashboard-admin" render={() => <ExternalRedirect to={buildAdminAppUrl('/dashboard-admin')} />} />
 
                     <Route path="/dashboard-user-client" render={() => (<RequireRole role="USER" allowedUserTypes={[UserTypes.FORM_CLIENT]}><DashboardUserClient /></RequireRole>)} />

@@ -3747,5 +3747,48 @@
       "ctaSecondary": "Volver al inicio"
     },
     "footerLink": "Para estudios"
+  },
+  "masterDashboard": {
+    "nav": {
+      "overview": "Resumen",
+      "modelos": "Modelos",
+      "historial": "Historial",
+      "payout": "Retiro",
+      "blog": "Blog",
+      "openMenu": "Abrir menú",
+      "menu": "Menú"
+    },
+    "actions": {
+      "profile": "Perfil",
+      "logout": "Cerrar sesión",
+      "logoutTitle": "Cerrar sesión"
+    },
+    "overview": {
+      "title": "Resumen del programa Master",
+      "subtitle": "Indicadores consolidados del estudio en los últimos 30 días."
+    },
+    "banners": {
+      "kycPending": "Verificación de identidad pendiente. Completa el KYC para activar plenamente tu cuenta Master.",
+      "contractPending": "Contrato Master pendiente de firma. Fírmalo desde tu perfil para operar sin restricciones."
+    },
+    "kpi": {
+      "gross30d": "Facturación bruta 30d",
+      "gross30dHint": "Suma bruta de todas las modelos activas del estudio.",
+      "activeModels": "Modelos activas",
+      "pending": "{{count}} pendientes de activar",
+      "balance": "Saldo disponible",
+      "balanceHint": "Fondos disponibles para retiro.",
+      "lastPayout": "Último retiro",
+      "lastPayoutNever": "Sin retiros solicitados"
+    },
+    "recent": {
+      "title": "Actividad reciente",
+      "empty": "Aún no hay movimientos registrados."
+    },
+    "placeholders": {
+      "modelos": "Gestión de modelos del estudio — se activa en la próxima entrega.",
+      "historial": "Historial completo del ledger — se activa en la próxima entrega.",
+      "payout": "Solicitud de retiro multi-canal — se activa en la próxima entrega."
+    }
   }
 }

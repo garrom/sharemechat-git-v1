@@ -3747,5 +3747,48 @@
       "ctaSecondary": "Back to home"
     },
     "footerLink": "For studios"
+  },
+  "masterDashboard": {
+    "nav": {
+      "overview": "Overview",
+      "modelos": "Models",
+      "historial": "History",
+      "payout": "Payout",
+      "blog": "Blog",
+      "openMenu": "Open menu",
+      "menu": "Menu"
+    },
+    "actions": {
+      "profile": "Profile",
+      "logout": "Log out",
+      "logoutTitle": "Log out"
+    },
+    "overview": {
+      "title": "Master program overview",
+      "subtitle": "Consolidated studio indicators for the last 30 days."
+    },
+    "banners": {
+      "kycPending": "Identity verification pending. Complete KYC to fully activate your Master account.",
+      "contractPending": "Master contract pending signature. Sign it from your profile to operate without restrictions."
+    },
+    "kpi": {
+      "gross30d": "Gross billing 30d",
+      "gross30dHint": "Aggregated gross of all active studio models.",
+      "activeModels": "Active models",
+      "pending": "{{count}} pending activation",
+      "balance": "Available balance",
+      "balanceHint": "Funds available for payout.",
+      "lastPayout": "Last payout",
+      "lastPayoutNever": "No payouts requested yet"
+    },
+    "recent": {
+      "title": "Recent activity",
+      "empty": "No movements recorded yet."
+    },
+    "placeholders": {
+      "modelos": "Studio model management — ships in the next iteration.",
+      "historial": "Full ledger history — ships in the next iteration.",
+      "payout": "Multi-channel payout request — ships in the next iteration."
+    }
   }
 }

@@ -49,6 +49,10 @@ export const resolveHomeUrl = (user) => {
     return buildPublicAppUrl('/model');
   }
 
+  if (user?.role === Roles.MASTER) {
+    return buildPublicAppUrl('/master');
+  }
+
   if (user?.role === Roles.USER) {
     if (user?.userType === UserTypes.FORM_CLIENT) {
       return buildPublicAppUrl('/dashboard-user-client');

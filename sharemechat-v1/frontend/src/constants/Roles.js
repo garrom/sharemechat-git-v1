@@ -1,6 +1,7 @@
 const Roles = {
   CLIENT: 'CLIENT',
   MODEL: 'MODEL',
+  MASTER: 'MASTER',
   ADMIN: 'ADMIN',
   USER: 'USER'
 };
