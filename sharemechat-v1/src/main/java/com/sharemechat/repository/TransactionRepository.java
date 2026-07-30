@@ -204,4 +204,32 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to,
             Pageable pageable);
+
+    /**
+     * ADR-056 Fase S5.a.3: historial del Master autenticado con filtros
+     * opcionales. Las transacciones del Master siempre tienen
+     * {@code t.user.id = masterId} (atribucion S3.rev via
+     * StreamService/UserTrialService cuando la modelo tiene
+     * master_user_id set). El campo {@code attributedModelUserId} del
+     * DTO respuesta permite drill-down por modelo.
+     *
+     * <p>Filtros y semantica identicos a
+     * {@link #findClientTransactionsFiltered}: se excluyen operaciones
+     * de gift con amount=0 (residuo legacy) y se ordena descendente por
+     * timestamp.
+     */
+    @Query("SELECT t FROM Transaction t "
+            + "WHERE t.user.id = :masterId "
+            + "AND (:types IS NULL OR t.operationType IN :types) "
+            + "AND (:from IS NULL OR t.timestamp >= :from) "
+            + "AND (:to IS NULL OR t.timestamp < :to) "
+            + "AND NOT (t.operationType = 'GIFT_SEND' AND t.amount = 0) "
+            + "AND NOT (t.operationType = 'GIFT_EARNING' AND t.amount = 0) "
+            + "ORDER BY t.timestamp DESC")
+    Page<Transaction> findMasterTransactionsFiltered(
+            @Param("masterId") Long masterId,
+            @Param("types") List<String> types,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to,
+            Pageable pageable);
 }
