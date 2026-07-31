@@ -3806,8 +3806,56 @@
       "empty": "Aún no hay movimientos registrados."
     },
     "placeholders": {
-      "historial": "Historial completo del ledger — se activa en la próxima entrega.",
       "payout": "Solicitud de retiro multi-canal — se activa en la próxima entrega."
+    },
+    "historial": {
+      "title": "Historial de movimientos",
+      "subtitle": "Ingresos por streaming y retiros solicitados de tu cuenta Master.",
+      "filters": {
+        "range": "Rango",
+        "from": "Desde",
+        "to": "Hasta",
+        "type": "Tipo",
+        "pageSize": "Resultados"
+      },
+      "presets": {
+        "d7": "Últimos 7 días",
+        "d30": "Últimos 30 días",
+        "d90": "Últimos 90 días",
+        "all": "Todo",
+        "custom": "Personalizado"
+      },
+      "tipos": {
+        "all": "Todos",
+        "income": "Ingresos",
+        "payout": "Retiros"
+      },
+      "cols": {
+        "date": "Fecha",
+        "type": "Tipo",
+        "amount": "Importe",
+        "description": "Descripción",
+        "attributedModel": "Modelo atribuida"
+      },
+      "opTypes": {
+        "streamEarning": "Ingreso streaming",
+        "payoutRequest": "Solicitud de retiro"
+      },
+      "actions": {
+        "refresh": "Refrescar"
+      },
+      "empty": {
+        "title": "No hay movimientos en el rango seleccionado.",
+        "hint": "Amplía el rango de fechas o cambia el filtro de tipo."
+      },
+      "pagination": {
+        "info": "Página {{page}} de {{totalPages}} · {{total}} movimientos",
+        "prev": "Anterior",
+        "next": "Siguiente"
+      },
+      "errors": {
+        "load": "No se pudo cargar el historial."
+      }
     },
     "modelos": {
       "title": "Modelos del estudio",

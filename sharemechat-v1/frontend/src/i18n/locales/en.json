@@ -3806,8 +3806,56 @@
       "empty": "No movements recorded yet."
     },
     "placeholders": {
-      "historial": "Full ledger history — ships in the next iteration.",
       "payout": "Multi-channel payout request — ships in the next iteration."
+    },
+    "historial": {
+      "title": "Transaction history",
+      "subtitle": "Streaming income and payout requests from your Master account.",
+      "filters": {
+        "range": "Range",
+        "from": "From",
+        "to": "To",
+        "type": "Type",
+        "pageSize": "Results"
+      },
+      "presets": {
+        "d7": "Last 7 days",
+        "d30": "Last 30 days",
+        "d90": "Last 90 days",
+        "all": "All",
+        "custom": "Custom"
+      },
+      "tipos": {
+        "all": "All",
+        "income": "Income",
+        "payout": "Payouts"
+      },
+      "cols": {
+        "date": "Date",
+        "type": "Type",
+        "amount": "Amount",
+        "description": "Description",
+        "attributedModel": "Attributed model"
+      },
+      "opTypes": {
+        "streamEarning": "Streaming income",
+        "payoutRequest": "Payout request"
+      },
+      "actions": {
+        "refresh": "Refresh"
+      },
+      "empty": {
+        "title": "No transactions in the selected range.",
+        "hint": "Widen the date range or change the type filter."
+      },
+      "pagination": {
+        "info": "Page {{page}} of {{totalPages}} · {{total}} entries",
+        "prev": "Previous",
+        "next": "Next"
+      },
+      "errors": {
+        "load": "Could not load history."
+      }
     },
     "modelos": {
       "title": "Studio models",

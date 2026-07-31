@@ -9,6 +9,7 @@ import { useSession } from '../../components/SessionProvider';
 import { useAppModals } from '../../components/useAppModals';
 import NavbarMaster from '../../components/navbar/NavbarMaster';
 import MasterModelosPanel from '../../components/master/MasterModelosPanel';
+import MasterHistorialPanel from '../../components/master/MasterHistorialPanel';
 import masterApi from '../../api/masterApi';
 
 // ============================================================
@@ -304,11 +305,7 @@ export default function DashboardMaster() {
 
         {activeTab === 'modelos' && <MasterModelosPanel />}
 
-        {activeTab === 'historial' && (
-          <div style={TabPlaceholder}>
-            <p>{i18n.t('masterDashboard.placeholders.historial')}</p>
-          </div>
-        )}
+        {activeTab === 'historial' && <MasterHistorialPanel />}
 
         {activeTab === 'payout' && (
           <div style={TabPlaceholder}>
