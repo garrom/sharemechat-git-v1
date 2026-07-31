@@ -89,12 +89,16 @@ const AdminOverviewPanel = ({
       pending: 0,
       approved: 0,
       rejected: 0,
+      pendingPromotion: 0, // ADR-056 2026-07-31: verification=APPROVED AND role=USER
     };
 
     return models.reduce((acc, item) => {
       const status = String(item?.verificationStatus || '').toUpperCase();
-      if (status === 'APPROVED') acc.approved += 1;
-      else if (status === 'REJECTED') acc.rejected += 1;
+      const role = String(item?.role || '').toUpperCase();
+      if (status === 'APPROVED') {
+        acc.approved += 1;
+        if (role === 'USER') acc.pendingPromotion += 1;
+      } else if (status === 'REJECTED') acc.rejected += 1;
       else acc.pending += 1;
       return acc;
     }, initial);
@@ -114,6 +118,17 @@ const AdminOverviewPanel = ({
         title: t('admin.overview.priority.pendingModels.title', { count: modelSummary.pending }),
         meta: t('admin.overview.priority.pendingModels.meta'),
         action: t('admin.overview.priority.pendingModels.action'),
+      });
+    }
+
+    if (modelSummary.pendingPromotion > 0) {
+      items.push({
+        key: 'modelsPendingPromotion',
+        tone: '#e0e7ff',
+        title: t('admin.overview.priority.pendingPromotionModels.title',
+                 { count: modelSummary.pendingPromotion }),
+        meta: t('admin.overview.priority.pendingPromotionModels.meta'),
+        action: t('admin.overview.priority.pendingPromotionModels.action'),
       });
     }
 

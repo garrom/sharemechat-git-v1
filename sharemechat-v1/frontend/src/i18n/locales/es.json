@@ -2384,6 +2384,11 @@
           "meta": "Conviene revisar onboarding y documentacion pendiente.",
           "action": "Abrir Modelos"
         },
+        "pendingPromotionModels": {
+          "title": "{{count}} modelos pendientes de promocion",
+          "meta": "Didit aprobo KYC. Falta tu decision editorial para promocionar a MODEL.",
+          "action": "Abrir Modelos"
+        },
         "openReports": {
           "title": "{{count}} reports abiertos",
           "meta": "Hay incidencias pendientes de triage o decision.",

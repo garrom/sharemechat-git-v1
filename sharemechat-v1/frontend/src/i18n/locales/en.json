@@ -2384,6 +2384,11 @@
           "meta": "Onboarding and pending documentation should be reviewed.",
           "action": "Open Models"
         },
+        "pendingPromotionModels": {
+          "title": "{{count}} models pending promotion",
+          "meta": "Didit approved KYC. Your editorial decision is needed to promote to MODEL.",
+          "action": "Open Models"
+        },
         "openReports": {
           "title": "{{count}} open reports",
           "meta": "There are incidents pending triage or decision.",
