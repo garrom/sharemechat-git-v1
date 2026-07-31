@@ -24,6 +24,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -191,6 +192,7 @@ public class AuthController {
     // =========================================================
 
     @PostMapping("/refresh")
+    @Transactional
     public ResponseEntity<?> refresh(
             @CookieValue(name = "refresh_token", required = false) String refreshToken,
             HttpServletRequest req,
@@ -252,7 +254,8 @@ public class AuthController {
         String refreshRole = u.getRole();
         boolean primaryRoleAllowed = Constants.Roles.USER.equals(refreshRole)
                 || Constants.Roles.CLIENT.equals(refreshRole)
-                || Constants.Roles.MODEL.equals(refreshRole);
+                || Constants.Roles.MODEL.equals(refreshRole)
+                || Constants.Roles.MASTER.equals(refreshRole);
         BackofficeAccessService.BackofficeAccessProfile refreshProfile =
                 backofficeAccessService.loadProfile(u.getId(), u.getRole());
         if (!primaryRoleAllowed || !refreshProfile.roles().isEmpty()) {
