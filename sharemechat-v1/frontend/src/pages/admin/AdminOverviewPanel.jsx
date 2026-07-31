@@ -123,7 +123,12 @@ const AdminOverviewPanel = ({
 
     if (modelSummary.pendingPromotion > 0) {
       items.push({
-        key: 'modelsPendingPromotion',
+        // key='models' reutiliza el handler onOpen('models') existente
+        // que abre el panel Modelos. Alli el operador cambia el filtro
+        // Estado a "Pendiente promocion" para ver la lista. Deuda menor:
+        // auto-preseleccionar ese filtro pasando query/state en la
+        // navegacion (requiere cambio DashboardAdmin router).
+        key: 'models',
         tone: '#e0e7ff',
         title: t('admin.overview.priority.pendingPromotionModels.title',
                  { count: modelSummary.pendingPromotion }),
