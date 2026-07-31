@@ -3827,7 +3827,8 @@
       },
       "tipos": {
         "all": "Todos",
-        "income": "Ingresos",
+        "income": "Ingresos (streaming + regalos)",
+        "gifts": "Solo regalos",
         "payout": "Retiros"
       },
       "cols": {
@@ -3839,6 +3840,7 @@
       },
       "opTypes": {
         "streamEarning": "Ingreso streaming",
+        "giftEarning": "Regalo recibido",
         "payoutRequest": "Solicitud de retiro"
       },
       "actions": {

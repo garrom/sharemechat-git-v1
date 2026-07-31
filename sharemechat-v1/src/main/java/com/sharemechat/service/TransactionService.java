@@ -1,7 +1,6 @@
 package com.sharemechat.service;
 
 import com.sharemechat.config.BillingProperties;
-import com.sharemechat.config.GiftProperties;
 import com.sharemechat.constants.Constants;
 import com.sharemechat.dto.TransactionRequestDTO;
 import com.sharemechat.entity.*;
@@ -45,7 +44,11 @@ public class TransactionService {
     private final SupportTicketRepository supportTicketRepository;
 
     private final BillingProperties billing;
-    private final GiftProperties giftProperties;
+    // ADR-056 revision 2026-08-01: giftProperties.modelShare eliminada.
+    // Los gifts ahora aplican el mismo motor de tramos que streams
+    // (ModelTierService), unificando el reparto Master↔Modelo. La property
+    // gift.model-share=0.90 se retiro tambien de application.properties.
+    private final ModelTierService modelTierService;
     private final EmailVerificationService emailVerificationService;
     private final ClientKycGate clientKycGate;
 
@@ -62,7 +65,7 @@ public class TransactionService {
             PayoutRequestRepository payoutRequestRepository,
             SupportTicketRepository supportTicketRepository,
             BillingProperties billing,
-            GiftProperties giftProperties,
+            ModelTierService modelTierService,
             EmailVerificationService emailVerificationService,
             ClientKycGate clientKycGate
     ) {
@@ -78,7 +81,7 @@ public class TransactionService {
         this.payoutRequestRepository = payoutRequestRepository;
         this.supportTicketRepository = supportTicketRepository;
         this.billing = billing;
-        this.giftProperties = giftProperties;
+        this.modelTierService = modelTierService;
         this.emailVerificationService = emailVerificationService;
         this.clientKycGate = clientKycGate;
     }
@@ -743,13 +746,61 @@ public class TransactionService {
         log.debug("processGift: loaded model entity userId={} saldoActual={} totalIngresos={}",
                 modelId, model.getSaldoActual(), model.getTotalIngresos());
 
-        BigDecimal lastModelBalance = lastBalanceOf(modelId);
-
-        BigDecimal share = (giftProperties.getModelShare() != null ? giftProperties.getModelShare() : BigDecimal.ZERO);
-        BigDecimal modelEarning = cost.multiply(share).setScale(2, RoundingMode.HALF_UP);
+        // ADR-056 revision 2026-08-01: los gifts pasan a aplicar el mismo
+        // motor de tramos que streams (ModelTierService). Antes iba con
+        // share fijo giftProperties.modelShare=0.90; ahora respeta el
+        // tramo INDIVIDUAL o MASTER T1-T4 vigente para la modelo.
+        // Gifts NO cuentan para determinar el tramo (level-independent
+        // income segun LiveJasmin/estandar sector) — solo lo consumen.
+        com.sharemechat.entity.ModelPricingTier giftTier = null;
+        try {
+            giftTier = modelTierService.resolveEffectiveTierForPayout(modelId);
+        } catch (Exception ex) {
+            log.warn("processGift: error resolviendo tier modelId={} -> {}",
+                    modelId, ex.getMessage());
+        }
+        BigDecimal modelEarning;
+        if (giftTier == null || giftTier.getModelSharePct() == null) {
+            // Sin tramo resoluble: no repartir a modelo (defensive).
+            // La plataforma se queda todo. Log warning para investigar.
+            modelEarning = BigDecimal.ZERO;
+            log.warn("processGift: no tier resolvable modelId={} giftId={} — modelEarning=0",
+                    modelId, giftId);
+        } else {
+            modelEarning = cost.multiply(giftTier.getModelSharePct())
+                    .divide(new BigDecimal("100"), 6, RoundingMode.HALF_UP)
+                    .setScale(2, RoundingMode.HALF_UP);
+        }
         BigDecimal platformEarning = cost.subtract(modelEarning).setScale(2, RoundingMode.HALF_UP);
-        log.debug("processGift: split giftId={} share={} modelEarning={} platformEarning={}",
-                giftId, share, modelEarning, platformEarning);
+        if (platformEarning.compareTo(BigDecimal.ZERO) < 0) {
+            // defensive: nunca margen negativo
+            platformEarning = BigDecimal.ZERO;
+            modelEarning = cost;
+        }
+        log.debug("processGift: split giftId={} tierCode={} tierPct={} modelEarning={} platformEarning={}",
+                giftId,
+                giftTier != null ? giftTier.getTierCode() : "-",
+                giftTier != null ? giftTier.getModelSharePct() : "-",
+                modelEarning, platformEarning);
+
+        // ADR-056 D4: si la modelo tiene master_user_id, el modelEarning
+        // se atribuye al MASTER (mismo patron StreamService.endSession).
+        // Model.saldoActual/totalIngresos NO se tocan cuando hay Master.
+        // La modelo cobra off-platform del Master segun master_model_splits.
+        Long masterUserIdOfModel = model.getMasterUserId();
+        Long earningRecipientId;
+        User earningRecipient;
+        if (masterUserIdOfModel != null) {
+            earningRecipientId = masterUserIdOfModel;
+            earningRecipient = userRepository.findById(masterUserIdOfModel)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Master no encontrado para modelId=" + modelId
+                                    + " masterUserId=" + masterUserIdOfModel));
+        } else {
+            earningRecipientId = modelId;
+            earningRecipient = modelUser;
+        }
+        BigDecimal lastRecipientBalance = lastBalanceOf(earningRecipientId);
 
         StreamRecord stream = null;
 
@@ -804,35 +855,52 @@ public class TransactionService {
         clientRepository.save(client);
         log.debug("processGift: updated client cache userId={} saldoActual={}", clientId, client.getSaldoActual());
 
+        // Transaction GIFT_EARNING atribuida al recipient (Master si
+        // masterUserIdOfModel != null; modelo si es individual). Igual
+        // patron que StreamService.endSession.
         Transaction txModel = new Transaction();
-        txModel.setUser(modelUser);
+        txModel.setUser(earningRecipient);
         txModel.setAmount(modelEarning);
         txModel.setOperationType("GIFT_EARNING");
         txModel.setStreamRecord(stream);
         txModel.setGift(gift);
-        txModel.setDescription("Ingreso por regalo: " + gift.getName());
+        if (masterUserIdOfModel != null) {
+            // Trazabilidad: modelo original que genero el gift.
+            txModel.setAttributedModelUserId(modelId);
+            txModel.setDescription("Ingreso por regalo (modeloId=" + modelId
+                    + "): " + gift.getName());
+        } else {
+            txModel.setDescription("Ingreso por regalo: " + gift.getName());
+        }
         Transaction savedTxModel = transactionRepository.save(txModel);
-        log.debug("processGift: saved model transaction txId={} amount={} op={}",
-                savedTxModel.getId(), txModel.getAmount(), txModel.getOperationType());
+        log.debug("processGift: saved earning transaction txId={} recipientId={} amount={} op={}",
+                savedTxModel.getId(), earningRecipientId, txModel.getAmount(),
+                txModel.getOperationType());
 
-        BigDecimal newModelBalance = lastModelBalance.add(modelEarning);
+        BigDecimal newRecipientBalance = lastRecipientBalance.add(modelEarning);
 
         Balance balModel = new Balance();
-        balModel.setUserId(modelId);
+        balModel.setUserId(earningRecipientId);
         balModel.setTransactionId(savedTxModel.getId());
         balModel.setOperationType("GIFT_EARNING");
         balModel.setAmount(modelEarning);
-        balModel.setBalance(newModelBalance);
-        balModel.setDescription("Ingreso por regalo: " + gift.getName());
+        balModel.setBalance(newRecipientBalance);
+        balModel.setDescription(txModel.getDescription());
         balanceRepository.save(balModel);
-        log.debug("processGift: saved model balance userId={} newBalance={}", modelId, newModelBalance);
+        log.debug("processGift: saved earning balance userId={} newBalance={}",
+                earningRecipientId, newRecipientBalance);
 
-        model.setSaldoActual(newModelBalance);
-        BigDecimal totalIngresos = model.getTotalIngresos() == null ? BigDecimal.ZERO : model.getTotalIngresos();
-        model.setTotalIngresos(totalIngresos.add(modelEarning));
-        modelRepository.save(model);
-        log.debug("processGift: updated model cache userId={} saldoActual={} totalIngresos={}",
-                modelId, model.getSaldoActual(), model.getTotalIngresos());
+        if (masterUserIdOfModel == null) {
+            // Solo modelo individual: actualizar caches Model.
+            // Bajo Master, Model.saldoActual/totalIngresos NO se tocan
+            // (el dinero es del Master, no de la modelo).
+            model.setSaldoActual(newRecipientBalance);
+            BigDecimal totalIngresos = model.getTotalIngresos() == null ? BigDecimal.ZERO : model.getTotalIngresos();
+            model.setTotalIngresos(totalIngresos.add(modelEarning));
+            modelRepository.save(model);
+            log.debug("processGift: updated model cache userId={} saldoActual={} totalIngresos={}",
+                    modelId, model.getSaldoActual(), model.getTotalIngresos());
+        }
 
         if (platformEarning.compareTo(BigDecimal.ZERO) > 0) {
             PlatformTransaction ptx = new PlatformTransaction();
@@ -852,17 +920,18 @@ public class TransactionService {
             log.debug("processGift: saved platform balance newBalance={}", newPlatformBalance);
         }
 
-        log.info("processGift: success clientId={} modelId={} giftId={} finalClientBalance={} finalModelBalance={}",
-                clientId, modelId, giftId, newClientBalance, newModelBalance);
-        log.info("gift_tx_committed actorUserId={} peerUserId={} giftId={} streamRecordId={} senderTransactionId={} recipientTransactionId={} senderBalanceAfter={} recipientBalanceAfter={}",
+        log.info("processGift: success clientId={} modelId={} giftId={} recipientId={} finalClientBalance={} finalRecipientBalance={}",
+                clientId, modelId, giftId, earningRecipientId, newClientBalance, newRecipientBalance);
+        log.info("gift_tx_committed actorUserId={} peerUserId={} recipientUserId={} giftId={} streamRecordId={} senderTransactionId={} recipientTransactionId={} senderBalanceAfter={} recipientBalanceAfter={}",
                 clientId,
                 modelId,
+                earningRecipientId,
                 giftId,
                 stream != null ? stream.getId() : null,
                 savedTxClient.getId(),
                 savedTxModel.getId(),
                 newClientBalance,
-                newModelBalance);
+                newRecipientBalance);
 
         return gift;
     }

@@ -3827,7 +3827,8 @@
       },
       "tipos": {
         "all": "All",
-        "income": "Income",
+        "income": "Income (streaming + gifts)",
+        "gifts": "Gifts only",
         "payout": "Payouts"
       },
       "cols": {
@@ -3839,6 +3840,7 @@
       },
       "opTypes": {
         "streamEarning": "Streaming income",
+        "giftEarning": "Gift received",
         "payoutRequest": "Payout request"
       },
       "actions": {

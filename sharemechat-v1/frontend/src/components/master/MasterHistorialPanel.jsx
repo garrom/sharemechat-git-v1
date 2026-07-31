@@ -88,9 +88,13 @@ const rangeFromPreset = (preset) => {
 
 // Mapeo dropdown tipo -> types param backend.
 // El backend ya soporta CSV en `types=` (mayusculas).
+// INGRESOS incluye STREAM_EARNING y GIFT_EARNING atribuidos al Master
+// (ADR-056 revision 2026-08-01: los gifts de modelos bajo Master
+// pasan por el Master igual que streams).
 const typesFromDropdown = (tipo) => {
   if (tipo === 'ALL') return null;
-  if (tipo === 'INGRESOS') return ['STREAM_EARNING'];
+  if (tipo === 'INGRESOS') return ['STREAM_EARNING', 'GIFT_EARNING'];
+  if (tipo === 'GIFTS') return ['GIFT_EARNING'];
   if (tipo === 'RETIROS') return ['PAYOUT_REQUEST'];
   return null;
 };
@@ -147,9 +151,10 @@ export default function MasterHistorialPanel() {
 
   useEffect(() => { load(page); }, [load, page]);
 
-  const isIncome = (op) => op === 'STREAM_EARNING';
+  const isIncome = (op) => op === 'STREAM_EARNING' || op === 'GIFT_EARNING';
   const opLabel = (op) => {
     if (op === 'STREAM_EARNING') return t('masterDashboard.historial.opTypes.streamEarning');
+    if (op === 'GIFT_EARNING') return t('masterDashboard.historial.opTypes.giftEarning');
     if (op === 'PAYOUT_REQUEST') return t('masterDashboard.historial.opTypes.payoutRequest');
     return op;
   };
@@ -205,6 +210,7 @@ export default function MasterHistorialPanel() {
           <select style={Select} value={tipo} onChange={(e) => setTipo(e.target.value)}>
             <option value="ALL">{t('masterDashboard.historial.tipos.all')}</option>
             <option value="INGRESOS">{t('masterDashboard.historial.tipos.income')}</option>
+            <option value="GIFTS">{t('masterDashboard.historial.tipos.gifts')}</option>
             <option value="RETIROS">{t('masterDashboard.historial.tipos.payout')}</option>
           </select>
         </div>
