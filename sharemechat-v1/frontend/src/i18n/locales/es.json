@@ -2729,7 +2729,9 @@
         "back": "Trasera",
         "selfie": "Selfie/PDF",
         "diditApproved": "Docs validados por Didit",
-        "diditPending": "Esperando verificación Didit"
+        "diditPending": "Esperando verificación Didit",
+        "diditSessionCopy": "Copiar session_id para pegar en dashboard Didit",
+        "diditSessionCopyLabel": "Copiar"
       },
       "kyc": {
         "title": "Configuración KYC de onboarding",
@@ -2746,7 +2748,8 @@
         "repeat": "Repetir"
       },
       "filters": {
-        "statusActive": "Activas"
+        "statusActive": "Activas",
+        "statusPendingPromotion": "Pendiente promoción"
       },
       "pills": {
         "subscribed": "Alta",

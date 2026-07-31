@@ -45,6 +45,13 @@ public class UserDTO {
     private Boolean modelChecklistFrontOk;
     private Boolean modelChecklistBackOk;
     private Boolean modelChecklistSelfieOk;
+    // ADR-056 2026-07-31: id de la ultima sesion Didit (provider) de esta
+    // modelo, expuesto en la tab admin Modelos para que el admin lo copie
+    // y lo pegue en el dashboard Didit y ver selfie + docs de la modelo
+    // antes de decidir promocion a role=MODEL (validacion editorial de
+    // perfil). Didit no expone deep-link URL a session concreta en su
+    // dashboard publico (verificado en docs.didit.me 2026-07-31).
+    private String providerSessionId;
 
     // Product Operational Mode (ADR-009) — exposicion al frontend del estado
     // del gate de admision para que la SPA decida si renderiza la pantalla
@@ -153,6 +160,9 @@ public class UserDTO {
 
     public Boolean getModelChecklistSelfieOk() { return modelChecklistSelfieOk; }
     public void setModelChecklistSelfieOk(Boolean modelChecklistSelfieOk) { this.modelChecklistSelfieOk = modelChecklistSelfieOk; }
+
+    public String getProviderSessionId() { return providerSessionId; }
+    public void setProviderSessionId(String providerSessionId) { this.providerSessionId = providerSessionId; }
 
     public String getProductAccessMode() { return productAccessMode; }
     public void setProductAccessMode(String productAccessMode) { this.productAccessMode = productAccessMode; }

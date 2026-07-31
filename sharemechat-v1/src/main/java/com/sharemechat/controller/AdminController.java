@@ -98,11 +98,16 @@ public class AdminController {
         }
     }
 
-    // GET /api/admin/models?verification=PENDING|APPROVED|REJECTED (opcional)
+    // GET /api/admin/models?verification=PENDING|APPROVED|REJECTED&pendingPromotion=true (opcionales)
+    // pendingPromotion=true aisla modelos APPROVED por Didit pero aun con
+    // role=USER (esperan la decision editorial admin para promover a MODEL).
     @GetMapping("/models")
-    public ResponseEntity<List<UserDTO>> getModels(@RequestParam(required = false) String verification) {
-        logger.info("GET /api/admin/models verification={}", verification);
-        return ResponseEntity.ok(adminService.getModels(verification));
+    public ResponseEntity<List<UserDTO>> getModels(
+            @RequestParam(required = false) String verification,
+            @RequestParam(required = false, defaultValue = "false") boolean pendingPromotion) {
+        logger.info("GET /api/admin/models verification={} pendingPromotion={}",
+                verification, pendingPromotion);
+        return ResponseEntity.ok(adminService.getModels(verification, pendingPromotion));
     }
 
     // POST /api/admin/review/{userId}?action=APPROVE|REJECT|PENDING

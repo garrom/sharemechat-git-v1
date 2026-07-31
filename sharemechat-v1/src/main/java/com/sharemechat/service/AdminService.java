@@ -110,6 +110,11 @@ public class AdminService {
 
     @Transactional(readOnly = true)
     public List<UserDTO> getModels(String verification) {
+        return getModels(verification, false);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserDTO> getModels(String verification, boolean pendingPromotion) {
         List<User> raw = (verification == null || verification.isBlank())
                 ? userRepository.findByVerificationStatusIsNotNull()
                 : userRepository.findByVerificationStatus(verification.toUpperCase());
@@ -121,6 +126,20 @@ public class AdminService {
         List<User> list = raw.stream()
                 .filter(u -> Constants.UserTypes.FORM_MODEL.equals(u.getUserType()))
                 .toList();
+
+        // Filtro adicional "Pendiente promocion" (2026-07-31): aisla las
+        // modelos con verification=APPROVED (Didit aprobo o admin manual
+        // aprobo docs) que aun mantienen role=USER — necesitan la
+        // decision editorial final del admin para pasar a role=MODEL y
+        // poder emitir. Antes se mezclaban con las ya promovidas en el
+        // mismo filtro "Aprobado", el admin no distinguia cuales le
+        // esperaban accion.
+        if (pendingPromotion) {
+            list = list.stream()
+                    .filter(u -> Constants.VerificationStatuses.APPROVED.equals(u.getVerificationStatus())
+                            && Constants.Roles.USER.equals(u.getRole()))
+                    .toList();
+        }
 
         List<Long> userIds = list.stream()
                 .map(User::getId)
@@ -137,6 +156,12 @@ public class AdminService {
             dto.setModelChecklistFrontOk(checklist != null && checklist.isFrontOk());
             dto.setModelChecklistBackOk(checklist != null && checklist.isBackOk());
             dto.setModelChecklistSelfieOk(checklist != null && checklist.isSelfieOk());
+            // provider_session_id de la ultima sesion Didit MODEL de la user.
+            // Admin lo copia para pegarlo en dashboard Didit (Didit no
+            // expone deep-link URL 2026-07-31).
+            kycSessionRepository.findTopByUserIdAndSessionTypeOrderByIdDesc(
+                            user.getId(), Constants.SessionTypes.MODEL)
+                    .ifPresent(s -> dto.setProviderSessionId(s.getProviderSessionId()));
             return dto;
         }).toList();
     }

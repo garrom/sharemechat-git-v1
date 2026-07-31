@@ -277,6 +277,17 @@ const AdminModelsPanel = ({
         return verification === 'APPROVED' && !isUnsubscribed;
       });
     }
+    // ADR-056 2026-07-31: "Pendiente promocion" aisla las modelos con
+    // Didit APPROVED pero role=USER que esperan la decision editorial
+    // admin (no la validacion tecnica KYC). Antes se mezclaban con las
+    // ya promovidas dentro de "Aprobado".
+    if (statusFilter === 'PENDING_PROMOTION') {
+      return users.filter((user) => {
+        const verification = String(user?.verificationStatus || 'PENDING').toUpperCase();
+        const role = String(user?.role || '').toUpperCase();
+        return verification === 'APPROVED' && role === 'USER';
+      });
+    }
     return users.filter((user) => (user.verificationStatus || 'PENDING') === statusFilter);
   }, [users, statusFilter]);
 
@@ -307,11 +318,43 @@ const AdminModelsPanel = ({
     // basada en verification_status APPROVED del webhook.
     if (activeMode === 'DIDIT') {
       const isApproved = user.verificationStatus === 'APPROVED';
+      const sid = user.providerSessionId;
+      const handleCopySid = async () => {
+        if (!sid) return;
+        try {
+          await navigator.clipboard.writeText(sid);
+        } catch { /* silent: usuario puede seleccionar manualmente */ }
+      };
       return (
-        <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>
-          {isApproved
-            ? t('admin.models.checklist.diditApproved')
-            : t('admin.models.checklist.diditPending')}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>
+            {isApproved
+              ? t('admin.models.checklist.diditApproved')
+              : t('admin.models.checklist.diditPending')}
+          </div>
+          {sid && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <code style={{
+                fontSize: '0.72rem', background: '#f3f4f6', padding: '2px 6px',
+                borderRadius: 4, color: '#374151', wordBreak: 'break-all',
+                fontFamily: 'ui-monospace, SFMono-Regular, monospace',
+              }}>
+                {sid}
+              </code>
+              <button
+                type="button"
+                onClick={handleCopySid}
+                title={t('admin.models.checklist.diditSessionCopy')}
+                style={{
+                  fontSize: '0.72rem', padding: '2px 8px', borderRadius: 4,
+                  border: '1px solid #d1d5db', background: '#fff',
+                  cursor: 'pointer', color: '#374151',
+                }}
+              >
+                {t('admin.models.checklist.diditSessionCopyLabel')}
+              </button>
+            </div>
+          )}
         </div>
       );
     }
@@ -454,6 +497,7 @@ const AdminModelsPanel = ({
             <option value="ALL">{t('admin.common.labels.all')}</option>
             <option value="ACTIVE">{t('admin.models.filters.statusActive')}</option>
             <option value="PENDING">{t('admin.common.status.pending')}</option>
+            <option value="PENDING_PROMOTION">{t('admin.models.filters.statusPendingPromotion')}</option>
             <option value="APPROVED">{t('admin.common.status.approved')}</option>
             <option value="REJECTED">{t('admin.common.status.rejected')}</option>
           </StyledSelect>
