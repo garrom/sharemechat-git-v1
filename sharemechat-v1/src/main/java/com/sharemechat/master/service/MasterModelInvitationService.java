@@ -126,9 +126,11 @@ public class MasterModelInvitationService {
         user.setVerificationStatus(Constants.VerificationStatuses.PENDING);
         User savedUser = userRepository.save(user);
 
-        // Fila Model con master_user_id set.
+        // Fila Model con master_user_id set. NO setear userId manualmente:
+        // Model usa @MapsId, JPA copia user.id al @Id durante persist. Setearlo
+        // hace que Spring Data JPA save() interprete la entidad como detached y
+        // ejecute merge() -> UPDATE sobre fila inexistente -> StaleObjectStateException.
         Model model = new Model();
-        model.setUserId(savedUser.getId());
         model.setUser(savedUser);
         model.setMasterUserId(masterUserId);
         modelRepository.save(model);
