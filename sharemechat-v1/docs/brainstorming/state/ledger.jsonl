@@ -40,3 +40,6 @@
 {"c":5,"t":"mut","id":"H0013","par":"H0002","note":"trial-hook derivado del wedge USP"}
 {"c":5,"t":"crit","note":"top-5 estable (H0002,H0003,H0001,H0011,H0005); sin hipotesis nuevas de mayor score -> formando meseta"}
 {"c":6,"t":"plateau","note":"top-5 sin cambios c4->c6; senal: toca EXPERIMENTAR (lanzar E0001-E0003 + desbloquear R0004), no seguir pensando"}
+{"c":7,"t":"src","id":"S0006","u":"repo GTM+GA4+GSC infra medicion"}
+{"c":7,"t":"note","id":"R0004","r":"resuelto parcial via repo: infra medicion existe (GA4 Traffic acquisition lee UTM); gap = signup no dispara evento GA4; queda pedir baseline BD + decidir metrica"}
+{"c":7,"t":"approve","id":"R0005","r":"Alain OK outreach; kit A0003 preparado; envio queda a Alain"}
