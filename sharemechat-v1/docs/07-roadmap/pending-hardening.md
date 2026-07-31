@@ -500,6 +500,40 @@ Cambios estructurales al régimen económico ADR-052: reparto dual INDIVIDUAL (5
 
 Sin grandfathering — modelos individuales existentes pasan al nuevo régimen desde momento de aplicación (coste real ≈ 0 dado que hoy hay 0 modelos facturando en T2+).
 
+**Resuelto 2026-07-31 — Redirect browser Didit Master apunta a `/master-kyc-didit/processing`**:
+- Backend: fix `assertWorkflowIdMatchesSessionType` acepta webhook con
+  workflow=model sobre sesión MASTER cuando `masterWorkflowId` está en
+  fallback (esperado hasta que el operador cree workflow dedicado en Didit
+  dashboard).
+- Frontend: nueva página `MasterKycDiditProcessingPage.jsx` con
+  `RequireRole=MASTER`, ruta `/master-kyc-didit/processing`, polling
+  `/api/masters/me/overview` cada 3s hasta 60s.
+- Env vars TEST: publicado `KYC_DIDIT_MASTER_CALLBACK_URL=https://test.sharemechat.com/master-kyc-didit/processing`
+  en `/opt/sharemechat/config.env` + restart servicio.
+- **Pendiente PROD/AUDIT**: publicar el env var equivalente
+  `KYC_DIDIT_MASTER_CALLBACK_URL=https://sharemechat.com/master-kyc-didit/processing`
+  (PROD) y `https://audit.sharemechat.com/master-kyc-didit/processing`
+  (AUDIT cuando esté disponible) antes del deploy del frontend Master a
+  esos entornos. Sin ese env var el fallback a `KYC_DIDIT_CALLBACK_URL`
+  legacy vuelve a romper el redirect.
+
+**Deuda operativa 2026-07-31 — Contrato Master publicado en TEST es BORRADOR**:
+el PDF servido en `https://assets.test.sharemechat.com/legal/master_contract.pdf`
+(manifest version `master_contract_v1_2026-07-31`, sha256
+`490864CE00608B13332DFAA71AA9C6C723F0126276DAAAA5C3302760D2F376D7`)
+es la conversión directa de `docs/01-business/master-contract-v1-draft.md`
+generada con `markdown-pdf` para desbloquear el flujo end-to-end de firma
+en TEST (S5.a fix, 2026-07-31). El fichero fuente es **draft** — redactado
+entre operador y Claude sin revisión legal — y contiene la tabla de tramos
+económicos que la revisión D4 (2026-07-30) reemplazó por referencia al
+Dashboard Master. **Antes de PROD**: revisar el MD desde cero, validar
+cláusulas 5.1-5.5 tras revisión D4, publicar versión nueva con
+`master_contract_v1_YYYY-MM-DD.pdf` distinta y actualizar el manifest en
+S3 PROD (`assets.sharemechat.com/legal/master_contract.pdf`) + S3 AUDIT
+cuando esté disponible. También revisar si conviene sustituir `markdown-pdf`
+por generación con plantilla profesional (pandoc + template LaTeX, o
+Puppeteer HTML→PDF con estilo de marca).
+
 ### Naturaleza y prioridad de la Parte 5
 
 Las cuatro líneas comparten haber sido levantadas conversacionalmente durante las sesiones del 2026-07-27 (5.1-5.3, pivote hacia PSP tarjeta) y 2026-07-29 (5.4, pivote hacia captación estudios). Ninguna tiene fecha impuesta. Orden sugerido según impacto en fricción vs riesgo técnico:

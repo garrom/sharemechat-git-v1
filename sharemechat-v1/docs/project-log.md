@@ -8,6 +8,66 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-07-31 — ADR-056 Fase S5.a dashboard Master post-login + onboarding KYC/contrato end-to-end en TEST
+
+Sesión larga y en cascada: arrancó como "S5.a implementación dashboard Master" y escaló por 8 bugs estructurales y decisiones de arquitectura no anticipadas cuando se planificó el frente. Al final el ciclo Master queda operativo end-to-end en TEST: **registro público → verificación email → login → firma contrato con PDF real → KYC Didit end-to-end con webhook procesado → dashboard limpio con banners resueltos**. Cero workarounds SQL al cierre.
+
+**Materializado del plan original S5.a.1-6, 9, 10** (commit `4fb4d03` backend + `eafd32c` frontend shell + `8629194` manifest, del cierre inicial de la sesión):
+- Constants `Roles.MASTER` + `resolveHomeUrl` a `/master` + Route `/master` protegida con `RequireRole=MASTER`.
+- Backend nuevos endpoints bajo `/api/masters/me/*`: `GET /me` (`MasterMeDTO` — perfil + saldo), `GET /me/overview` (`MasterOverviewDTO` — KPIs 30d + banners), `GET /me/transactions` (query nueva `TransactionRepository.findMasterTransactionsFiltered` filtrada por user + attributedModelUserId), `POST /me/payout` (`MasterPayoutService` reutilizando `PayoutRequest.modelUserId=masterId` legacy, min 100 EUR ADR-056 D12). Servicios `MasterOverviewService` + `MasterPayoutService`.
+- Frontend cliente `masterApi.js`, `NavbarMaster.jsx` (5 tabs — sin Blog tras iteración operador), `DashboardMaster.jsx` SPA con `activeTab` (tabs Modelos/Historial/Payout como placeholders, S5.a.7-8), tab Overview funcional (4 KPI cards + banners condicionales + actividad reciente), i18n `masterDashboard.*`.
+
+**8 bugs estructurales encontrados y resueltos durante la sesión** (cada uno destapó el siguiente):
+
+1. **Login MASTER rechazado**: `AuthController.login` allowlist solo aceptaba USER/CLIENT/MODEL (código previo a ADR-056). Master se rechazaba con "Credenciales inválidas" falso pese a password correcta. Fix: añadir `Roles.MASTER` a la lista.
+
+2. **Diseño original USER+FORM_MASTER "pendiente admin promoción"**: `MasterService.registerMaster` asignaba `role=USER + user_type=FORM_MASTER` en anticipación de una revisión admin previa (que nunca se implementó — ni endpoint admin, ni `/dashboard-user-master`, ni flujo de promoción). Análisis de 3 opciones con operador: (1) auto-promoción a MASTER directo, (2) construir la UI intermedia + endpoint admin, (3) parche mínimo temporal. Elegida **Opción 1** — el Master no tiene gate PRELAUNCH aplicable (a diferencia de Cliente/Modelo que consumen/producen servicio directo); el KYC + contrato pendientes se enforcean via banners UI y validaciones futuras en endpoint payout. Cambio: `user.setRole(Constants.Roles.MASTER)` en el registro.
+
+3. **EmailVerifiedFilter bloqueaba todo `/api/masters/me/**`**: patrón validado del proyecto (gate global) bloqueaba el dashboard Master hasta verificar email. Operador pidió Opción Z ("puede entrar pero no operar"). Fix: whitelist selectiva por método en `EmailVerifiedFilter.isWhitelisted(path, method)` — GET Master + POST onboarding (contract accept + kyc start) permitidos sin verify, POST invitar modelo/payout siguen bloqueados con 403 EMAIL_NOT_VERIFIED. Frontend: banner rojo grande con botón "Reenviar email de verificación" que llama `/api/email-verification/resend`. `MasterMeDTO` + `MasterOverviewDTO` extendidos con `emailVerified` boolean para pintar el banner.
+
+4. **KycSessionService.startDiditMasterSession guard obsoleto**: exigía USER+FORM_MASTER pero tras el fix de auto-promoción el user es role=MASTER. Fix: ampliar guard a ambos.
+
+5. **Didit sandbox reutiliza `provider_session_id`**: llamadas repetidas al mismo user devuelven el mismo session_id hasta que la sesión pasa a estado terminal. `startDiditMasterSession` intentaba insertar duplicado → SQLIntegrityConstraintViolationException → 500 → MaintenanceProvider frontend se activa (pantalla mantenimiento). Fix: reutilizar sesión PENDING existente antes de llamar Didit, devolviendo el DTO desde BD.
+
+6. **MasterOverviewService revienta si manifest S3 no existe**: al inicio no había `master_contract.manifest.json` en el bucket. `masterContractService.isAcceptedCurrent` propagaba HttpClientErrorException hasta el endpoint → 500 → maintenance overlay. Fix: envolver en `safeIsContractAccepted` que traga excepciones y retorna `false` (banner "contrato pendiente" aparece; user avanza).
+
+7. **assertWorkflowIdMatchesSessionType rechazaba webhook Master**: Didit dashboard envía webhook con `workflow_id=modelWorkflowId` cuando la sesión Master se creó con fallback (`masterWorkflowId` blank → `getEffectiveMasterWorkflowId` → modelWorkflowId). El check tiraba `IllegalStateException` con "Mismatch workflow_id/session_type". Fix: aceptar `isModelWf + MASTER + masterUsesModelFallback` como combinación esperada. Sin este fix los 3 webhooks reales del user 105 (Not Started + In Progress + Approved) quedaron guardados en `kyc_webhook_events` con `is_processed=0` y `processing_error_message` mismatch. Tras el fix se reprocesaron manualmente (DELETE events + curl POST local con HMAC recalculado del `KYC_DIDIT_API_SECRET`) — validando end-to-end el pipeline webhook.
+
+8. **Callback URL Didit apuntaba al webhook endpoint API**: env var `KYC_DIDIT_MASTER_CALLBACK_URL` no publicada → `getEffectiveMasterCallbackUrl` caía en fallback a `KYC_DIDIT_CALLBACK_URL` legacy = `https://test.sharemechat.com/api/kyc/didit/webhook`. Tras completar Didit UI el browser era redirigido a esa URL (GET) → 401 → SPA cae en `/unauthorized`. Fix estructural: (a) crear `MasterKycDiditProcessingPage.jsx` (RequireRole=MASTER, polling `/api/masters/me/overview` cada 3s hasta 60s, redirect a `/master` cuando `verificationStatus=APPROVED`), (b) publicar env var `KYC_DIDIT_MASTER_CALLBACK_URL=https://test.sharemechat.com/master-kyc-didit/processing` en `/opt/sharemechat/config.env` TEST + restart servicio. **Pendiente PROD/AUDIT**: publicar env var equivalente antes del deploy Master a esos entornos (deuda registrada).
+
+**Materializado ops** (fuera del código Java/React):
+- **PDF Contrato Master v1** publicado en S3 TEST (`s3://assets-sharemechat-test1/legal/master_contract.pdf`, ~278 KB) + `master_contract.manifest.json` con version `master_contract_v1_2026-07-31` y sha256 `490864CE...` — generado desde `docs/01-business/master-contract-v1-draft.md` con `pip install markdown-pdf`. **Deuda registrada explícitamente por el operador**: el PDF es BORRADOR (draft redactado entre operador y Claude sin abogado externo, además la revisión D4 de 2026-07-30 hace que la tabla de tramos del §5.1 esté superseded por referencia al Dashboard). Ver [[project_contrato_master_test_borrador]] y `pending-hardening.md` §5.4.
+- **Cierre gap workflow Didit sin dedicated Master**: `masterWorkflowId` sigue blank en `/opt/sharemechat/config.env` de TEST; el flujo cae en fallback al `modelWorkflowId`. Deuda menor (funcional pero mejorable): crear workflow dedicado "shareme-master-kyc" en Didit dashboard para operar con configuración propia (posiblemente distinta a la del modelo — el Master es persona física B2B, no talent).
+
+**Iteración UX intensiva con operador tras publicar el shell en TEST**:
+- **Modal registro Master no cabía en pantalla**: fix `max-height: calc(100vh - 48px) + overflow-y: auto` en `StyledForm` de `LoginStyles.js`. Aplica a todos los subviews del LoginModal (login + register-gender + register-client + register-model + register-master). Ninguno de los otros se ve afectado (todos son más cortos).
+- **Contexto Master perdido en tab "Regístrate"** desde tab Login: `LoginModalContent` hacía `setView('register-gender')` hardcoded. Fix: persistir `initialView` y volver a `register-master` si venía de ahí.
+- **Título modal "Registro Master (Estudio)"**: retirado "(Estudio)". Intro reescrito de textos previos a texto seco: "Alta como Master en SharemeChat. Persona física, sin necesidad de empresa."
+- **Tab Blog del navbar Master retirado** (rompe UX — al pulsarlo el user va a un contexto público con otro navbar y no sabe volver). Blog queda accesible via URL directa `/blog`.
+- **Icon perfil Master deshabilitado** hasta que exista `/perfil-master` (deuda futura). `DesktopActions` maneja `onAvatarClick=undefined` con clase `disabled-avatar-wrap`.
+- **Contrato: gate "abrir PDF antes de firmar"** (nueva UX, Model no lo tiene). Botón azul "Abrir PDF del contrato" (antes era link `<a target=_blank>` que en algunos navegadores se comporta raro con `onClick`). Al pulsar setea `pdfOpened=true` y abre `window.open`. Checkbox y botón firmar deshabilitados hasta ese click. Hint amarillo mientras no se abre. Defensa extra en `handleAccept` que valida `pdfOpened` antes del POST.
+- **KYC consentimiento GDPR reforzado**: texto largo Art. 9.2.a RGPD (patrón simétrico a Model KYC) — datos biométricos faciales + encargado del tratamiento Didit UE + retención + derecho a retirar contactando privacidad@sharemechat.com + bloqueo del alta si retira. Link a `/legal?tab=privacy` como "Más información en la política de privacidad." Antes solo tenía checkbox sin nada que leer realmente.
+
+**Aprendizajes operativos**:
+- El diseño original de "USER + FORM_MASTER pendiente admin promoción" en `MasterService.registerMaster` era arquitectónicamente coherente (patrón Cliente/Modelo → gate PRELAUNCH) pero incompleto (no había endpoints admin ni página intermedia). Al no completar la cadena, el registro Master rompía el login. Aprendizaje: si un patrón se anuncia en javadoc pero solo se implementa la mitad, mejor no anunciarlo. La decisión final (Opción 1 auto-promoción) es más honesta con lo que realmente hace el sistema.
+- **Los webhooks vendor con dedup por event_id no se pueden reejecutar sin borrar el registro anterior**: el pipeline chequea `existsByProviderAndProviderEventId` antes de procesar; el reintento tras fix de bug requiere DELETE del kyc_webhook_events por id + re-POST. Documentado el workaround en la sesión pero no automatizado — deuda menor: endpoint admin de reprocesamiento.
+- **Didit sandbox tiene comportamientos idiosincráticos** (reutilización de session_id, semántica del param `callback` como redirect_url en lugar de webhook_url) que solo emergen al probar end-to-end con webhooks reales. El código anterior a esta sesión pasaba tests unitarios pero no cubría estos casos porque nunca se había ejercitado.
+
+**Estado al cierre**:
+- TEST: user Master `admin+master@sharemechat.com` (id=105) registrado + email verificado + contrato firmado + KYC APPROVED por webhook real. Dashboard `/master` limpio (0 banners, 4 KPIs a 0, actividad reciente vacía). Tabs Modelos/Historial/Payout muestran placeholders "se activa en próxima entrega".
+- 733/733 tests backend pasan.
+- 4 bundles frontend desplegados (product `main.25cb7ed3.js` es el vigente; admin `main.1c952956.js` sin cambios funcionales); 5 JARs backend desplegados en cascada (JAR final = commit del último push de esta sesión).
+
+**Pendiente frente Master**:
+- **S5.a.7** — Tab Modelos: tabla listado + acciones inline (activar/desactivar, editar %) + modal invitar modelo + modal editar % pactado.
+- **S5.a.8** — Tab Historial paginado + Tab Payout con formulario canal + importe + validación min 100 EUR.
+- **Deudas registradas**: sustituir PDF contrato TEST antes de PROD, publicar env var `KYC_DIDIT_MASTER_CALLBACK_URL` en AUDIT/PROD, crear workflow dedicado Master en Didit dashboard, página `/perfil-master`.
+- **S6** payouts multi-canal (Paxum primero).
+- **S7** frontend admin Masters + suspensión D11.
+- **S8** nivelación AUDIT (caído desde 2026-07-25) + PROD.
+
+---
+
 ## 2026-07-30 — ADR-056 D4 revertido + landing /for-studios reescrita alineada con sector
 
 Sesión de pulido de la landing pública `/for-studios` que arrancó como un pulido menor de textos y escaló a un cambio estructural del motor. Al pulir el hero.subtitle "se agregan sus ingresos y desbloqueáis mejores condiciones", el operador cuestionó si la agregación por estudio era estándar del sector. Research web dirigido (LiveJasmin Studio Center, Stripchat Studio Program, BongaCams/BongaModels, Chaturbate) confirmó que **ninguno agrega**: los tres portales grandes con programa de estudios calculan tramos individualmente por modelo; el estudio recibe la suma de payouts individuales, sin bonus estructural por agrupar. Consecuencia económica que no había caído: mantener D4 tal como estaba habría regalado ~20pp de margen bruto al Master en escenario top vs modelos individuales sumadas (T4 agregado 70 % vs T3 individual sumado 57 %, delta 2.600 €/mes por Master de 5×4.000 €/30d). Además, los umbrales L1/L3/L5/L7 tomados de LiveJasmin son per modelo, no agregados — al aplicarlos como umbrales agregados los cruzábamos mucho más rápido de lo previsto.
