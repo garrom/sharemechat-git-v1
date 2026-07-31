@@ -9,12 +9,12 @@
 "H0011",
 "H0014",
 "H0005",
-"H0013",
-"H0004",
 "H0006",
+"H0004",
+"H0013",
 "H0012",
-"H0009",
-"H0007"
+"H0007",
+"H0009"
 ],
 "h": {
 "H0002": {
@@ -57,14 +57,14 @@
 ]
 },
 "H0013": {
-"st": "active",
-"score": 6.8,
+"st": "parked",
+"score": 5.1,
 "ch": "product-hook",
 "f": true,
 "par": "H0002"
 },
 "H0004": {
-"st": "active",
+"st": "parked",
 "score": 6.3,
 "ch": "listicle-outreach",
 "f": true
@@ -106,11 +106,13 @@
 "f": true
 },
 "H0014": {
-"st": "active",
+"st": "promoted",
 "score": 9.0,
 "ch": "funnel-framing",
 "f": true,
 "par": "H0002"
 }
-}
+},
+"ceiling_note": "conf<=0.60 aunque lleguen datos: signups waitlist=senal de canal, no validacion de negocio (S0008)",
+"policy": "H0014 early-access framing = politica por defecto mientras PROD en PRELAUNCH"
 }

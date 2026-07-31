@@ -48,3 +48,22 @@
 {"c":8,"t":"resolve","id":"R0004","r":"baseline ~=0 clientes reales (via tunel PROD); registro abierto en PRELAUNCH; signup medible hoy"}
 {"c":8,"t":"req","id":"R0006","k":"api","note":"instrumentar GA4 sign_up + col acquisition_source (aditivo, no rompe)"}
 {"c":8,"t":"req","id":"R0007","k":"data","note":"decidir lanzar experimentos en PRELAUNCH con encuadre early-access"}
+{"c":9,"t":"input","src":"operator 2026-07-31","note":"PRELAUNCH reality + waitlist rule + early-access policy + R0006/R0007 resueltos + AWS 3 envs"}
+{"c":9,"t":"src","id":"S0008","u":"operator: waitlist!=validacion"}
+{"c":9,"t":"src","id":"S0009","u":"operator: early-access policy + copy rules"}
+{"c":9,"t":"src","id":"S0010","u":"operator: R0006 capa A + R0007 go E0001/E0003, defer A0003"}
+{"c":9,"t":"src","id":"S0011","u":"operator: PSP no firmado, horizonte pago"}
+{"c":9,"t":"src","id":"S0012","u":"operator: 3 envs TEST/AUDIT/PROD mismo jar"}
+{"c":9,"t":"resolve","id":"R0006","r":"capa A, la implementa el operador; IA no toca codigo; capa B aplazada"}
+{"c":9,"t":"resolve","id":"R0007","r":"go E0001+E0003 early-access; diferir A0003/H0004"}
+{"c":10,"t":"fix","id":"A0001","r":"reescrito v2 early-access: fuera precio/trial/pago; compliance defendible (disenado para cumplir; DSA!=edad)"}
+{"c":10,"t":"fix","id":"A0002","r":"encuadre early-access en mencion soft; sin uso/pago inmediato"}
+{"c":10,"t":"fix","id":"A0003","r":"copy corregido + marcado DIFERIDO hasta producto cerca de abrir"}
+{"c":10,"t":"park","id":"H0013","r":"gancho minuto-gratis no operativo en PRELAUNCH (falso); revivir al abrir"}
+{"c":10,"t":"park","id":"H0004","r":"outreach listicles diferido (pitch mas fuerte con producto vivo)"}
+{"c":11,"t":"promote","id":"H0014","note":"adoptada como POLITICA por defecto (early-access framing)"}
+{"c":11,"t":"decide","id":"H0002","r":"tesis-madre, sin experimento propio; instanciada por E0001/E0002/E0003; promover cornerstone solo si hay senal de canal"}
+{"c":11,"t":"approve","id":"E0001","st":"approved","note":"go, lo ejecuta el operador"}
+{"c":11,"t":"approve","id":"E0003","st":"approved","note":"go, lo ejecuta el operador"}
+{"c":11,"t":"rule","note":"TECHO conf<=0.60 aunque lleguen datos: signups waitlist = senal de canal, no validacion de negocio (S0008). conf>0.60 solo con revenue post-lanzamiento"}
+{"c":11,"t":"halt","note":"blocked+plateau: E0001/E0003 aprobados esperando ejecucion del operador + capa A; nada mas que razonar productivamente hasta que vuelvan datos"}

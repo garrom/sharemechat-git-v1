@@ -3,5 +3,5 @@
 "pv":[{"p":"inf"}],
 "ft":"Wedge de oferta, no canal: A/B 'prueba 1 min gratis' vs 'registrate' como CTA en la primera superficie con trafico; medir signup-rate. Se acopla a H0003/H0011",
 "cost":{"eur":0,"type":"none"},
-"sc":{"reach":2,"conv":4,"eff":2,"ban":1,"brand":4,"conf":0.4},
-"st":"active","kr":"","par":"H0002","exp":[]}
+"sc":{"reach":2,"conv":4,"eff":2,"ban":1,"brand":4,"conf":0.3},
+"st":"parked","kr":"PARKED 2026-07-31 (S0009/S0011): el gancho 'primer minuto gratis' NO es operativo en PRELAUNCH y prometerlo seria publicidad falsa. Revivir cuando el producto abra (trial + pago activos). Sustituido temporalmente por H0014 (encuadre early-access).","par":"H0002","exp":[]}
