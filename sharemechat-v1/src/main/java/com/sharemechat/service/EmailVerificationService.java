@@ -111,6 +111,21 @@ public class EmailVerificationService {
         ));
     }
 
+    /**
+     * Peek de un token de verificacion sin consumirlo. Devuelve el userId
+     * asociado si el token existe, no ha sido consumido y no ha expirado.
+     * Usado por endpoints publicos que necesitan info previa a la accion
+     * (ej. /masters/models/invitation-info/{token} para mostrar nombre del
+     * Master antes de que la modelo elija su password).
+     */
+    public java.util.Optional<Long> peekUserIdFromToken(String rawToken) {
+        if (rawToken == null || rawToken.isBlank()) return java.util.Optional.empty();
+        String tokenHash = sha256Hex(rawToken);
+        return tokenRepository.findByTokenHashAndConsumedAtIsNull(tokenHash)
+                .filter(t -> t.getExpiresAt() == null || !t.getExpiresAt().isBefore(LocalDateTime.now()))
+                .map(t -> t.getUser().getId());
+    }
+
     @Transactional
     public Map<String, Object> consumeVerificationToken(String rawToken) {
         if (rawToken == null || rawToken.isBlank()) {

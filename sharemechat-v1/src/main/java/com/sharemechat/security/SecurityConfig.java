@@ -72,6 +72,11 @@ public class SecurityConfig {
                         // credenciales — el token del email es la unica
                         // autenticacion. Consume el token + set password.
                         .requestMatchers(HttpMethod.POST, "/api/masters/models/activate/**").permitAll()
+                        // Info previa de la invitacion (nombre del estudio, etc.).
+                        // Publico porque se renderiza en la pagina de activacion
+                        // ANTES de que la modelo tenga credenciales. NO consume
+                        // el token (solo peek).
+                        .requestMatchers(HttpMethod.GET, "/api/masters/models/invitation-info/**").permitAll()
                         .requestMatchers("/api/email-verification/confirm").permitAll()
                         .requestMatchers("/api/public/home/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/public/content/**").permitAll()

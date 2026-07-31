@@ -6,6 +6,9 @@ import com.sharemechat.entity.Model;
 import com.sharemechat.entity.User;
 import com.sharemechat.exception.NicknameAlreadyInUseException;
 import com.sharemechat.master.dto.CreateMasterModelRequestDTO;
+import com.sharemechat.master.dto.MasterInvitationInfoDTO;
+import com.sharemechat.master.entity.Master;
+import com.sharemechat.master.repository.MasterRepository;
 import com.sharemechat.repository.EmailVerificationTokenRepository;
 import com.sharemechat.repository.ModelRepository;
 import com.sharemechat.repository.UserRepository;
@@ -50,17 +53,55 @@ public class MasterModelInvitationService {
     private final EmailVerificationService emailVerificationService;
     private final EmailVerificationTokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
+    private final MasterRepository masterRepository;
 
     public MasterModelInvitationService(UserRepository userRepository,
                                          ModelRepository modelRepository,
                                          EmailVerificationService emailVerificationService,
                                          EmailVerificationTokenRepository tokenRepository,
-                                         PasswordEncoder passwordEncoder) {
+                                         PasswordEncoder passwordEncoder,
+                                         MasterRepository masterRepository) {
         this.userRepository = userRepository;
         this.modelRepository = modelRepository;
         this.emailVerificationService = emailVerificationService;
         this.tokenRepository = tokenRepository;
         this.passwordEncoder = passwordEncoder;
+        this.masterRepository = masterRepository;
+    }
+
+    /**
+     * Info publica de la invitacion asociada a un token, sin consumirlo.
+     * Devuelve el nombre visible del Master (companyName si existe, si
+     * no nickname del User Master) y el nickname que el Master eligio
+     * para la modelo al invitarla. Sirve para renderizar el header de
+     * la pagina de activacion antes de que la modelo elija password.
+     *
+     * @throws IllegalArgumentException si el token no existe, ya se
+     *   consumio, expiro, o no corresponde a una invitacion de modelo
+     *   bajo un Master valido.
+     */
+    public MasterInvitationInfoDTO getInvitationInfo(String rawToken) {
+        Long userId = emailVerificationService.peekUserIdFromToken(rawToken)
+                .orElseThrow(() -> new IllegalArgumentException("Token invalido o ya consumido"));
+        User modelUser = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+        Model model = modelRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Modelo no encontrada"));
+        Long masterUserId = model.getMasterUserId();
+        if (masterUserId == null) {
+            throw new IllegalArgumentException("Modelo sin Master asociado");
+        }
+        Master master = masterRepository.findByUserId(masterUserId)
+                .orElseThrow(() -> new IllegalArgumentException("Master no encontrado"));
+        User masterUser = userRepository.findById(masterUserId).orElse(null);
+        String displayName = master.getCompanyName();
+        if (displayName == null || displayName.isBlank()) {
+            displayName = masterUser != null ? masterUser.getNickname() : null;
+        }
+        if (displayName == null || displayName.isBlank()) {
+            displayName = "un estudio";
+        }
+        return new MasterInvitationInfoDTO(displayName, modelUser.getNickname());
     }
 
     /**

@@ -3,7 +3,7 @@
 // invitadas por un Master. Consume POST /api/masters/models/activate/{token}
 // tras leer el token de path param. La modelo genera su propia password:
 // nadie (incluido el Master) la conoce.
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useHistory, useLocation, useParams } from 'react-router-dom';
 import i18n from '../i18n';
 import {
@@ -28,6 +28,23 @@ const MasterModelActivationPage = () => {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [status, setStatus] = useState({ loading: false, ok: '', err: '' });
+  const [studioName, setStudioName] = useState('');
+
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/masters/models/invitation-info/${encodeURIComponent(token)}`, {
+          credentials: 'include',
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data?.masterDisplayName) setStudioName(data.masterDisplayName);
+      } catch { /* silent: sin nombre, fallback en copy */ }
+    })();
+    return () => { cancelled = true; };
+  }, [token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -76,9 +93,14 @@ const MasterModelActivationPage = () => {
   return (
     <Container>
       <Card>
-        <Title>{t('auth.masterActivation.title')}</Title>
-        <Paragraph>{t('auth.masterActivation.intro')}</Paragraph>
-        <Paragraph style={{ opacity: 0.85, fontSize: '0.88rem' }}>{t('auth.masterActivation.note')}</Paragraph>
+        <Title style={{ color: '#7c3aed' }}>{t('auth.masterActivation.title')}</Title>
+        <Paragraph style={{ fontWeight: 600, fontSize: '1.05rem' }}>
+          {t('auth.masterActivation.greeting')}
+        </Paragraph>
+        <Paragraph>
+          {t('auth.masterActivation.intro', { studioName: studioName || t('auth.masterActivation.studioFallback') })}
+        </Paragraph>
+        <Paragraph>{t('auth.masterActivation.callToAction')}</Paragraph>
 
         {!token && <StatusErr role="alert">{t('auth.masterActivation.status.tokenMissing')}</StatusErr>}
         {status.ok && <StatusOk role="status">{status.ok}</StatusOk>}

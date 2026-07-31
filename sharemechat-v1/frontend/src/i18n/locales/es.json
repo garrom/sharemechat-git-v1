@@ -950,8 +950,10 @@
     },
     "masterActivation": {
       "title": "Activa tu cuenta de modelo",
-      "intro": "Un Master de estudio te ha invitado a operar bajo su umbrella en SharemeChat. Elige tu contraseña personal. Solo tú la conocerás.",
-      "note": "La contraseña la eliges tú y podrás cambiarla en cualquier momento. Después firmarás el Contrato de Modelo y pasarás KYC para poder emitir.",
+      "greeting": "¡Enhorabuena!",
+      "intro": "El estudio {{studioName}} te ha enviado una invitación para que formes parte de su equipo de modelos.",
+      "callToAction": "Elige una contraseña segura.",
+      "studioFallback": "que te invita",
       "labels": {
         "password": "Nueva contraseña",
         "confirmPassword": "Repite la contraseña"

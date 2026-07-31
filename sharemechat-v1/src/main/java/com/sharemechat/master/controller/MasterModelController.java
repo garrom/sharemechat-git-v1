@@ -3,6 +3,7 @@ package com.sharemechat.master.controller;
 import com.sharemechat.entity.User;
 import com.sharemechat.master.dto.ActivateMasterModelRequestDTO;
 import com.sharemechat.master.dto.CreateMasterModelRequestDTO;
+import com.sharemechat.master.dto.MasterInvitationInfoDTO;
 import com.sharemechat.master.dto.MasterModelViewDTO;
 import com.sharemechat.master.dto.UpdateInternalShareRequestDTO;
 import com.sharemechat.master.service.MasterModelInvitationService;
@@ -129,6 +130,20 @@ public class MasterModelController {
                     "internalSharePct", split.getInternalSharePct(),
                     "effectiveFrom", split.getEffectiveFrom().toString()
             ));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(404).body(Map.of("error", ex.getMessage()));
+        }
+    }
+
+    // ============================================================
+    // GET /models/invitation-info/{token} — publico: info previa (no consume)
+    // ============================================================
+
+    @GetMapping("/models/invitation-info/{token}")
+    public ResponseEntity<?> invitationInfo(@PathVariable String token) {
+        try {
+            MasterInvitationInfoDTO info = invitationService.getInvitationInfo(token);
+            return ResponseEntity.ok(info);
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(404).body(Map.of("error", ex.getMessage()));
         }

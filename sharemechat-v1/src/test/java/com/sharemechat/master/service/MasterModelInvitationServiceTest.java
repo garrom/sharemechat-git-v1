@@ -4,6 +4,7 @@ import com.sharemechat.constants.Constants;
 import com.sharemechat.entity.User;
 import com.sharemechat.exception.NicknameAlreadyInUseException;
 import com.sharemechat.master.dto.CreateMasterModelRequestDTO;
+import com.sharemechat.master.repository.MasterRepository;
 import com.sharemechat.repository.EmailVerificationTokenRepository;
 import com.sharemechat.repository.ModelRepository;
 import com.sharemechat.repository.UserRepository;
@@ -42,6 +43,7 @@ class MasterModelInvitationServiceTest {
     private EmailVerificationService emailVerificationService;
     private EmailVerificationTokenRepository tokenRepository;
     private PasswordEncoder passwordEncoder;
+    private MasterRepository masterRepository;
     private MasterModelInvitationService svc;
 
     @BeforeEach
@@ -51,11 +53,12 @@ class MasterModelInvitationServiceTest {
         emailVerificationService = mock(EmailVerificationService.class);
         tokenRepository = mock(EmailVerificationTokenRepository.class);
         passwordEncoder = mock(PasswordEncoder.class);
+        masterRepository = mock(MasterRepository.class);
         when(passwordEncoder.encode(any())).thenReturn("HASH");
 
         svc = new MasterModelInvitationService(
                 userRepository, modelRepository, emailVerificationService,
-                tokenRepository, passwordEncoder);
+                tokenRepository, passwordEncoder, masterRepository);
     }
 
     @Test
