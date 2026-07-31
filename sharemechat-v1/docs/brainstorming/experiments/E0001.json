@@ -1,0 +1,3 @@
+{"id":"E0001","h":"H0003","hyp":"Listar SharemeChat en directorios crowd-sourced client-facing genera referral pasivo de clientes","m":"clicks referral con UTM + signups atribuidos","thr":">=20 clicks/mes agregados a los 60d desde >=4 directorios free","cost":{"eur":0,"type":"none"},"st":"proposed","res":null,
+"steps":["crear cuenta + entry en alternativeto.net (/manage/new/) en cat. Omegle/LuckyCrush/random-video-chat con claim 'modelos KYC-verificadas'","identificar 3 directorios free adicionales client-facing y submit","instrumentar UTM por directorio (utm_source=dir_<nombre>)","medir GSC/GA4 referral a 30 y 60d"],
+"depends":["R0004 (medicion UTM/atribucion operativa)"]}

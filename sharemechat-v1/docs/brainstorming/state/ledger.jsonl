@@ -1,0 +1,42 @@
+{"c":1,"t":"boot","note":"estructura creada + README; foco cliente directo, complementa plan model-centrico"}
+{"c":1,"t":"gen","id":"H0001"}
+{"c":1,"t":"gen","id":"H0002"}
+{"c":1,"t":"gen","id":"H0003"}
+{"c":1,"t":"gen","id":"H0004"}
+{"c":1,"t":"gen","id":"H0005"}
+{"c":1,"t":"gen","id":"H0006"}
+{"c":1,"t":"gen","id":"H0007"}
+{"c":1,"t":"gen","id":"H0008"}
+{"c":1,"t":"gen","id":"H0009"}
+{"c":1,"t":"gen","id":"H0010"}
+{"c":1,"t":"gen","id":"H0011"}
+{"c":1,"t":"gen","id":"H0012"}
+{"c":1,"t":"gen","id":"H0013"}
+{"c":1,"t":"kill","id":"H0008","r":"ban=4>umbral2; link-drop NSFW consumer refutado + ban a operadores ya confirmado en el proyecto"}
+{"c":1,"t":"kill","id":"H0010","r":"brand=1 ban=4; 4chan incompatible con marca KYC/compliance adult"}
+{"c":1,"t":"park","id":"H0007","r":"cold-start X adult sin following: alcance organico bajo, conf 0.35"}
+{"c":1,"t":"park","id":"H0009","r":"telegram: audiencia real dudosa (bots), evidencia solo inf"}
+{"c":1,"t":"park","id":"H0012","r":"partnership: requiere contact + evidencia baja"}
+{"c":2,"t":"src","id":"S0001","u":"alternativeto.net free submission"}
+{"c":2,"t":"src","id":"S0002","u":"dolor bots/fake random chat"}
+{"c":2,"t":"src","id":"S0003","u":"competidores venden 'verified'"}
+{"c":2,"t":"src","id":"S0004","u":"reddit self-promo NSFW rules"}
+{"c":2,"t":"src","id":"S0005","u":"espacio keywords 'X alternative'"}
+{"c":2,"t":"rescore","note":"src-backed suben a conf<=0.60: H0001 .55, H0002 .58, H0003 .58, H0005 .5, H0011 .5"}
+{"c":3,"t":"promote","id":"H0001"}
+{"c":3,"t":"promote","id":"H0002"}
+{"c":3,"t":"crit","note":"H0002 y H0013 son wedges de mensaje, no canales: su test se acopla a canales; H0001 requiere landing (code) -> mas friccion que H0003/H0011"}
+{"c":4,"t":"promote","id":"H0003"}
+{"c":4,"t":"promote","id":"H0005"}
+{"c":4,"t":"promote","id":"H0011"}
+{"c":4,"t":"exp","id":"E0001","st":"proposed"}
+{"c":4,"t":"exp","id":"E0002","st":"proposed"}
+{"c":4,"t":"exp","id":"E0003","st":"proposed"}
+{"c":4,"t":"req","id":"R0001","k":"experiment"}
+{"c":4,"t":"req","id":"R0002","k":"experiment"}
+{"c":4,"t":"req","id":"R0003","k":"experiment"}
+{"c":4,"t":"req","id":"R0004","k":"data"}
+{"c":4,"t":"req","id":"R0005","k":"contact"}
+{"c":5,"t":"mut","id":"H0013","par":"H0002","note":"trial-hook derivado del wedge USP"}
+{"c":5,"t":"crit","note":"top-5 estable (H0002,H0003,H0001,H0011,H0005); sin hipotesis nuevas de mayor score -> formando meseta"}
+{"c":6,"t":"plateau","note":"top-5 sin cambios c4->c6; senal: toca EXPERIMENTAR (lanzar E0001-E0003 + desbloquear R0004), no seguir pensando"}

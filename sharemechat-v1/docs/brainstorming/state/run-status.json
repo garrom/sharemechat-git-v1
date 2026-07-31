@@ -1,0 +1,8 @@
+{"last_cycle":6,"halt":"batch+plateau","cycles_this_run":"1-6","date":"2026-07-31",
+"top5":["H0002","H0003","H0001","H0011","H0005"],
+"recommended":["H0003","H0005","H0011"],
+"experiments_proposed":["E0001","E0002","E0003"],
+"open_requests":5,
+"blocking":"R0004 (infra de medicion UTM/atribucion) es prerequisito duro: sin ella ningun experimento organico es falsable",
+"note_probabilidad":"Ninguna hipotesis supera conf 0.60. Correcto por diseno: sin resultados de experimento la probabilidad NO es real. El top-5 es razonamiento aterrizado en fuentes, no evidencia de exito.",
+"next":"1) Alain resuelve R0004 (confirmar medicion + baseline signups cliente). 2) Aprobar/lanzar E0001 (directorios, el mas barato) y E0003 (Quora). 3) E0002 tras cerrar bug internal-linking SEO. 4) Al volver resultados (res!=null), ingerirlos, re-scorear y subir/bajar conf real. 5) Explorar experimento de descubrimiento barato para H0006 (crypto-privacy wedge) y auditar pay-to-play de H0004."}

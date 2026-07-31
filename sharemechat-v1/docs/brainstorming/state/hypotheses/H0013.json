@@ -1,0 +1,7 @@
+{"id":"H0013","cyc":1,"cyl":1,"ch":"product-hook","th":"Gancho 'primer minuto gratis con modelo verificada' (mecanismo trial ya existe en producto, ADR-052 D8) como oferta de adquisicion sin friccion inyectada en toda la mensajeria",
+"as":["el trial gratis reduce la barrera de primer uso del cliente","el mecanismo anti-abuso ya limita el coste (~3 min gratis/24h)","el hook potencia conversion de cualquier canal upstream"],
+"pv":[{"p":"inf"}],
+"ft":"Wedge de oferta, no canal: A/B 'prueba 1 min gratis' vs 'registrate' como CTA en la primera superficie con trafico; medir signup-rate. Se acopla a H0003/H0011",
+"cost":{"eur":0,"type":"none"},
+"sc":{"reach":2,"conv":4,"eff":2,"ban":1,"brand":4,"conf":0.4},
+"st":"active","kr":"","par":"H0002","exp":[]}

@@ -1,0 +1,7 @@
+{"id":"H0008","cyc":1,"cyl":1,"ch":"reddit-nsfw","th":"Presencia karma-first en subs NSFW consumer-facing para referir clientes",
+"as":["existen subs consumer donde recomendar cam/chat es tolerado","warm-up evita ban","la mencion convierte"],
+"pv":[{"p":"src","s":"S0004"}],
+"ft":"n/a - descartada",
+"cost":{"eur":0,"type":"none"},
+"sc":{"reach":3,"conv":3,"eff":3,"ban":4,"brand":2,"conf":0.3},
+"st":"killed","kr":"ban=4 supera umbral duro <=2: link directo en subs NSFW consumer produce shadowban/ban (S0004); ademas la investigacion previa del proyecto ya confirmo ban a operadores en subs adult-ecosystem. Vector de link-drop refutado.","par":"","exp":[]}
