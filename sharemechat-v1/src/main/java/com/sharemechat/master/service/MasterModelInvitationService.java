@@ -42,7 +42,8 @@ import java.util.UUID;
 public class MasterModelInvitationService {
 
     private static final Logger log = LoggerFactory.getLogger(MasterModelInvitationService.class);
-    private static final String CONTEXT_MASTER_INVITATION = "MASTER_MODEL_INVITATION";
+    private static final String CONTEXT_MASTER_INVITATION =
+            EmailVerificationService.CONTEXT_MASTER_INVITATION;
 
     private final UserRepository userRepository;
     private final ModelRepository modelRepository;

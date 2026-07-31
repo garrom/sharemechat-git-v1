@@ -308,7 +308,11 @@ public class EmailCopyRenderer {
         // backoffice incluso en coming-soon. El gate del producto NO
         // aplica al backoffice.
         boolean backoffice = "BACKOFFICE".equalsIgnoreCase(context);
-        boolean comingSoonCopy = prelaunch && !backoffice;
+        boolean masterInvite = "MASTER_MODEL_INVITATION".equalsIgnoreCase(context);
+        // Invitacion Master prevalece sobre coming-soon: si el estudio
+        // esta dando de alta modelos, deben recibir email aunque el
+        // producto este en PRELAUNCH.
+        boolean comingSoonCopy = prelaunch && !backoffice && !masterInvite;
 
         if ("es".equals(locale)) {
             if (backoffice) {
@@ -320,6 +324,20 @@ public class EmailCopyRenderer {
                                 <p>Antes de poder entrar, debes validar tu email:</p>
                                 <p><a href="%s">%s</a></p>
                                 <p>Este enlace caduca en %s.</p>
+                                """.formatted(displayName, link, link, expiryText))
+                );
+            }
+
+            if (masterInvite) {
+                return new EmailContent(
+                        "Has sido invitada a SharemeChat",
+                        wrapWithLogo("""
+                                <p>Hola %s,</p>
+                                <p>Has sido invitada a formar parte de <b>SharemeChat</b> como modelo bajo una cuenta Master (estudio).</p>
+                                <p>Para activar tu cuenta, elige tu contraseña personal en este enlace:</p>
+                                <p><a href="%s">%s</a></p>
+                                <p>Una vez activada podras completar tu perfil y la verificacion de identidad de forma autonoma.</p>
+                                <p>El enlace caduca en %s.</p>
                                 """.formatted(displayName, link, link, expiryText))
                 );
             }
@@ -373,6 +391,20 @@ public class EmailCopyRenderer {
                             <p>Your internal access to <b>SharemeChat Backoffice</b> is ready.</p>
                             <p>Before you can sign in, you must verify your email:</p>
                             <p><a href="%s">%s</a></p>
+                            <p>This link expires in %s.</p>
+                            """.formatted(displayName, link, link, expiryText))
+            );
+        }
+
+        if (masterInvite) {
+            return new EmailContent(
+                    "You have been invited to SharemeChat",
+                    wrapWithLogo("""
+                            <p>Hi %s,</p>
+                            <p>You have been invited to join <b>SharemeChat</b> as a model under a Master account (studio).</p>
+                            <p>To activate your account, choose your personal password using this link:</p>
+                            <p><a href="%s">%s</a></p>
+                            <p>Once activated, you can complete your profile and identity verification on your own.</p>
                             <p>This link expires in %s.</p>
                             """.formatted(displayName, link, link, expiryText))
             );

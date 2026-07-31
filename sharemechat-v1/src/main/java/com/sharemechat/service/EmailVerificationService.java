@@ -23,6 +23,13 @@ public class EmailVerificationService {
 
     private static final String CONTEXT_BACKOFFICE = "BACKOFFICE";
     private static final String CONTEXT_PRODUCT = "PRODUCT";
+    /**
+     * Contexto usado por MasterModelInvitationService al invitar una modelo
+     * bajo umbrella del Master. Cambia tanto el copy del email (renderer)
+     * como el link (path /master/invite/activate/{token}, no /verify-email).
+     * Publico para que el caller lo importe en vez de repetir el literal.
+     */
+    public static final String CONTEXT_MASTER_INVITATION = "MASTER_MODEL_INVITATION";
 
     private final EmailVerificationTokenRepository tokenRepository;
     private final UserRepository userRepository;
@@ -40,6 +47,9 @@ public class EmailVerificationService {
 
     @Value("${app.frontend.verify-email-product-url}")
     private String productVerificationUrlBase;
+
+    @Value("${app.frontend.master-invite-activate-url}")
+    private String masterInviteActivateUrlBase;
 
     public EmailVerificationService(EmailVerificationTokenRepository tokenRepository,
                                     UserRepository userRepository,
@@ -152,6 +162,10 @@ public class EmailVerificationService {
 
     private String buildFrontendLink(String rawToken, String context) {
         String encoded = URLEncoder.encode(rawToken, StandardCharsets.UTF_8);
+        if (CONTEXT_MASTER_INVITATION.equalsIgnoreCase(context)) {
+            // Path param (no query): MasterModelActivationPage lee :token de la ruta.
+            return masterInviteActivateUrlBase + "/" + encoded;
+        }
         String baseUrl = CONTEXT_BACKOFFICE.equalsIgnoreCase(context)
                 ? adminVerificationUrlBase
                 : productVerificationUrlBase;
