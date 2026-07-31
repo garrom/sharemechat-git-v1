@@ -133,6 +133,7 @@
     "fullscreen": "Pantalla completa",
     "sendMessage": "Enviar mensaje",
     "networkError": "Error de red",
+    "loading": "Cargando…",
     "ratePerMin": "{{rate}} €/min",
     "actions": {
       "addToFavorites": "Añadir a favoritos",
@@ -3793,9 +3794,80 @@
       "empty": "Aún no hay movimientos registrados."
     },
     "placeholders": {
-      "modelos": "Gestión de modelos del estudio — se activa en la próxima entrega.",
       "historial": "Historial completo del ledger — se activa en la próxima entrega.",
       "payout": "Solicitud de retiro multi-canal — se activa en la próxima entrega."
+    },
+    "modelos": {
+      "title": "Modelos del estudio",
+      "inviteButton": "Invitar modelo",
+      "empty": {
+        "title": "Aún no has invitado a ninguna modelo.",
+        "hint": "Usa \"Invitar modelo\" para enviarles el email de alta. La modelo completa su verificación de identidad y su perfil de forma autónoma."
+      },
+      "cols": {
+        "nickname": "Nickname",
+        "status": "Estado",
+        "kyc": "KYC",
+        "hours": "Horas emitidas",
+        "rate": "Tarifa €/min",
+        "share": "% pactado",
+        "actions": "Acciones"
+      },
+      "status": {
+        "active": "Activa",
+        "inactive": "Inactiva"
+      },
+      "kyc": {
+        "approved": "Aprobado",
+        "pending": "Pendiente",
+        "rejected": "Rechazado"
+      },
+      "actions": {
+        "editShare": "Editar %",
+        "activate": "Activar",
+        "deactivate": "Desactivar"
+      },
+      "confirmActivate": "¿Activar a {{nickname}}? La modelo podrá empezar a emitir bajo tu cuenta Master.",
+      "confirmDeactivate": "¿Desactivar a {{nickname}}? Dejará de poder emitir hasta que la reactives.",
+      "flash": {
+        "invited": "Invitación registrada correctamente.",
+        "activated": "{{nickname}} ha sido activada.",
+        "deactivated": "{{nickname}} ha sido desactivada.",
+        "shareUpdated": "% pactado actualizado correctamente."
+      },
+      "errors": {
+        "load": "No se pudo cargar el listado de modelos.",
+        "toggle": "No se pudo actualizar el estado de la modelo."
+      },
+      "invite": {
+        "title": "Invitar modelo bajo tu cuenta Master",
+        "subtitle": "Le enviaremos un email de alta. Ella completará su verificación de identidad y su perfil.",
+        "email": "Email de la modelo",
+        "emailPlaceholder": "modelo@correo.com",
+        "nickname": "Nickname (nombre artístico)",
+        "nicknamePlaceholder": "p. ej. AlmaStar",
+        "submit": "Enviar invitación",
+        "submitting": "Enviando…",
+        "errors": {
+          "emailInvalid": "Introduce un email válido.",
+          "nicknameRequired": "El nickname debe tener al menos 3 caracteres.",
+          "generic": "No se pudo enviar la invitación. Inténtalo de nuevo."
+        }
+      },
+      "editShare": {
+        "title": "Editar % pactado interno",
+        "subtitle": "Ajusta el porcentaje que percibirá {{nickname}} sobre su facturación.",
+        "pct": "% pactado (0 – 100)",
+        "pctPlaceholder": "p. ej. 55.00",
+        "notes": "Notas (opcional)",
+        "notesPlaceholder": "Motivo del cambio, referencia, etc.",
+        "submit": "Guardar",
+        "submitting": "Guardando…",
+        "errors": {
+          "pctRange": "El porcentaje debe estar entre 0 y 100.",
+          "generic": "No se pudo actualizar el % pactado."
+        }
+      }
     }
   },
   "masterKyc": {

@@ -133,6 +133,7 @@
     "fullscreen": "Fullscreen",
     "sendMessage": "Send message",
     "networkError": "Network error",
+    "loading": "Loading…",
     "ratePerMin": "€{{rate}}/min",
     "actions": {
       "addToFavorites": "Add to favorites",
@@ -3793,9 +3794,80 @@
       "empty": "No movements recorded yet."
     },
     "placeholders": {
-      "modelos": "Studio model management — ships in the next iteration.",
       "historial": "Full ledger history — ships in the next iteration.",
       "payout": "Multi-channel payout request — ships in the next iteration."
+    },
+    "modelos": {
+      "title": "Studio models",
+      "inviteButton": "Invite model",
+      "empty": {
+        "title": "You have not invited any model yet.",
+        "hint": "Use \"Invite model\" to send them the sign-up email. The model completes identity verification and profile on her own."
+      },
+      "cols": {
+        "nickname": "Nickname",
+        "status": "Status",
+        "kyc": "KYC",
+        "hours": "Broadcast hours",
+        "rate": "Rate €/min",
+        "share": "Agreed %",
+        "actions": "Actions"
+      },
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "kyc": {
+        "approved": "Approved",
+        "pending": "Pending",
+        "rejected": "Rejected"
+      },
+      "actions": {
+        "editShare": "Edit %",
+        "activate": "Activate",
+        "deactivate": "Deactivate"
+      },
+      "confirmActivate": "Activate {{nickname}}? The model will be able to start broadcasting under your Master account.",
+      "confirmDeactivate": "Deactivate {{nickname}}? She will no longer be able to broadcast until reactivated.",
+      "flash": {
+        "invited": "Invitation registered successfully.",
+        "activated": "{{nickname}} has been activated.",
+        "deactivated": "{{nickname}} has been deactivated.",
+        "shareUpdated": "Agreed % updated successfully."
+      },
+      "errors": {
+        "load": "Could not load the models list.",
+        "toggle": "Could not update model status."
+      },
+      "invite": {
+        "title": "Invite a model under your Master account",
+        "subtitle": "We will send her a sign-up email. She will complete identity verification and her profile.",
+        "email": "Model email",
+        "emailPlaceholder": "model@email.com",
+        "nickname": "Nickname (stage name)",
+        "nicknamePlaceholder": "e.g. AlmaStar",
+        "submit": "Send invitation",
+        "submitting": "Sending…",
+        "errors": {
+          "emailInvalid": "Enter a valid email.",
+          "nicknameRequired": "Nickname must be at least 3 characters.",
+          "generic": "Could not send the invitation. Please try again."
+        }
+      },
+      "editShare": {
+        "title": "Edit agreed internal %",
+        "subtitle": "Adjust the percentage {{nickname}} will earn on her billing.",
+        "pct": "Agreed % (0 – 100)",
+        "pctPlaceholder": "e.g. 55.00",
+        "notes": "Notes (optional)",
+        "notesPlaceholder": "Reason for change, reference, etc.",
+        "submit": "Save",
+        "submitting": "Saving…",
+        "errors": {
+          "pctRange": "Percentage must be between 0 and 100.",
+          "generic": "Could not update agreed %."
+        }
+      }
     }
   },
   "masterKyc": {

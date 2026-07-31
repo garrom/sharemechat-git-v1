@@ -8,6 +8,7 @@ import { apiFetch } from '../../config/http';
 import { useSession } from '../../components/SessionProvider';
 import { useAppModals } from '../../components/useAppModals';
 import NavbarMaster from '../../components/navbar/NavbarMaster';
+import MasterModelosPanel from '../../components/master/MasterModelosPanel';
 import masterApi from '../../api/masterApi';
 
 // ============================================================
@@ -301,11 +302,7 @@ export default function DashboardMaster() {
           </>
         )}
 
-        {activeTab === 'modelos' && (
-          <div style={TabPlaceholder}>
-            <p>{i18n.t('masterDashboard.placeholders.modelos')}</p>
-          </div>
-        )}
+        {activeTab === 'modelos' && <MasterModelosPanel />}
 
         {activeTab === 'historial' && (
           <div style={TabPlaceholder}>
