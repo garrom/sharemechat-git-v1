@@ -110,9 +110,17 @@ public class AdminService {
 
     @Transactional(readOnly = true)
     public List<UserDTO> getModels(String verification) {
-        List<User> list = (verification == null || verification.isBlank())
+        List<User> raw = (verification == null || verification.isBlank())
                 ? userRepository.findByVerificationStatusIsNotNull()
                 : userRepository.findByVerificationStatus(verification.toUpperCase());
+
+        // ADR-056 revision 2026-07-31: la tab admin "Modelos" solo debe
+        // mostrar candidatas a role MODEL (user_type=FORM_MODEL). Los
+        // Masters (user_type=FORM_MASTER) tienen su propia tab admin y
+        // no aplican al checklist de aprobacion de modelos.
+        List<User> list = raw.stream()
+                .filter(u -> Constants.UserTypes.FORM_MODEL.equals(u.getUserType()))
+                .toList();
 
         List<Long> userIds = list.stream()
                 .map(User::getId)

@@ -2727,7 +2727,9 @@
       "checklist": {
         "front": "Frontal",
         "back": "Trasera",
-        "selfie": "Selfie/PDF"
+        "selfie": "Selfie/PDF",
+        "diditApproved": "Docs validados por Didit",
+        "diditPending": "Esperando verificación Didit"
       },
       "kyc": {
         "title": "Configuración KYC de onboarding",

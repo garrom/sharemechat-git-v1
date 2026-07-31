@@ -125,6 +125,16 @@ const AdminModelsPanel = ({
   };
 
   const canApprove = (userId) => {
+    // ADR-056 revision 2026-07-31: en modo DIDIT (automatico), Didit
+    // gestiona los documentos por su lado — no hay 3 docs manuales que
+    // validar en admin. La aprobacion admin solo confirma la promocion
+    // a role=MODEL para modelos ya APPROVED via webhook Didit.
+    const activeMode = (kycCfg?.activeMode || '').toUpperCase();
+    if (activeMode === 'DIDIT') {
+      const user = users.find((u) => u.id === userId);
+      return !!user && user.verificationStatus === 'APPROVED';
+    }
+    // Modo MANUAL: mantener chequeo tradicional (3 docs + 3 checks).
     const docs = docsByUser[userId] || {};
     const checks = checksByUser[userId] || {};
     const hasFront = !!docs.urlVerificFront;
@@ -289,6 +299,22 @@ const AdminModelsPanel = ({
   const renderChecklistCell = (user) => {
     const checks = checksByUser[user.id] || {};
     const docs = docsByUser[user.id] || {};
+    const activeMode = (kycCfg?.activeMode || '').toUpperCase();
+
+    // ADR-056 revision 2026-07-31: en modo DIDIT los documentos los
+    // gestiona el proveedor (Didit dashboard). El admin no valida
+    // Frontal/Trasera/Selfie manualmente: solo confirma la promocion
+    // basada en verification_status APPROVED del webhook.
+    if (activeMode === 'DIDIT') {
+      const isApproved = user.verificationStatus === 'APPROVED';
+      return (
+        <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>
+          {isApproved
+            ? t('admin.models.checklist.diditApproved')
+            : t('admin.models.checklist.diditPending')}
+        </div>
+      );
+    }
 
     const items = [
       { label: t('admin.models.checklist.front'), fieldKey: 'frontOk', url: docs.urlVerificFront },
