@@ -517,6 +517,44 @@ Sin grandfathering — modelos individuales existentes pasan al nuevo régimen d
   esos entornos. Sin ese env var el fallback a `KYC_DIDIT_CALLBACK_URL`
   legacy vuelve a romper el redirect.
 
+**Deuda operativa 2026-07-31 — Contrato Modelo v4.2 publicado solo en TEST**:
+el PDF servido en `https://assets.test.sharemechat.com/legal/model_contract.pdf`
+(manifest version `model_contract_v42_2026-07-31`, sha256
+`3E1CBFAC1A12277CFB13455371E42D038F1B44149B6CBF55199F13EBFF0CEDA3`)
+sustituye la v4.1 anterior (mismo texto legal + ajuste menor Section 2
+adult-oriented + formato limpio reportlab en lugar de `markdown-pdf`
+que rompía cada frase en párrafo suelto). Generado por
+`ops/legal-pdfs/generate_legal_pdfs.py` como job #10 y archivado en
+`ops/legal-history/model_contract/model_contract_v42_2026-07-31.pdf`.
+Cambia SHA256 → las modelos que ya firmaron v4.1 pasan a estado
+`acceptedCurrent=false` y necesitan re-firmar antes de operar (en TEST
+no hay modelos reales, en PROD sí habría que planificar re-aceptación
+masiva). **Antes de PROD/AUDIT**: replicar publicación al bucket
+correspondiente (`assets-sharemechat-audit` / `assets-sharemechat-prod`)
++ manifest.json + invalidación CloudFront de la distribución de assets
+del entorno + copia al histórico local con la misma version_id (regla
+de `ops/legal-history/README.md`: nombre fichero = version del manifest,
+nunca sobrescribir).
+
+**Deuda operativa 2026-07-31 — Cláusulas D7 del Contrato Modelo (chargebacks/disputa/reserva) pendientes hasta Sub-frente 3 técnico ADR-052**:
+el borrador `docs/01-business/model-contract-v5-clauses-d7-draft.md`
+define X.1-X.7 (categorías costes, notificación 7d, umbral 5%,
+disputa 10d, transparencia panel, consentimiento, reserva 5%×90d).
+Ninguna cláusula X.2-X.7 se puede publicar hoy porque el respaldo
+técnico no existe (no hay tabla `payout_deductions`, no hay cálculo
+ratio individual, no hay botón disputa panel, no hay tickets
+internos, no hay retención automática 5%). Publicar creando
+obligaciones incumplibles daría argumento legal directo a la modelo.
+El v4.1 §8 vigente ("Adjust or reverse earnings in case of disputes,
+chargebacks, or violations") cubre el mínimo hoy porque no hay D9
+descuentos automáticos desplegados (todo ad-hoc por operaciones).
+**Cuando toque implementar Sub-frente 3 técnico ADR-052 (D9)**:
+crear entidad `DeductionEvent` + tabla `payout_deductions` +
+service notificación 7d + endpoint disputa + panel modelo botón
+disputa + retención 5% × 90d + estado `UNDER_REVIEW` en
+`PayoutRequest`. Solo entonces publicar v5 real con cláusulas X.1-X.7
+completas.
+
 **Deuda operativa 2026-07-31 — Contrato Master publicado en TEST es BORRADOR**:
 el PDF servido en `https://assets.test.sharemechat.com/legal/master_contract.pdf`
 (manifest version `master_contract_v1_2026-07-31`, sha256

@@ -1153,6 +1153,167 @@ RECORDS_2257_SECTIONS = [
     ]},
 ]
 
+# 10) Model Collaboration Agreement (contrato firmado por cada modelo)
+#
+# Version v4.2 publicada 2026-07-31. Cambio unicamente de formato
+# respecto de v4.1 (reportlab en vez de conversor markdown-pdf que
+# rompia cada frase en parrafo suelto). Texto legal identico a v4.1
+# excepto ajuste menor de la Section 2 para reflejar la realidad
+# adult-oriented alineada con Terms of Service Section 4 y Content
+# Management Policy. Las clausulas D7 (chargebacks, disputa, reserva)
+# quedan pendientes hasta que exista el Sub-frente 3 tecnico ADR-052
+# (draft en docs/01-business/model-contract-v5-clauses-d7-draft.md).
+MCA_INTRO = (
+    '<b>Platform:</b> SharemeChat<br/>'
+    '<b>Version:</b> 4.2<br/>'
+    '<b>Effective Date:</b> 31/07/2026<br/>'
+    '<br/>'
+    '<b>IMPORTANT NOTICE.</b> This Agreement is accepted electronically. '
+    'The Platform records acceptance data including timestamp, IP '
+    'address, device, version, and cryptographic hash.'
+)
+MCA_SECTIONS = [
+    {'title': '1. Parties', 'paras': [
+        {'type': 'p', 'text': 'This Agreement is entered into between:'},
+        {'type': 'addr', 'text': (
+            'Shareme Technologies OÜ, a company incorporated under the '
+            'laws of Estonia, with registry code 17444422 and registered '
+            'address at Lõõtsa tn 5, 11415 Tallinn, Harju maakond, '
+            'Estonia. Contact email: operations@sharemechat.com (the '
+            '"Platform"),'
+        )},
+        {'type': 'p', 'text': (
+            'and the registered user acting as a "Model" (the "Model").'
+        )},
+    ]},
+    {'title': '2. Service Description', 'paras': [
+        {'type': 'p', 'text': (
+            'The Platform enables real-time private 1-to-1 video and '
+            'chat interactions between identity-verified adults. The '
+            'Model provides live adult-oriented interaction services '
+            'via the Platform.'
+        )},
+    ]},
+    {'title': '3. Independent Contractor Status', 'paras': [
+        {'type': 'p', 'text': (
+            'The Model acts as an independent contractor. Nothing in '
+            'this Agreement constitutes employment, partnership, or '
+            'agency.'
+        )},
+    ]},
+    {'title': '4. Eligibility & KYC', 'paras': [
+        {'type': 'p', 'text': (
+            'The Model must be at least 18 years old. The Platform may '
+            'require identity verification (KYC). Failure to complete '
+            'verification may result in suspension or termination.'
+        )},
+    ]},
+    {'title': '5. Content & Conduct Policy', 'paras': [
+        {'type': 'p', 'text': 'The Model agrees to comply with:'},
+        {'type': 'ul', 'items': [
+            'Applicable laws.',
+            'Platform rules.',
+            'Payment provider requirements.',
+        ]},
+        {'type': 'p', 'text': 'The following is strictly prohibited:'},
+        {'type': 'ul', 'items': [
+            'Any involvement of minors.',
+            'Illegal, abusive, or non-consensual content.',
+            'Fraud, impersonation, or misleading behavior.',
+            'Harassment, coercion, or extortion.',
+            'Attempts to move users off-platform.',
+        ]},
+    ]},
+    {'title': '6. Platform Control & Moderation', 'paras': [
+        {'type': 'p', 'text': 'The Platform reserves the right to:'},
+        {'type': 'ul', 'items': [
+            'Monitor activity for compliance.',
+            'Remove content or terminate sessions.',
+            'Suspend or ban accounts.',
+            'Restrict functionality when necessary.',
+        ]},
+    ]},
+    {'title': '7. Off-Platform Restrictions', 'paras': [
+        {'type': 'p', 'text': 'The Model may not:'},
+        {'type': 'ul', 'items': [
+            'Redirect users to external platforms.',
+            'Share contact details for off-platform interaction.',
+            'Accept or request payments outside the Platform.',
+        ]},
+    ]},
+    {'title': '8. Payments & Earnings', 'paras': [
+        {'type': 'p', 'text': 'Earnings depend on:'},
+        {'type': 'ul', 'items': [
+            'Session duration.',
+            'Gifts or bonuses.',
+        ]},
+        {'type': 'p', 'text': 'Conditions:'},
+        {'type': 'ul', 'items': [
+            'Completed KYC.',
+            'Valid payment details.',
+            'Compliance checks.',
+        ]},
+        {'type': 'p', 'text': 'The Platform may:'},
+        {'type': 'ul', 'items': [
+            'Delay payments for fraud review.',
+            ('Adjust or reverse earnings in case of disputes, '
+             'chargebacks, or violations.'),
+        ]},
+        {'type': 'p', 'text': 'Minimum payout thresholds apply.'},
+    ]},
+    {'title': '9. No Guarantee of Income', 'paras': [
+        {'type': 'p', 'text': (
+            'The Platform does not guarantee earnings, traffic, or '
+            'session volume.'
+        )},
+    ]},
+    {'title': '10. Taxes', 'paras': [
+        {'type': 'p', 'text': (
+            'The Model is solely responsible for all taxes and legal '
+            'obligations.'
+        )},
+    ]},
+    {'title': '11. Intellectual Property', 'paras': [
+        {'type': 'p', 'text': (
+            'The Platform retains ownership of its software and '
+            'branding. The Model grants a limited license to display '
+            'content within the service.'
+        )},
+    ]},
+    {'title': '12. Confidentiality', 'paras': [
+        {'type': 'p', 'text': (
+            'The Model agrees not to disclose internal or user-related '
+            'information.'
+        )},
+    ]},
+    {'title': '13. Termination', 'paras': [
+        {'type': 'p', 'text': (
+            'The Platform may suspend or terminate accounts for '
+            'violations or risks. The Model may terminate their '
+            'account at any time.'
+        )},
+    ]},
+    {'title': '14. Limitation of Liability', 'paras': [
+        {'type': 'p', 'text': (
+            'The Platform is not liable for indirect damages or '
+            'service interruptions.'
+        )},
+    ]},
+    {'title': '15. Governing Law', 'paras': [
+        {'type': 'p', 'text': (
+            'This Agreement is governed by Estonian law. Jurisdiction: '
+            'Harju County Court (Tallinn, Estonia).'
+        )},
+    ]},
+    {'title': '16. Digital Acceptance', 'paras': [
+        {'type': 'p', 'text': (
+            'Acceptance of this Agreement is legally binding and '
+            'equivalent to a handwritten signature.'
+        )},
+    ]},
+]
+
+
 # ----------------------------------------------------------------------
 # Generación
 # ----------------------------------------------------------------------
@@ -1193,6 +1354,9 @@ def main():
          RECORDS_2257_INTRO, RECORDS_2257_SECTIONS, None),
         ('SharemeChat_Contact_Information.pdf',
          'Contact Information', CONTACT_INTRO, CONTACT_SECTIONS, None),
+        ('SharemeChat_Model_Collaboration_Agreement.pdf',
+         'Model Collaboration Agreement',
+         MCA_INTRO, MCA_SECTIONS, None),
     ]
 
     for filename, title, intro, sections, parts in jobs:
