@@ -274,7 +274,7 @@ public class EmailCopyRenderer {
             return new EmailContent(
                     "Recuperación de contraseña",
                     wrapWithLogo("""
-                            <p>Has solicitado restablecer tu contraseÃ±a.</p>
+                            <p>Has solicitado restablecer tu contraseña.</p>
                             <p>Haz clic en el siguiente enlace para continuar:</p>
                             <p><a href="%s">%s</a></p>
                             <p>Este enlace caduca en %s.</p>
