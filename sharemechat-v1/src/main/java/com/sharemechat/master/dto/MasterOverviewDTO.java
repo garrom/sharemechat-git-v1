@@ -19,6 +19,7 @@ public class MasterOverviewDTO {
     private LocalDateTime lastPayoutAt;
     private BigDecimal lastPayoutAmount;
     private String verificationStatus;
+    private Boolean emailVerified;
     private Boolean contractAccepted;
 
     public BigDecimal getBilledGrossEur30d() { return billedGrossEur30d; }
@@ -41,6 +42,9 @@ public class MasterOverviewDTO {
 
     public String getVerificationStatus() { return verificationStatus; }
     public void setVerificationStatus(String verificationStatus) { this.verificationStatus = verificationStatus; }
+
+    public Boolean getEmailVerified() { return emailVerified; }
+    public void setEmailVerified(Boolean emailVerified) { this.emailVerified = emailVerified; }
 
     public Boolean getContractAccepted() { return contractAccepted; }
     public void setContractAccepted(Boolean contractAccepted) { this.contractAccepted = contractAccepted; }

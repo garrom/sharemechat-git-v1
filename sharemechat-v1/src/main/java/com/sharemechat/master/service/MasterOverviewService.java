@@ -65,7 +65,8 @@ public class MasterOverviewService {
         dto.setNickname(user.getNickname());
         dto.setAccountStatus(user.getAccountStatus());
         dto.setVerificationStatus(user.getVerificationStatus());
-        dto.setContractAccepted(masterContractService.isAcceptedCurrent(user.getId()));
+        dto.setEmailVerified(user.getEmailVerifiedAt() != null);
+        dto.setContractAccepted(safeIsContractAccepted(user.getId()));
         dto.setSaldoActual(currentBalance(user.getId()));
         masterRepository.findByUserId(user.getId()).ifPresent(m -> {
             dto.setCompanyName(m.getCompanyName());
@@ -124,7 +125,8 @@ public class MasterOverviewService {
                 });
 
         out.setVerificationStatus(user.getVerificationStatus());
-        out.setContractAccepted(masterContractService.isAcceptedCurrent(user.getId()));
+        out.setEmailVerified(user.getEmailVerifiedAt() != null);
+        out.setContractAccepted(safeIsContractAccepted(user.getId()));
 
         log.debug("[MASTER-OVERVIEW] userId={} gross30d={} active={} pending={} balance={}",
                 user.getId(), out.getBilledGrossEur30d(),
@@ -137,5 +139,22 @@ public class MasterOverviewService {
         return balanceRepository.findTopByUserIdOrderByTimestampDescIdDesc(userId)
                 .map(Balance::getBalance)
                 .orElse(BigDecimal.ZERO);
+    }
+
+    /**
+     * Wrapper defensivo sobre {@link MasterContractService#isAcceptedCurrent}.
+     * Si el manifest del contrato no esta disponible en S3 (bucket TEST sin
+     * publicar aun, o timeout momentaneo), tratamos como "no aceptado" para
+     * no romper el dashboard entero. El banner "contrato pendiente" ya empuja
+     * al Master a firmar cuando el manifest exista.
+     */
+    private boolean safeIsContractAccepted(Long userId) {
+        try {
+            return masterContractService.isAcceptedCurrent(userId);
+        } catch (Exception ex) {
+            log.warn("[MASTER-OVERVIEW] no se pudo verificar aceptacion contrato userId={} (manifest no disponible?): {}",
+                    userId, ex.getMessage());
+            return false;
+        }
     }
 }

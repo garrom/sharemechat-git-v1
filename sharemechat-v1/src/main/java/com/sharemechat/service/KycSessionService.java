@@ -21,6 +21,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -333,16 +335,44 @@ public class KycSessionService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
 
-        boolean isOnboardingMaster =
-                Constants.Roles.USER.equals(user.getRole())
-                        && Constants.UserTypes.FORM_MASTER.equals(user.getUserType());
+        // ADR-056 fix (2026-07-31): tras el cambio a auto-promocion (Opcion 1
+        // en MasterService.registerMaster) los Masters se crean directamente
+        // con role=MASTER + user_type=FORM_MASTER (no USER+FORM_MASTER como
+        // en el diseno inicial "pendiente de revision admin"). Aceptar ambas
+        // combinaciones para compatibilidad si el diseno cambia de nuevo.
+        boolean isValidMaster =
+                (Constants.Roles.MASTER.equals(user.getRole())
+                        && Constants.UserTypes.FORM_MASTER.equals(user.getUserType()))
+                || (Constants.Roles.USER.equals(user.getRole())
+                        && Constants.UserTypes.FORM_MASTER.equals(user.getUserType()));
 
-        if (!isOnboardingMaster) {
-            throw new IllegalArgumentException("Solo USER + FORM_MASTER puede iniciar KYC Master");
+        if (!isValidMaster) {
+            throw new IllegalArgumentException("Solo MASTER o USER+FORM_MASTER puede iniciar KYC Master");
         }
 
         if (!masterContractService.isAcceptedCurrent(userId)) {
             throw new IllegalArgumentException("Debes aceptar el contrato Master antes del KYC");
+        }
+
+        // ADR-056 fix (2026-07-31): reutilizar sesion Didit MASTER PENDING
+        // existente en lugar de crear una nueva. Didit sandbox devuelve el
+        // mismo provider_session_id en llamadas repetidas al mismo user
+        // hasta que la sesion pasa a Approved/Rejected — reintentar crearla
+        // hace fallar la constraint UNIQUE uk_mks_provider_session.
+        Optional<KycSession> existing = kycSessionRepository
+                .findTopByUserIdAndSessionTypeAndKycStatusOrderByIdDesc(
+                        userId, Constants.SessionTypes.MASTER,
+                        Constants.VerificationStatuses.PENDING);
+        if (existing.isPresent()) {
+            KycSession row = existing.get();
+            KycStartSessionResponseDTO reuseDto = new KycStartSessionResponseDTO();
+            reuseDto.setUserId(userId);
+            reuseDto.setProvider(row.getProvider());
+            reuseDto.setProviderSessionId(row.getProviderSessionId());
+            reuseDto.setVerificationUrl(row.getHostedUrl());
+            reuseDto.setProviderStatus(row.getProviderStatus());
+            reuseDto.setMappedStatus(row.getKycStatus());
+            return reuseDto;
         }
 
         DiditCreateSessionResult result = diditClient.createSession(
@@ -812,13 +842,26 @@ public class KycSessionService {
         }
         String modelWf = diditProperties == null ? null : diditProperties.getModelWorkflowId();
         String clientWf = diditProperties == null ? null : diditProperties.getClientWorkflowId();
+        // ADR-056: workflow MASTER dedicado (puede ser blank, en cuyo caso el
+        // effective master workflow cae en fallback al model workflow — ver
+        // DiditProperties.getEffectiveMasterWorkflowId).
+        String masterWf = diditProperties == null ? null : diditProperties.getMasterWorkflowId();
+        boolean masterUsesModelFallback = (masterWf == null || masterWf.isBlank());
 
         boolean isModelWf = modelWf != null && !modelWf.isBlank() && payloadWorkflowId.equals(modelWf);
         boolean isClientWf = clientWf != null && !clientWf.isBlank() && payloadWorkflowId.equals(clientWf);
+        boolean isMasterWf = masterWf != null && !masterWf.isBlank() && payloadWorkflowId.equals(masterWf);
 
-        if (!isModelWf && !isClientWf) {
+        if (!isModelWf && !isClientWf && !isMasterWf) {
             log.warn("Didit webhook con workflow_id desconocido='{}' (session_id={}, session_type={}); se procesa con la session existente sin barrera adicional",
                     payloadWorkflowId, providerSessionId, sessionType);
+            return;
+        }
+
+        // Master usando fallback al model workflow: el webhook llega con
+        // workflow=model pero la sesion es MASTER — es el flujo esperado
+        // hasta que el operador cree workflow dedicado en Didit dashboard.
+        if (isModelWf && Constants.SessionTypes.MASTER.equals(sessionType) && masterUsesModelFallback) {
             return;
         }
 
@@ -831,6 +874,11 @@ public class KycSessionService {
             throw new IllegalStateException(
                     "Mismatch workflow_id/session_type: payload=" + payloadWorkflowId
                             + " (client workflow) pero la sesion " + providerSessionId + " es " + sessionType);
+        }
+        if (isMasterWf && !Constants.SessionTypes.MASTER.equals(sessionType)) {
+            throw new IllegalStateException(
+                    "Mismatch workflow_id/session_type: payload=" + payloadWorkflowId
+                            + " (master workflow) pero la sesion " + providerSessionId + " es " + sessionType);
         }
     }
 

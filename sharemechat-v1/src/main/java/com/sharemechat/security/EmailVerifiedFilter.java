@@ -78,7 +78,7 @@ public class EmailVerifiedFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
 
         // 2) Whitelist y rutas de sistema. OPTIONS siempre pasa (CORS preflight).
-        if ("OPTIONS".equalsIgnoreCase(method) || isWhitelisted(path)) {
+        if ("OPTIONS".equalsIgnoreCase(method) || isWhitelisted(path, method)) {
             chain.doFilter(request, response);
             return;
         }
@@ -113,13 +113,37 @@ public class EmailVerifiedFilter extends OncePerRequestFilter {
      * Whitelist hardcoded. Documenta porque cada entrada esta aqui. Si
      * la suma de paths crece o se reordena, mantener este JavaDoc al dia
      * es mas valioso que extraerlo a config externa.
+     *
+     * @param method HTTP method para whitelisting selectivo por metodo
+     *               (algunos paths solo se permiten en GET / lectura).
      */
-    private boolean isWhitelisted(String path) {
+    private boolean isWhitelisted(String path, String method) {
         if (path == null) return false;
+        String m = method == null ? "" : method.toUpperCase();
 
         // Identidad del propio user: tiene que poder consultarse antes
         // de saber si esta o no verificado.
         if (path.equals("/api/users/me")) return true;
+
+        // ADR-056 Opcion Z (2026-07-30): permitir al Master ver su
+        // dashboard y avanzar onboarding (contrato + KYC) aunque no haya
+        // verificado email. Las acciones de escritura sobre modelos y
+        // payouts NO estan aqui — siguen bloqueadas con 403
+        // EMAIL_NOT_VERIFIED, garantizando que ningun uso operativo real
+        // procede sin el email verificado.
+        //
+        // GET (lectura) para pintar el dashboard:
+        if ("GET".equals(m)) {
+            if (path.equals("/api/masters/me")) return true;
+            if (path.equals("/api/masters/me/overview")) return true;
+            if (path.equals("/api/masters/me/transactions")) return true;
+            if (path.equals("/api/masters/me/models")) return true;
+            if (path.startsWith("/api/masters/me/models/")) return true;
+            if (path.equals("/api/masters/me/contract")) return true;
+        }
+        // Onboarding paralelo (contrato + KYC pueden avanzar sin email verify):
+        if ("POST".equals(m) && path.equals("/api/masters/me/contract/accept")) return true;
+        if ("POST".equals(m) && path.equals("/api/masters/me/kyc/didit")) return true;
 
         // Reenvio y confirmacion del email de verificacion (la unica
         // forma de salir del estado bloqueado).

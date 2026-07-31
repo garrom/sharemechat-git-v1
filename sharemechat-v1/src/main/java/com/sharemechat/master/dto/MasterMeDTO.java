@@ -14,6 +14,7 @@ public class MasterMeDTO {
     private String nickname;
     private String accountStatus;
     private String verificationStatus;
+    private Boolean emailVerified;
     private Boolean contractAccepted;
     private BigDecimal saldoActual;
     private String companyName;
@@ -33,6 +34,9 @@ public class MasterMeDTO {
 
     public String getVerificationStatus() { return verificationStatus; }
     public void setVerificationStatus(String verificationStatus) { this.verificationStatus = verificationStatus; }
+
+    public Boolean getEmailVerified() { return emailVerified; }
+    public void setEmailVerified(Boolean emailVerified) { this.emailVerified = emailVerified; }
 
     public Boolean getContractAccepted() { return contractAccepted; }
     public void setContractAccepted(Boolean contractAccepted) { this.contractAccepted = contractAccepted; }

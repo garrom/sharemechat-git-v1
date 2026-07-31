@@ -27,13 +27,25 @@ import java.util.Locale;
  * (crea fila Master 1-a-1 con users). Sin flujo de country-gating por
  * ahora (D6 v1: Master persona fisica sin restriccion geografica).
  *
- * <p>Post-registro:
+ * <p>Post-registro (decision 2026-07-30, revision del comentario original):
  * <ul>
- *   <li>user.role = USER, user.user_type = FORM_MASTER (aun no promocionado
- *       a role MASTER; la promocion ocurre en revision admin tras KYC).</li>
+ *   <li>user.role = MASTER, user.user_type = FORM_MASTER (auto-promocion).
+ *       A diferencia de Cliente/Modelo que arrancan como USER y se promocionan
+ *       tras primera recarga / primeros docs, el Master no tiene gate PRELAUNCH
+ *       aplicable: no consume ni produce servicio directo. El KYC + contrato
+ *       Master se enforcean via banners del dashboard y validaciones en el
+ *       endpoint de payout (deuda: bloquear payout hasta contrato firmado).</li>
  *   <li>Se crea fila Master con datos opcionales de empresa.</li>
  *   <li>Se dispara email de verificacion (patron estandar).</li>
  * </ul>
+ *
+ * <p>Si en el futuro se decide reintroducir revision admin previa antes de
+ * activar el rol MASTER (Opcion 2 del analisis), habra que:
+ * <ol>
+ *   <li>Volver a asignar role=USER + user_type=FORM_MASTER aqui.</li>
+ *   <li>Crear pagina intermedia {@code /dashboard-user-master}.</li>
+ *   <li>Anyadir endpoint admin de promocion USER+FORM_MASTER -> MASTER.</li>
+ * </ol>
  */
 @Service
 public class MasterService {
@@ -103,7 +115,7 @@ public class MasterService {
         user.setEmail(email);
         user.setNickname(nickname);
         user.setPassword(passwordEncoder.encode(password));
-        user.setRole(Constants.Roles.USER);
+        user.setRole(Constants.Roles.MASTER);   // auto-promocion (ver javadoc)
         user.setUserType(Constants.UserTypes.FORM_MASTER);
         user.setDateOfBirth(dob);
         user.setUnsubscribe(false);

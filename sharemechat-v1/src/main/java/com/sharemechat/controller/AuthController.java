@@ -131,11 +131,15 @@ public class AuthController {
         // user_backoffice_roles) DEBE usar /api/admin/auth/login. Respuesta indistinguible
         // de credencial invalida para no filtrar oraculo (mantiene contrato AuthRiskService).
         //
-        // 1) Rol primario (columna users.role) debe estar en {USER, CLIENT, MODEL}.
+        // 1) Rol primario (columna users.role) debe estar en {USER, CLIENT, MODEL, MASTER}.
+        //    MASTER es rol de usuario final B2B (owner de estudio, ADR-056), operativo bajo
+        //    el surface product. Se logea via /api/auth/login como CLIENT/MODEL, no via
+        //    /api/admin/auth/login (que es solo para empleados backoffice).
         String role = u.getRole();
         if (!Constants.Roles.USER.equals(role)
                 && !Constants.Roles.CLIENT.equals(role)
-                && !Constants.Roles.MODEL.equals(role)) {
+                && !Constants.Roles.MODEL.equals(role)
+                && !Constants.Roles.MASTER.equals(role)) {
             authRiskService.record(AuthRiskConstants.Events.LOGIN_FAILURE, riskCtx.withUserId(u.getId()));
             throw new InvalidCredentialsException("Credenciales inválidas");
         }
