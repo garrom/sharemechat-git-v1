@@ -3850,11 +3850,15 @@
         "emailPlaceholder": "model@email.com",
         "nickname": "Nickname (stage name)",
         "nicknamePlaceholder": "e.g. AlmaStar",
+        "sharePct": "Initial agreed % (0 – 100)",
+        "sharePctPlaceholder": "e.g. 20",
+        "sharePctHint": "% the model will earn on her gross billing. You can adjust it later from the table.",
         "submit": "Send invitation",
         "submitting": "Sending…",
         "errors": {
           "emailInvalid": "Enter a valid email.",
           "nicknameRequired": "Nickname must be at least 3 characters.",
+          "sharePctRange": "Agreed % must be a whole number between 0 and 100.",
           "generic": "Could not send the invitation. Please try again."
         }
       },

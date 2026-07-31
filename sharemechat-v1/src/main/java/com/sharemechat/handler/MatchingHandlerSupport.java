@@ -77,6 +77,14 @@ public class MatchingHandlerSupport {
     // modelos actualmente baneadas del matching pool.
     private final com.sharemechat.repository.ModelRepository modelRepository;
 
+    // ADR-056 gate hard (2026-07-31): modelo bajo Master sin fila vigente
+    // en master_model_splits queda excluida del pool. Evita que emita "a
+    // ciegas" sin pacto Master↔Modelo registrado. Enforce upstream vive
+    // en MasterModelInvitationService (obligatorio al invitar); esto es
+    // safety net por si aparece alguna via edge (import batch, admin
+    // manual) que la deje sin split.
+    private final com.sharemechat.master.repository.MasterModelSplitRepository masterModelSplitRepository;
+
     public MatchingHandlerSupport(MatchingRuntimeState state,
                                   JwtUtil jwtUtil,
                                   UserRepository userRepository,
@@ -98,6 +106,7 @@ public class MatchingHandlerSupport {
                                   LivenessChallengeService livenessChallengeService,
                                   LivenessProperties livenessProperties,
                                   com.sharemechat.repository.ModelRepository modelRepository,
+                                  com.sharemechat.master.repository.MasterModelSplitRepository masterModelSplitRepository,
                                   @Value("${matching.seen.max-scan:60}") int seenMaxScan) {
         this.state = state;
         this.jwtUtil = jwtUtil;
@@ -121,6 +130,7 @@ public class MatchingHandlerSupport {
         this.livenessChallengeService = livenessChallengeService;
         this.livenessProperties = livenessProperties;
         this.modelRepository = modelRepository;
+        this.masterModelSplitRepository = masterModelSplitRepository;
     }
 
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -2004,7 +2014,39 @@ public class MatchingHandlerSupport {
         // falla, no filtramos (fail-open — mismo criterio que otros gates
         // de este metodo). Aplica a paid Y trial: cualquier modelo con
         // ban activo se excluye del matching pool.
-        return !isStreamingBanned(userAId) && !isStreamingBanned(userBId);
+        if (isStreamingBanned(userAId) || isStreamingBanned(userBId)) return false;
+        // ADR-056 gate hard (2026-07-31): modelo bajo Master sin split
+        // vigente queda excluida del matching pool. Fail-CLOSED
+        // intencionalmente (a diferencia del ban): sin pacto no puede
+        // emitir bajo ningun concepto.
+        if (isMasterModelWithoutSplit(userAId) || isMasterModelWithoutSplit(userBId)) return false;
+        return true;
+    }
+
+    private boolean isMasterModelWithoutSplit(Long userId) {
+        try {
+            Long masterUserId = modelRepository.findById(userId)
+                    .map(com.sharemechat.entity.Model::getMasterUserId)
+                    .orElse(null);
+            if (masterUserId == null) return false; // modelo individual o no-modelo
+            boolean hasVigenteSplit = masterModelSplitRepository
+                    .findFirstByMasterUserIdAndModelUserIdAndEffectiveToIsNullOrderByIdDesc(
+                            masterUserId, userId)
+                    .isPresent();
+            if (!hasVigenteSplit) {
+                log.warn("[MATCH-GATE] modelo bajo Master sin split vigente userId={} masterUserId={}",
+                        userId, masterUserId);
+            }
+            return !hasVigenteSplit;
+        } catch (Exception ex) {
+            log.warn("[MATCH-GATE] isMasterModelWithoutSplit FAIL userId={}: {}",
+                    userId, ex.getMessage());
+            // Fail-CLOSED: si no podemos verificar, excluimos del pool
+            // (opuesto al criterio de otros gates). El coste de no
+            // emitir 1 sesion es mucho menor que el coste de emitir sin
+            // pacto registrado.
+            return true;
+        }
     }
 
     private boolean isStreamingBanned(Long userId) {

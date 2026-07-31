@@ -3850,11 +3850,15 @@
         "emailPlaceholder": "modelo@correo.com",
         "nickname": "Nickname (nombre artístico)",
         "nicknamePlaceholder": "p. ej. AlmaStar",
+        "sharePct": "% pactado inicial (0 – 100)",
+        "sharePctPlaceholder": "p. ej. 20",
+        "sharePctHint": "% que percibirá la modelo sobre su facturación bruta. Puedes ajustarlo después desde la tabla.",
         "submit": "Enviar invitación",
         "submitting": "Enviando…",
         "errors": {
           "emailInvalid": "Introduce un email válido.",
           "nicknameRequired": "El nickname debe tener al menos 3 caracteres.",
+          "sharePctRange": "El % pactado debe ser un número entero entre 0 y 100.",
           "generic": "No se pudo enviar la invitación. Inténtalo de nuevo."
         }
       },

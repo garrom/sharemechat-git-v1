@@ -77,6 +77,9 @@ export async function getModel(id) {
 export async function inviteModel(body) {
   if (!body || !body.modelEmail) throw new Error('modelEmail requerido');
   if (!body.modelNickname) throw new Error('modelNickname requerido');
+  if (body.initialInternalSharePct == null) {
+    throw new Error('initialInternalSharePct requerido');
+  }
   return apiFetch('/masters/me/models', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

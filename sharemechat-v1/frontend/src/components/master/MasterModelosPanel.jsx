@@ -76,10 +76,11 @@ const t = (k, opts) => i18n.t(k, opts);
 function InviteModal({ open, onClose, onInvited }) {
   const [email, setEmail] = useState('');
   const [nickname, setNickname] = useState('');
+  const [sharePct, setSharePct] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const reset = () => { setEmail(''); setNickname(''); setError(''); };
+  const reset = () => { setEmail(''); setNickname(''); setSharePct(''); setError(''); };
   const handleClose = () => { reset(); onClose(); };
 
   const handleSubmit = async (e) => {
@@ -93,11 +94,17 @@ function InviteModal({ open, onClose, onInvited }) {
       setError(t('masterDashboard.modelos.invite.errors.nicknameRequired'));
       return;
     }
+    const n = Number(sharePct);
+    if (!Number.isInteger(n) || n < 0 || n > 100) {
+      setError(t('masterDashboard.modelos.invite.errors.sharePctRange'));
+      return;
+    }
     setSubmitting(true);
     try {
       await masterApi.inviteModel({
         modelEmail: email.trim().toLowerCase(),
         modelNickname: nickname.trim(),
+        initialInternalSharePct: n,
       });
       onInvited();
       reset();
@@ -139,6 +146,23 @@ function InviteModal({ open, onClose, onInvited }) {
             onChange={(e) => setNickname(e.target.value)}
             placeholder={t('masterDashboard.modelos.invite.nicknamePlaceholder')}
           />
+        </div>
+
+        <div style={Field}>
+          <div style={Label}>{t('masterDashboard.modelos.invite.sharePct')}</div>
+          <input
+            style={Input}
+            type="number"
+            step="1"
+            min="0"
+            max="100"
+            value={sharePct}
+            onChange={(e) => setSharePct(e.target.value)}
+            placeholder={t('masterDashboard.modelos.invite.sharePctPlaceholder')}
+          />
+          <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: 4 }}>
+            {t('masterDashboard.modelos.invite.sharePctHint')}
+          </div>
         </div>
 
         {error && <div style={FormError}>{error}</div>}

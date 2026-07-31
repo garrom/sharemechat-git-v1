@@ -8,6 +8,8 @@ import com.sharemechat.exception.NicknameAlreadyInUseException;
 import com.sharemechat.master.dto.CreateMasterModelRequestDTO;
 import com.sharemechat.master.dto.MasterInvitationInfoDTO;
 import com.sharemechat.master.entity.Master;
+import com.sharemechat.master.entity.MasterModelSplit;
+import com.sharemechat.master.repository.MasterModelSplitRepository;
 import com.sharemechat.master.repository.MasterRepository;
 import com.sharemechat.repository.EmailVerificationTokenRepository;
 import com.sharemechat.repository.ModelRepository;
@@ -19,6 +21,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.UUID;
@@ -54,19 +57,22 @@ public class MasterModelInvitationService {
     private final EmailVerificationTokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final MasterRepository masterRepository;
+    private final MasterModelSplitRepository splitRepository;
 
     public MasterModelInvitationService(UserRepository userRepository,
                                          ModelRepository modelRepository,
                                          EmailVerificationService emailVerificationService,
                                          EmailVerificationTokenRepository tokenRepository,
                                          PasswordEncoder passwordEncoder,
-                                         MasterRepository masterRepository) {
+                                         MasterRepository masterRepository,
+                                         MasterModelSplitRepository splitRepository) {
         this.userRepository = userRepository;
         this.modelRepository = modelRepository;
         this.emailVerificationService = emailVerificationService;
         this.tokenRepository = tokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.masterRepository = masterRepository;
+        this.splitRepository = splitRepository;
     }
 
     /**
@@ -120,9 +126,15 @@ public class MasterModelInvitationService {
         }
         String email = sanitizeEmail(dto.getModelEmail());
         String nickname = sanitizeNickname(dto.getModelNickname());
+        BigDecimal initialPct = dto.getInitialInternalSharePct();
 
         if (email == null) throw new IllegalArgumentException("modelEmail obligatorio");
         if (nickname == null) throw new IllegalArgumentException("modelNickname obligatorio");
+        if (initialPct == null
+                || initialPct.signum() < 0
+                || initialPct.compareTo(new BigDecimal("100")) > 0) {
+            throw new IllegalArgumentException("initialInternalSharePct obligatorio en [0,100]");
+        }
 
         // Idempotencia: si el email ya existe, comprobar ownership.
         User existing = userRepository.findByEmail(email).orElse(null);
@@ -176,6 +188,20 @@ public class MasterModelInvitationService {
         model.setUser(savedUser);
         model.setMasterUserId(masterUserId);
         modelRepository.save(model);
+
+        // Split inicial obligatorio (feedback operador 2026-07-31): sin
+        // pacto registrado la modelo puede empezar a emitir a ciegas sin
+        // evidencia del acuerdo Master↔Modelo. Persistir aqui en la misma
+        // transaccion asegura que la fila users nunca existe sin split.
+        LocalDateTime nowSplit = LocalDateTime.now();
+        MasterModelSplit initialSplit = new MasterModelSplit();
+        initialSplit.setMasterUserId(masterUserId);
+        initialSplit.setModelUserId(savedUser.getId());
+        initialSplit.setInternalSharePct(initialPct);
+        initialSplit.setEffectiveFrom(nowSplit);
+        initialSplit.setSetByMasterAt(nowSplit);
+        initialSplit.setNotes("Configurado al invitar");
+        splitRepository.save(initialSplit);
 
         // Emitir token de activacion.
         emailVerificationService.issueVerification(savedUser, masterUserId, CONTEXT_MASTER_INVITATION);

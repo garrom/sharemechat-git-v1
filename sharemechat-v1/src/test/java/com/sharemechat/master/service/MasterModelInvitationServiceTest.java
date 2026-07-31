@@ -4,11 +4,14 @@ import com.sharemechat.constants.Constants;
 import com.sharemechat.entity.User;
 import com.sharemechat.exception.NicknameAlreadyInUseException;
 import com.sharemechat.master.dto.CreateMasterModelRequestDTO;
+import com.sharemechat.master.repository.MasterModelSplitRepository;
 import com.sharemechat.master.repository.MasterRepository;
 import com.sharemechat.repository.EmailVerificationTokenRepository;
 import com.sharemechat.repository.ModelRepository;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.service.EmailVerificationService;
+
+import java.math.BigDecimal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -44,6 +47,7 @@ class MasterModelInvitationServiceTest {
     private EmailVerificationTokenRepository tokenRepository;
     private PasswordEncoder passwordEncoder;
     private MasterRepository masterRepository;
+    private MasterModelSplitRepository splitRepository;
     private MasterModelInvitationService svc;
 
     @BeforeEach
@@ -54,11 +58,12 @@ class MasterModelInvitationServiceTest {
         tokenRepository = mock(EmailVerificationTokenRepository.class);
         passwordEncoder = mock(PasswordEncoder.class);
         masterRepository = mock(MasterRepository.class);
+        splitRepository = mock(MasterModelSplitRepository.class);
         when(passwordEncoder.encode(any())).thenReturn("HASH");
 
         svc = new MasterModelInvitationService(
                 userRepository, modelRepository, emailVerificationService,
-                tokenRepository, passwordEncoder, masterRepository);
+                tokenRepository, passwordEncoder, masterRepository, splitRepository);
     }
 
     @Test
@@ -67,6 +72,7 @@ class MasterModelInvitationServiceTest {
         CreateMasterModelRequestDTO dto = new CreateMasterModelRequestDTO();
         dto.setModelEmail("modelo@example.com");
         dto.setModelNickname("estrella01");
+        dto.setInitialInternalSharePct(new BigDecimal("20"));
 
         when(userRepository.findByEmail("modelo@example.com")).thenReturn(Optional.empty());
         when(userRepository.existsByNickname("estrella01")).thenReturn(false);
@@ -83,8 +89,25 @@ class MasterModelInvitationServiceTest {
         // Verificar user creado con estado correcto.
         verify(userRepository).save(any(User.class));
         verify(modelRepository).save(any());
+        // Split inicial (feedback operador 2026-07-31): obligatorio en la misma
+        // transaccion para evitar modelos operando sin pacto registrado.
+        verify(splitRepository).save(any());
         verify(emailVerificationService).issueVerification(any(User.class), eq(500L),
                 eq("MASTER_MODEL_INVITATION"));
+    }
+
+    @Test
+    @DisplayName("inviteModel rechaza cuando initialInternalSharePct falta")
+    void invite_rejects_missing_share_pct() {
+        CreateMasterModelRequestDTO dto = new CreateMasterModelRequestDTO();
+        dto.setModelEmail("modelo@example.com");
+        dto.setModelNickname("estrella01");
+        // Sin setInitialInternalSharePct → null → debe rechazar antes de tocar repos.
+
+        assertThrows(IllegalArgumentException.class, () -> svc.inviteModel(500L, dto));
+        verify(userRepository, never()).save(any());
+        verify(modelRepository, never()).save(any());
+        verify(splitRepository, never()).save(any());
     }
 
     @Test
@@ -93,6 +116,7 @@ class MasterModelInvitationServiceTest {
         CreateMasterModelRequestDTO dto = new CreateMasterModelRequestDTO();
         dto.setModelEmail("modelo@example.com");
         dto.setModelNickname("estrella01");
+        dto.setInitialInternalSharePct(new BigDecimal("20"));
 
         User existing = new User();
         try {
@@ -118,6 +142,7 @@ class MasterModelInvitationServiceTest {
         CreateMasterModelRequestDTO dto = new CreateMasterModelRequestDTO();
         dto.setModelEmail("modelo@example.com");
         dto.setModelNickname("estrella01");
+        dto.setInitialInternalSharePct(new BigDecimal("20"));
 
         User existing = new User();
         try {
