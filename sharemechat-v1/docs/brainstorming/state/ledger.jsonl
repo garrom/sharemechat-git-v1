@@ -43,3 +43,8 @@
 {"c":7,"t":"src","id":"S0006","u":"repo GTM+GA4+GSC infra medicion"}
 {"c":7,"t":"note","id":"R0004","r":"resuelto parcial via repo: infra medicion existe (GA4 Traffic acquisition lee UTM); gap = signup no dispara evento GA4; queda pedir baseline BD + decidir metrica"}
 {"c":7,"t":"approve","id":"R0005","r":"Alain OK outreach; kit A0003 preparado; envio queda a Alain"}
+{"c":8,"t":"src","id":"S0007","u":"PROD RDS baseline + PRELAUNCH funnel"}
+{"c":8,"t":"gen","id":"H0014","note":"early-access framing por muro PRELAUNCH"}
+{"c":8,"t":"resolve","id":"R0004","r":"baseline ~=0 clientes reales (via tunel PROD); registro abierto en PRELAUNCH; signup medible hoy"}
+{"c":8,"t":"req","id":"R0006","k":"api","note":"instrumentar GA4 sign_up + col acquisition_source (aditivo, no rompe)"}
+{"c":8,"t":"req","id":"R0007","k":"data","note":"decidir lanzar experimentos en PRELAUNCH con encuadre early-access"}

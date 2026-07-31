@@ -1,0 +1,7 @@
+{"id":"H0014","cyc":8,"cyl":1,"ch":"funnel-framing","th":"Dado que PROD esta en PRELAUNCH (registro SI, pero producto y pago NO), los experimentos de captacion deben enmarcarse como 'acceso anticipado / lista de espera', no 'empieza a chatear ya': convertir la visita en signup-verificado como objetivo, evitando quemar al cliente contra un muro 'coming soon'",
+"as":["un cliente que se registra y choca con PRELAUNCH sin poder usar nada se pierde salvo que se le prometiera acceso anticipado","el signup-verificado es un evento de conversion valido y medible hoy","captar interes ahora tiene valor (valida canal + construye lista) si la expectativa se fija bien"],
+"pv":[{"p":"src","s":"S0007"}],
+"ft":"A/B de encuadre en la primera superficie con trafico: 'early access, te avisamos al lanzar' vs 'registrate'; medir signup-rate + tasa de retorno post-lanzamiento. Wedge de encuadre que condiciona E0001/E0003/E0011",
+"cost":{"eur":0,"type":"none"},
+"sc":{"reach":3,"conv":4,"eff":2,"ban":1,"brand":4,"conf":0.5},
+"st":"active","kr":"","par":"H0002","exp":[]}

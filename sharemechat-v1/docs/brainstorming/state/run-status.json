@@ -2,7 +2,10 @@
 "top5":["H0002","H0003","H0001","H0011","H0005"],
 "recommended":["H0003","H0005","H0011"],
 "experiments_proposed":["E0001","E0002","E0003"],
-"open_requests":4,
-"blocking":"R0004 rebajado: infra medicion SI existe (GA4 Traffic acquisition lee UTM, S0006). Queda solo baseline BD de registros cliente/mes + decidir si medir clicks o clicks->signups. R0005 aprobado (kit A0003 listo para que Alain envie).",
+"open_requests":5,
+"baseline_clientes_prod":"~=0 reales (1 CLIENT + 6 USER, todos internos/seed desde 2026-06-07). Verificado via tunel RDS PROD (S0007).",
+"funnel_prelaunch":"PROD PRELAUNCH: landing+registro SI (signup verificable end-to-end HOY), producto+pago NO (sin PSP). Experimentos miden clic->signup, no revenue.",
+"metrica_elegida":"la mas completa (clic->signup atribuido). Instrumentacion planificada en R0006 (GA4 sign_up event + col nullable acquisition_source, aditivo).",
+"blocking":"R0006 (instrumentar atribucion, code change fuera de SEED) + R0007 (decidir lanzar en PRELAUNCH con encuadre early-access). R0004 resuelto. R0005 aprobado (A0003 listo).",
 "note_probabilidad":"Ninguna hipotesis supera conf 0.60. Correcto por diseno: sin resultados de experimento la probabilidad NO es real. El top-5 es razonamiento aterrizado en fuentes, no evidencia de exito.",
 "next":"1) Alain resuelve R0004 (confirmar medicion + baseline signups cliente). 2) Aprobar/lanzar E0001 (directorios, el mas barato) y E0003 (Quora). 3) E0002 tras cerrar bug internal-linking SEO. 4) Al volver resultados (res!=null), ingerirlos, re-scorear y subir/bajar conf real. 5) Explorar experimento de descubrimiento barato para H0006 (crypto-privacy wedge) y auditar pay-to-play de H0004."}
