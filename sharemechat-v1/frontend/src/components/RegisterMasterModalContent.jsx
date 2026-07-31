@@ -5,6 +5,7 @@ import { apiFetch } from '../config/http';
 import { getResolvedLocale } from '../i18n/localeUtils';
 import { Form as RegForm, Title, Input, Button, LinkButton, Error as ErrorText, Field, FieldError, CheckRow, CheckInput, CheckText } from '../styles/public-styles/RegisterClientModelStyles';
 import { useAppModals } from './useAppModals';
+import { pushSignUp } from '../utils/attribution';
 
 // ADR-056 Fase S5.b: formulario de registro Master (Opcion A). Alineado con
 // RegisterMasterRequestDTO: email + password (>=10) + dateOfBirth + nickname
@@ -100,6 +101,11 @@ const RegisterMasterModalContent = ({ onClose, onBack }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+
+      // Atribución de origen (capa A): evento GA4 vía dataLayer con los UTM
+      // first-touch. Sin PII. Respeta consentimiento y solo llega a GA4 en
+      // PROD (ver utils/attribution.js). No debe romper el flujo de registro.
+      pushSignUp({ userType: 'master' });
 
       await alert({
         title: i18n.t('auth.registerMaster.success.title'),
