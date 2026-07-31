@@ -893,8 +893,8 @@
       }
     },
     "registerMaster": {
-      "title": "Registro Master (Estudio)",
-      "intro": "Vas a registrarte como Master (responsable de estudio). Podrás dar de alta modelos bajo tu umbrella y percibir un porcentaje de sus emisiones. No emites tú. Antes de operar deberás aceptar el Contrato de Master y superar KYC de persona física.",
+      "title": "Registro Master",
+      "intro": "Alta como Master en SharemeChat. Persona física, sin necesidad de empresa.",
       "sections": {
         "personal": "Datos personales (obligatorio)",
         "company": "Datos de empresa (opcional)"
@@ -3769,7 +3769,14 @@
     },
     "banners": {
       "kycPending": "Verificación de identidad pendiente. Completa el KYC para activar plenamente tu cuenta Master.",
-      "contractPending": "Contrato Master pendiente de firma. Fírmalo desde tu perfil para operar sin restricciones."
+      "contractPending": "Contrato Master pendiente de firma. Fírmalo desde tu perfil para operar sin restricciones.",
+      "emailNotVerified": "Verifica tu email para operar. Puedes ver el panel pero no invitar modelos ni solicitar retiros hasta verificar. Revisa tu bandeja de entrada (y la carpeta de spam).",
+      "emailResendCta": "Reenviar email de verificación",
+      "emailResendLoading": "Enviando…",
+      "emailResendOk": "Email reenviado. Revisa tu bandeja.",
+      "emailResendErr": "No se pudo reenviar. Inténtalo de nuevo.",
+      "kycCta": "Iniciar verificación KYC",
+      "contractCta": "Firmar contrato Master"
     },
     "kpi": {
       "gross30d": "Facturación bruta 30d",
@@ -3790,5 +3797,50 @@
       "historial": "Historial completo del ledger — se activa en la próxima entrega.",
       "payout": "Solicitud de retiro multi-canal — se activa en la próxima entrega."
     }
+  },
+  "masterKyc": {
+    "navTitle": "Verificación KYC Master",
+    "back": "Volver",
+    "title": "Verificación de identidad (KYC)",
+    "intro": "Para completar tu alta como Master necesitamos verificar tu identidad (persona física). La verificación se realiza con cámara y documento: nuestro proveedor (Didit, certificado en la UE) lee tu documento de identidad y comprueba que coincide con tu rostro mediante una selfie.",
+    "whyLegal": "Esto se exige por normativa antifraude y de conocimiento del titular de cuenta (KYC) aplicable a la operativa del programa Master. No es opcional.",
+    "consentTitle": "Consentimiento de tratamiento biométrico y de identidad",
+    "consentText": "Doy mi consentimiento explícito para que mi documento de identidad y mis datos biométricos faciales (imagen de mi rostro) sean procesados por Didit (encargado del tratamiento, UE) con el fin de verificar mi identidad como Master, conforme al Art. 9.2.a del RGPD. Los datos se almacenan durante el periodo necesario para cumplir las obligaciones legales aplicables y luego se eliminan. Puedo retirar mi consentimiento en cualquier momento contactando con privacidad@sharemechat.com; en ese caso, no podré completar el alta como Master.",
+    "consentAck": "He leído y acepto el consentimiento de tratamiento biométrico y de identidad.",
+    "startButton": "Iniciar verificación",
+    "startingButton": "Iniciando…",
+    "errors": {
+      "generic": "No se pudo iniciar la verificación. Inténtalo de nuevo.",
+      "alreadyApproved": "Tu identidad ya está verificada.",
+      "contractRequired": "Debes aceptar el Contrato de Master antes de iniciar KYC."
+    },
+    "processing": {
+      "title": "Procesando verificación…",
+      "subtitle": "Estamos comprobando el resultado del proveedor. Esto puede tardar unos segundos.",
+      "rejected": "La verificación de identidad fue rechazada. Puedes intentarlo de nuevo desde tu panel.",
+      "timeout": "La verificación aún no ha llegado. Vuelve a intentarlo en unos minutos desde tu panel.",
+      "back": "Volver al panel"
+    },
+    "consentReadMore": "Más información en la política de privacidad."
+  },
+  "masterContract": {
+    "navTitle": "Contrato Master",
+    "back": "Volver",
+    "title": "Firma del Contrato Master",
+    "intro": "Revisa la versión vigente del Contrato Master. Al aceptar quedas vinculado por sus términos.",
+    "version": "Versión",
+    "readPdf": "Abrir el PDF del contrato",
+    "acceptCheckbox": "He leído el contrato y acepto sus términos.",
+    "submitButton": "Firmar contrato",
+    "submittingButton": "Firmando…",
+    "status": {
+      "accepted": "Contrato firmado correctamente. Redirigiendo…"
+    },
+    "errors": {
+      "loadFailed": "No se pudo cargar el contrato vigente. Inténtalo más tarde.",
+      "acceptFailed": "No se pudo registrar la firma. Inténtalo de nuevo."
+    },
+    "mustOpenPdfFirst": "Debes abrir y revisar el PDF del contrato antes de poder firmar.",
+    "pdfOpenedOk": "PDF abierto — ya puedes marcar y firmar."
   }
 }

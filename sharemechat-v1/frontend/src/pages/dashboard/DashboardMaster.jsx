@@ -98,6 +98,7 @@ export default function DashboardMaster() {
   const [recent, setRecent] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [resendState, setResendState] = useState({ loading: false, msg: '' });
 
   const loadOverview = useCallback(async () => {
     setLoading(true);
@@ -125,23 +126,91 @@ export default function DashboardMaster() {
     history.push('/');
   };
 
+  const handleResendVerification = async () => {
+    if (resendState.loading) return;
+    setResendState({ loading: true, msg: '' });
+    try {
+      await apiFetch('/email-verification/resend', { method: 'POST' });
+      setResendState({ loading: false, msg: i18n.t('masterDashboard.banners.emailResendOk') });
+    } catch (err) {
+      setResendState({
+        loading: false,
+        msg: err?.data?.message || i18n.t('masterDashboard.banners.emailResendErr'),
+      });
+    }
+  };
+
   const brandClick = (e) => { if (e?.preventDefault) e.preventDefault(); history.push('/'); };
 
   const balanceText = overview ? fmtEur(overview.balanceCurrent) : '';
 
-  // Banner de estado compliance
-  let banner = null;
+  // Banners de estado (email verify → KYC → contrato).
+  // Se muestran TODOS los que apliquen. Email verify es el mas critico
+  // porque bloquea todas las acciones operativas (Opcion Z, 2026-07-30).
+  const banners = [];
   if (overview) {
-    if (overview.verificationStatus && overview.verificationStatus !== 'APPROVED') {
-      banner = (
-        <div style={BannerAlert} role="alert">
-          {i18n.t('masterDashboard.banners.kycPending')}
+    if (overview.emailVerified === false) {
+      banners.push(
+        <div key="email" style={BannerAlert} role="alert">
+          <div>{i18n.t('masterDashboard.banners.emailNotVerified')}</div>
+          <div style={{ marginTop: 8, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={handleResendVerification}
+              disabled={resendState.loading}
+              style={{
+                appearance: 'none', border: '1px solid #991b1b', background: '#fff',
+                color: '#991b1b', padding: '6px 14px', borderRadius: 8,
+                cursor: resendState.loading ? 'wait' : 'pointer',
+                fontSize: '0.85rem', fontWeight: 600,
+              }}
+            >
+              {resendState.loading
+                ? i18n.t('masterDashboard.banners.emailResendLoading')
+                : i18n.t('masterDashboard.banners.emailResendCta')}
+            </button>
+            {resendState.msg && <span style={{ fontSize: '0.85rem' }}>{resendState.msg}</span>}
+          </div>
         </div>
       );
-    } else if (overview.contractAccepted === false) {
-      banner = (
-        <div style={BannerWarn} role="alert">
-          {i18n.t('masterDashboard.banners.contractPending')}
+    }
+    if (overview.verificationStatus && overview.verificationStatus !== 'APPROVED') {
+      banners.push(
+        <div key="kyc" style={BannerAlert} role="alert">
+          <div>{i18n.t('masterDashboard.banners.kycPending')}</div>
+          <div style={{ marginTop: 8 }}>
+            <button
+              type="button"
+              onClick={() => history.push('/master-kyc-didit')}
+              style={{
+                appearance: 'none', border: '1px solid #991b1b', background: '#fff',
+                color: '#991b1b', padding: '6px 14px', borderRadius: 8, cursor: 'pointer',
+                fontSize: '0.85rem', fontWeight: 600,
+              }}
+            >
+              {i18n.t('masterDashboard.banners.kycCta')}
+            </button>
+          </div>
+        </div>
+      );
+    }
+    if (overview.contractAccepted === false) {
+      banners.push(
+        <div key="contract" style={BannerWarn} role="alert">
+          <div>{i18n.t('masterDashboard.banners.contractPending')}</div>
+          <div style={{ marginTop: 8 }}>
+            <button
+              type="button"
+              onClick={() => history.push('/master-contract')}
+              style={{
+                appearance: 'none', border: '1px solid #92400e', background: '#fff',
+                color: '#92400e', padding: '6px 14px', borderRadius: 8, cursor: 'pointer',
+                fontSize: '0.85rem', fontWeight: 600,
+              }}
+            >
+              {i18n.t('masterDashboard.banners.contractCta')}
+            </button>
+          </div>
         </div>
       );
     }
@@ -159,8 +228,7 @@ export default function DashboardMaster() {
         onGoModelos={() => setActiveTab('modelos')}
         onGoHistorial={() => setActiveTab('historial')}
         onGoPayout={() => setActiveTab('payout')}
-        onGoBlog={() => history.push('/blog')}
-        onProfile={() => history.push('/perfil-master')}
+        onProfile={undefined /* deshabilitado hasta que exista /perfil-master (deuda futura) */}
         onLogout={handleLogout}
         showLocaleSwitcher={true}
         showBalance={true}
@@ -174,7 +242,7 @@ export default function DashboardMaster() {
             <h1 style={H1}>{i18n.t('masterDashboard.overview.title')}</h1>
             <p style={Subtitle}>{i18n.t('masterDashboard.overview.subtitle')}</p>
 
-            {banner}
+            {banners}
 
             <div style={KpiGrid}>
               <div style={KpiCard}>

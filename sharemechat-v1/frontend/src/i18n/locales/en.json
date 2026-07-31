@@ -893,8 +893,8 @@
       }
     },
     "registerMaster": {
-      "title": "Master (Studio) sign-up",
-      "intro": "You are signing up as a Master (studio manager). You will be able to onboard models under your umbrella and receive a share of their streams. Masters do not stream themselves. Before operating you must accept the Master Contract and complete natural-person KYC.",
+      "title": "Master sign-up",
+      "intro": "Master sign-up on SharemeChat. Natural person, no company required.",
       "sections": {
         "personal": "Personal data (required)",
         "company": "Company data (optional)"
@@ -3769,7 +3769,14 @@
     },
     "banners": {
       "kycPending": "Identity verification pending. Complete KYC to fully activate your Master account.",
-      "contractPending": "Master contract pending signature. Sign it from your profile to operate without restrictions."
+      "contractPending": "Master contract pending signature. Sign it from your profile to operate without restrictions.",
+      "emailNotVerified": "Verify your email to operate. You can view the panel but cannot invite models or request payouts until verified. Check your inbox (and spam folder).",
+      "emailResendCta": "Resend verification email",
+      "emailResendLoading": "Sending…",
+      "emailResendOk": "Email resent. Check your inbox.",
+      "emailResendErr": "Could not resend. Please try again.",
+      "kycCta": "Start KYC verification",
+      "contractCta": "Sign Master Contract"
     },
     "kpi": {
       "gross30d": "Gross billing 30d",
@@ -3790,5 +3797,50 @@
       "historial": "Full ledger history — ships in the next iteration.",
       "payout": "Multi-channel payout request — ships in the next iteration."
     }
+  },
+  "masterKyc": {
+    "navTitle": "Master KYC verification",
+    "back": "Back",
+    "title": "Identity verification (KYC)",
+    "intro": "To complete your Master sign-up we need to verify your identity (natural person). The verification is done with camera and document: our provider (Didit, EU certified) reads your ID document and checks it matches your face via a selfie.",
+    "whyLegal": "This is required by anti-fraud and Know-Your-Customer (KYC) regulation applicable to the Master program operation. Not optional.",
+    "consentTitle": "Biometric and identity processing consent",
+    "consentText": "I give my explicit consent for my ID document and my facial biometric data (image of my face) to be processed by Didit (data processor, EU) for the purpose of verifying my identity as Master, pursuant to Art. 9.2.a GDPR. Data is kept for as long as legal obligations require, then deleted. I can withdraw consent at any time by contacting privacidad@sharemechat.com; in that case, Master sign-up cannot be completed.",
+    "consentAck": "I have read and accept the biometric and identity processing consent.",
+    "startButton": "Start verification",
+    "startingButton": "Starting…",
+    "errors": {
+      "generic": "Could not start verification. Please try again.",
+      "alreadyApproved": "Your identity is already verified.",
+      "contractRequired": "You must accept the Master Contract before starting KYC."
+    },
+    "processing": {
+      "title": "Verification in progress…",
+      "subtitle": "We are waiting for the provider result. This may take a few seconds.",
+      "rejected": "Identity verification was rejected. You can try again from your panel.",
+      "timeout": "The verification result has not arrived yet. Try again in a few minutes from your panel.",
+      "back": "Back to panel"
+    },
+    "consentReadMore": "More information in the privacy policy."
+  },
+  "masterContract": {
+    "navTitle": "Master Contract",
+    "back": "Back",
+    "title": "Sign the Master Contract",
+    "intro": "Review the current Master Contract. By accepting you agree to its terms.",
+    "version": "Version",
+    "readPdf": "Open contract PDF",
+    "acceptCheckbox": "I have read the contract and accept its terms.",
+    "submitButton": "Sign contract",
+    "submittingButton": "Signing…",
+    "status": {
+      "accepted": "Contract signed successfully. Redirecting…"
+    },
+    "errors": {
+      "loadFailed": "Could not load the current contract. Try again later.",
+      "acceptFailed": "Could not register the signature. Please try again."
+    },
+    "mustOpenPdfFirst": "You must open and review the contract PDF before you can sign.",
+    "pdfOpenedOk": "PDF opened — you can now check and sign."
   }
 }

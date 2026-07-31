@@ -156,7 +156,13 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) =
         <TabButton
           type="button"
           data-active={isRegisterTab}
-          onClick={() => setView('register-gender')}
+          onClick={() => {
+            // ADR-056 Fase S5.a.6-fix: si el modal se abrio desde /for-studios
+            // (initialView='register-master'), el tab "Registrate" debe volver
+            // al flujo Master, no al selector gender de cliente/modelo. Preserva
+            // la intencion inicial del visitante.
+            setView(initialView === 'register-master' ? 'register-master' : 'register-gender');
+          }}
         >
           {i18n.t('auth.tabs.register')}
         </TabButton>

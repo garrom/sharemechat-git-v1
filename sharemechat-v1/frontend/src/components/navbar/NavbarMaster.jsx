@@ -21,7 +21,6 @@ const NavbarMaster = ({
   onGoModelos,
   onGoHistorial,
   onGoPayout,
-  onGoBlog,
   onProfile,
   onLogout,
   showLocaleSwitcher = true,
@@ -31,7 +30,6 @@ const NavbarMaster = ({
   const modelosLabel = i18n.t('masterDashboard.nav.modelos');
   const historialLabel = i18n.t('masterDashboard.nav.historial');
   const payoutLabel = i18n.t('masterDashboard.nav.payout');
-  const blogLabel = i18n.t('masterDashboard.nav.blog');
 
   const tab = (key, label, onClick) => (
     <StyledNavTab
@@ -55,7 +53,6 @@ const NavbarMaster = ({
       {tab('modelos', modelosLabel, onGoModelos)}
       {tab('historial', historialLabel, onGoHistorial)}
       {tab('payout', payoutLabel, onGoPayout)}
-      {tab('blog', blogLabel, onGoBlog)}
     </div>
   );
 
@@ -118,12 +115,6 @@ const NavbarMaster = ({
           key: 'payout',
           label: payoutLabel,
           onClick: onGoPayout,
-          useIconWrapper: false,
-        },
-        {
-          key: 'blog',
-          label: blogLabel,
-          onClick: onGoBlog,
           useIconWrapper: false,
         },
         {

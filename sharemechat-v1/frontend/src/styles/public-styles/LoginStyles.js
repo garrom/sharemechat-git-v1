@@ -32,10 +32,18 @@ export const StyledForm = styled.form`
   align-items: stretch;
   gap: 14px; /* mismo espacio entre todos los elementos del form */
 
+  /* ModalBase con hideChrome=true renderiza este form directo en el Dialog
+     sin el <Body> con scroll. Para formularios largos (RegisterMasterModalContent
+     con 7 campos + 3 checkboxes) hay que ceñirse a la viewport y scrollear
+     el propio form cuando desborde. */
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+
   @media (max-width: ${bp.md}) {
     max-width: ${p => p.$wide ? '100%' : '92%'};
     padding: ${p => p.$wide ? '26px 16px 24px' : '24px 20px'};
     border-radius: 20px;
+    max-height: calc(100vh - 32px);
   }
 
 `;
