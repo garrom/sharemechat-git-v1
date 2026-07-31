@@ -3842,5 +3842,46 @@
     },
     "mustOpenPdfFirst": "Debes abrir y revisar el PDF del contrato antes de poder firmar.",
     "pdfOpenedOk": "PDF abierto — ya puedes marcar y firmar."
+  },
+  "perfilMaster": {
+    "navTitle": "Perfil Master",
+    "back": "Volver al panel",
+    "title": "Datos del perfil Master",
+    "empty": "—",
+    "sections": {
+      "basic": "Datos básicos",
+      "company": "Datos de empresa",
+      "onboarding": "Estado del alta",
+      "security": "Seguridad"
+    },
+    "labels": {
+      "email": "Email",
+      "nickname": "Nickname",
+      "name": "Nombre",
+      "surname": "Apellidos",
+      "companyName": "Razón social",
+      "companyCountry": "País empresa (ISO)",
+      "emailVerified": "Email verificado",
+      "kyc": "Verificación KYC",
+      "contract": "Contrato Master firmado"
+    },
+    "company": {
+      "readOnlyHint": "Los datos de empresa se editan desde el backoffice. Contacta con soporte si necesitas actualizarlos."
+    },
+    "actions": {
+      "save": "Guardar cambios",
+      "saving": "Guardando…",
+      "changePassword": "Cambiar contraseña"
+    },
+    "status": {
+      "saved": "Datos actualizados correctamente.",
+      "ok": "OK",
+      "pending": "Pendiente",
+      "approved": "Aprobado",
+      "rejected": "Rechazado"
+    },
+    "errors": {
+      "saveFailed": "No se pudieron guardar los cambios. Inténtalo de nuevo."
+    }
   }
 }

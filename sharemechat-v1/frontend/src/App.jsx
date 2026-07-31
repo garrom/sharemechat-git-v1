@@ -8,6 +8,7 @@ import DashboardMaster from './pages/dashboard/DashboardMaster';
 import MasterKycDiditPage from './pages/subpages/MasterKycDiditPage';
 import MasterKycDiditProcessingPage from './pages/subpages/MasterKycDiditProcessingPage';
 import MasterContractPage from './pages/subpages/MasterContractPage';
+import PerfilMaster from './pages/subpages/PerfilMaster';
 import DashboardUserClient from './pages/dashboard/DashboardUserClient';
 import DashboardUserModel from './pages/dashboard/DashboardUserModel';
 import DashboardAdmin from './pages/admin/DashboardAdmin';
@@ -207,6 +208,7 @@ function App() {
                     <Route path="/master-kyc-didit/processing" render={() => (<RequireRole role="MASTER"><MasterKycDiditProcessingPage /></RequireRole>)} />
                     <Route path="/master-kyc-didit" render={() => (<RequireRole role="MASTER"><MasterKycDiditPage /></RequireRole>)} />
                     <Route path="/master-contract" render={() => (<RequireRole role="MASTER"><MasterContractPage /></RequireRole>)} />
+                    <Route path="/perfil-master" render={() => (<RequireRole role="MASTER"><PerfilMaster /></RequireRole>)} />
                     <Route path="/master" render={() => (<RequireRole role="MASTER"><DashboardMaster /></RequireRole>)} />
                     <Route path="/dashboard-admin" render={() => <ExternalRedirect to={buildAdminAppUrl('/dashboard-admin')} />} />
 

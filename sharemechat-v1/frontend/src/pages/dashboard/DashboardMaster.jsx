@@ -228,7 +228,7 @@ export default function DashboardMaster() {
         onGoModelos={() => setActiveTab('modelos')}
         onGoHistorial={() => setActiveTab('historial')}
         onGoPayout={() => setActiveTab('payout')}
-        onProfile={undefined /* deshabilitado hasta que exista /perfil-master (deuda futura) */}
+        onProfile={() => history.push('/perfil-master')}
         onLogout={handleLogout}
         showLocaleSwitcher={true}
         showBalance={true}

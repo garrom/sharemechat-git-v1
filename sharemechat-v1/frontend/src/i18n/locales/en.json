@@ -3842,5 +3842,46 @@
     },
     "mustOpenPdfFirst": "You must open and review the contract PDF before you can sign.",
     "pdfOpenedOk": "PDF opened — you can now check and sign."
+  },
+  "perfilMaster": {
+    "navTitle": "Master profile",
+    "back": "Back to panel",
+    "title": "Master profile data",
+    "empty": "—",
+    "sections": {
+      "basic": "Basic data",
+      "company": "Company data",
+      "onboarding": "Onboarding status",
+      "security": "Security"
+    },
+    "labels": {
+      "email": "Email",
+      "nickname": "Nickname",
+      "name": "Name",
+      "surname": "Surname",
+      "companyName": "Company name",
+      "companyCountry": "Company country (ISO)",
+      "emailVerified": "Email verified",
+      "kyc": "KYC verification",
+      "contract": "Master contract signed"
+    },
+    "company": {
+      "readOnlyHint": "Company data is edited from the backoffice. Contact support if you need to update it."
+    },
+    "actions": {
+      "save": "Save changes",
+      "saving": "Saving…",
+      "changePassword": "Change password"
+    },
+    "status": {
+      "saved": "Data updated successfully.",
+      "ok": "OK",
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "errors": {
+      "saveFailed": "Could not save changes. Please try again."
+    }
   }
 }
