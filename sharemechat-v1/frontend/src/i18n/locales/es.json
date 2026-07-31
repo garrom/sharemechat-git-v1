@@ -2735,7 +2735,7 @@
         "selfie": "Selfie/PDF",
         "diditApproved": "Docs validados por Didit",
         "diditPending": "Esperando verificación Didit",
-        "diditSessionCopy": "Copiar session_id para pegar en dashboard Didit",
+        "diditSessionCopy": "Copiar identificador para buscar en Didit → Users → Datos del proveedor",
         "diditSessionCopyLabel": "Copiar"
       },
       "kyc": {

@@ -318,12 +318,20 @@ const AdminModelsPanel = ({
     // basada en verification_status APPROVED del webhook.
     if (activeMode === 'DIDIT') {
       const isApproved = user.verificationStatus === 'APPROVED';
-      const sid = user.providerSessionId;
-      const handleCopySid = async () => {
-        if (!sid) return;
+      // Vendor_data que enviamos a Didit al crear la sesion:
+      // "smc:{userId}" (prefix config DiditProperties.vendorDataPrefix,
+      // hoy hardcodeado "smc"). Es el string que Didit muestra como
+      // "Datos del proveedor" en su dashboard Users → el operador lo
+      // busca ahi para localizar al user y ver selfie/docs. El
+      // provider_session_id del backend (uuid session) NO se muestra en
+      // el listado Users de Didit y por eso no le servia al operador
+      // como pista visual (feedback 2026-07-31).
+      const vendorData = user.id ? `smc:${user.id}` : null;
+      const handleCopy = async () => {
+        if (!vendorData) return;
         try {
-          await navigator.clipboard.writeText(sid);
-        } catch { /* silent: usuario puede seleccionar manualmente */ }
+          await navigator.clipboard.writeText(vendorData);
+        } catch { /* silent */ }
       };
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -332,18 +340,18 @@ const AdminModelsPanel = ({
               ? t('admin.models.checklist.diditApproved')
               : t('admin.models.checklist.diditPending')}
           </div>
-          {sid && (
+          {vendorData && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <code style={{
                 fontSize: '0.72rem', background: '#f3f4f6', padding: '2px 6px',
-                borderRadius: 4, color: '#374151', wordBreak: 'break-all',
+                borderRadius: 4, color: '#374151',
                 fontFamily: 'ui-monospace, SFMono-Regular, monospace',
               }}>
-                {sid}
+                {vendorData}
               </code>
               <button
                 type="button"
-                onClick={handleCopySid}
+                onClick={handleCopy}
                 title={t('admin.models.checklist.diditSessionCopy')}
                 style={{
                   fontSize: '0.72rem', padding: '2px 8px', borderRadius: 4,
