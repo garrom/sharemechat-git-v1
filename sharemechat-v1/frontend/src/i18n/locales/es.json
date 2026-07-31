@@ -3858,13 +3858,13 @@
         "title": "Editar % pactado interno",
         "subtitle": "Ajusta el porcentaje que percibirá {{nickname}} sobre su facturación.",
         "pct": "% pactado (0 – 100)",
-        "pctPlaceholder": "p. ej. 55.00",
+        "pctPlaceholder": "p. ej. 55",
         "notes": "Notas (opcional)",
         "notesPlaceholder": "Motivo del cambio, referencia, etc.",
         "submit": "Guardar",
         "submitting": "Guardando…",
         "errors": {
-          "pctRange": "El porcentaje debe estar entre 0 y 100.",
+          "pctRange": "El porcentaje debe ser un número entero entre 0 y 100.",
           "generic": "No se pudo actualizar el % pactado."
         }
       }

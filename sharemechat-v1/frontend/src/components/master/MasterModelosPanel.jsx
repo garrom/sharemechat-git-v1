@@ -56,7 +56,7 @@ const fmtEur = (n) => {
     }).format(Number(n));
   } catch { return `${Number(n).toFixed(2)} €`; }
 };
-const fmtPct = (n) => n == null ? '—' : `${Number(n).toFixed(2)} %`;
+const fmtPct = (n) => n == null ? '—' : `${Number(n).toFixed(0)} %`;
 const fmtHours = (n) => n == null ? '—' : `${Number(n).toFixed(2)} h`;
 
 const kycBadge = (s) => {
@@ -167,7 +167,7 @@ function EditShareModal({ open, model, onClose, onSaved }) {
 
   useEffect(() => {
     if (open && model) {
-      setPct(model.internalSharePctPactado != null ? String(model.internalSharePctPactado) : '');
+      setPct(model.internalSharePctPactado != null ? String(Math.round(Number(model.internalSharePctPactado))) : '');
       setNotes('');
       setError('');
     }
@@ -179,7 +179,7 @@ function EditShareModal({ open, model, onClose, onSaved }) {
     if (e?.preventDefault) e.preventDefault();
     setError('');
     const n = Number(pct);
-    if (!Number.isFinite(n) || n < 0 || n > 100) {
+    if (!Number.isInteger(n) || n < 0 || n > 100) {
       setError(t('masterDashboard.modelos.editShare.errors.pctRange'));
       return;
     }
@@ -209,7 +209,7 @@ function EditShareModal({ open, model, onClose, onSaved }) {
           <input
             style={Input}
             type="number"
-            step="0.01"
+            step="1"
             min="0"
             max="100"
             value={pct}

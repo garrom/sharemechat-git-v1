@@ -3858,13 +3858,13 @@
         "title": "Edit agreed internal %",
         "subtitle": "Adjust the percentage {{nickname}} will earn on her billing.",
         "pct": "Agreed % (0 – 100)",
-        "pctPlaceholder": "e.g. 55.00",
+        "pctPlaceholder": "e.g. 55",
         "notes": "Notes (optional)",
         "notesPlaceholder": "Reason for change, reference, etc.",
         "submit": "Save",
         "submitting": "Saving…",
         "errors": {
-          "pctRange": "Percentage must be between 0 and 100.",
+          "pctRange": "Percentage must be a whole number between 0 and 100.",
           "generic": "Could not update agreed %."
         }
       }
