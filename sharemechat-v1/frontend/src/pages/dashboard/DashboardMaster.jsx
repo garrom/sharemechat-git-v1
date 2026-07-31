@@ -233,7 +233,7 @@ export default function DashboardMaster() {
         onProfile={() => history.push('/perfil-master')}
         onLogout={handleLogout}
         showLocaleSwitcher={true}
-        showBalance={true}
+        showBalance={false}
       />
 
       <div style={Content}>
