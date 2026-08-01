@@ -3833,6 +3833,28 @@
       "title": "Actividad reciente",
       "empty": "Aún no hay movimientos registrados."
     },
+    "topModels": {
+      "title": "Modelos más activas",
+      "empty": "No hay actividad en la ventana seleccionada.",
+      "windowToday": "Hoy",
+      "window7d": "Últimos 7 días",
+      "window30d": "Últimos 30 días",
+      "cols": {
+        "id": "ID",
+        "nickname": "Nickname",
+        "lastActivity": "Última actividad",
+        "total": "Total generado"
+      }
+    },
+    "tiers": {
+      "title": "Tramos del Estudio y umbrales",
+      "hint": "Al subir de tramo (facturación bruta 30d del Estudio), tus modelos pueden elegir tarifa dentro del rango permitido.",
+      "cols": {
+        "tier": "Tramo",
+        "threshold": "Umbral (30d)",
+        "rateRange": "Precio permitido"
+      }
+    },
     "placeholders": {
       "payout": "Solicitud de retiro multi-canal — se activa en la próxima entrega."
     },
@@ -4014,9 +4036,17 @@
     "navTitle": "Perfil Master",
     "back": "Volver al panel",
     "title": "Datos del perfil Master",
+    "role": "MASTER",
     "empty": "—",
+    "header": {
+      "subtitle": "Administras un estudio y las modelos que operan bajo tu cuenta."
+    },
+    "security": {
+      "hint": "Puedes cambiar tu contraseña en cualquier momento. Para dar de baja la cuenta, contacta con soporte."
+    },
     "sections": {
       "basic": "Datos básicos",
+      "basicSubtitle": "Nombre público y datos de contacto del titular.",
       "company": "Datos de empresa",
       "onboarding": "Estado del alta",
       "security": "Seguridad"

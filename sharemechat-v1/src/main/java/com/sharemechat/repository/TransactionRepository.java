@@ -289,4 +289,31 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             + "  AND t.operationType IN ('STREAM_EARNING', 'GIFT_EARNING') "
             + "  AND NOT (t.operationType = 'GIFT_EARNING' AND t.amount = 0)")
     BigDecimal sumAttributedGrossEarnings(@Param("modelId") Long modelId);
+
+    /**
+     * ADR-056 iter.6 (2026-08-02): top modelos del Master por facturación
+     * bruta en una ventana temporal, ordenadas DESC. Se agrupa por
+     * attributedModelUserId (que la StreamService/UserTrialService setea al
+     * atribuir la ganancia al Master). Cada fila:
+     *   [0] modelUserId (Long)
+     *   [1] totalGross (BigDecimal)
+     *   [2] lastActivityAt (LocalDateTime)
+     * El controller resuelve nickname en batch via UserRepository.
+     */
+    @Query("SELECT t.attributedModelUserId, "
+            + "       COALESCE(SUM(t.amount), 0), "
+            + "       MAX(t.timestamp) "
+            + "  FROM Transaction t "
+            + " WHERE t.user.id = :masterId "
+            + "   AND t.attributedModelUserId IS NOT NULL "
+            + "   AND t.operationType IN ('STREAM_EARNING', 'GIFT_EARNING') "
+            + "   AND NOT (t.operationType = 'GIFT_EARNING' AND t.amount = 0) "
+            + "   AND t.timestamp >= :from "
+            + "   AND t.timestamp < :to "
+            + " GROUP BY t.attributedModelUserId "
+            + " ORDER BY SUM(t.amount) DESC")
+    List<Object[]> findTopAttributedModelsInWindow(@Param("masterId") Long masterId,
+                                                   @Param("from") LocalDateTime from,
+                                                   @Param("to") LocalDateTime to,
+                                                   Pageable pageable);
 }

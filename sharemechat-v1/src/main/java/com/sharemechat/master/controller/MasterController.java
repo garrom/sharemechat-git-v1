@@ -283,6 +283,79 @@ public class MasterController {
     }
 
     // ============================================================
+    // GET /me/recent-active-models — top modelos por facturación bruta
+    // en la ventana temporal solicitada (iter.6, 2026-08-02)
+    // ============================================================
+
+    @GetMapping("/me/recent-active-models")
+    public ResponseEntity<?> getRecentActiveModels(Authentication auth,
+                                                   @RequestParam(defaultValue = "10") int limit,
+                                                   @RequestParam(defaultValue = "today") String window) {
+        if (auth == null || auth.getName() == null) {
+            return ResponseEntity.status(401).body("No autenticado");
+        }
+        User user = userService.findByEmail(auth.getName());
+        if (user == null) {
+            return ResponseEntity.status(401).body("Usuario no encontrado");
+        }
+        if (!com.sharemechat.constants.Constants.Roles.MASTER.equals(user.getRole())) {
+            return ResponseEntity.status(403).body(Map.of("error", "Requiere rol MASTER"));
+        }
+
+        int safeLimit = Math.max(1, Math.min(limit, 50));
+
+        LocalDateTime from;
+        LocalDateTime to;
+        LocalDate today = LocalDate.now();
+        switch (window.toLowerCase(Locale.ROOT)) {
+            case "7d":
+                from = today.minusDays(6).atStartOfDay();
+                to = today.plusDays(1).atStartOfDay();
+                break;
+            case "30d":
+                from = today.minusDays(29).atStartOfDay();
+                to = today.plusDays(1).atStartOfDay();
+                break;
+            case "today":
+            default:
+                from = today.atStartOfDay();
+                to = today.plusDays(1).atStartOfDay();
+                break;
+        }
+
+        List<Object[]> rows = transactionRepository.findTopAttributedModelsInWindow(
+                user.getId(), from, to,
+                PageRequest.of(0, safeLimit));
+
+        java.util.Set<Long> modelIds = rows.stream()
+                .map(r -> (Long) r[0])
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
+        java.util.Map<Long, String> nicknameByUserId = modelIds.isEmpty()
+                ? java.util.Collections.emptyMap()
+                : userRepository.findAllById(modelIds).stream()
+                        .filter(u -> u.getId() != null && u.getNickname() != null)
+                        .collect(java.util.stream.Collectors.toMap(User::getId, User::getNickname));
+
+        List<Map<String, Object>> items = rows.stream().map(r -> {
+            Long modelId = (Long) r[0];
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("modelUserId", modelId);
+            m.put("modelNickname", modelId != null ? nicknameByUserId.get(modelId) : null);
+            m.put("totalGross", r[1]);
+            m.put("lastActivityAt", r[2] != null ? r[2].toString() : null);
+            return m;
+        }).toList();
+
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("window", window);
+        out.put("from", from.toString());
+        out.put("to", to.toString());
+        out.put("items", items);
+        return ResponseEntity.ok(out);
+    }
+
+    // ============================================================
     // POST /me/payout — solicitud de retiro (S5.a.4)
     // ============================================================
 

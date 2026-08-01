@@ -3833,6 +3833,28 @@
       "title": "Recent activity",
       "empty": "No movements recorded yet."
     },
+    "topModels": {
+      "title": "Most active models",
+      "empty": "No activity in the selected window.",
+      "windowToday": "Today",
+      "window7d": "Last 7 days",
+      "window30d": "Last 30 days",
+      "cols": {
+        "id": "ID",
+        "nickname": "Nickname",
+        "lastActivity": "Last activity",
+        "total": "Total generated"
+      }
+    },
+    "tiers": {
+      "title": "Studio brackets and thresholds",
+      "hint": "As the Studio moves up brackets (30d gross billing), your models can pick a rate within the allowed range.",
+      "cols": {
+        "tier": "Bracket",
+        "threshold": "Threshold (30d)",
+        "rateRange": "Allowed rate"
+      }
+    },
     "placeholders": {
       "payout": "Multi-channel payout request — ships in the next iteration."
     },
@@ -4014,9 +4036,17 @@
     "navTitle": "Master profile",
     "back": "Back to panel",
     "title": "Master profile data",
+    "role": "MASTER",
     "empty": "—",
+    "header": {
+      "subtitle": "You administer a studio and the models operating under your account."
+    },
+    "security": {
+      "hint": "You can change your password anytime. To close your account, contact support."
+    },
     "sections": {
       "basic": "Basic data",
+      "basicSubtitle": "Public name and contact data of the account holder.",
       "company": "Company data",
       "onboarding": "Onboarding status",
       "security": "Security"

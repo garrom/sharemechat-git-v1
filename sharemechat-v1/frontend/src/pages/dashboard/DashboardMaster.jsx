@@ -70,6 +70,19 @@ const ActivityAmount = { fontSize: '0.95rem', fontWeight: 700 };
 
 const TabPlaceholder = { ...SectionCard, textAlign: 'center', padding: '48px 20px', color: '#6b7280' };
 
+// ADR-056 iter.6 (2026-08-02): tramos MASTER de referencia para el
+// dashboard del Master. Duplicado a proposito con
+// ModelPricingPanel.TIER_REFERENCE_MASTER (misma fuente V42), asi el
+// panel Master y la vista de la modelo bajo Master muestran los mismos
+// valores. Si en el futuro cambian los tramos, se toca V42 + estas 2
+// constantes.
+const TIER_REFERENCE_MASTER = [
+  { code: 'T1', minGross: 0,     rateMin: 1, rateMax: 1 },
+  { code: 'T2', minGross: 1000,  rateMin: 1, rateMax: 3 },
+  { code: 'T3', minGross: 4000,  rateMin: 1, rateMax: 6 },
+  { code: 'T4', minGross: 15000, rateMin: 1, rateMax: 9 },
+];
+
 // ============================================================
 // Helpers
 // ============================================================
@@ -97,7 +110,11 @@ export default function DashboardMaster() {
   const [activeTab, setActiveTab] = useState('overview');
   const [me, setMe] = useState(null);
   const [overview, setOverview] = useState(null);
-  const [recent, setRecent] = useState([]);
+  // Iter.6 (2026-08-02): sustituye "recent transactions" por top modelos
+  // atribuidas por facturación bruta del día. Más útil operativamente
+  // para el Master (ver quién produce hoy) que el ledger de operaciones.
+  const [topModels, setTopModels] = useState([]);
+  const [topModelsWindow, setTopModelsWindow] = useState('today');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [resendState, setResendState] = useState({ loading: false, msg: '' });
@@ -106,20 +123,20 @@ export default function DashboardMaster() {
     setLoading(true);
     setError('');
     try {
-      const [meDto, ovDto, txPage] = await Promise.all([
+      const [meDto, ovDto, topDto] = await Promise.all([
         masterApi.getMe(),
         masterApi.getOverview(),
-        masterApi.listTransactions({ page: 0, size: 5 }),
+        masterApi.getRecentActiveModels({ limit: 10, window: topModelsWindow }),
       ]);
       setMe(meDto);
       setOverview(ovDto);
-      setRecent(Array.isArray(txPage?.items) ? txPage.items : []);
+      setTopModels(Array.isArray(topDto?.items) ? topDto.items : []);
     } catch (err) {
       setError(err?.data?.error || err?.message || i18n.t('common.networkError'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [topModelsWindow]);
 
   useEffect(() => { loadOverview(); }, [loadOverview]);
 
@@ -276,29 +293,85 @@ export default function DashboardMaster() {
             </div>
 
             <div style={SectionCard}>
-              <h2 style={SectionTitle}>{i18n.t('masterDashboard.recent.title')}</h2>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+                <h2 style={{ ...SectionTitle, margin: 0 }}>{i18n.t('masterDashboard.topModels.title')}</h2>
+                <select
+                  value={topModelsWindow}
+                  onChange={(e) => setTopModelsWindow(e.target.value)}
+                  style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: '0.85rem' }}
+                >
+                  <option value="today">{i18n.t('masterDashboard.topModels.windowToday')}</option>
+                  <option value="7d">{i18n.t('masterDashboard.topModels.window7d')}</option>
+                  <option value="30d">{i18n.t('masterDashboard.topModels.window30d')}</option>
+                </select>
+              </div>
               {loading && <p style={EmptyText}>{i18n.t('common.loading')}</p>}
-              {!loading && recent.length === 0 && (
-                <p style={EmptyText}>{i18n.t('masterDashboard.recent.empty')}</p>
+              {!loading && topModels.length === 0 && (
+                <p style={EmptyText}>{i18n.t('masterDashboard.topModels.empty')}</p>
               )}
-              {!loading && recent.length > 0 && (
-                <div>
-                  {recent.map((t) => (
-                    <div key={t.id} style={ActivityRow}>
-                      <div style={ActivityLeft}>
-                        <span style={ActivityKind}>{t.operationType}</span>
-                        <span style={ActivityWhen}>{fmtDate(t.timestamp)}</span>
-                      </div>
-                      <span style={{
-                        ...ActivityAmount,
-                        color: Number(t.amount) >= 0 ? '#059669' : '#dc2626',
-                      }}>
-                        {fmtEur(t.amount)}
-                      </span>
-                    </div>
-                  ))}
+              {!loading && topModels.length > 0 && (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                    <thead>
+                      <tr>
+                        <th style={{ textAlign: 'left', padding: '8px 6px', color: '#6b7280', fontWeight: 600, borderBottom: '1px solid #e5e7eb' }}>{i18n.t('masterDashboard.topModels.cols.id')}</th>
+                        <th style={{ textAlign: 'left', padding: '8px 6px', color: '#6b7280', fontWeight: 600, borderBottom: '1px solid #e5e7eb' }}>{i18n.t('masterDashboard.topModels.cols.nickname')}</th>
+                        <th style={{ textAlign: 'left', padding: '8px 6px', color: '#6b7280', fontWeight: 600, borderBottom: '1px solid #e5e7eb' }}>{i18n.t('masterDashboard.topModels.cols.lastActivity')}</th>
+                        <th style={{ textAlign: 'right', padding: '8px 6px', color: '#6b7280', fontWeight: 600, borderBottom: '1px solid #e5e7eb' }}>{i18n.t('masterDashboard.topModels.cols.total')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {topModels.map((m) => (
+                        <tr key={m.modelUserId}>
+                          <td style={{ padding: '8px 6px', fontFamily: 'monospace', fontSize: '0.85rem', color: '#6b7280', borderBottom: '1px solid #f3f4f6' }}>#{m.modelUserId}</td>
+                          <td style={{ padding: '8px 6px', fontWeight: 600, color: '#111827', borderBottom: '1px solid #f3f4f6' }}>{m.modelNickname || '—'}</td>
+                          <td style={{ padding: '8px 6px', color: '#6b7280', borderBottom: '1px solid #f3f4f6' }}>{fmtDate(m.lastActivityAt)}</td>
+                          <td style={{ padding: '8px 6px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#059669', borderBottom: '1px solid #f3f4f6' }}>{fmtEur(m.totalGross)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
+            </div>
+
+            {/* Iter.6 B: tabla de tramos T1-T4 régimen MASTER. Misma info
+                que ve la modelo bajo Master en su Panel Tarifa, para que
+                el Master conozca umbrales y precio permitido por tramo.
+                Sin columna %. */}
+            <div style={SectionCard}>
+              <h2 style={SectionTitle}>{i18n.t('masterDashboard.tiers.title')}</h2>
+              <p style={{ ...EmptyText, marginTop: -4, marginBottom: 12 }}>
+                {i18n.t('masterDashboard.tiers.hint')}
+              </p>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ textAlign: 'left', padding: '8px 6px', color: '#6b7280', fontWeight: 600, borderBottom: '1px solid #e5e7eb' }}>{i18n.t('masterDashboard.tiers.cols.tier')}</th>
+                      <th style={{ textAlign: 'right', padding: '8px 6px', color: '#6b7280', fontWeight: 600, borderBottom: '1px solid #e5e7eb' }}>{i18n.t('masterDashboard.tiers.cols.threshold')}</th>
+                      <th style={{ textAlign: 'right', padding: '8px 6px', color: '#6b7280', fontWeight: 600, borderBottom: '1px solid #e5e7eb' }}>{i18n.t('masterDashboard.tiers.cols.rateRange')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {TIER_REFERENCE_MASTER.map((tier) => {
+                      const rangeText = tier.rateMin === tier.rateMax
+                        ? `${tier.rateMin} €/min`
+                        : `${tier.rateMin} – ${tier.rateMax} €/min`;
+                      const thresholdText = tier.minGross === 0
+                        ? '—'
+                        : `${tier.minGross.toLocaleString('es-ES')} €`;
+                      return (
+                        <tr key={tier.code}>
+                          <td style={{ padding: '8px 6px', fontWeight: 600, color: '#111827', borderBottom: '1px solid #f3f4f6' }}>{tier.code}</td>
+                          <td style={{ padding: '8px 6px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', borderBottom: '1px solid #f3f4f6' }}>{thresholdText}</td>
+                          <td style={{ padding: '8px 6px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', borderBottom: '1px solid #f3f4f6' }}>{rangeText}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </>
         )}

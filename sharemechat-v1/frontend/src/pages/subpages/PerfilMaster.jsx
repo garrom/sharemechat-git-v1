@@ -1,46 +1,88 @@
-// PerfilMaster.jsx — ADR-056 Fase S5.a.
-// Página de perfil del Master: datos básicos editables + estado
-// onboarding (email/KYC/contrato) informativo + link cambiar password.
-// Datos de empresa (companyName/companyRegistrationNumber/companyCountry)
-// son readonly por ahora — se editan en admin. Deuda futura: PATCH
-// endpoint dedicado en /api/masters/me si conviene autoservicio.
+// PerfilMaster.jsx — ADR-056 Fase S5.a (iter.6 layout unificado 2026-08-02).
+// Refactor visual para reutilizar el patrón de PerfilClient/PerfilModel:
+//   ProfileHeader (avatar + nombre + chip MASTER + meta) +
+//   ProfileGrid 2 col (izq datos básicos + empresa; der onboarding + seguridad).
+// Datos de empresa siguen siendo readonly (edición en admin, deuda pendiente
+// de PATCH autoservicio en /api/masters/me).
 import React, { useCallback, useEffect, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import i18n from '../../i18n';
 import { apiFetch } from '../../config/http';
 import masterApi from '../../api/masterApi';
+import LocaleSwitcher from '../../components/LocaleSwitcher';
 import {
   StyledContainer,
-  StyledMainContent,
-  GlobalBlack,
-} from '../../styles/pages-styles/VideochatStyles';
-import {
   StyledNavbar,
   StyledBrand,
-  NavText,
 } from '../../styles/NavbarStyles';
-import { NavButton } from '../../styles/ButtonStyles';
 import {
+  NavButton,
+  ProfilePrimaryButton,
+  ProfileSecondaryButton,
+} from '../../styles/ButtonStyles';
+import {
+  Message,
+  Label,
+  Input,
   Hint,
-  CenteredMain,
-  OnboardingCard,
+  ProfileMain,
+  ProfileHeader,
+  ProfileHeaderAvatar,
+  Avatar,
+  ProfileHeaderInfo,
+  ProfileHeaderTitleRow,
+  ProfileHeaderName,
+  ChipRole,
+  ProfileHeaderSubtitle,
+  ProfileHeaderMeta,
+  MetaItem,
+  MetaLabel,
+  MetaValue,
+  MetaValueOk,
+  ProfileGrid,
+  ProfileColMain,
+  ProfileColSide,
+  ProfileCard,
+  SecurityCard,
+  CardHeader,
+  CardTitle,
+  CardSubtitle,
+  CardBody,
+  CardFooter,
+  FormGridNew,
+  FormFieldNew,
+  SecurityActions,
 } from '../../styles/subpages/PerfilClientModelStyle';
 
 const t = (k) => i18n.t(k);
 
-const Section = { marginTop: 20, paddingTop: 16, borderTop: '1px solid #eee' };
-const Label = { fontSize: '0.85rem', color: '#666', marginBottom: 4 };
-const Input = {
-  width: '100%', padding: '8px 10px', borderRadius: 6,
-  border: '1px solid #ccc', fontSize: '0.95rem', color: '#000',
-  boxSizing: 'border-box',
+// Estilos locales solo para el bloque "estado onboarding" (badges).
+const readonlyInput = {
+  background: '#f5f5f5',
+  color: '#555',
+  cursor: 'not-allowed',
 };
-const InputRO = { ...Input, background: '#f5f5f5', color: '#555' };
-const Field = { marginTop: 10 };
-const StatusBadge = (color) => ({
-  display: 'inline-block', padding: '2px 10px', borderRadius: 12,
-  fontSize: '0.8rem', fontWeight: 600, background: color, color: '#fff',
-});
+const OnboardingRow = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  padding: '10px 0',
+  borderBottom: '1px solid #f3f4f6',
+};
+const OnboardingRowLast = { ...OnboardingRow, borderBottom: 'none' };
+const OnboardingLabel = { fontSize: '0.92rem', color: '#334155' };
+const badge = (variant) => {
+  const map = {
+    ok: { bg: '#dcfce7', fg: '#166534' },
+    pending: { bg: '#fef3c7', fg: '#92400e' },
+    error: { bg: '#fee2e2', fg: '#991b1b' },
+  };
+  const c = map[variant] || map.pending;
+  return {
+    display: 'inline-block', padding: '3px 12px', borderRadius: 999,
+    fontSize: '0.75rem', fontWeight: 600, background: c.bg, color: c.fg,
+  };
+};
 
 export default function PerfilMaster() {
   const history = useHistory();
@@ -107,116 +149,178 @@ export default function PerfilMaster() {
   const handleBack = () => history.push('/master');
   const handleChangePassword = () => history.push('/change-password');
 
-  const kycBadge = (status) => {
-    if (status === 'APPROVED') return <span style={StatusBadge('#0a7a2f')}>{t('perfilMaster.status.approved')}</span>;
-    if (status === 'REJECTED') return <span style={StatusBadge('#b00020')}>{t('perfilMaster.status.rejected')}</span>;
-    return <span style={StatusBadge('#b8860b')}>{t('perfilMaster.status.pending')}</span>;
-  };
-  const boolBadge = (b) => b
-    ? <span style={StatusBadge('#0a7a2f')}>{t('perfilMaster.status.ok')}</span>
-    : <span style={StatusBadge('#b8860b')}>{t('perfilMaster.status.pending')}</span>;
+  const displayName = form.nickname || me?.nickname || me?.email || t('perfilMaster.title');
+  const initial = (displayName || '?').trim().charAt(0).toUpperCase();
+
+  const emailVerifiedBadge = me?.emailVerified
+    ? <span style={badge('ok')}>{t('perfilMaster.status.ok')}</span>
+    : <span style={badge('pending')}>{t('perfilMaster.status.pending')}</span>;
+  const kycStatusBadge = (() => {
+    if (me?.verificationStatus === 'APPROVED') return <span style={badge('ok')}>{t('perfilMaster.status.approved')}</span>;
+    if (me?.verificationStatus === 'REJECTED') return <span style={badge('error')}>{t('perfilMaster.status.rejected')}</span>;
+    return <span style={badge('pending')}>{t('perfilMaster.status.pending')}</span>;
+  })();
+  const contractBadge = me?.contractAccepted
+    ? <span style={badge('ok')}>{t('perfilMaster.status.ok')}</span>
+    : <span style={badge('pending')}>{t('perfilMaster.status.pending')}</span>;
 
   return (
     <StyledContainer>
-      <GlobalBlack />
-
       <StyledNavbar>
-        <StyledBrand href="#" aria-label="SharemeChat" onClick={(e) => e.preventDefault()} />
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginLeft: 'auto' }}>
-          <NavText>{t('perfilMaster.navTitle')}</NavText>
-          <NavButton type="button" onClick={handleBack}>{t('perfilMaster.back')}</NavButton>
+        <StyledBrand
+          href="/master"
+          aria-label="SharemeChat"
+          onClick={(e) => { e.preventDefault(); handleBack(); }}
+        />
+        <div>
+          <NavButton type="button" onClick={handleBack}>
+            {t('perfilMaster.back')}
+          </NavButton>
         </div>
       </StyledNavbar>
 
-      <StyledMainContent data-tab="perfil-master">
-        <CenteredMain>
-          <OnboardingCard>
-            <h3>{t('perfilMaster.title')}</h3>
+      <ProfileMain>
+        <ProfileHeader>
+          <ProfileHeaderAvatar>
+            <Avatar>
+              <span style={{ fontSize: 22, fontWeight: 600, color: '#3730a3' }}>{initial}</span>
+            </Avatar>
+          </ProfileHeaderAvatar>
+          <ProfileHeaderInfo>
+            <ProfileHeaderTitleRow>
+              <ProfileHeaderName>{displayName}</ProfileHeaderName>
+              <ChipRole>{t('perfilMaster.role')}</ChipRole>
+            </ProfileHeaderTitleRow>
+            <ProfileHeaderSubtitle>
+              {t('perfilMaster.header.subtitle')}
+            </ProfileHeaderSubtitle>
+            <ProfileHeaderMeta>
+              <MetaItem>
+                <MetaLabel>{t('profileCommon.labels.status')}</MetaLabel>
+                <MetaValueOk>{t('profileCommon.status.active')}</MetaValueOk>
+              </MetaItem>
+              <MetaItem>
+                <MetaLabel>{t('profileCommon.labels.email')}</MetaLabel>
+                <MetaValue>{me?.email || t('profileCommon.empty.value')}</MetaValue>
+              </MetaItem>
+              <MetaItem>
+                <MetaLabel>{t('profileCommon.labels.language')}</MetaLabel>
+                <LocaleSwitcher />
+              </MetaItem>
+            </ProfileHeaderMeta>
+          </ProfileHeaderInfo>
+        </ProfileHeader>
 
-            {loading && <p style={{ color: '#000' }}>{t('common.loading')}</p>}
+        {loading && <p>{t('common.loading')}</p>}
+        {error && <Message type="error">{error}</Message>}
+        {msg && <Message type="ok">{msg}</Message>}
 
-            {error && <div role="alert" style={{ marginTop: 12, color: '#b00020' }}>{error}</div>}
-            {msg && <div role="status" style={{ marginTop: 12, color: '#0a7a2f' }}>{msg}</div>}
+        {!loading && me && (
+          <ProfileGrid>
+            <ProfileColMain>
+              <ProfileCard>
+                <CardHeader>
+                  <CardTitle>{t('perfilMaster.sections.basic')}</CardTitle>
+                  <CardSubtitle>{t('perfilMaster.sections.basicSubtitle')}</CardSubtitle>
+                </CardHeader>
+                <CardBody>
+                  <FormGridNew>
+                    <FormFieldNew>
+                      <Label>{t('perfilMaster.labels.nickname')}</Label>
+                      <Input
+                        name="nickname"
+                        value={form.nickname}
+                        onChange={onChange}
+                        placeholder={t('perfilMaster.labels.nickname')}
+                      />
+                    </FormFieldNew>
+                    <FormFieldNew>
+                      <Label>{t('perfilMaster.labels.email')}</Label>
+                      <Input value={me.email || ''} readOnly style={readonlyInput} />
+                    </FormFieldNew>
+                    <FormFieldNew>
+                      <Label>{t('perfilMaster.labels.name')}</Label>
+                      <Input
+                        name="name"
+                        value={form.name}
+                        onChange={onChange}
+                      />
+                    </FormFieldNew>
+                    <FormFieldNew>
+                      <Label>{t('perfilMaster.labels.surname')}</Label>
+                      <Input
+                        name="surname"
+                        value={form.surname}
+                        onChange={onChange}
+                      />
+                    </FormFieldNew>
+                  </FormGridNew>
+                </CardBody>
+                <CardFooter>
+                  <ProfilePrimaryButton type="button" onClick={handleSave} disabled={saving}>
+                    {saving ? t('perfilMaster.actions.saving') : t('perfilMaster.actions.save')}
+                  </ProfilePrimaryButton>
+                </CardFooter>
+              </ProfileCard>
 
-            {!loading && me && (
-              <>
-                <div style={Section}>
-                  <strong style={{ color: '#000' }}>{t('perfilMaster.sections.basic')}</strong>
+              <ProfileCard>
+                <CardHeader>
+                  <CardTitle>{t('perfilMaster.sections.company')}</CardTitle>
+                  <CardSubtitle>{t('perfilMaster.company.readOnlyHint')}</CardSubtitle>
+                </CardHeader>
+                <CardBody>
+                  <FormGridNew>
+                    <FormFieldNew>
+                      <Label>{t('perfilMaster.labels.companyName')}</Label>
+                      <Input value={me.companyName || t('perfilMaster.empty')} readOnly style={readonlyInput} />
+                    </FormFieldNew>
+                    <FormFieldNew>
+                      <Label>{t('perfilMaster.labels.companyCountry')}</Label>
+                      <Input value={me.companyCountry || t('perfilMaster.empty')} readOnly style={readonlyInput} />
+                    </FormFieldNew>
+                  </FormGridNew>
+                </CardBody>
+              </ProfileCard>
+            </ProfileColMain>
 
-                  <div style={Field}>
-                    <div style={Label}>{t('perfilMaster.labels.email')}</div>
-                    <input style={InputRO} value={me.email || ''} readOnly />
+            <ProfileColSide>
+              <ProfileCard>
+                <CardHeader>
+                  <CardTitle>{t('perfilMaster.sections.onboarding')}</CardTitle>
+                </CardHeader>
+                <CardBody>
+                  <div style={OnboardingRow}>
+                    <span style={OnboardingLabel}>{t('perfilMaster.labels.emailVerified')}</span>
+                    {emailVerifiedBadge}
                   </div>
-
-                  <div style={Field}>
-                    <div style={Label}>{t('perfilMaster.labels.nickname')}</div>
-                    <input style={Input} name="nickname" value={form.nickname} onChange={onChange} />
+                  <div style={OnboardingRow}>
+                    <span style={OnboardingLabel}>{t('perfilMaster.labels.kyc')}</span>
+                    {kycStatusBadge}
                   </div>
-
-                  <div style={Field}>
-                    <div style={Label}>{t('perfilMaster.labels.name')}</div>
-                    <input style={Input} name="name" value={form.name} onChange={onChange} />
+                  <div style={OnboardingRowLast}>
+                    <span style={OnboardingLabel}>{t('perfilMaster.labels.contract')}</span>
+                    {contractBadge}
                   </div>
+                </CardBody>
+              </ProfileCard>
 
-                  <div style={Field}>
-                    <div style={Label}>{t('perfilMaster.labels.surname')}</div>
-                    <input style={Input} name="surname" value={form.surname} onChange={onChange} />
-                  </div>
-
-                  <div style={{ marginTop: 16 }}>
-                    <NavButton type="button" onClick={handleSave} disabled={saving}>
-                      {saving ? t('perfilMaster.actions.saving') : t('perfilMaster.actions.save')}
-                    </NavButton>
-                  </div>
-                </div>
-
-                <div style={Section}>
-                  <strong style={{ color: '#000' }}>{t('perfilMaster.sections.company')}</strong>
-                  <Hint style={{ color: '#666', fontSize: '0.85rem' }}>{t('perfilMaster.company.readOnlyHint')}</Hint>
-
-                  <div style={Field}>
-                    <div style={Label}>{t('perfilMaster.labels.companyName')}</div>
-                    <input style={InputRO} value={me.companyName || t('perfilMaster.empty')} readOnly />
-                  </div>
-
-                  <div style={Field}>
-                    <div style={Label}>{t('perfilMaster.labels.companyCountry')}</div>
-                    <input style={InputRO} value={me.companyCountry || t('perfilMaster.empty')} readOnly />
-                  </div>
-                </div>
-
-                <div style={Section}>
-                  <strong style={{ color: '#000' }}>{t('perfilMaster.sections.onboarding')}</strong>
-
-                  <div style={{ ...Field, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#000' }}>{t('perfilMaster.labels.emailVerified')}</span>
-                    {boolBadge(me.emailVerified)}
-                  </div>
-
-                  <div style={{ ...Field, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#000' }}>{t('perfilMaster.labels.kyc')}</span>
-                    {kycBadge(me.verificationStatus)}
-                  </div>
-
-                  <div style={{ ...Field, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#000' }}>{t('perfilMaster.labels.contract')}</span>
-                    {boolBadge(me.contractAccepted)}
-                  </div>
-                </div>
-
-                <div style={Section}>
-                  <strong style={{ color: '#000' }}>{t('perfilMaster.sections.security')}</strong>
-                  <div style={{ marginTop: 12 }}>
-                    <NavButton type="button" onClick={handleChangePassword}>
+              <SecurityCard>
+                <CardHeader>
+                  <CardTitle>{t('perfilMaster.sections.security')}</CardTitle>
+                </CardHeader>
+                <CardBody>
+                  <SecurityActions>
+                    <ProfileSecondaryButton type="button" onClick={handleChangePassword}>
                       {t('perfilMaster.actions.changePassword')}
-                    </NavButton>
-                  </div>
-                </div>
-              </>
-            )}
-          </OnboardingCard>
-        </CenteredMain>
-      </StyledMainContent>
+                    </ProfileSecondaryButton>
+                  </SecurityActions>
+                  <Hint>{t('perfilMaster.security.hint')}</Hint>
+                </CardBody>
+              </SecurityCard>
+            </ProfileColSide>
+          </ProfileGrid>
+        )}
+      </ProfileMain>
     </StyledContainer>
   );
 }

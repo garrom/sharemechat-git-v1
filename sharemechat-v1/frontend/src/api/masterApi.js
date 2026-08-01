@@ -41,6 +41,25 @@ export async function listTransactions(opts = {}) {
 }
 
 // ============================================================
+// Recent active models (iter.6, 2026-08-02)
+// ============================================================
+
+/**
+ * GET /api/masters/me/recent-active-models — top modelos por facturación
+ * bruta atribuida al Master en la ventana solicitada.
+ *
+ * @param {{ limit?: number, window?: 'today'|'7d'|'30d' }} opts
+ * @returns {Promise<{ window: string, from: string, to: string, items: Array<{ modelUserId: number, modelNickname: string|null, totalGross: number, lastActivityAt: string|null }> }>}
+ */
+export async function getRecentActiveModels(opts = {}) {
+  const params = new URLSearchParams();
+  if (opts.limit != null) params.set('limit', String(opts.limit));
+  if (opts.window) params.set('window', opts.window);
+  const qs = params.toString();
+  return apiFetch(`/masters/me/recent-active-models${qs ? `?${qs}` : ''}`);
+}
+
+// ============================================================
 // Payout (S5.a.4)
 // ============================================================
 
@@ -137,6 +156,7 @@ export const masterApi = {
   getMe,
   getOverview,
   listTransactions,
+  getRecentActiveModels,
   requestPayout,
   listModels,
   getModel,
