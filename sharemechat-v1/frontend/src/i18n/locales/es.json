@@ -1300,7 +1300,9 @@
       "label": "Saldo:",
       "loading": "Saldo: …",
       "unavailable": "Saldo: -",
-      "unavailableMobile": "Saldo: n/d"
+      "unavailableMobile": "Saldo: n/d",
+      "underMaster": "Gestionado por tu Master",
+      "underMasterMobile": "Master"
     },
     "actions": {
       "stats": "Estadísticas",
@@ -1433,6 +1435,15 @@
         "proError": "No se pudo actualizar el toggle. Inténtalo de nuevo."
       },
       "reloadButton": "Actualizar",
+      "underMaster": {
+        "title": "Tu reparto con tu Master",
+        "hint": "Operas bajo la cuenta de {{name}}. Aquí ves lo que cobras realmente por minuto.",
+        "fallbackName": "tu estudio",
+        "lineRate": "Tu tarifa por minuto",
+        "linePactado": "% pactado con {{name}}",
+        "lineNeto": "Tu neto por minuto",
+        "formula": "= {{rate}} €/min × {{tramo}}% (plataforma → tu Master) × {{pactado}}% (Master → tú)"
+      },
       "progress": {
         "title": "Progreso hacia el siguiente tramo",
         "hint": "Visual del recorrido hasta el próximo escalón.",
@@ -3875,6 +3886,7 @@
         "hint": "Usa \"Invitar modelo\" para enviarles el email de alta. La modelo completa su verificación de identidad y su perfil de forma autónoma."
       },
       "cols": {
+        "id": "ID",
         "nickname": "Nickname",
         "status": "Estado",
         "kyc": "KYC",

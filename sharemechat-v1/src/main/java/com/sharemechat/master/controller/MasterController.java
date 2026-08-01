@@ -71,6 +71,9 @@ public class MasterController {
     private final UserService userService;
     private final TransactionRepository transactionRepository;
     private final UserAcquisitionService userAcquisitionService;
+    // ADR-056 UX M1 (2026-08-01): batch lookup nicknames de modelos
+    // atribuidas para enriquecer el historial Master.
+    private final com.sharemechat.repository.UserRepository userRepository;
 
     public MasterController(MasterService masterService,
                             MasterContractService masterContractService,
@@ -79,7 +82,8 @@ public class MasterController {
                             KycSessionService kycSessionService,
                             UserService userService,
                             TransactionRepository transactionRepository,
-                            UserAcquisitionService userAcquisitionService) {
+                            UserAcquisitionService userAcquisitionService,
+                            com.sharemechat.repository.UserRepository userRepository) {
         this.masterService = masterService;
         this.masterContractService = masterContractService;
         this.masterOverviewService = masterOverviewService;
@@ -88,6 +92,7 @@ public class MasterController {
         this.userService = userService;
         this.transactionRepository = transactionRepository;
         this.userAcquisitionService = userAcquisitionService;
+        this.userRepository = userRepository;
     }
 
     // ============================================================
@@ -240,6 +245,19 @@ public class MasterController {
                 user.getId(), typeList, fromDt, toDt,
                 PageRequest.of(safePage, safeSize));
 
+        // ADR-056 UX M1 (2026-08-01): batch lookup nicknames de modelos
+        // atribuidas para que el historial Master muestre el nombre
+        // ademas del id. Evita N+1 haciendo un solo findAllById.
+        java.util.Set<Long> attributedIds = pageResult.getContent().stream()
+                .map(Transaction::getAttributedModelUserId)
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
+        java.util.Map<Long, String> nicknameByUserId = attributedIds.isEmpty()
+                ? java.util.Collections.emptyMap()
+                : userRepository.findAllById(attributedIds).stream()
+                        .filter(u -> u.getId() != null && u.getNickname() != null)
+                        .collect(java.util.stream.Collectors.toMap(User::getId, User::getNickname));
+
         List<Map<String, Object>> items = pageResult.getContent().stream().map(t -> {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id", t.getId());
@@ -248,6 +266,10 @@ public class MasterController {
             m.put("description", t.getDescription());
             m.put("timestamp", t.getTimestamp() != null ? t.getTimestamp().toString() : null);
             m.put("attributedModelUserId", t.getAttributedModelUserId());
+            m.put("attributedModelNickname",
+                    t.getAttributedModelUserId() != null
+                            ? nicknameByUserId.get(t.getAttributedModelUserId())
+                            : null);
             return m;
         }).toList();
 

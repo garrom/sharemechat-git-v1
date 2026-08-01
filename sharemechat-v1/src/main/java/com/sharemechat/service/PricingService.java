@@ -2,10 +2,16 @@ package com.sharemechat.service;
 
 import com.sharemechat.constants.Constants;
 import com.sharemechat.dto.ModelEconomicsDTO;
+import com.sharemechat.entity.Model;
 import com.sharemechat.entity.ModelPricingTier;
 import com.sharemechat.entity.ModelTierDailySnapshot;
 import com.sharemechat.entity.User;
+import com.sharemechat.master.entity.Master;
+import com.sharemechat.master.entity.MasterModelSplit;
+import com.sharemechat.master.repository.MasterModelSplitRepository;
+import com.sharemechat.master.repository.MasterRepository;
 import com.sharemechat.repository.ModelPricingTierRepository;
+import com.sharemechat.repository.ModelRepository;
 import com.sharemechat.repository.ModelTierDailySnapshotRepository;
 import com.sharemechat.repository.UserRepository;
 import org.slf4j.Logger;
@@ -38,30 +44,35 @@ public class PricingService {
     private static final Logger log = LoggerFactory.getLogger(PricingService.class);
 
     private final UserRepository userRepository;
+    private final ModelRepository modelRepository;
     private final ModelPricingTierRepository pricingTierRepository;
     private final ModelTierDailySnapshotRepository snapshotRepository;
     private final ModelTierService modelTierService;
+    // ADR-056 Opcion D (2026-08-01): resolver Master + split vigente
+    // cuando la modelo tiene master_user_id (para servir DTO coherente
+    // al frontend con vista bajo-Master).
+    private final MasterModelSplitRepository masterModelSplitRepository;
+    private final MasterRepository masterRepository;
     private final BigDecimal proStatusMinBilledGross;
-    private final BigDecimal giftModelSharePct;
 
     public PricingService(UserRepository userRepository,
+                          ModelRepository modelRepository,
                           ModelPricingTierRepository pricingTierRepository,
                           ModelTierDailySnapshotRepository snapshotRepository,
                           ModelTierService modelTierService,
-                          @Value("${billing.pro-status.min-billed-gross-eur-30d:1500}") BigDecimal proStatusMinBilledGross,
-                          @Value("${gift.model-share:0.90}") BigDecimal giftModelShare) {
+                          MasterModelSplitRepository masterModelSplitRepository,
+                          MasterRepository masterRepository,
+                          @Value("${billing.pro-status.min-billed-gross-eur-30d:1500}") BigDecimal proStatusMinBilledGross) {
         this.userRepository = userRepository;
+        this.modelRepository = modelRepository;
         this.pricingTierRepository = pricingTierRepository;
         this.snapshotRepository = snapshotRepository;
         this.modelTierService = modelTierService;
+        this.masterModelSplitRepository = masterModelSplitRepository;
+        this.masterRepository = masterRepository;
         this.proStatusMinBilledGross = proStatusMinBilledGross != null
                 ? proStatusMinBilledGross
                 : new BigDecimal("1500");
-        // gift.model-share viene como fraccion (0.90) y se sirve al frontend
-        // como porcentaje (90.00) para consistencia con modelSharePct.
-        BigDecimal share = giftModelShare != null ? giftModelShare : new BigDecimal("0.90");
-        this.giftModelSharePct = share.multiply(new BigDecimal("100"))
-                .setScale(2, RoundingMode.HALF_UP);
     }
 
     /**
@@ -85,12 +96,22 @@ public class PricingService {
                 .findByModelIdAndSnapshotDate(modelId, snapshotDate)
                 .orElse(null);
 
+        // ADR-056 Opcion D (2026-08-01): detectar regimen segun
+        // Model.master_user_id. INDIVIDUAL o MASTER cambia la tabla
+        // model_pricing_tiers de la que resolvemos el tramo Y todos los
+        // %reparto derivados. Antes se hardcodeaba INDIVIDUAL — bug que
+        // servia al modelo bajo Master datos irrelevantes.
+        Model modelEntity = modelRepository.findById(modelId).orElse(null);
+        Long masterUserId = modelEntity != null ? modelEntity.getMasterUserId() : null;
+        boolean underMaster = masterUserId != null;
+        String targetType = underMaster ? "MASTER" : "INDIVIDUAL";
+
         ModelEconomicsDTO dto = new ModelEconomicsDTO();
         dto.snapshotDate = snapshotDate;
         dto.chosenRateEurPerMin = user.getChosenRateEurPerMin();
         dto.proAcceptsTrial = Boolean.TRUE.equals(user.getProAcceptsTrial());
         dto.proStatusMinBilledGrossEur30d = proStatusMinBilledGross;
-        dto.giftModelSharePct = giftModelSharePct;
+        dto.underMaster = underMaster;
 
         // Resolver tramo desde el snapshot (o fallback si no hay snapshot).
         ModelPricingTier tier = null;
@@ -100,12 +121,9 @@ public class PricingService {
             dto.proStatusEligible = Boolean.TRUE.equals(snap.getProStatusActive());
         }
         if (tier == null) {
-            // Fallback: T0 vigente si no hay snapshot todavia.
-            // ADR-056: PricingService actual sirve /api/models/me/economics
-            // (endpoint modelo autoservicio). Regimen fijo INDIVIDUAL — el
-            // dashboard Master de S3/S5 tendra su propio servicio.
+            // Fallback: T0 vigente del regimen que aplica al user.
             List<ModelPricingTier> vigentes = pricingTierRepository
-                    .findAllCurrentByTargetTypeAsc("INDIVIDUAL");
+                    .findAllCurrentByTargetTypeAsc(targetType);
             tier = vigentes.isEmpty() ? null : vigentes.get(0);
             dto.billedGrossEur30d = BigDecimal.ZERO.setScale(2);
             dto.proStatusEligible = false;
@@ -124,6 +142,31 @@ public class PricingService {
                 dto.nextTierCode = next.getTierCode();
                 dto.nextTierMinBilledGrossEur30d = next.getMinBilledGrossEur30d();
             }
+        }
+
+        // ADR-056 revision 2026-08-01: los gifts aplican el mismo % del
+        // tramo que streams (TransactionService.processGiftInternal). El
+        // legacy giftModelSharePct pasa a ser identico a modelSharePct
+        // para no romper consumidores (SessionHUD variant='model').
+        dto.giftModelSharePct = dto.modelSharePct;
+
+        // ADR-056 Opcion D: popular info Master si aplica.
+        if (underMaster) {
+            masterModelSplitRepository
+                    .findFirstByMasterUserIdAndModelUserIdAndEffectiveToIsNullOrderByIdDesc(
+                            masterUserId, modelId)
+                    .map(MasterModelSplit::getInternalSharePct)
+                    .ifPresent(pct -> dto.internalSharePct = pct);
+            Master master = masterRepository.findByUserId(masterUserId).orElse(null);
+            User masterUser = userRepository.findById(masterUserId).orElse(null);
+            String displayName = master != null ? master.getCompanyName() : null;
+            if ((displayName == null || displayName.isBlank()) && masterUser != null) {
+                displayName = masterUser.getNickname();
+            }
+            if (displayName == null || displayName.isBlank()) {
+                displayName = "tu estudio";
+            }
+            dto.masterDisplayName = displayName;
         }
 
         return dto;

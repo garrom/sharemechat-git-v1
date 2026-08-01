@@ -344,7 +344,13 @@ export default function ModelBillingPanel() {
                     )}
                   </td>
                   <td style={refCell}>{parsed.detail || '-'}</td>
-                  <td style={{ ...amountCell, color: amountColor }}>{fmtEUR(it.amount, style.sign)}</td>
+                  <td style={{ ...amountCell, color: attributedToMaster ? '#94a3b8' : amountColor }}>
+                    {/* ADR-056 Opcion D punto U3: cuando la fila fue
+                        atribuida al Master, ocultar el importe bruto
+                        (es dinero del Master, confunde a la modelo).
+                        Solo se muestra "Tu neto pactado" al lado. */}
+                    {attributedToMaster ? '—' : fmtEUR(it.amount, style.sign)}
+                  </td>
                   {masterInfo.hasMaster && (
                     <td style={{ ...amountCell, color: attributedToMaster ? '#0f172a' : '#94a3b8', fontWeight: attributedToMaster ? 700 : 400 }}>
                       {netoPactado != null ? fmtEUR(netoPactado, style.sign) : '—'}

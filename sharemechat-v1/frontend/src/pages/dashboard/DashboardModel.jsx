@@ -149,6 +149,22 @@ const DashboardModel = () => {
   );
   const [saldoModel, setSaldoModel] = useState(null);
   const [loadingSaldoModel, setLoadingSaldoModel] = useState(false);
+  // ADR-056 Opcion D (2026-08-01): flag para sustituir el widget saldo
+  // por una leyenda "Gestionado por Master" cuando la modelo tiene
+  // master_user_id. Sin ese flag, el navbar mostraria 0€ engañoso
+  // (Model.saldoActual no se actualiza cuando hay Master, el earning
+  // va al Master directamente).
+  const [modelUnderMaster, setModelUnderMaster] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const info = await apiFetch('/models/me/master-info');
+        if (!cancelled && info?.hasMaster) setModelUnderMaster(true);
+      } catch { /* silent: modelo individual sigue con el widget saldo */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
   const [status, setStatus] = useState('');
   const [queuePosition, setQueuePosition] = useState(null);
   const [currentClientId, setCurrentClientId] = useState(null);
@@ -3276,17 +3292,21 @@ const DashboardModel = () => {
       ? `${i18n.t('dashboardModel.queue.label')} ${queuePosition}`
       : null;
 
-  const balanceTextDesktop = loadingSaldoModel
-    ? i18n.t('dashboardModel.balance.loading')
-    : saldoModel == null
-      ? i18n.t('dashboardModel.balance.unavailable')
-      : `${i18n.t('dashboardModel.balance.label')} ${fmtEUR(saldoModel)}`;
+  const balanceTextDesktop = modelUnderMaster
+    ? i18n.t('dashboardModel.balance.underMaster')
+    : loadingSaldoModel
+      ? i18n.t('dashboardModel.balance.loading')
+      : saldoModel == null
+        ? i18n.t('dashboardModel.balance.unavailable')
+        : `${i18n.t('dashboardModel.balance.label')} ${fmtEUR(saldoModel)}`;
 
-  const balanceTextMobile = loadingSaldoModel
-    ? i18n.t('dashboardModel.balance.loading')
-    : saldoModel == null
-      ? i18n.t('dashboardModel.balance.unavailableMobile')
-      : `${i18n.t('dashboardModel.balance.label')} ${fmtEUR(saldoModel)}`;
+  const balanceTextMobile = modelUnderMaster
+    ? i18n.t('dashboardModel.balance.underMasterMobile')
+    : loadingSaldoModel
+      ? i18n.t('dashboardModel.balance.loading')
+      : saldoModel == null
+        ? i18n.t('dashboardModel.balance.unavailableMobile')
+        : `${i18n.t('dashboardModel.balance.label')} ${fmtEUR(saldoModel)}`;
 
 
 

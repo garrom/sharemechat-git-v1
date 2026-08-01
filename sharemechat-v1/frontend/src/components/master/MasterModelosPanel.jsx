@@ -343,6 +343,7 @@ export default function MasterModelosPanel() {
           <table style={Table}>
             <thead>
               <tr>
+                <th style={Th}>{t('masterDashboard.modelos.cols.id')}</th>
                 <th style={Th}>{t('masterDashboard.modelos.cols.nickname')}</th>
                 <th style={Th}>{t('masterDashboard.modelos.cols.status')}</th>
                 <th style={Th}>{t('masterDashboard.modelos.cols.kyc')}</th>
@@ -355,6 +356,7 @@ export default function MasterModelosPanel() {
             <tbody>
               {models.map((m) => (
                 <tr key={m.modelUserId}>
+                  <td style={{ ...Td, fontFamily: 'ui-monospace, SFMono-Regular, monospace', color: '#6b7280' }}>#{m.modelUserId}</td>
                   <td style={Td}>{m.nickname || `#${m.modelUserId}`}</td>
                   <td style={Td}>{activeBadge(m.active)}</td>
                   <td style={Td}>{kycBadge(m.verificationStatus)}</td>

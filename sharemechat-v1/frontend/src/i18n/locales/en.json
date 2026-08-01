@@ -1300,7 +1300,9 @@
       "label": "Balance:",
       "loading": "Balance: …",
       "unavailable": "Balance: -",
-      "unavailableMobile": "Balance: n/a"
+      "unavailableMobile": "Balance: n/a",
+      "underMaster": "Managed by your Master",
+      "underMasterMobile": "Master"
     },
     "actions": {
       "stats": "Stats",
@@ -1433,6 +1435,15 @@
         "proError": "Could not update the toggle. Please try again."
       },
       "reloadButton": "Refresh",
+      "underMaster": {
+        "title": "Your split with your Master",
+        "hint": "You operate under {{name}}'s account. Here you see what you actually earn per minute.",
+        "fallbackName": "your studio",
+        "lineRate": "Your rate per minute",
+        "linePactado": "Agreed % with {{name}}",
+        "lineNeto": "Your net per minute",
+        "formula": "= {{rate}} €/min × {{tramo}}% (platform → your Master) × {{pactado}}% (Master → you)"
+      },
       "progress": {
         "title": "Progress to the next bracket",
         "hint": "Visual of your path to the next step.",
@@ -3875,6 +3886,7 @@
         "hint": "Use \"Invite model\" to send them the sign-up email. The model completes identity verification and profile on her own."
       },
       "cols": {
+        "id": "ID",
         "nickname": "Nickname",
         "status": "Status",
         "kyc": "KYC",

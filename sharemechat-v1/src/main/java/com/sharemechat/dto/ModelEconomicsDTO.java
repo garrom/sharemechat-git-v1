@@ -73,12 +73,44 @@ public class ModelEconomicsDTO {
     public LocalDate snapshotDate;
 
     /**
-     * %reparto de la modelo aplicado a los regalos (property
-     * {@code gift.model-share}, default 0.90 -> 90). Independiente del
-     * tramo T1-T4 (que solo afecta al reparto de tiempo). Se sirve como
-     * porcentaje (0-100) para consistencia con {@link #modelSharePct}.
-     * Consumido por el HUD de sesion (SessionHUD variant='model') para
-     * calcular la ganancia estimada por regalo en tiempo real.
+     * @deprecated 2026-08-01: la property {@code gift.model-share} fue
+     * eliminada al unificar el reparto de gifts al motor de tramos
+     * (ADR-056 revision 2026-08-01, ver TransactionService
+     * .processGiftInternal). Ahora los gifts aplican {@link #modelSharePct}
+     * (mismo % del tramo que streams). El campo se mantiene por
+     * compatibilidad con {@code SessionHUD variant='model'} y se popula
+     * igual a {@code modelSharePct}. Los nuevos consumidores deben usar
+     * {@link #modelSharePct} directamente. Eliminar cuando el HUD migre.
      */
+    @Deprecated
     public BigDecimal giftModelSharePct;
+
+    /**
+     * ADR-056 Opcion D (2026-08-01): true si el user tiene
+     * {@code Model.master_user_id} distinto de null. El frontend
+     * (ModelPricingPanel / ModelBillingPanel) usa este flag como rama
+     * top-level para renderizar la vista bajo-Master (transparencia +
+     * neto pactado) en lugar de la vista individual. Los datos
+     * economicos del DTO se sirven consistentemente al regimen que
+     * aplica: si {@code underMaster=true}, {@link #modelSharePct} y
+     * {@link #tierCode} vienen del regimen MASTER (T1=50/T2=60/T3=65/
+     * T4=70 %); en caso contrario, INDIVIDUAL (T1=50/T2=54/T3=57/T4=60 %).
+     */
+    public boolean underMaster;
+
+    /**
+     * ADR-056 Opcion D (2026-08-01): % pactado interno Master↔Modelo
+     * vigente desde {@code master_model_splits}. Solo poblado si
+     * {@link #underMaster} es true. Sirve para que el frontend calcule
+     * el neto real que cobra la modelo: {@code neto = bruto ×
+     * modelSharePct/100 × internalSharePct/100}.
+     */
+    public BigDecimal internalSharePct;
+
+    /**
+     * ADR-056 Opcion D (2026-08-01): nombre visible del Master
+     * (companyName || nickname del User Master, fallback "tu estudio").
+     * Solo poblado si {@link #underMaster} es true. Sin PII.
+     */
+    public String masterDisplayName;
 }

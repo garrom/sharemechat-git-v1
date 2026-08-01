@@ -536,6 +536,16 @@ del entorno + copia al histórico local con la misma version_id (regla
 de `ops/legal-history/README.md`: nombre fichero = version del manifest,
 nunca sobrescribir).
 
+**Deuda operativa 2026-08-01 — Tabla de referencia de tramos en dashboard Master**:
+al aplicar la Opción D se rediseñó el panel Tarifa del modelo bajo
+Master para ocultar la tabla T0-T3 INDIVIDUAL (irrelevante para su
+reparto real). En su lugar, dicha tabla — con las dos variantes
+INDIVIDUAL y MASTER — debe mostrarse en el dashboard Master (tab
+Overview o pestaña dedicada), para que el Master pueda planificar
+tarifas y anticipar el escalado de sus modelos. Estado: no
+implementada. Prioridad baja tras cerrar Opción D + puntos de UX
+Master 2026-08-01.
+
 **Deuda operativa 2026-08-01 — Dashboard Modelo bajo Master necesita vista de transparencia "Lo que has generado" (Opción D)**:
 tras el cambio 2026-08-01 que unifica el reparto de gifts al motor de
 tramos (JAR `dbf22209`, ver TransactionService.processGiftInternal),

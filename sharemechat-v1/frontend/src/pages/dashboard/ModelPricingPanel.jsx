@@ -332,6 +332,32 @@ export default function ModelPricingPanel() {
     return null;
   }
 
+  // ADR-056 Opcion D (2026-08-01): rama top-level para modelo bajo
+  // Master. Oculta tabla T0-T3 y barra de progreso hacia siguiente
+  // tramo (esos escalados afectan al reparto de su Master, no
+  // directamente a ella). Sustituye la card "Reparto" opaca por 3
+  // lineas transparentes con la formula real: tarifa × %tramo × %pactado.
+  if (economics.underMaster) {
+    return renderUnderMasterView({
+      economics,
+      allowedRates,
+      isFixedRate,
+      rateSelected,
+      setRateSelected,
+      rateUnchanged,
+      savingRate,
+      handleSaveRate,
+      savingPro,
+      handleToggleTrial,
+      flash,
+      loading,
+      loadEconomics,
+      rateMin,
+      rateMax,
+      t,
+    });
+  }
+
   const proEligible = !!economics.proStatusEligible;
   const proAccepts = !!economics.proAcceptsTrial;
   const proMin = Number(economics.proStatusMinBilledGrossEur30d || 1500);
@@ -594,6 +620,158 @@ export default function ModelPricingPanel() {
             </tbody>
           </Table>
         </TableWrap>
+      </Section>
+
+      <SmallButton type="button" onClick={loadEconomics} disabled={loading}>
+        {t('dashboardModel.pricing.reloadButton')}
+      </SmallButton>
+    </>
+  );
+}
+
+// ============================================================
+// ADR-056 Opcion D (2026-08-01): vista dedicada Modelo bajo Master.
+// Rama top-level del componente principal; comparte estilos, handlers
+// y estado con la vista individual (paso todo por props). Mantiene:
+//   - Selector Tarifa (input operativo suyo, ADR-056 D3).
+//   - Estatus PRO (toggle trials, sigue siendo suya).
+// Reemplaza:
+//   - Card "Reparto" opaca por 3 lineas transparentes con formula real.
+// Oculta:
+//   - Tabla T0-T3 (INDIVIDUAL, irrelevante para su reparto).
+//   - Barra de progreso hacia siguiente tramo (afecta al Master).
+//   - Card tramo (T1-T4) y card facturacion 30d (idem).
+// ============================================================
+function renderUnderMasterView({
+  economics, allowedRates, isFixedRate, rateSelected, setRateSelected,
+  rateUnchanged, savingRate, handleSaveRate, savingPro, handleToggleTrial,
+  flash, loading, loadEconomics, rateMin, rateMax, t,
+}) {
+  const proEligible = !!economics.proStatusEligible;
+  const proAccepts = !!economics.proAcceptsTrial;
+  const proMin = Number(economics.proStatusMinBilledGrossEur30d || 1500);
+  const billedGross = Number(economics.billedGrossEur30d || 0);
+
+  const chosenRate = Number(economics.chosenRateEurPerMin || 0);
+  const tramoPct = Number(economics.modelSharePct || 0);       // % que Master recibe del bruto
+  const pactadoPct = Number(economics.internalSharePct || 0);  // % que Master paga a modelo
+  const netoPorMinuto = chosenRate * (tramoPct / 100) * (pactadoPct / 100);
+
+  const masterName = economics.masterDisplayName || t('dashboardModel.pricing.underMaster.fallbackName');
+
+  return (
+    <>
+      {flash && (
+        <FlashLine $type={flash.type}>
+          <FontAwesomeIcon icon={flash.type === 'ok' ? faCircleCheck : faCircleExclamation} />
+          {flash.message}
+        </FlashLine>
+      )}
+
+      <Section>
+        <SectionHead>
+          <SectionTitle>
+            <FontAwesomeIcon icon={faTags} style={{ marginRight: 8 }} />
+            {t('dashboardModel.pricing.underMaster.title')}
+          </SectionTitle>
+          <SectionHint>
+            {t('dashboardModel.pricing.underMaster.hint', { name: masterName })}
+          </SectionHint>
+        </SectionHead>
+
+        <div style={{
+          background: '#e0e7ff', border: '1px solid #a5b4fc', borderRadius: 10,
+          padding: '14px 16px', color: '#3730a3', fontSize: 13, lineHeight: 1.6,
+        }}>
+          <div><b>{t('dashboardModel.pricing.underMaster.lineRate')}:</b> {formatEur2(chosenRate)} €/min</div>
+          <div><b>{t('dashboardModel.pricing.underMaster.linePactado', { name: masterName })}:</b> {formatEur0(pactadoPct)}%</div>
+          <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid #a5b4fc' }}>
+            <b>{t('dashboardModel.pricing.underMaster.lineNeto')}:</b> {formatEur2(netoPorMinuto)} €/min
+          </div>
+          <div style={{ marginTop: 4, fontSize: 11, opacity: 0.85 }}>
+            {t('dashboardModel.pricing.underMaster.formula', {
+              rate: formatEur2(chosenRate),
+              tramo: formatEur0(tramoPct),
+              pactado: formatEur0(pactadoPct),
+            })}
+          </div>
+        </div>
+      </Section>
+
+      <Section>
+        <SectionHead>
+          <SectionTitle>
+            <FontAwesomeIcon icon={faArrowRightLong} style={{ marginRight: 8 }} />
+            {t('dashboardModel.pricing.rate.title')}
+          </SectionTitle>
+          <SectionHint>
+            {isFixedRate
+              ? t('dashboardModel.pricing.rate.fixedHint', { tier: economics.tierCode })
+              : t('dashboardModel.pricing.rate.hint', {
+                  min: formatRate(rateMin),
+                  max: formatRate(rateMax),
+                })}
+          </SectionHint>
+        </SectionHead>
+
+        <InlineRow>
+          <span style={{ fontWeight: 700, color: '#334155' }}>
+            {t('dashboardModel.pricing.rate.label')}:
+          </span>
+          <RateSelect
+            value={rateSelected}
+            onChange={(e) => setRateSelected(e.target.value)}
+            disabled={savingRate || isFixedRate}
+          >
+            {allowedRates.map((v) => (
+              <option key={v} value={String(v)}>
+                {v} €/min
+              </option>
+            ))}
+          </RateSelect>
+          <PrimaryButton
+            type="button"
+            onClick={handleSaveRate}
+            disabled={rateUnchanged || savingRate || isFixedRate}
+          >
+            {savingRate && <FontAwesomeIcon icon={faSpinner} spin />}
+            {t('dashboardModel.pricing.rate.saveButton')}
+          </PrimaryButton>
+        </InlineRow>
+      </Section>
+
+      <Section>
+        <SectionHead>
+          <SectionTitle>
+            <FontAwesomeIcon icon={faCircleCheck} style={{ marginRight: 8 }} />
+            {t('dashboardModel.pricing.pro.title')}
+          </SectionTitle>
+          <SectionHint>
+            {proEligible
+              ? t('dashboardModel.pricing.pro.hintActive')
+              : t('dashboardModel.pricing.pro.hintInactive', {
+                  threshold: formatEur0(proMin),
+                  remaining: formatEur2(Math.max(0, proMin - billedGross)),
+                })}
+          </SectionHint>
+        </SectionHead>
+
+        <InlineRow>
+          <Toggle>
+            <input
+              type="checkbox"
+              checked={proAccepts}
+              disabled={!proEligible || savingPro}
+              onChange={(e) => handleToggleTrial(e.target.checked)}
+            />
+            <span>{t('dashboardModel.pricing.pro.acceptTrialLabel')}</span>
+          </Toggle>
+          {savingPro && <FontAwesomeIcon icon={faSpinner} spin style={{ color: '#f97316' }} />}
+        </InlineRow>
+
+        <HintText style={{ marginTop: 8 }}>
+          {t('dashboardModel.pricing.pro.explainer')}
+        </HintText>
       </Section>
 
       <SmallButton type="button" onClick={loadEconomics} disabled={loading}>

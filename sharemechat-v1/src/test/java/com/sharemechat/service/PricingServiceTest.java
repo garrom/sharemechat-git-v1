@@ -5,7 +5,10 @@ import com.sharemechat.dto.ModelEconomicsDTO;
 import com.sharemechat.entity.ModelPricingTier;
 import com.sharemechat.entity.ModelTierDailySnapshot;
 import com.sharemechat.entity.User;
+import com.sharemechat.master.repository.MasterModelSplitRepository;
+import com.sharemechat.master.repository.MasterRepository;
 import com.sharemechat.repository.ModelPricingTierRepository;
+import com.sharemechat.repository.ModelRepository;
 import com.sharemechat.repository.ModelTierDailySnapshotRepository;
 import com.sharemechat.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,9 +40,12 @@ import static org.mockito.Mockito.when;
 class PricingServiceTest {
 
     private UserRepository userRepository;
+    private ModelRepository modelRepository;
     private ModelPricingTierRepository pricingTierRepository;
     private ModelTierDailySnapshotRepository snapshotRepository;
     private ModelTierService modelTierService;
+    private MasterModelSplitRepository masterModelSplitRepository;
+    private MasterRepository masterRepository;
     private PricingService service;
 
     private ModelPricingTier T0;
@@ -49,12 +55,21 @@ class PricingServiceTest {
     @BeforeEach
     void setUp() {
         userRepository = mock(UserRepository.class);
+        modelRepository = mock(ModelRepository.class);
         pricingTierRepository = mock(ModelPricingTierRepository.class);
         snapshotRepository = mock(ModelTierDailySnapshotRepository.class);
         modelTierService = mock(ModelTierService.class);
+        masterModelSplitRepository = mock(MasterModelSplitRepository.class);
+        masterRepository = mock(MasterRepository.class);
 
-        service = new PricingService(userRepository, pricingTierRepository,
-                snapshotRepository, modelTierService, new BigDecimal("1500"), new BigDecimal("0.90"));
+        // ADR-056 Opcion D (2026-08-01): constructor amplia con
+        // modelRepository (detectar master_user_id), masterModelSplit
+        // Repository (leer % pactado), masterRepository (nombre visible
+        // Master). El parametro giftModelShare fue eliminado — los gifts
+        // aplican ahora el % del tramo (ver TransactionService.processGift).
+        service = new PricingService(userRepository, modelRepository, pricingTierRepository,
+                snapshotRepository, modelTierService, masterModelSplitRepository,
+                masterRepository, new BigDecimal("1500"));
 
         T0 = tier(1L, "T0", "0", "75.00", "1.00", "1.00");
         T1 = tier(2L, "T1", "3500", "77.00", "1.00", "3.00");

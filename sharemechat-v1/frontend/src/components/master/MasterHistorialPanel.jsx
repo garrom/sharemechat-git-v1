@@ -262,7 +262,13 @@ export default function MasterHistorialPanel() {
                       {fmtEur(row.amount)}
                     </td>
                     <td style={Td}>{row.description || '—'}</td>
-                    <td style={Td}>{row.attributedModelUserId ? `#${row.attributedModelUserId}` : '—'}</td>
+                    <td style={Td}>
+                      {row.attributedModelUserId
+                        ? (row.attributedModelNickname
+                            ? `${row.attributedModelNickname} (#${row.attributedModelUserId})`
+                            : `#${row.attributedModelUserId}`)
+                        : '—'}
+                    </td>
                   </tr>
                 ))}
               </tbody>
