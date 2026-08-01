@@ -536,6 +536,35 @@ del entorno + copia al histórico local con la misma version_id (regla
 de `ops/legal-history/README.md`: nombre fichero = version del manifest,
 nunca sobrescribir).
 
+**Deuda operativa 2026-08-01 — Dashboard Modelo bajo Master necesita vista de transparencia "Lo que has generado" (Opción D)**:
+tras el cambio 2026-08-01 que unifica el reparto de gifts al motor de
+tramos (JAR `dbf22209`, ver TransactionService.processGiftInternal),
+la modelo bajo Master no ve `STREAM_EARNING` ni `GIFT_EARNING` en su
+tab Facturación — todo el earning se atribuye al Master. Consecuencia:
+la modelo pierde visibilidad de lo que genera y no puede verificar
+que el Master le paga off-platform el `internal_share_pct` pactado.
+Vector de conflicto en el sector adult.
+
+**Opción D aprobada por operador 2026-08-01** (pendiente de implementar):
+- Backend: query del historial modelo debe incluir transacciones donde
+  `attributed_model_user_id = suUserId` (aunque el `user_id` sea el
+  Master). Exponer también `internal_share_pct` vigente de la modelo
+  al propio endpoint del modelo (`GET /api/models/me/*` o similar).
+- Frontend Modelo: en la tab Facturación, si `master_user_id != null`:
+  - Banner claro: "Estos ingresos son propiedad de tu Master {name}.
+    Cobras según acuerdo interno pactado ({X}%). Contacta con tu
+    Master para tus pagos."
+  - Columna extra "Tu neto pactado" = `importe × internal_share_pct/100`.
+- Sin cambio de flujo económico, solo lectura + banner + columna
+  calculada. Máxima transparencia sin renegociar el modelo económico.
+
+Prioridad: mañana 2026-08-02 al retomar S5.a.8 (agrupable con S5.a.8.c
+"columna €/min neto modelo" del panel Master, que también necesita
+exponer `internal_share_pct` desde backend).
+
+Trigger para el operador cuando retome: buscar "Opción D" o
+"opcion-d-modelo-bajo-master" en pending-hardening + memoria.
+
 **Deuda operativa 2026-07-31 — Cláusulas D7 del Contrato Modelo (chargebacks/disputa/reserva) pendientes hasta Sub-frente 3 técnico ADR-052**:
 el borrador `docs/01-business/model-contract-v5-clauses-d7-draft.md`
 define X.1-X.7 (categorías costes, notificación 7d, umbral 5%,
