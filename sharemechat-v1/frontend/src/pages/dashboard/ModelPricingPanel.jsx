@@ -655,9 +655,17 @@ function renderUnderMasterView({
   const chosenRate = Number(economics.chosenRateEurPerMin || 0);
   const tramoPct = Number(economics.modelSharePct || 0);       // % que Master recibe del bruto
   const pactadoPct = Number(economics.internalSharePct || 0);  // % que Master paga a modelo
-  const netoPorMinuto = chosenRate * (tramoPct / 100) * (pactadoPct / 100);
+  const masterEurPerMin = chosenRate * (tramoPct / 100);
+  const netoPorMinuto = masterEurPerMin * (pactadoPct / 100);
 
   const masterName = economics.masterDisplayName || t('dashboardModel.pricing.underMaster.fallbackName');
+  // Estilo compartido para cada línea del "flujo" (paso numerado con
+  // etiqueta a la izquierda y monto a la derecha, alineación limpia).
+  const flowRow = { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '6px 0' };
+  const flowNum = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    width: 22, height: 22, borderRadius: '50%', background: '#a5b4fc', color: '#1e1b4b',
+    fontSize: 11, fontWeight: 700, marginRight: 10, flexShrink: 0 };
+  const flowAmount = { fontVariantNumeric: 'tabular-nums', fontWeight: 700 };
 
   return (
     <>
@@ -681,19 +689,28 @@ function renderUnderMasterView({
 
         <div style={{
           background: '#e0e7ff', border: '1px solid #a5b4fc', borderRadius: 10,
-          padding: '14px 16px', color: '#3730a3', fontSize: 13, lineHeight: 1.6,
+          padding: '14px 18px', color: '#3730a3', fontSize: 13, lineHeight: 1.5,
         }}>
-          <div><b>{t('dashboardModel.pricing.underMaster.lineRate')}:</b> {formatEur2(chosenRate)} €/min</div>
-          <div><b>{t('dashboardModel.pricing.underMaster.linePactado', { name: masterName })}:</b> {formatEur0(pactadoPct)}%</div>
-          <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid #a5b4fc' }}>
-            <b>{t('dashboardModel.pricing.underMaster.lineNeto')}:</b> {formatEur2(netoPorMinuto)} €/min
+          <div style={flowRow}>
+            <span style={{ display: 'flex', alignItems: 'center' }}>
+              <span style={flowNum}>1</span>
+              {t('dashboardModel.pricing.underMaster.flow.step1')}
+            </span>
+            <span style={flowAmount}>{formatEur2(chosenRate)} €/min</span>
           </div>
-          <div style={{ marginTop: 4, fontSize: 11, opacity: 0.85 }}>
-            {t('dashboardModel.pricing.underMaster.formula', {
-              rate: formatEur2(chosenRate),
-              tramo: formatEur0(tramoPct),
-              pactado: formatEur0(pactadoPct),
-            })}
+          <div style={flowRow}>
+            <span style={{ display: 'flex', alignItems: 'center' }}>
+              <span style={flowNum}>2</span>
+              {t('dashboardModel.pricing.underMaster.flow.step2', { name: masterName, tramo: formatEur0(tramoPct) })}
+            </span>
+            <span style={flowAmount}>{formatEur2(masterEurPerMin)} €/min</span>
+          </div>
+          <div style={{ ...flowRow, marginTop: 6, paddingTop: 10, borderTop: '1px solid #a5b4fc' }}>
+            <span style={{ display: 'flex', alignItems: 'center' }}>
+              <span style={{ ...flowNum, background: '#4f46e5', color: '#fff' }}>3</span>
+              <b>{t('dashboardModel.pricing.underMaster.flow.step3', { pactado: formatEur0(pactadoPct) })}</b>
+            </span>
+            <span style={{ ...flowAmount, fontSize: 15 }}>{formatEur2(netoPorMinuto)} €/min</span>
           </div>
         </div>
       </Section>

@@ -277,4 +277,16 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to,
             Pageable pageable);
+
+    /**
+     * ADR-056 Opcion D iter.2 (2026-08-02): sumatorio bruto de earnings
+     * atribuidas a la modelo (STREAM_EARNING + GIFT_EARNING). Sirve al
+     * endpoint /models/me/master-info para calcular accumulatedNetPactado
+     * = grossAttributed * internalSharePct/100. Ignora gifts con amount=0.
+     */
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t "
+            + "WHERE t.attributedModelUserId = :modelId "
+            + "  AND t.operationType IN ('STREAM_EARNING', 'GIFT_EARNING') "
+            + "  AND NOT (t.operationType = 'GIFT_EARNING' AND t.amount = 0)")
+    BigDecimal sumAttributedGrossEarnings(@Param("modelId") Long modelId);
 }

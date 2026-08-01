@@ -127,8 +127,11 @@ export const StyledNavGroup = styled.div`
 export const StyledMainContent = styled.div`
   display: flex;
   flex: 1;
-  gap: 16px;
-  padding: 16px;
+  gap: ${props => props['data-tab'] === 'stats' ? '0' : '16px'};
+  /* tab 'stats' se pinta full-width sin marco negro alrededor: el propio
+     Wrap de Estadistica trae su fondo claro y ocupa 100% (mismo look que
+     DashboardMaster). Los demás tabs mantienen el padding 16px. */
+  padding: ${props => props['data-tab'] === 'stats' ? '0' : '16px'};
   box-sizing: border-box;
 
   /* Regla clave:

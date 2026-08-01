@@ -149,18 +149,19 @@ const DashboardModel = () => {
   );
   const [saldoModel, setSaldoModel] = useState(null);
   const [loadingSaldoModel, setLoadingSaldoModel] = useState(false);
-  // ADR-056 Opcion D (2026-08-01): flag para sustituir el widget saldo
-  // por una leyenda "Gestionado por Master" cuando la modelo tiene
-  // master_user_id. Sin ese flag, el navbar mostraria 0€ engañoso
-  // (Model.saldoActual no se actualiza cuando hay Master, el earning
-  // va al Master directamente).
-  const [modelUnderMaster, setModelUnderMaster] = useState(false);
+  // ADR-056 Opcion D (2026-08-01, iter.2 2026-08-02): DTO completo del
+  // Master asociado. Se usa para pintar "Estudio {name} · X€" en el
+  // widget del navbar (Model.saldoActual no se actualiza cuando hay
+  // Master, el earning va al Master directamente; en su lugar el DTO
+  // trae accumulatedNetPactado = suma bruta atribuida × %pactado, saldo
+  // informativo que el Master le debe fuera de plataforma).
+  const [masterInfo, setMasterInfo] = useState({ hasMaster: false });
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const info = await apiFetch('/models/me/master-info');
-        if (!cancelled && info?.hasMaster) setModelUnderMaster(true);
+        if (!cancelled && info) setMasterInfo(info);
       } catch { /* silent: modelo individual sigue con el widget saldo */ }
     })();
     return () => { cancelled = true; };
@@ -3292,16 +3293,23 @@ const DashboardModel = () => {
       ? `${i18n.t('dashboardModel.queue.label')} ${queuePosition}`
       : null;
 
-  const balanceTextDesktop = modelUnderMaster
-    ? i18n.t('dashboardModel.balance.underMaster')
+  // ADR-056 Opcion D iter.2 (2026-08-02): modelo bajo Master ve
+  // "Estudio {name} · {accumulatedNetPactado}€". El acumulado es
+  // informativo (Master paga fuera), pero es lo único que refleja lo
+  // que realmente ha ganado ella con su reparto pactado. Fallback si
+  // el Master no tiene nombre: solo "Estudio".
+  const balanceTextDesktop = masterInfo.hasMaster
+    ? `${masterInfo.masterDisplayName
+        ? i18n.t('dashboardModel.balance.underMaster', { name: masterInfo.masterDisplayName })
+        : i18n.t('dashboardModel.balance.underMasterNoName')} · ${fmtEUR(masterInfo.accumulatedNetPactado)}`
     : loadingSaldoModel
       ? i18n.t('dashboardModel.balance.loading')
       : saldoModel == null
         ? i18n.t('dashboardModel.balance.unavailable')
         : `${i18n.t('dashboardModel.balance.label')} ${fmtEUR(saldoModel)}`;
 
-  const balanceTextMobile = modelUnderMaster
-    ? i18n.t('dashboardModel.balance.underMasterMobile')
+  const balanceTextMobile = masterInfo.hasMaster
+    ? `${i18n.t('dashboardModel.balance.underMasterNoName')} · ${fmtEUR(masterInfo.accumulatedNetPactado)}`
     : loadingSaldoModel
       ? i18n.t('dashboardModel.balance.loading')
       : saldoModel == null

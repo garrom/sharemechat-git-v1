@@ -1301,8 +1301,8 @@
       "loading": "Balance: …",
       "unavailable": "Balance: -",
       "unavailableMobile": "Balance: n/a",
-      "underMaster": "Managed by your Master",
-      "underMasterMobile": "Master"
+      "underMaster": "Studio {{name}}",
+      "underMasterNoName": "Studio"
     },
     "actions": {
       "stats": "Stats",
@@ -1436,13 +1436,14 @@
       },
       "reloadButton": "Refresh",
       "underMaster": {
-        "title": "Your split with your Master",
-        "hint": "You operate under {{name}}'s account. Here you see what you actually earn per minute.",
-        "fallbackName": "your studio",
-        "lineRate": "Your rate per minute",
-        "linePactado": "Agreed % with {{name}}",
-        "lineNeto": "Your net per minute",
-        "formula": "= {{rate}} €/min × {{tramo}}% (platform → your Master) × {{pactado}}% (Master → you)"
+        "title": "Your split under the Studio",
+        "hint": "Managed under the {{name}} Studio account. This is the flow of every euro per minute the client pays.",
+        "fallbackName": "your Studio",
+        "flow": {
+          "step1": "Client pays",
+          "step2": "Platform pays the {{name}} Studio ({{tramo}}% of gross)",
+          "step3": "The Studio pays you ({{pactado}}% agreed)"
+        }
       },
       "progress": {
         "title": "Progress to the next bracket",

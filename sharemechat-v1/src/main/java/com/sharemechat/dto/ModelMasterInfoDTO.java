@@ -22,6 +22,13 @@ public class ModelMasterInfoDTO {
     private boolean hasMaster;
     private String masterDisplayName;
     private BigDecimal internalSharePct;
+    // Saldo INFORMATIVO acumulado a favor de la modelo bajo Master.
+    // Se calcula sobre la vida completa: SUM(t.amount * internalSharePct/100)
+    // para transactions con attributedModelUserId=modelo y operationType
+    // en (STREAM_EARNING, GIFT_EARNING). NO es exigible a la plataforma
+    // (el Master paga fuera), pero la modelo necesita verlo para saber
+    // cuánto le debe su Master.
+    private BigDecimal accumulatedNetPactado;
 
     public ModelMasterInfoDTO() {}
 
@@ -31,11 +38,14 @@ public class ModelMasterInfoDTO {
         return d;
     }
 
-    public static ModelMasterInfoDTO of(String masterDisplayName, BigDecimal internalSharePct) {
+    public static ModelMasterInfoDTO of(String masterDisplayName,
+                                        BigDecimal internalSharePct,
+                                        BigDecimal accumulatedNetPactado) {
         ModelMasterInfoDTO d = new ModelMasterInfoDTO();
         d.hasMaster = true;
         d.masterDisplayName = masterDisplayName;
         d.internalSharePct = internalSharePct;
+        d.accumulatedNetPactado = accumulatedNetPactado;
         return d;
     }
 
@@ -47,4 +57,7 @@ public class ModelMasterInfoDTO {
 
     public BigDecimal getInternalSharePct() { return internalSharePct; }
     public void setInternalSharePct(BigDecimal internalSharePct) { this.internalSharePct = internalSharePct; }
+
+    public BigDecimal getAccumulatedNetPactado() { return accumulatedNetPactado; }
+    public void setAccumulatedNetPactado(BigDecimal accumulatedNetPactado) { this.accumulatedNetPactado = accumulatedNetPactado; }
 }

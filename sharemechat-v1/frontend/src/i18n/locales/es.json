@@ -1301,8 +1301,8 @@
       "loading": "Saldo: …",
       "unavailable": "Saldo: -",
       "unavailableMobile": "Saldo: n/d",
-      "underMaster": "Gestionado por tu Master",
-      "underMasterMobile": "Master"
+      "underMaster": "Estudio {{name}}",
+      "underMasterNoName": "Estudio"
     },
     "actions": {
       "stats": "Estadísticas",
@@ -1436,13 +1436,14 @@
       },
       "reloadButton": "Actualizar",
       "underMaster": {
-        "title": "Tu reparto con tu Master",
-        "hint": "Operas bajo la cuenta de {{name}}. Aquí ves lo que cobras realmente por minuto.",
-        "fallbackName": "tu estudio",
-        "lineRate": "Tu tarifa por minuto",
-        "linePactado": "% pactado con {{name}}",
-        "lineNeto": "Tu neto por minuto",
-        "formula": "= {{rate}} €/min × {{tramo}}% (plataforma → tu Master) × {{pactado}}% (Master → tú)"
+        "title": "Tu reparto bajo el Estudio",
+        "hint": "Administrada bajo la cuenta del Estudio {{name}}. Este es el flujo de cada euro por minuto que paga el cliente.",
+        "fallbackName": "tu Estudio",
+        "flow": {
+          "step1": "El cliente paga",
+          "step2": "La plataforma abona al Estudio {{name}} ({{tramo}}% del bruto)",
+          "step3": "El Estudio te paga a ti ({{pactado}}% pactado)"
+        }
       },
       "progress": {
         "title": "Progreso hacia el siguiente tramo",
