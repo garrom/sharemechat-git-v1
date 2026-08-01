@@ -5,7 +5,7 @@ import { apiFetch } from '../config/http';
 import { getResolvedLocale } from '../i18n/localeUtils';
 import { Form as RegForm, Title, Input, Button, LinkButton, Error as ErrorText, Field, FieldError, CheckRow, CheckInput, CheckText } from '../styles/public-styles/RegisterClientModelStyles';
 import { useAppModals } from './useAppModals';
-import { pushSignUp } from '../utils/attribution';
+import { pushSignUp, getAcquisitionPayload } from '../utils/attribution';
 
 // ADR-056 Fase S5.b: formulario de registro Master (Opcion A). Alineado con
 // RegisterMasterRequestDTO: email + password (>=10) + dateOfBirth + nickname
@@ -93,6 +93,8 @@ const RegisterMasterModalContent = ({ onClose, onBack }) => {
     if (companyName.trim()) payload.companyName = companyName.trim();
     if (companyRegistrationNumber.trim()) payload.companyRegistrationNumber = companyRegistrationNumber.trim();
     if (companyCountry.trim()) payload.companyCountry = companyCountry.trim().toUpperCase();
+    // Capa B atribucion (ADR-057): first-touch para persistir en backend.
+    payload.acquisition = getAcquisitionPayload();
 
     setLoading(true);
     try {

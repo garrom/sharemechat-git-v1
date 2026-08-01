@@ -18,6 +18,7 @@ import com.sharemechat.entity.PayoutRequest;
 import com.sharemechat.repository.TransactionRepository;
 import com.sharemechat.service.KycSessionService;
 import com.sharemechat.service.UserService;
+import com.sharemechat.service.UserAcquisitionService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -69,6 +70,7 @@ public class MasterController {
     private final KycSessionService kycSessionService;
     private final UserService userService;
     private final TransactionRepository transactionRepository;
+    private final UserAcquisitionService userAcquisitionService;
 
     public MasterController(MasterService masterService,
                             MasterContractService masterContractService,
@@ -76,7 +78,8 @@ public class MasterController {
                             MasterPayoutService masterPayoutService,
                             KycSessionService kycSessionService,
                             UserService userService,
-                            TransactionRepository transactionRepository) {
+                            TransactionRepository transactionRepository,
+                            UserAcquisitionService userAcquisitionService) {
         this.masterService = masterService;
         this.masterContractService = masterContractService;
         this.masterOverviewService = masterOverviewService;
@@ -84,6 +87,7 @@ public class MasterController {
         this.kycSessionService = kycSessionService;
         this.userService = userService;
         this.transactionRepository = transactionRepository;
+        this.userAcquisitionService = userAcquisitionService;
     }
 
     // ============================================================
@@ -95,10 +99,16 @@ public class MasterController {
                                        HttpServletRequest request) {
         String ip = IpConfig.getClientIp(request);
         String acceptLanguage = request.getHeader("Accept-Language");
+        User createdMaster;
         try {
-            masterService.registerMaster(dto, ip, acceptLanguage);
+            createdMaster = masterService.registerMaster(dto, ip, acceptLanguage);
         } catch (NicknameAlreadyInUseException | UnderageModelException | IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        }
+        // Capa B atribucion (ADR-057): persiste first-touch atada al usuario,
+        // best-effort y en tx aparte. createdMaster null = email ya existia.
+        if (createdMaster != null) {
+            userAcquisitionService.record(createdMaster.getId(), dto.getAcquisition());
         }
         // Body uniforme: no revelamos si el email existia o no (patron
         // simetrico a registerModel/registerClient).

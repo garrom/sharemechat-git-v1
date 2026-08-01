@@ -5,7 +5,7 @@ import { apiFetch } from '../config/http';
 import { getResolvedLocale } from '../i18n/localeUtils';
 import { Form as RegForm, Title, Input, Button, LinkButton, Error as ErrorText, Field, FieldError, CheckRow, CheckInput, CheckText } from '../styles/public-styles/RegisterClientModelStyles';
 import { useAppModals } from './useAppModals';
-import { pushSignUp } from '../utils/attribution';
+import { pushSignUp, getAcquisitionPayload } from '../utils/attribution';
 
 const InlineForm = styled(RegForm)`
   background: transparent;
@@ -54,7 +54,10 @@ const RegisterClientModalContent = ({ onClose, onBack }) => {
       password,
       confirAdult: isOver18,
       acceptedTerm: acceptsTerms,
-      uiLocale
+      uiLocale,
+      // Capa B atribucion (ADR-057): first-touch para persistir en backend.
+      // Sin PII; null si no hay consentimiento/cookie.
+      acquisition: getAcquisitionPayload()
     };
 
     setLoading(true);

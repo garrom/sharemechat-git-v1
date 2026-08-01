@@ -7,6 +7,8 @@ import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+import com.sharemechat.dto.AcquisitionDTO;
+
 import java.time.LocalDate;
 
 /**
@@ -59,6 +61,9 @@ public class RegisterMasterRequestDTO {
     @Size(min = 2, max = 2, message = "companyCountry debe ser codigo ISO alpha-2")
     private String companyCountry;
 
+    // Capa B atribucion de origen (ADR-057): first-touch opcional.
+    private AcquisitionDTO acquisition;
+
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
 
@@ -91,4 +96,7 @@ public class RegisterMasterRequestDTO {
 
     public String getCompanyCountry() { return companyCountry; }
     public void setCompanyCountry(String companyCountry) { this.companyCountry = companyCountry; }
+
+    public AcquisitionDTO getAcquisition() { return acquisition; }
+    public void setAcquisition(AcquisitionDTO acquisition) { this.acquisition = acquisition; }
 }

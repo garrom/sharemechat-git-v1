@@ -3,17 +3,22 @@
 // Atribución de origen de registros — CAPA A (aditiva, solo frontend).
 //
 // Objetivo: registrar POR QUÉ CANAL llegó un visitante (first-touch) para
-// medir en GA4 qué fuente trae registros. NO hay backend ni columna en BD
-// (la capa B / acquisition_source queda aplazada a cuando haya revenue).
+// medir qué fuente trae registros.
 //
 // Piezas:
-//   1. captureFirstTouch(): al llegar con parámetros UTM, guarda la primera
-//      fuente en una cookie propia (la primera gana; la navegación interna
-//      posterior NO la sobrescribe). Expiración 90 días. Respeta consentimiento.
-//   2. pushSignUp(): al confirmarse un alta, empuja el evento `sign_up` a
-//      window.dataLayer con los UTM de la cookie. GTM (ya cargado en
-//      public/index.html, contenedor GTM-T7BNJP4M) lo reenvía a GA4.
-//      SIN PII (nada de email, nombre ni id personal).
+//   1. captureFirstTouch(): en la primera visita (con consentimiento) guarda
+//      en una cookie propia el contexto first-touch: utm_source/medium/campaign
+//      (si vienen), landing_path y referrer_host. La primera fuente de CAMPAÑA
+//      gana; una visita directa/orgánica inicial guarda landing+referrer y se
+//      "upgradea" con la utm de una campaña posterior sin perder el resto.
+//      Expiración 90 días. Respeta consentimiento.
+//   2. pushSignUp() [capa A]: al confirmarse un alta, empuja el evento GA4
+//      `sign_up` a window.dataLayer con los UTM de la cookie. GTM
+//      (GTM-T7BNJP4M) lo reenvía a GA4. SIN PII.
+//   3. getAcquisitionPayload() [capa B, ADR-057]: devuelve el objeto que los
+//      modales de registro adjuntan al POST para que el backend persista la
+//      atribución first-touch atada al usuario (tabla user_acquisition). Sin
+//      PII directa (solo canal de marketing).
 //
 // Consentimiento (GDPR/ePrivacy — plataforma adulta UE): tanto la escritura
 // de la cookie como el evento de analítica respetan el consentimiento que ya
@@ -110,31 +115,78 @@ const readUtmFromUrl = () => {
   };
 };
 
+// Ruta de aterrizaje (sin query, para no arrastrar PII de la URL).
+const readLandingPath = () => {
+  try {
+    if (typeof window === 'undefined' || !window.location) return null;
+    return window.location.pathname || null;
+  } catch (_) {
+    return null;
+  }
+};
+
+// Host del referrer externo (sin path ni query). null si no hay referrer.
+const readReferrerHost = () => {
+  try {
+    if (typeof document === 'undefined' || !document.referrer) return null;
+    return new URL(document.referrer).host || null;
+  } catch (_) {
+    return null;
+  }
+};
+
+const writeCookie = (payload) => {
+  setCookie(COOKIE_NAME, JSON.stringify(payload), COOKIE_MAX_AGE_DAYS * 24 * 60 * 60);
+};
+
 /**
- * Captura la primera fuente (first-touch) en cookie propia si:
- *  - hay consentimiento de analítica,
- *  - aún no existe la cookie (la primera fuente gana), y
- *  - la URL actual trae utm_source.
- * Idempotente: es seguro llamarla varias veces (al arrancar y tras aceptar
- * cookies). No sobrescribe una atribución ya guardada.
+ * Captura el contexto first-touch en cookie propia (requiere consentimiento).
+ *
+ * - Primera visita: guarda utm (si hay), landing_path y referrer_host. Aunque
+ *   sea directa/orgánica (sin utm) se guarda landing+referrer para la capa B.
+ * - Visitas siguientes: NO sobrescribe. Única excepción, "upgrade" de campaña:
+ *   si la cookie no tenía utm (first-touch directo) y ahora llega una utm, se
+ *   añade la utm conservando landing/referrer/timestamp originales. Así el
+ *   first-touch de CAMPAÑA gana sin perder el contexto inicial.
+ *
+ * Idempotente: seguro llamarla varias veces (al arrancar y al aceptar cookies).
  */
 export const captureFirstTouch = () => {
   try {
     if (!analyticsConsentGranted()) return;
-    if (readCookie(COOKIE_NAME)) return; // la primera fuente gana
     const utm = readUtmFromUrl();
-    if (!utm) return;
-    const payload = {
-      s: utm.source,
-      m: utm.medium,
-      c: utm.campaign,
-      t: Date.now(),
-    };
-    setCookie(
-      COOKIE_NAME,
-      JSON.stringify(payload),
-      COOKIE_MAX_AGE_DAYS * 24 * 60 * 60,
-    );
+    const raw = readCookie(COOKIE_NAME);
+
+    if (raw) {
+      // Ya hay cookie: solo upgrade de utm si aún no tenía campaña.
+      if (utm) {
+        try {
+          const p = JSON.parse(raw);
+          if (p && !p.s) {
+            p.s = utm.source;
+            p.m = utm.medium;
+            p.c = utm.campaign;
+            writeCookie(p);
+          }
+        } catch (_) {
+          // cookie corrupta: la dejamos como está.
+        }
+      }
+      return;
+    }
+
+    // Primera visita con consentimiento: contexto first-touch completo.
+    const payload = { t: Date.now() };
+    const lp = readLandingPath();
+    const rf = readReferrerHost();
+    if (lp) payload.lp = lp;
+    if (rf) payload.rf = rf;
+    if (utm) {
+      payload.s = utm.source;
+      payload.m = utm.medium;
+      payload.c = utm.campaign;
+    }
+    writeCookie(payload);
   } catch (_) {
     // Nunca romper el arranque de la app por analítica.
   }
@@ -157,6 +209,34 @@ export const readAttribution = () => {
     }
   }
   return { source: 'direct', medium: '(none)', campaign: '(none)' };
+};
+
+// --- capa B: payload de adquisición para el backend -----------------------
+
+/**
+ * Devuelve el objeto de atribución first-touch que los modales de registro
+ * adjuntan al POST (campo `acquisition`) para que el backend lo persista en
+ * user_acquisition (capa B, ADR-057). Respeta consentimiento. null si no hay
+ * consentimiento o no hay cookie (el backend lo trata como "sin datos" y no
+ * crea fila). Sin PII directa.
+ */
+export const getAcquisitionPayload = () => {
+  try {
+    if (!analyticsConsentGranted()) return null;
+    const raw = readCookie(COOKIE_NAME);
+    if (!raw) return null;
+    const p = JSON.parse(raw);
+    if (!p) return null;
+    return {
+      utmSource: p.s || null,
+      utmMedium: p.m || null,
+      utmCampaign: p.c || null,
+      referrerHost: p.rf || null,
+      landingPath: p.lp || null,
+    };
+  } catch (_) {
+    return null;
+  }
 };
 
 // --- evento sign_up -------------------------------------------------------

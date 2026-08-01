@@ -38,6 +38,10 @@ public class UserClientRegisterDTO {
     private String termVersion;
     private String registerIp;
 
+    // Capa B atribucion de origen (ADR-057): first-touch opcional que envia el
+    // frontend desde la cookie smc_attribution. Sin PII directa.
+    private AcquisitionDTO acquisition;
+
     // getter y setter
 
 
@@ -98,5 +102,13 @@ public class UserClientRegisterDTO {
 
     public void setRegisterIp(String registerIp) {
         this.registerIp = registerIp;
+    }
+
+    public AcquisitionDTO getAcquisition() {
+        return acquisition;
+    }
+
+    public void setAcquisition(AcquisitionDTO acquisition) {
+        this.acquisition = acquisition;
     }
 }

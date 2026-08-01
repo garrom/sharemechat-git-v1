@@ -16,6 +16,7 @@ import com.sharemechat.service.BackofficeAccessService;
 import com.sharemechat.service.ConsentService;
 import com.sharemechat.service.ProductOperationalModeService;
 import com.sharemechat.service.UserService;
+import com.sharemechat.service.UserAcquisitionService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -42,6 +43,7 @@ public class UserController {
     private final AgeGatePolicyService ageGatePolicyService;
     private final BackofficeAccessService backofficeAccessService;
     private final ProductOperationalModeService productOperationalModeService;
+    private final UserAcquisitionService userAcquisitionService;
 
     public UserController(UserService userService,
                           UserRepository userRepository,
@@ -51,7 +53,8 @@ public class UserController {
                           ConsentService consentService,
                           AgeGatePolicyService ageGatePolicyService,
                           BackofficeAccessService backofficeAccessService,
-                          ProductOperationalModeService productOperationalModeService) {
+                          ProductOperationalModeService productOperationalModeService,
+                          UserAcquisitionService userAcquisitionService) {
         this.userService = userService;
         this.modelAssetRepository = modelAssetRepository;
         this.clientDocumentRepository = clientDocumentRepository;
@@ -61,6 +64,7 @@ public class UserController {
         this.ageGatePolicyService = ageGatePolicyService;
         this.backofficeAccessService = backofficeAccessService;
         this.productOperationalModeService = productOperationalModeService;
+        this.userAcquisitionService = userAcquisitionService;
     }
 
 
@@ -108,6 +112,12 @@ public class UserController {
                 "age_gate_link_register_client",
                 "/api/users/register/client"
         );
+        // Capa B atribucion (ADR-057): persiste la fuente first-touch atada al
+        // usuario, best-effort y en tx aparte (nunca rompe el alta). Solo si se
+        // creo usuario (createdUser null = email ya existia).
+        if (createdUser != null) {
+            userAcquisitionService.record(createdUser.getId(), registerDTO.getAcquisition());
+        }
         // H1 hardening: body uniforme. NO devolver createdUser (filtraria
         // si se creo o no via id/email/role en el JSON).
         return ResponseEntity.ok(REGISTER_UNIFORM_BODY);
@@ -135,6 +145,10 @@ public class UserController {
                 "age_gate_link_register_model",
                 "/api/users/register/model"
         );
+        // Capa B atribucion (ADR-057): ver registerClient.
+        if (createdUser != null) {
+            userAcquisitionService.record(createdUser.getId(), registerDTO.getAcquisition());
+        }
         // H1 hardening: body uniforme (ver registerClient).
         return ResponseEntity.ok(REGISTER_UNIFORM_BODY);
     }

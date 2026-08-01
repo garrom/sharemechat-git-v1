@@ -40,6 +40,9 @@ public class UserModelRegisterDTO {
     private String termVersion;
     private String registerIp;
 
+    // Capa B atribucion de origen (ADR-057): first-touch opcional.
+    private AcquisitionDTO acquisition;
+
     // Getters y Setters
 
 
@@ -108,5 +111,13 @@ public class UserModelRegisterDTO {
 
     public void setRegisterIp(String registerIp) {
         this.registerIp = registerIp;
+    }
+
+    public AcquisitionDTO getAcquisition() {
+        return acquisition;
+    }
+
+    public void setAcquisition(AcquisitionDTO acquisition) {
+        this.acquisition = acquisition;
     }
 }
