@@ -1300,7 +1300,7 @@
       "loading": "Balance: …",
       "unavailable": "Balance: -",
       "unavailableMobile": "Balance: n/a",
-      "underMaster": "Studio {{name}}",
+      "underMaster": "{{name}}",
       "underMasterNoName": "Studio"
     },
     "actions": {
@@ -1447,6 +1447,10 @@
           "tier": "Bracket",
           "threshold": "Threshold (30d)",
           "rateRange": "Allowed rate"
+        },
+        "kpi": {
+          "label": "Accumulated net",
+          "hint": "What your Studio owes you. Paid off-platform."
         }
       },
       "progress": {

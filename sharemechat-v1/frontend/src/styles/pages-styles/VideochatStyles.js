@@ -97,13 +97,18 @@ export const GlobalBlack = createGlobalStyle`
 export const StyledContainer = styled.div`
   display: flex;
   flex-direction: column;
-  /* Usar dvh para iOS: evita que el teclado “coma” el vh */
-  height: 100vh;
+  /* Iter.4 (2026-08-02): min-height en vez de height para que el body pueda
+     scrollear y muestre el Footer al final sin solapar contenido. Videochat
+     mantiene el layout sin scroll externo porque su contenido interno está
+     contenido (overflow:hidden en StyledMainContent + panes de video con
+     tamaño calculado). El Navbar ya es position:sticky, así que se queda
+     arriba durante el scroll global de la página. */
+  min-height: 100vh;
   background: var(--c-black);
   min-width: 48px;
 
-  @supports (height: 100dvh) {
-    height: 100dvh;
+  @supports (min-height: 100dvh) {
+    min-height: 100dvh;
   }
 `;
 

@@ -1300,7 +1300,7 @@
       "loading": "Saldo: …",
       "unavailable": "Saldo: -",
       "unavailableMobile": "Saldo: n/d",
-      "underMaster": "Estudio {{name}}",
+      "underMaster": "{{name}}",
       "underMasterNoName": "Estudio"
     },
     "actions": {
@@ -1447,6 +1447,10 @@
           "tier": "Tramo",
           "threshold": "Umbral (30d)",
           "rateRange": "Precio permitido"
+        },
+        "kpi": {
+          "label": "Neto acumulado",
+          "hint": "Lo que te debe tu Estudio. Se paga fuera de la plataforma."
         }
       },
       "progress": {

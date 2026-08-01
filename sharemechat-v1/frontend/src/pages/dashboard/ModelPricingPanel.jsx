@@ -12,6 +12,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import i18n from '../../i18n';
+import { apiFetch } from '../../config/http';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faTags,
@@ -263,6 +264,26 @@ export default function ModelPricingPanel() {
   const [savingRate, setSavingRate] = useState(false);
   const [savingPro, setSavingPro] = useState(false);
   const [flash, setFlash] = useState(null); // { type: 'ok'|'error', message: string }
+  // ADR-056 Opcion D iter.4 (2026-08-02): saldo acumulado informativo
+  // para el KPI card de la columna derecha en vista Modelo bajo Master.
+  // Fetch adicional al endpoint /master-info (que ya devuelve
+  // accumulatedNetPactado). Se hace independiente del economics para
+  // que el reload local del panel no fuerce a rehacer el cálculo si
+  // no cambia el reparto.
+  const [accumulatedNet, setAccumulatedNet] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const info = await apiFetch('/models/me/master-info');
+        if (!cancelled && info?.hasMaster) {
+          setAccumulatedNet(info.accumulatedNetPactado);
+        }
+      } catch { /* silent: modelo individual no consume el KPI */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const loadEconomics = useCallback(async () => {
     setLoading(true);
@@ -367,6 +388,7 @@ export default function ModelPricingPanel() {
       loadEconomics,
       rateMin,
       rateMax,
+      accumulatedNet,
       t,
     });
   }
@@ -658,7 +680,7 @@ export default function ModelPricingPanel() {
 function renderUnderMasterView({
   economics, allowedRates, isFixedRate, rateSelected, setRateSelected,
   rateUnchanged, savingRate, handleSaveRate, savingPro, handleToggleTrial,
-  flash, loading, loadEconomics, rateMin, rateMax, t,
+  flash, loading, loadEconomics, rateMin, rateMax, accumulatedNet, t,
 }) {
   const proEligible = !!economics.proStatusEligible;
   const proAccepts = !!economics.proAcceptsTrial;
@@ -674,180 +696,215 @@ function renderUnderMasterView({
   const masterName = economics.masterDisplayName || t('dashboardModel.pricing.underMaster.fallbackName');
   const currentTierCode = economics.tierCode || 'T1';
 
-  // Iter.3 (2026-08-02): vista reducida a ~mitad de ancho, alineada a
-  // la izquierda. Sin bordes redondeados. 3 lineas exactas del mock
-  // aprobado + tabla T1-T4 (sin columna % Estudio para evitar
-  // "restregar" en la cara de la modelo lo que ya se explica arriba).
+  // Iter.4 (2026-08-02): layout 2 columnas (desktop >=1024px) → columna
+  // izquierda ancha con reparto + tabla T1-T4, columna derecha estrecha
+  // con KPI neto acumulado + tarifa + Pro. Apilado vertical en móvil.
   const boxRow = { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '4px 0' };
+  const kpiCard = { background: '#f1f5f9', padding: '14px 16px', borderRadius: 8 };
+  const kpiLabel = { fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 };
+  const kpiValue = { fontSize: 24, fontWeight: 700, color: '#0f172a', margin: '4px 0 0' };
+  const kpiHint = { fontSize: 11, color: '#94a3b8', marginTop: 6, lineHeight: 1.4 };
 
   return (
-    <div style={{ maxWidth: 640 }}>
+    <div className="mp-under-master-grid">
+      <style>{`
+        .mp-under-master-grid {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr);
+          gap: 24px;
+          align-items: start;
+        }
+        @media (min-width: 1024px) {
+          .mp-under-master-grid {
+            grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+          }
+        }
+        .mp-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+      `}</style>
+
       {flash && (
-        <FlashLine $type={flash.type}>
-          <FontAwesomeIcon icon={flash.type === 'ok' ? faCircleCheck : faCircleExclamation} />
-          {flash.message}
-        </FlashLine>
+        <div style={{ gridColumn: '1 / -1' }}>
+          <FlashLine $type={flash.type}>
+            <FontAwesomeIcon icon={flash.type === 'ok' ? faCircleCheck : faCircleExclamation} />
+            {flash.message}
+          </FlashLine>
+        </div>
       )}
 
-      <Section>
-        <SectionHead>
-          <SectionTitle>
-            <FontAwesomeIcon icon={faTags} style={{ marginRight: 8 }} />
-            {t('dashboardModel.pricing.underMaster.title')}
-          </SectionTitle>
-          <SectionHint>
-            {t('dashboardModel.pricing.underMaster.hint', { name: masterName })}
-          </SectionHint>
-        </SectionHead>
+      {/* ============================================================
+          COLUMNA IZQUIERDA — reparto + tabla T1-T4
+          ============================================================ */}
+      <div className="mp-col">
+        <Section>
+          <SectionHead>
+            <SectionTitle>
+              <FontAwesomeIcon icon={faTags} style={{ marginRight: 8 }} />
+              {t('dashboardModel.pricing.underMaster.title')}
+            </SectionTitle>
+            <SectionHint>
+              {t('dashboardModel.pricing.underMaster.hint', { name: masterName })}
+            </SectionHint>
+          </SectionHead>
 
-        <div style={{
-          background: '#e0e7ff', border: '1px solid #a5b4fc', borderRadius: 0,
-          padding: '14px 16px', color: '#3730a3', fontSize: 13, lineHeight: 1.6,
-        }}>
-          <div style={boxRow}>
-            <span><b>{t('dashboardModel.pricing.underMaster.line1', { tier: currentTierCode })}</b></span>
-            <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatEur2(chosenRate)} €/min</span>
+          <div style={{
+            background: '#e0e7ff', border: '1px solid #a5b4fc', borderRadius: 0,
+            padding: '14px 16px', color: '#3730a3', fontSize: 13, lineHeight: 1.6,
+          }}>
+            <div style={boxRow}>
+              <span><b>{t('dashboardModel.pricing.underMaster.line1', { tier: currentTierCode })}</b></span>
+              <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatEur2(chosenRate)} €/min</span>
+            </div>
+            <div style={boxRow}>
+              <span>{t('dashboardModel.pricing.underMaster.line2', { tramo: formatEur0(tramoPct), tier: currentTierCode })}</span>
+              <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatEur2(masterEurPerMin)} €/min</span>
+            </div>
+            <div style={{ ...boxRow, borderTop: '1px solid #a5b4fc', marginTop: 6, paddingTop: 8 }}>
+              <span><b>{t('dashboardModel.pricing.underMaster.line3', { pactado: formatEur0(pactadoPct), tramo: formatEur0(tramoPct), tier: currentTierCode })}</b></span>
+              <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>{formatEur2(netoPorMinuto)} €/min</span>
+            </div>
           </div>
-          <div style={boxRow}>
-            <span>{t('dashboardModel.pricing.underMaster.line2', { tramo: formatEur0(tramoPct), tier: currentTierCode })}</span>
-            <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatEur2(masterEurPerMin)} €/min</span>
+        </Section>
+
+        <Section>
+          <SectionHead>
+            <SectionTitle>
+              <FontAwesomeIcon icon={faTable} style={{ marginRight: 8 }} />
+              {t('dashboardModel.pricing.underMaster.tiersTitle')}
+            </SectionTitle>
+            <SectionHint>{t('dashboardModel.pricing.underMaster.tiersHint')}</SectionHint>
+          </SectionHead>
+
+          <TableWrap style={{ borderRadius: 0 }}>
+            <Table>
+              <thead>
+                <tr>
+                  <th>{t('dashboardModel.pricing.underMaster.headers.tier')}</th>
+                  <th style={{ textAlign: 'right' }}>{t('dashboardModel.pricing.underMaster.headers.threshold')}</th>
+                  <th style={{ textAlign: 'right' }}>{t('dashboardModel.pricing.underMaster.headers.rateRange')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {TIER_REFERENCE_MASTER.map((tier) => {
+                  const isCurrent = tier.code === currentTierCode;
+                  const RowComp = isCurrent ? CurrentTierRowInTable : 'tr';
+                  const rangeText = tier.rateMin === tier.rateMax
+                    ? `${tier.rateMin} €/min`
+                    : `${tier.rateMin} – ${tier.rateMax} €/min`;
+                  return (
+                    <RowComp key={tier.code}>
+                      <td className="name">
+                        {tier.code}
+                        {isCurrent && (
+                          <span style={{ marginLeft: 8, color: '#f97316', fontWeight: 700 }}>
+                            {t('dashboardModel.pricing.reference.youAreHere')}
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        {tier.minGross === 0 ? '—' : `${formatEur0(tier.minGross)} €`}
+                      </td>
+                      <td style={{ textAlign: 'right' }}>{rangeText}</td>
+                    </RowComp>
+                  );
+                })}
+              </tbody>
+            </Table>
+          </TableWrap>
+        </Section>
+      </div>
+
+      {/* ============================================================
+          COLUMNA DERECHA — KPI neto acumulado + Tarifa + Pro
+          ============================================================ */}
+      <div className="mp-col">
+        <div style={kpiCard}>
+          <div style={kpiLabel}>{t('dashboardModel.pricing.underMaster.kpi.label')}</div>
+          <div style={kpiValue}>
+            {accumulatedNet != null ? `${formatEur2(accumulatedNet)} €` : '—'}
           </div>
-          <div style={{ ...boxRow, borderTop: '1px solid #a5b4fc', marginTop: 6, paddingTop: 8 }}>
-            <span><b>{t('dashboardModel.pricing.underMaster.line3', { pactado: formatEur0(pactadoPct), tramo: formatEur0(tramoPct), tier: currentTierCode })}</b></span>
-            <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>{formatEur2(netoPorMinuto)} €/min</span>
-          </div>
+          <div style={kpiHint}>{t('dashboardModel.pricing.underMaster.kpi.hint')}</div>
         </div>
-      </Section>
 
-      <Section>
-        <SectionHead>
-          <SectionTitle>
-            <FontAwesomeIcon icon={faArrowRightLong} style={{ marginRight: 8 }} />
-            {t('dashboardModel.pricing.rate.title')}
-          </SectionTitle>
-          <SectionHint>
-            {isFixedRate
-              ? t('dashboardModel.pricing.rate.fixedHint', { tier: economics.tierCode })
-              : t('dashboardModel.pricing.rate.hint', {
-                  min: formatRate(rateMin),
-                  max: formatRate(rateMax),
-                })}
-          </SectionHint>
-        </SectionHead>
+        <Section>
+          <SectionHead>
+            <SectionTitle>
+              <FontAwesomeIcon icon={faArrowRightLong} style={{ marginRight: 8 }} />
+              {t('dashboardModel.pricing.rate.title')}
+            </SectionTitle>
+            <SectionHint>
+              {isFixedRate
+                ? t('dashboardModel.pricing.rate.fixedHint', { tier: economics.tierCode })
+                : t('dashboardModel.pricing.rate.hint', {
+                    min: formatRate(rateMin),
+                    max: formatRate(rateMax),
+                  })}
+            </SectionHint>
+          </SectionHead>
 
-        <InlineRow>
-          <span style={{ fontWeight: 700, color: '#334155' }}>
-            {t('dashboardModel.pricing.rate.label')}:
-          </span>
-          <RateSelect
-            value={rateSelected}
-            onChange={(e) => setRateSelected(e.target.value)}
-            disabled={savingRate || isFixedRate}
-          >
-            {allowedRates.map((v) => (
-              <option key={v} value={String(v)}>
-                {v} €/min
-              </option>
-            ))}
-          </RateSelect>
-          <PrimaryButton
-            type="button"
-            onClick={handleSaveRate}
-            disabled={rateUnchanged || savingRate || isFixedRate}
-          >
-            {savingRate && <FontAwesomeIcon icon={faSpinner} spin />}
-            {t('dashboardModel.pricing.rate.saveButton')}
-          </PrimaryButton>
-        </InlineRow>
-      </Section>
+          <InlineRow>
+            <span style={{ fontWeight: 700, color: '#334155' }}>
+              {t('dashboardModel.pricing.rate.label')}:
+            </span>
+            <RateSelect
+              value={rateSelected}
+              onChange={(e) => setRateSelected(e.target.value)}
+              disabled={savingRate || isFixedRate}
+            >
+              {allowedRates.map((v) => (
+                <option key={v} value={String(v)}>
+                  {v} €/min
+                </option>
+              ))}
+            </RateSelect>
+            <PrimaryButton
+              type="button"
+              onClick={handleSaveRate}
+              disabled={rateUnchanged || savingRate || isFixedRate}
+            >
+              {savingRate && <FontAwesomeIcon icon={faSpinner} spin />}
+              {t('dashboardModel.pricing.rate.saveButton')}
+            </PrimaryButton>
+          </InlineRow>
+        </Section>
 
-      <Section>
-        <SectionHead>
-          <SectionTitle>
-            <FontAwesomeIcon icon={faCircleCheck} style={{ marginRight: 8 }} />
-            {t('dashboardModel.pricing.pro.title')}
-          </SectionTitle>
-          <SectionHint>
-            {proEligible
-              ? t('dashboardModel.pricing.pro.hintActive')
-              : t('dashboardModel.pricing.pro.hintInactive', {
-                  threshold: formatEur0(proMin),
-                  remaining: formatEur2(Math.max(0, proMin - billedGross)),
-                })}
-          </SectionHint>
-        </SectionHead>
+        <Section>
+          <SectionHead>
+            <SectionTitle>
+              <FontAwesomeIcon icon={faCircleCheck} style={{ marginRight: 8 }} />
+              {t('dashboardModel.pricing.pro.title')}
+            </SectionTitle>
+            <SectionHint>
+              {proEligible
+                ? t('dashboardModel.pricing.pro.hintActive')
+                : t('dashboardModel.pricing.pro.hintInactive', {
+                    threshold: formatEur0(proMin),
+                    remaining: formatEur2(Math.max(0, proMin - billedGross)),
+                  })}
+            </SectionHint>
+          </SectionHead>
 
-        <InlineRow>
-          <Toggle>
-            <input
-              type="checkbox"
-              checked={proAccepts}
-              disabled={!proEligible || savingPro}
-              onChange={(e) => handleToggleTrial(e.target.checked)}
-            />
-            <span>{t('dashboardModel.pricing.pro.acceptTrialLabel')}</span>
-          </Toggle>
-          {savingPro && <FontAwesomeIcon icon={faSpinner} spin style={{ color: '#f97316' }} />}
-        </InlineRow>
+          <InlineRow>
+            <Toggle>
+              <input
+                type="checkbox"
+                checked={proAccepts}
+                disabled={!proEligible || savingPro}
+                onChange={(e) => handleToggleTrial(e.target.checked)}
+              />
+              <span>{t('dashboardModel.pricing.pro.acceptTrialLabel')}</span>
+            </Toggle>
+            {savingPro && <FontAwesomeIcon icon={faSpinner} spin style={{ color: '#f97316' }} />}
+          </InlineRow>
 
-        <HintText style={{ marginTop: 8 }}>
-          {t('dashboardModel.pricing.pro.explainer')}
-        </HintText>
-      </Section>
+          <HintText style={{ marginTop: 8 }}>
+            {t('dashboardModel.pricing.pro.explainer')}
+          </HintText>
+        </Section>
 
-      {/* Tabla referencia T1-T4 (regimen MASTER). Sin columna "Estudio
-          recibe %" a proposito. Solo tramo + umbral (30d del Estudio) +
-          precio permitido. */}
-      <Section>
-        <SectionHead>
-          <SectionTitle>
-            <FontAwesomeIcon icon={faTable} style={{ marginRight: 8 }} />
-            {t('dashboardModel.pricing.underMaster.tiersTitle')}
-          </SectionTitle>
-          <SectionHint>{t('dashboardModel.pricing.underMaster.tiersHint')}</SectionHint>
-        </SectionHead>
-
-        <TableWrap style={{ borderRadius: 0 }}>
-          <Table>
-            <thead>
-              <tr>
-                <th>{t('dashboardModel.pricing.underMaster.headers.tier')}</th>
-                <th style={{ textAlign: 'right' }}>{t('dashboardModel.pricing.underMaster.headers.threshold')}</th>
-                <th style={{ textAlign: 'right' }}>{t('dashboardModel.pricing.underMaster.headers.rateRange')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {TIER_REFERENCE_MASTER.map((tier) => {
-                const isCurrent = tier.code === currentTierCode;
-                const RowComp = isCurrent ? CurrentTierRowInTable : 'tr';
-                const rangeText = tier.rateMin === tier.rateMax
-                  ? `${tier.rateMin} €/min`
-                  : `${tier.rateMin} – ${tier.rateMax} €/min`;
-                return (
-                  <RowComp key={tier.code}>
-                    <td className="name">
-                      {tier.code}
-                      {isCurrent && (
-                        <span style={{ marginLeft: 8, color: '#f97316', fontWeight: 700 }}>
-                          {t('dashboardModel.pricing.reference.youAreHere')}
-                        </span>
-                      )}
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      {tier.minGross === 0 ? '—' : `${formatEur0(tier.minGross)} €`}
-                    </td>
-                    <td style={{ textAlign: 'right' }}>{rangeText}</td>
-                  </RowComp>
-                );
-              })}
-            </tbody>
-          </Table>
-        </TableWrap>
-      </Section>
-
-      <SmallButton type="button" onClick={loadEconomics} disabled={loading}>
-        {t('dashboardModel.pricing.reloadButton')}
-      </SmallButton>
+        <SmallButton type="button" onClick={loadEconomics} disabled={loading}>
+          {t('dashboardModel.pricing.reloadButton')}
+        </SmallButton>
+      </div>
     </div>
   );
 }
