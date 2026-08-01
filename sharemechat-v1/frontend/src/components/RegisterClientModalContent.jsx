@@ -5,6 +5,7 @@ import { apiFetch } from '../config/http';
 import { getResolvedLocale } from '../i18n/localeUtils';
 import { Form as RegForm, Title, Input, Button, LinkButton, Error as ErrorText, Field, FieldError, CheckRow, CheckInput, CheckText } from '../styles/public-styles/RegisterClientModelStyles';
 import { useAppModals } from './useAppModals';
+import { pushSignUp } from '../utils/attribution';
 
 const InlineForm = styled(RegForm)`
   background: transparent;
@@ -63,6 +64,11 @@ const RegisterClientModalContent = ({ onClose, onBack }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(registerData)
       });
+
+      // Atribución de origen (capa A): evento GA4 vía dataLayer con los UTM
+      // first-touch. Sin PII. Respeta consentimiento y solo llega a GA4 en
+      // PROD (ver utils/attribution.js). No debe romper el flujo de registro.
+      pushSignUp({ userType: 'client' });
 
       await alert({
         title: i18n.t('auth.registerClient.success.title'),

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import i18n from '../i18n';
+import { captureFirstTouch } from '../utils/attribution';
 import {
   CookieBar,
   CookieText,
@@ -25,6 +26,9 @@ const CookieBanner = () => {
     try {
       localStorage.setItem('smc_cookie_consent', 'accepted');
     } catch {}
+    // Recién concedido el consentimiento: intenta capturar el first-touch
+    // ahora que la URL de aterrizaje (con UTM) suele seguir intacta.
+    captureFirstTouch();
     setVisible(false);
   };
 
