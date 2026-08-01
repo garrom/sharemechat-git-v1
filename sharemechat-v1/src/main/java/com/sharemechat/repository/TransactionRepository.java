@@ -232,4 +232,49 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to,
             Pageable pageable);
+
+    /**
+     * ADR-056 Opcion D (2026-08-01): historial extendido para la MODELO
+     * bajo Master. Devuelve las transacciones donde
+     * {@code t.user.id = :modelId} (movimientos directos, ej. gifts
+     * historicos pre-cambio 2026-08-01, retiros manuales) O donde
+     * {@code t.attributedModelUserId = :modelId} (movimientos que ella
+     * genero pero cuyo earning fue al Master tras la unificacion de
+     * reparto a tramos). Permite transparencia total a la modelo sobre
+     * lo que genera aunque el saldo lo cobre off-platform del Master.
+     *
+     * <p>Filtros y semantica identicos a
+     * {@link #findClientTransactionsFiltered} / {@link #findMasterTransactionsFiltered}:
+     * se excluyen gifts con amount=0 y se ordena descendente por timestamp.
+     */
+    @Query("SELECT t FROM Transaction t "
+            + "WHERE (t.user.id = :modelId OR t.attributedModelUserId = :modelId) "
+            + "AND (:types IS NULL OR t.operationType IN :types) "
+            + "AND (:from IS NULL OR t.timestamp >= :from) "
+            + "AND (:to IS NULL OR t.timestamp < :to) "
+            + "AND NOT (t.operationType = 'GIFT_SEND' AND t.amount = 0) "
+            + "AND NOT (t.operationType = 'GIFT_EARNING' AND t.amount = 0) "
+            + "ORDER BY t.timestamp DESC")
+    Page<Transaction> findModelTransactionsFiltered(
+            @Param("modelId") Long modelId,
+            @Param("types") List<String> types,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to,
+            Pageable pageable);
+
+    /** Variante sin paginacion para export CSV modelo bajo Master. */
+    @Query("SELECT t FROM Transaction t "
+            + "WHERE (t.user.id = :modelId OR t.attributedModelUserId = :modelId) "
+            + "AND (:types IS NULL OR t.operationType IN :types) "
+            + "AND (:from IS NULL OR t.timestamp >= :from) "
+            + "AND (:to IS NULL OR t.timestamp < :to) "
+            + "AND NOT (t.operationType = 'GIFT_SEND' AND t.amount = 0) "
+            + "AND NOT (t.operationType = 'GIFT_EARNING' AND t.amount = 0) "
+            + "ORDER BY t.timestamp DESC")
+    List<Transaction> findModelTransactionsForExport(
+            @Param("modelId") Long modelId,
+            @Param("types") List<String> types,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to,
+            Pageable pageable);
 }

@@ -1257,7 +1257,8 @@
         "date": "Fecha",
         "type": "Tipo",
         "detail": "Detalle",
-        "amount": "Importe"
+        "amount": "Importe",
+        "netoPactado": "Tu neto pactado"
       },
       "categories": {
         "all": "Todos",
@@ -1270,6 +1271,13 @@
         "GIFT_EARNING": "Regalo",
         "PAYOUT_REQUEST": "Retirada",
         "PAYOUT_REQUEST_REVERT": "Devolución"
+      },
+      "masterBanner": {
+        "title": "Operas bajo la cuenta Master de {{name}}",
+        "body": "Tus ingresos por streaming y regalos son propiedad de tu Master. Cobras {{pct}}% de cada importe según el acuerdo interno pactado, y tu Master te paga fuera de la plataforma. Consulta la columna \"Tu neto pactado\" para el desglose por operación. Si el porcentaje no coincide con lo acordado, contacta directamente con tu Master."
+      },
+      "badge": {
+        "attributedMaster": "A Master"
       }
     },
     "moderationNotice": "Tu sesión está supervisada automáticamente conforme a nuestras políticas de seguridad y términos de servicio",

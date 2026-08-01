@@ -2,12 +2,20 @@ package com.sharemechat.controller;
 
 import com.sharemechat.constants.Constants;
 import com.sharemechat.dto.ModelDTO;
+import com.sharemechat.dto.ModelMasterInfoDTO;
+import com.sharemechat.entity.Model;
 import com.sharemechat.entity.ModelDocument;
 import com.sharemechat.entity.Transaction;
 import com.sharemechat.entity.User;
 import com.sharemechat.exception.EmailVerificationRequiredException;
+import com.sharemechat.master.entity.Master;
+import com.sharemechat.master.entity.MasterModelSplit;
+import com.sharemechat.master.repository.MasterModelSplitRepository;
+import com.sharemechat.master.repository.MasterRepository;
 import com.sharemechat.repository.ModelDocumentRepository;
+import com.sharemechat.repository.ModelRepository;
 import com.sharemechat.repository.TransactionRepository;
+import com.sharemechat.repository.UserRepository;
 import com.sharemechat.security.ModelContractGate;
 import com.sharemechat.service.EmailVerificationService;
 import com.sharemechat.service.ModelService;
@@ -50,6 +58,13 @@ public class ModelController {
     private final ModelContractGate modelContractGate;
     private final EmailVerificationService emailVerificationService;
     private final TransactionRepository transactionRepository;
+    // ADR-056 Opcion D (2026-08-01): endpoint /me/master-info + historial
+    // extendido para modelo bajo Master necesitan resolver el Master
+    // asociado + su split vigente + su displayName.
+    private final ModelRepository modelRepository;
+    private final MasterModelSplitRepository masterModelSplitRepository;
+    private final MasterRepository masterRepository;
+    private final UserRepository userRepository;
     private static final Logger log = LoggerFactory.getLogger(ModelController.class);
 
     public ModelController(ModelService modelService,
@@ -59,7 +74,11 @@ public class ModelController {
                            ModelStatsService modelStatsService,
                            ModelContractGate modelContractGate,
                            EmailVerificationService emailVerificationService,
-                           TransactionRepository transactionRepository) {
+                           TransactionRepository transactionRepository,
+                           ModelRepository modelRepository,
+                           MasterModelSplitRepository masterModelSplitRepository,
+                           MasterRepository masterRepository,
+                           UserRepository userRepository) {
         this.modelService = modelService;
         this.userService = userService;
         this.modelDocumentRepository = modelDocumentRepository;
@@ -68,6 +87,10 @@ public class ModelController {
         this.modelContractGate = modelContractGate;
         this.emailVerificationService = emailVerificationService;
         this.transactionRepository = transactionRepository;
+        this.modelRepository = modelRepository;
+        this.masterModelSplitRepository = masterModelSplitRepository;
+        this.masterRepository = masterRepository;
+        this.userRepository = userRepository;
     }
 
     // ==========================
@@ -186,9 +209,16 @@ public class ModelController {
             return ResponseEntity.badRequest().body("Formato de fecha invalido (esperado yyyy-MM-dd)");
         }
 
-        Page<Transaction> pageResult = transactionRepository.findClientTransactionsFiltered(
+        // ADR-056 Opcion D (2026-08-01): historial extendido — incluye
+        // tanto sus transacciones directas (user_id=modelId, ej. gifts
+        // historicos pre-cambio, retiros manuales) como las que ella
+        // genero atribuidas al Master (attributed_model_user_id=modelId).
+        // El frontend usa attributedToMaster para renderizar la columna
+        // "tu neto pactado" y el badge visual.
+        Page<Transaction> pageResult = transactionRepository.findModelTransactionsFiltered(
                 user.getId(), typeList, fromDt, toDt, PageRequest.of(safePage, safeSize));
 
+        final Long modelId = user.getId();
         List<Map<String, Object>> items = pageResult.getContent().stream().map(t -> {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id", t.getId());
@@ -196,6 +226,15 @@ public class ModelController {
             m.put("amount", t.getAmount());
             m.put("description", t.getDescription());
             m.put("timestamp", t.getTimestamp() != null ? t.getTimestamp().toString() : null);
+            // attributedToMaster=true si la fila no le pertenece directamente
+            // sino que fue generada por ella pero atribuida al Master. Le
+            // sirve al frontend para pintar el badge + calcular neto pactado.
+            Long attrId = t.getAttributedModelUserId();
+            boolean attributedToMaster = attrId != null
+                    && attrId.equals(modelId)
+                    && t.getUser() != null
+                    && !modelId.equals(t.getUser().getId());
+            m.put("attributedToMaster", attributedToMaster);
             return m;
         }).toList();
 
@@ -206,6 +245,47 @@ public class ModelController {
         out.put("totalPages", pageResult.getTotalPages());
         out.put("totalElements", pageResult.getTotalElements());
         return ResponseEntity.ok(out);
+    }
+
+    /**
+     * ADR-056 Opcion D (2026-08-01): info del Master asociado a esta
+     * modelo. Devuelve {@code hasMaster=false} para modelo individual.
+     * Para modelo bajo Master, devuelve nombre visible + % pactado
+     * vigente para que el frontend calcule la columna "tu neto pactado"
+     * y renderice el banner de transparencia.
+     */
+    @GetMapping("/me/master-info")
+    public ResponseEntity<?> getMyMasterInfo(Authentication authentication) {
+        User user = requireUser(authentication);
+        if (user == null) return unauth();
+        if (!Constants.Roles.MODEL.equals(user.getRole())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Requiere rol MODEL");
+        }
+
+        Model model = modelRepository.findById(user.getId()).orElse(null);
+        if (model == null || model.getMasterUserId() == null) {
+            return ResponseEntity.ok(ModelMasterInfoDTO.empty());
+        }
+
+        Long masterUserId = model.getMasterUserId();
+        Master master = masterRepository.findByUserId(masterUserId).orElse(null);
+        User masterUser = userRepository.findById(masterUserId).orElse(null);
+        String displayName = null;
+        if (master != null) displayName = master.getCompanyName();
+        if ((displayName == null || displayName.isBlank()) && masterUser != null) {
+            displayName = masterUser.getNickname();
+        }
+        if (displayName == null || displayName.isBlank()) {
+            displayName = "tu estudio";
+        }
+
+        BigDecimal pct = masterModelSplitRepository
+                .findFirstByMasterUserIdAndModelUserIdAndEffectiveToIsNullOrderByIdDesc(
+                        masterUserId, user.getId())
+                .map(MasterModelSplit::getInternalSharePct)
+                .orElse(null);
+
+        return ResponseEntity.ok(ModelMasterInfoDTO.of(displayName, pct));
     }
 
     @GetMapping("/me/transactions/export")

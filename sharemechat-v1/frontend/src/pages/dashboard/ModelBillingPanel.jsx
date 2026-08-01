@@ -132,6 +132,21 @@ export default function ModelBillingPanel() {
   const [page, setPage] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  // ADR-056 Opcion D (2026-08-01): info del Master para banner de
+  // transparencia + calculo de columna "tu neto pactado".
+  // masterInfo = { hasMaster, masterDisplayName, internalSharePct }
+  const [masterInfo, setMasterInfo] = useState({ hasMaster: false, masterDisplayName: null, internalSharePct: null });
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const info = await apiFetch('/models/me/master-info');
+        if (!cancelled && info) setMasterInfo(info);
+      } catch { /* silent: modelo individual continua sin banner */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const buildUrl = useCallback((pageArg, category, from, to) => {
     const params = new URLSearchParams();
@@ -259,6 +274,21 @@ export default function ModelBillingPanel() {
 
       {error && <div style={errBox}>{error}</div>}
 
+      {masterInfo.hasMaster && (
+        <div style={{
+          background: '#e0e7ff', border: '1px solid #a5b4fc', borderRadius: 10,
+          padding: '12px 14px', marginBottom: 12, color: '#3730a3', fontSize: 13,
+        }}>
+          <strong>{t('dashboardModel.billing.masterBanner.title', { defaultValue: 'Operas bajo la cuenta Master de {{name}}', name: masterInfo.masterDisplayName })}</strong>
+          <div style={{ marginTop: 6 }}>
+            {t('dashboardModel.billing.masterBanner.body', {
+              defaultValue: 'Tus ingresos por streaming y regalos son propiedad de tu Master. Cobras {{pct}}% de cada importe según el acuerdo interno pactado, y tu Master te paga fuera de la plataforma. Consulta la columna "Tu neto pactado" para el desglose por operación. Si el porcentaje no coincide con lo acordado, contacta directamente con tu Master.',
+              pct: masterInfo.internalSharePct != null ? Number(masterInfo.internalSharePct).toFixed(0) : '—',
+            })}
+          </div>
+        </div>
+      )}
+
       <div style={activeFilterLine}>
         {t('dashboardModel.billing.activeFilter.label', { defaultValue: 'Filtro' })}: <span style={activeFilterValue}>{activeFilterLabel}</span>
       </div>
@@ -271,11 +301,16 @@ export default function ModelBillingPanel() {
               <th>{t('dashboardModel.billing.col.type', { defaultValue: 'Tipo' })}</th>
               <th>{t('dashboardModel.billing.col.detail', { defaultValue: 'Detalle' })}</th>
               <th style={{ textAlign: 'right' }}>{t('dashboardModel.billing.col.amount', { defaultValue: 'Importe' })}</th>
+              {masterInfo.hasMaster && (
+                <th style={{ textAlign: 'right' }}>
+                  {t('dashboardModel.billing.col.netoPactado', { defaultValue: 'Tu neto pactado' })}
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
             {items.length === 0 && !busy && (
-              <tr><td style={emptyRow} colSpan={4}>
+              <tr><td style={emptyRow} colSpan={masterInfo.hasMaster ? 5 : 4}>
                 {t('dashboardModel.billing.noRows', { defaultValue: 'No hay operaciones para los filtros aplicados.' })}
               </td></tr>
             )}
@@ -284,12 +319,37 @@ export default function ModelBillingPanel() {
               const typeLabel = t(`dashboardModel.billing.typeLabel.${it.operationType}`, { defaultValue: it.operationType });
               const parsed = parseDescription(it.description);
               const amountColor = style.sign === '+' ? '#166534' : style.sign === '-' ? '#991b1b' : '#0f172a';
+              // ADR-056 Opcion D: cuando la fila fue atribuida al Master
+              // (attributedToMaster=true), calcular la parte que la modelo
+              // cobra del Master aplicando internalSharePct. Los movimientos
+              // NO atribuidos (directos de la modelo) se muestran a valor
+              // integro — es su dinero, no del Master.
+              const attributedToMaster = !!it.attributedToMaster;
+              const pct = masterInfo.internalSharePct != null ? Number(masterInfo.internalSharePct) : null;
+              const netoPactado = (attributedToMaster && pct != null)
+                ? (Number(it.amount) * pct / 100)
+                : (masterInfo.hasMaster ? Number(it.amount) : null);
               return (
                 <tr key={it.id}>
                   <td>{fmtDate(it.timestamp)}</td>
-                  <td><span style={pill(style.pill.bg, style.pill.fg)}>{typeLabel}</span></td>
+                  <td>
+                    <span style={pill(style.pill.bg, style.pill.fg)}>{typeLabel}</span>
+                    {attributedToMaster && (
+                      <span style={{
+                        ...pill('#e0e7ff', '#3730a3'),
+                        marginLeft: 6, fontSize: 10, textTransform: 'uppercase',
+                      }}>
+                        {t('dashboardModel.billing.badge.attributedMaster', { defaultValue: 'A Master' })}
+                      </span>
+                    )}
+                  </td>
                   <td style={refCell}>{parsed.detail || '-'}</td>
                   <td style={{ ...amountCell, color: amountColor }}>{fmtEUR(it.amount, style.sign)}</td>
+                  {masterInfo.hasMaster && (
+                    <td style={{ ...amountCell, color: attributedToMaster ? '#0f172a' : '#94a3b8', fontWeight: attributedToMaster ? 700 : 400 }}>
+                      {netoPactado != null ? fmtEUR(netoPactado, style.sign) : '—'}
+                    </td>
+                  )}
                 </tr>
               );
             })}

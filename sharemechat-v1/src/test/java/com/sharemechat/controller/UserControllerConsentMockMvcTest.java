@@ -11,6 +11,7 @@ import com.sharemechat.service.BackofficeAccessService;
 import com.sharemechat.service.ConsentService;
 import com.sharemechat.service.CountryAccessService;
 import com.sharemechat.service.ProductOperationalModeService;
+import com.sharemechat.service.UserAcquisitionService;
 import com.sharemechat.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -36,6 +37,7 @@ class UserControllerConsentMockMvcTest {
         AgeGatePolicyService ageGatePolicyService = new AgeGatePolicyService("v1");
         BackofficeAccessService backofficeAccessService = mock(BackofficeAccessService.class);
         ProductOperationalModeService productOperationalModeService = mock(ProductOperationalModeService.class);
+        UserAcquisitionService userAcquisitionService = mock(UserAcquisitionService.class);
         when(productOperationalModeService.currentMode())
                 .thenReturn(com.sharemechat.config.ProductOperationalProperties.Mode.OPEN);
         when(productOperationalModeService.isUserAllowlisted(anyLong())).thenReturn(false);
@@ -66,7 +68,8 @@ class UserControllerConsentMockMvcTest {
                 consentService,
                 ageGatePolicyService,
                 backofficeAccessService,
-                productOperationalModeService
+                productOperationalModeService,
+                userAcquisitionService
         );
 
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller)

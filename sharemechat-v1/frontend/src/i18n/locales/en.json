@@ -1257,7 +1257,8 @@
         "date": "Date",
         "type": "Type",
         "detail": "Detail",
-        "amount": "Amount"
+        "amount": "Amount",
+        "netoPactado": "Your agreed net"
       },
       "categories": {
         "all": "All",
@@ -1270,6 +1271,13 @@
         "GIFT_EARNING": "Gift",
         "PAYOUT_REQUEST": "Withdrawal",
         "PAYOUT_REQUEST_REVERT": "Reverted"
+      },
+      "masterBanner": {
+        "title": "You operate under {{name}}'s Master account",
+        "body": "Your streaming and gift income is property of your Master. You earn {{pct}}% of each amount according to the internal agreement, and your Master pays you off-platform. Check the \"Your agreed net\" column for the breakdown per transaction. If the percentage does not match what was agreed, contact your Master directly."
+      },
+      "badge": {
+        "attributedMaster": "To Master"
       }
     },
     "moderationNotice": "Your session is automatically supervised in accordance with our safety policies and terms of service",
