@@ -14,6 +14,7 @@ import LocaleSwitcher from '../LocaleSwitcher';
 const DesktopActions = ({
   queueText = null,
   balanceText = null,
+  studioText = null,
   showLocaleSwitcher = true,
   primaryAction = null,
   secondaryAction = null,
@@ -60,6 +61,11 @@ const DesktopActions = ({
       data-nav-group={useNavGroupAttr ? true : undefined}
     >
       {queueText ? <QueueText className="me-3">{queueText}</QueueText> : null}
+
+      {/* ADR-056 Opcion D iter.3 (2026-08-02): pill separado del saldo para
+          identidad del Estudio. Se mantiene aparte a propósito para que la
+          modelo distinga "quién la administra" de "cuánto ha generado". */}
+      {studioText ? <SaldoText className="me-3">{studioText}</SaldoText> : null}
 
       {balanceText ? <SaldoText className="me-3">{balanceText}</SaldoText> : null}
 

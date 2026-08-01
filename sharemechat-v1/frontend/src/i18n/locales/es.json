@@ -1258,7 +1258,7 @@
         "type": "Tipo",
         "detail": "Detalle",
         "amount": "Importe",
-        "netoPactado": "Tu neto pactado"
+        "netoModelo": "Neto Modelo"
       },
       "categories": {
         "all": "Todos",
@@ -1273,8 +1273,7 @@
         "PAYOUT_REQUEST_REVERT": "Devolución"
       },
       "masterBanner": {
-        "title": "Operas bajo la cuenta Master de {{name}}",
-        "body": "Tus ingresos por streaming y regalos son propiedad de tu Master. Cobras {{pct}}% de cada importe según el acuerdo interno pactado, y tu Master te paga fuera de la plataforma. Consulta la columna \"Tu neto pactado\" para el desglose por operación. Si el porcentaje no coincide con lo acordado, contacta directamente con tu Master."
+        "body": "El % ganado por streaming y regalos ha sido acordado con tu Estudio. La plataforma queda fuera de esa negociación."
       },
       "badge": {
         "attributedMaster": "A Master"
@@ -1437,12 +1436,17 @@
       "reloadButton": "Actualizar",
       "underMaster": {
         "title": "Tu reparto bajo el Estudio",
-        "hint": "Administrada bajo la cuenta del Estudio {{name}}. Este es el flujo de cada euro por minuto que paga el cliente.",
+        "hint": "Administrada bajo la cuenta del Estudio {{name}}.",
         "fallbackName": "tu Estudio",
-        "flow": {
-          "step1": "El cliente paga",
-          "step2": "La plataforma abona al Estudio {{name}} ({{tramo}}% del bruto)",
-          "step3": "El Estudio te paga a ti ({{pactado}}% pactado)"
+        "line1": "{{tier}} – Estás en este tramo",
+        "line2": "El Estudio recibe {{tramo}}% en tramo {{tier}}",
+        "line3": "La modelo recibe el {{pactado}}% del {{tramo}}% en {{tier}}",
+        "tiersTitle": "Tramos del Estudio y umbrales",
+        "tiersHint": "Al subir de tramo (facturación bruta 30d del Estudio), puedes elegir tarifa dentro del rango permitido.",
+        "headers": {
+          "tier": "Tramo",
+          "threshold": "Umbral (30d)",
+          "rateRange": "Precio permitido"
         }
       },
       "progress": {

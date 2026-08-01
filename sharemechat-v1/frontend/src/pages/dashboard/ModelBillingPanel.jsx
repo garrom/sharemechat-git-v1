@@ -276,16 +276,10 @@ export default function ModelBillingPanel() {
 
       {masterInfo.hasMaster && (
         <div style={{
-          background: '#e0e7ff', border: '1px solid #a5b4fc', borderRadius: 10,
+          background: '#e0e7ff', border: '1px solid #a5b4fc', borderRadius: 0,
           padding: '12px 14px', marginBottom: 12, color: '#3730a3', fontSize: 13,
         }}>
-          <strong>{t('dashboardModel.billing.masterBanner.title', { defaultValue: 'Operas bajo la cuenta Master de {{name}}', name: masterInfo.masterDisplayName })}</strong>
-          <div style={{ marginTop: 6 }}>
-            {t('dashboardModel.billing.masterBanner.body', {
-              defaultValue: 'Tus ingresos por streaming y regalos son propiedad de tu Master. Cobras {{pct}}% de cada importe según el acuerdo interno pactado, y tu Master te paga fuera de la plataforma. Consulta la columna "Tu neto pactado" para el desglose por operación. Si el porcentaje no coincide con lo acordado, contacta directamente con tu Master.',
-              pct: masterInfo.internalSharePct != null ? Number(masterInfo.internalSharePct).toFixed(0) : '—',
-            })}
-          </div>
+          {t('dashboardModel.billing.masterBanner.body')}
         </div>
       )}
 
@@ -303,7 +297,7 @@ export default function ModelBillingPanel() {
               <th style={{ textAlign: 'right' }}>{t('dashboardModel.billing.col.amount', { defaultValue: 'Importe' })}</th>
               {masterInfo.hasMaster && (
                 <th style={{ textAlign: 'right' }}>
-                  {t('dashboardModel.billing.col.netoPactado', { defaultValue: 'Tu neto pactado' })}
+                  {t('dashboardModel.billing.col.netoModelo', { defaultValue: 'Neto Modelo' })}
                 </th>
               )}
             </tr>

@@ -3293,15 +3293,22 @@ const DashboardModel = () => {
       ? `${i18n.t('dashboardModel.queue.label')} ${queuePosition}`
       : null;
 
-  // ADR-056 Opcion D iter.2 (2026-08-02): modelo bajo Master ve
-  // "Estudio {name} · {accumulatedNetPactado}€". El acumulado es
-  // informativo (Master paga fuera), pero es lo único que refleja lo
-  // que realmente ha ganado ella con su reparto pactado. Fallback si
-  // el Master no tiene nombre: solo "Estudio".
-  const balanceTextDesktop = masterInfo.hasMaster
-    ? `${masterInfo.masterDisplayName
+  // ADR-056 Opcion D iter.3 (2026-08-02): dos pills separadas para la
+  // modelo bajo Master. El pill de "Estudio {name}" identifica quién la
+  // administra; el pill del saldo muestra el acumulado neto pactado
+  // (informativo — el Master paga fuera). Se mantienen separados a
+  // propósito para que ambos hechos se lean por sí mismos.
+  const studioTextDesktop = masterInfo.hasMaster
+    ? (masterInfo.masterDisplayName
         ? i18n.t('dashboardModel.balance.underMaster', { name: masterInfo.masterDisplayName })
-        : i18n.t('dashboardModel.balance.underMasterNoName')} · ${fmtEUR(masterInfo.accumulatedNetPactado)}`
+        : i18n.t('dashboardModel.balance.underMasterNoName'))
+    : null;
+  const studioTextMobile = masterInfo.hasMaster
+    ? i18n.t('dashboardModel.balance.underMasterNoName')
+    : null;
+
+  const balanceTextDesktop = masterInfo.hasMaster
+    ? `${i18n.t('dashboardModel.balance.label')} ${fmtEUR(masterInfo.accumulatedNetPactado)}`
     : loadingSaldoModel
       ? i18n.t('dashboardModel.balance.loading')
       : saldoModel == null
@@ -3309,7 +3316,7 @@ const DashboardModel = () => {
         : `${i18n.t('dashboardModel.balance.label')} ${fmtEUR(saldoModel)}`;
 
   const balanceTextMobile = masterInfo.hasMaster
-    ? `${i18n.t('dashboardModel.balance.underMasterNoName')} · ${fmtEUR(masterInfo.accumulatedNetPactado)}`
+    ? `${i18n.t('dashboardModel.balance.label')} ${fmtEUR(masterInfo.accumulatedNetPactado)}`
     : loadingSaldoModel
       ? i18n.t('dashboardModel.balance.loading')
       : saldoModel == null
@@ -3333,6 +3340,8 @@ const DashboardModel = () => {
         queueText={queueText}
         balanceTextDesktop={balanceTextDesktop}
         balanceTextMobile={balanceTextMobile}
+        studioTextDesktop={studioTextDesktop}
+        studioTextMobile={studioTextMobile}
         avatarUrl={profilePic}
         showBottomNav={!inCall}
         onBrandClick={handleLogoClick}

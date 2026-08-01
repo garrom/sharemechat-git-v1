@@ -18,6 +18,8 @@ const NavbarModel = ({
   queueText = null,
   balanceTextDesktop = null,
   balanceTextMobile = null,
+  studioTextDesktop = null,
+  studioTextMobile = null,
   avatarUrl = null,
   showBottomNav,
   onBrandClick,
@@ -68,6 +70,7 @@ const NavbarModel = ({
     <DesktopActions
       displayName={displayName}
       queueText={showQueue ? queueText : null}
+      studioText={showBalance ? studioTextDesktop : null}
       balanceText={showBalance ? balanceTextDesktop : null}
       showLocaleSwitcher={showLocaleSwitcher}
       // tertiaryAction (pill Afiliada) retirada el 2026-07-24 junto con el
@@ -111,7 +114,12 @@ const NavbarModel = ({
       displayName={displayName}
       queueText={showQueue ? queueText : null}
       balanceText={showBalance ? balanceTextMobile : null}
-      topRightContent={showBalance ? <SaldoText>{balanceTextMobile}</SaldoText> : null}
+      topRightContent={showBalance ? (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          {studioTextMobile ? <SaldoText>{studioTextMobile}</SaldoText> : null}
+          {balanceTextMobile ? <SaldoText>{balanceTextMobile}</SaldoText> : null}
+        </div>
+      ) : null}
       showLocaleSwitcher={showLocaleSwitcher}
       items={[
         {

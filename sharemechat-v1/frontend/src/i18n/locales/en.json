@@ -1258,7 +1258,7 @@
         "type": "Type",
         "detail": "Detail",
         "amount": "Amount",
-        "netoPactado": "Your agreed net"
+        "netoModelo": "Model net"
       },
       "categories": {
         "all": "All",
@@ -1273,8 +1273,7 @@
         "PAYOUT_REQUEST_REVERT": "Reverted"
       },
       "masterBanner": {
-        "title": "You operate under {{name}}'s Master account",
-        "body": "Your streaming and gift income is property of your Master. You earn {{pct}}% of each amount according to the internal agreement, and your Master pays you off-platform. Check the \"Your agreed net\" column for the breakdown per transaction. If the percentage does not match what was agreed, contact your Master directly."
+        "body": "The % earned from streaming and gifts was agreed with your Studio. The platform is not part of that negotiation."
       },
       "badge": {
         "attributedMaster": "To Master"
@@ -1437,12 +1436,17 @@
       "reloadButton": "Refresh",
       "underMaster": {
         "title": "Your split under the Studio",
-        "hint": "Managed under the {{name}} Studio account. This is the flow of every euro per minute the client pays.",
+        "hint": "Managed under the {{name}} Studio account.",
         "fallbackName": "your Studio",
-        "flow": {
-          "step1": "Client pays",
-          "step2": "Platform pays the {{name}} Studio ({{tramo}}% of gross)",
-          "step3": "The Studio pays you ({{pactado}}% agreed)"
+        "line1": "{{tier}} – You are at this bracket",
+        "line2": "Studio receives {{tramo}}% at bracket {{tier}}",
+        "line3": "You receive {{pactado}}% of the {{tramo}}% at {{tier}}",
+        "tiersTitle": "Studio brackets and thresholds",
+        "tiersHint": "As the Studio moves up brackets (30d gross billing), you can pick a rate within the allowed range.",
+        "headers": {
+          "tier": "Bracket",
+          "threshold": "Threshold (30d)",
+          "rateRange": "Allowed rate"
         }
       },
       "progress": {

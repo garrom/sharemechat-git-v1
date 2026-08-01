@@ -238,6 +238,19 @@ const TIER_REFERENCE = [
   { code: 'T4', minGross: 6500, share: 79, rateMin: 1, rateMax: 9 },
 ];
 
+// ADR-056 Opcion D (2026-08-02): tramos regimen MASTER. Fuente de verdad:
+// migracion V42 (seed model_pricing_tiers target_type=MASTER). Solo se
+// muestran cuando economics.underMaster=true. No incluyen la columna
+// "Estudio recibe %" a proposito (feedback operador iter.3: evitar
+// restregar el % en la cara de la modelo — el reparto ya se explica en
+// las 3 lineas de arriba).
+const TIER_REFERENCE_MASTER = [
+  { code: 'T1', minGross: 0,     rateMin: 1, rateMax: 1 },
+  { code: 'T2', minGross: 1000,  rateMin: 1, rateMax: 3 },
+  { code: 'T3', minGross: 4000,  rateMin: 1, rateMax: 6 },
+  { code: 'T4', minGross: 15000, rateMin: 1, rateMax: 9 },
+];
+
 // ---------- Componente ----------
 
 export default function ModelPricingPanel() {
@@ -659,16 +672,16 @@ function renderUnderMasterView({
   const netoPorMinuto = masterEurPerMin * (pactadoPct / 100);
 
   const masterName = economics.masterDisplayName || t('dashboardModel.pricing.underMaster.fallbackName');
-  // Estilo compartido para cada línea del "flujo" (paso numerado con
-  // etiqueta a la izquierda y monto a la derecha, alineación limpia).
-  const flowRow = { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '6px 0' };
-  const flowNum = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-    width: 22, height: 22, borderRadius: '50%', background: '#a5b4fc', color: '#1e1b4b',
-    fontSize: 11, fontWeight: 700, marginRight: 10, flexShrink: 0 };
-  const flowAmount = { fontVariantNumeric: 'tabular-nums', fontWeight: 700 };
+  const currentTierCode = economics.tierCode || 'T1';
+
+  // Iter.3 (2026-08-02): vista reducida a ~mitad de ancho, alineada a
+  // la izquierda. Sin bordes redondeados. 3 lineas exactas del mock
+  // aprobado + tabla T1-T4 (sin columna % Estudio para evitar
+  // "restregar" en la cara de la modelo lo que ya se explica arriba).
+  const boxRow = { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '4px 0' };
 
   return (
-    <>
+    <div style={{ maxWidth: 640 }}>
       {flash && (
         <FlashLine $type={flash.type}>
           <FontAwesomeIcon icon={flash.type === 'ok' ? faCircleCheck : faCircleExclamation} />
@@ -688,29 +701,20 @@ function renderUnderMasterView({
         </SectionHead>
 
         <div style={{
-          background: '#e0e7ff', border: '1px solid #a5b4fc', borderRadius: 10,
-          padding: '14px 18px', color: '#3730a3', fontSize: 13, lineHeight: 1.5,
+          background: '#e0e7ff', border: '1px solid #a5b4fc', borderRadius: 0,
+          padding: '14px 16px', color: '#3730a3', fontSize: 13, lineHeight: 1.6,
         }}>
-          <div style={flowRow}>
-            <span style={{ display: 'flex', alignItems: 'center' }}>
-              <span style={flowNum}>1</span>
-              {t('dashboardModel.pricing.underMaster.flow.step1')}
-            </span>
-            <span style={flowAmount}>{formatEur2(chosenRate)} €/min</span>
+          <div style={boxRow}>
+            <span><b>{t('dashboardModel.pricing.underMaster.line1', { tier: currentTierCode })}</b></span>
+            <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatEur2(chosenRate)} €/min</span>
           </div>
-          <div style={flowRow}>
-            <span style={{ display: 'flex', alignItems: 'center' }}>
-              <span style={flowNum}>2</span>
-              {t('dashboardModel.pricing.underMaster.flow.step2', { name: masterName, tramo: formatEur0(tramoPct) })}
-            </span>
-            <span style={flowAmount}>{formatEur2(masterEurPerMin)} €/min</span>
+          <div style={boxRow}>
+            <span>{t('dashboardModel.pricing.underMaster.line2', { tramo: formatEur0(tramoPct), tier: currentTierCode })}</span>
+            <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatEur2(masterEurPerMin)} €/min</span>
           </div>
-          <div style={{ ...flowRow, marginTop: 6, paddingTop: 10, borderTop: '1px solid #a5b4fc' }}>
-            <span style={{ display: 'flex', alignItems: 'center' }}>
-              <span style={{ ...flowNum, background: '#4f46e5', color: '#fff' }}>3</span>
-              <b>{t('dashboardModel.pricing.underMaster.flow.step3', { pactado: formatEur0(pactadoPct) })}</b>
-            </span>
-            <span style={{ ...flowAmount, fontSize: 15 }}>{formatEur2(netoPorMinuto)} €/min</span>
+          <div style={{ ...boxRow, borderTop: '1px solid #a5b4fc', marginTop: 6, paddingTop: 8 }}>
+            <span><b>{t('dashboardModel.pricing.underMaster.line3', { pactado: formatEur0(pactadoPct), tramo: formatEur0(tramoPct), tier: currentTierCode })}</b></span>
+            <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>{formatEur2(netoPorMinuto)} €/min</span>
           </div>
         </div>
       </Section>
@@ -791,9 +795,59 @@ function renderUnderMasterView({
         </HintText>
       </Section>
 
+      {/* Tabla referencia T1-T4 (regimen MASTER). Sin columna "Estudio
+          recibe %" a proposito. Solo tramo + umbral (30d del Estudio) +
+          precio permitido. */}
+      <Section>
+        <SectionHead>
+          <SectionTitle>
+            <FontAwesomeIcon icon={faTable} style={{ marginRight: 8 }} />
+            {t('dashboardModel.pricing.underMaster.tiersTitle')}
+          </SectionTitle>
+          <SectionHint>{t('dashboardModel.pricing.underMaster.tiersHint')}</SectionHint>
+        </SectionHead>
+
+        <TableWrap style={{ borderRadius: 0 }}>
+          <Table>
+            <thead>
+              <tr>
+                <th>{t('dashboardModel.pricing.underMaster.headers.tier')}</th>
+                <th style={{ textAlign: 'right' }}>{t('dashboardModel.pricing.underMaster.headers.threshold')}</th>
+                <th style={{ textAlign: 'right' }}>{t('dashboardModel.pricing.underMaster.headers.rateRange')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {TIER_REFERENCE_MASTER.map((tier) => {
+                const isCurrent = tier.code === currentTierCode;
+                const RowComp = isCurrent ? CurrentTierRowInTable : 'tr';
+                const rangeText = tier.rateMin === tier.rateMax
+                  ? `${tier.rateMin} €/min`
+                  : `${tier.rateMin} – ${tier.rateMax} €/min`;
+                return (
+                  <RowComp key={tier.code}>
+                    <td className="name">
+                      {tier.code}
+                      {isCurrent && (
+                        <span style={{ marginLeft: 8, color: '#f97316', fontWeight: 700 }}>
+                          {t('dashboardModel.pricing.reference.youAreHere')}
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      {tier.minGross === 0 ? '—' : `${formatEur0(tier.minGross)} €`}
+                    </td>
+                    <td style={{ textAlign: 'right' }}>{rangeText}</td>
+                  </RowComp>
+                );
+              })}
+            </tbody>
+          </Table>
+        </TableWrap>
+      </Section>
+
       <SmallButton type="button" onClick={loadEconomics} disabled={loading}>
         {t('dashboardModel.pricing.reloadButton')}
       </SmallButton>
-    </>
+    </div>
   );
 }

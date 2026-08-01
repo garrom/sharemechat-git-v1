@@ -87,13 +87,16 @@ export const Wrap = styled.div`
 
   color: ${c.text};
   overflow: auto;
-  border-radius: 16px;
-  border: 1px solid ${c.borderSoft};
-  box-shadow: 0 2px 20px rgba(15,23,42,0.06);
+  /* Iter.3 (2026-08-02): sin border-radius ni borde exterior — el panel
+     ocupa todo el ancho pegado al navbar (patrón visual DashboardMaster).
+     El arco redondeado previo generaba fricción visual en la esquina
+     superior izquierda contra el fondo negro del StyledContainer. */
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
 
   @media (max-width: 768px) {
     padding: 14px 14px 28px;
-    border-radius: 12px;
   }
 `;
 
