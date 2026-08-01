@@ -75,7 +75,14 @@ export const Wrap = styled.div`
   flex: 1;
   min-width: 0;
   min-height: 0;
-  padding: 20px 22px 32px;
+  /* Iter.5 (2026-08-02): unificación con DashboardMaster
+     (maxWidth 1200 + margin auto). El contenido de Estadística
+     queda centrado en pantallas anchas en vez de pegado a la
+     izquierda con vacío a la derecha. */
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
   display: flex;
   flex-direction: column;
   gap: 18px;

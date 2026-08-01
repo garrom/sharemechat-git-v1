@@ -10,7 +10,10 @@ import i18n from '../../i18n';
 import { apiFetch } from '../../config/http';
 import { buildApiUrl } from '../../config/api';
 
-const wrap = { padding: '20px 24px', maxWidth: 1000 };
+// Iter.5 (2026-08-02) — unificación de layout con DashboardMaster
+// (maxWidth 1200 + margin 0 auto). Antes quedaba alineado a la izquierda
+// con vacío grande a la derecha (feedback operador).
+const wrap = { padding: '24px 16px 64px', maxWidth: 1200, margin: '0 auto' };
 const headerRow = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12, flexWrap: 'wrap' };
 const btn = (variant = 'primary', disabled = false) => ({
   padding: '8px 16px', borderRadius: 8, border: 'none',

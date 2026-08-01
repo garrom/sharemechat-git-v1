@@ -10,7 +10,10 @@ import { listMyTickets, getMyTicket } from '../../api/ticketsApi';
 import NewTicketModal from '../support/NewTicketModal';
 import SupportChat from '../support/SupportChat';
 
-const wrap = { padding: '20px 24px', maxWidth: 1000 };
+// Iter.5 (2026-08-02) — unificación de layout con DashboardMaster
+// (maxWidth 1200 + margin 0 auto). Antes quedaba alineado a la izquierda
+// con vacío grande a la derecha (feedback operador).
+const wrap = { padding: '24px 16px 64px', maxWidth: 1200, margin: '0 auto' };
 const headerRow = {
   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
   gap: 12, marginBottom: 16, flexWrap: 'wrap',
