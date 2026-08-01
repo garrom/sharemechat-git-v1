@@ -97,17 +97,20 @@ export const GlobalBlack = createGlobalStyle`
 export const StyledContainer = styled.div`
   display: flex;
   flex-direction: column;
-  /* Iter.4 (2026-08-02): min-height en vez de height para que el body pueda
-     scrollear y muestre el Footer al final sin solapar contenido. Videochat
-     mantiene el layout sin scroll externo porque su contenido interno está
-     contenido (overflow:hidden en StyledMainContent + panes de video con
-     tamaño calculado). El Navbar ya es position:sticky, así que se queda
-     arriba durante el scroll global de la página. */
+  /* Iter.4 (2026-08-02) + hotfix iter.4b: altura condicionada por data-tab.
+     - videochat: height 100vh fijo → las columnas de video usan flex:1 y
+       necesitan que el padre tenga altura definida para calcular su tamaño.
+       Sin esto los <video> colapsan a ~120px de altura.
+     - resto de tabs (stats, favoritos, blog, soporte): min-height 100vh
+       + auto → el body scrollea globalmente y el Footer aparece al final
+       sin solapar el contenido. Navbar sticky top:0 se queda arriba. */
+  height: ${props => props['data-tab'] === 'videochat' ? '100vh' : 'auto'};
   min-height: 100vh;
   background: var(--c-black);
   min-width: 48px;
 
-  @supports (min-height: 100dvh) {
+  @supports (height: 100dvh) {
+    height: ${props => props['data-tab'] === 'videochat' ? '100dvh' : 'auto'};
     min-height: 100dvh;
   }
 `;

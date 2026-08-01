@@ -3326,7 +3326,7 @@ const DashboardModel = () => {
 
 
   return (
-    <StyledContainer>
+    <StyledContainer data-tab={activeTab}>
       <GlobalBlack />
       <AuthenticatedConsentModal
         open={consentRequired}
