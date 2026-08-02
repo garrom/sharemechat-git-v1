@@ -86,7 +86,7 @@ public class AdminMasterService {
      */
     public Map<String, Object> listMasters(int page, int size, String q,
                                            String kycStatus, Boolean emailVerified,
-                                           Boolean contractAccepted) {
+                                           Boolean contractAccepted, Boolean suspended) {
         int safePage = Math.max(0, page);
         int safeSize = Math.max(1, Math.min(size, 100));
 
@@ -105,7 +105,7 @@ public class AdminMasterService {
 
         List<AdminMasterListItemDTO> items = pageResult.getContent().stream()
                 .map(m -> toListItem(m, userById.get(m.getUserId())))
-                .filter(dto -> filterMatches(dto, qNorm, kycStatus, emailVerified, contractAccepted))
+                .filter(dto -> filterMatches(dto, qNorm, kycStatus, emailVerified, contractAccepted, suspended))
                 .toList();
 
         Map<String, Object> out = new LinkedHashMap<>();
@@ -193,6 +193,8 @@ public class AdminMasterService {
         dto.setTotalPaidOutEur(m.getTotalPaidOutEur());
         dto.setOnboardedAt(m.getOnboardedAt());
         dto.setCreatedAt(m.getCreatedAt());
+        dto.setSuspendedAt(m.getSuspendedAt());
+        dto.setSuspensionReason(m.getSuspensionReason());
 
         if (user != null) {
             dto.setEmail(user.getEmail());
@@ -223,7 +225,7 @@ public class AdminMasterService {
 
     private boolean filterMatches(AdminMasterListItemDTO dto, String qNorm,
                                    String kycStatus, Boolean emailVerified,
-                                   Boolean contractAccepted) {
+                                   Boolean contractAccepted, Boolean suspended) {
         if (qNorm != null && !qNorm.isEmpty()) {
             String haystack = ((dto.getEmail() != null ? dto.getEmail() : "") + " "
                     + (dto.getNickname() != null ? dto.getNickname() : "") + " "
@@ -235,6 +237,10 @@ public class AdminMasterService {
         }
         if (emailVerified != null && emailVerified != dto.isEmailVerified()) return false;
         if (contractAccepted != null && contractAccepted != dto.isContractAccepted()) return false;
+        if (suspended != null) {
+            boolean isSusp = dto.getSuspendedAt() != null;
+            if (suspended != isSusp) return false;
+        }
         return true;
     }
 }

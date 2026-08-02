@@ -31,6 +31,8 @@ public class SecurityConfig {
     private final ApiRateLimitService apiRateLimitService;
     private final ProductOperationalModeService productOperationalModeService;
     private final UserRepository userRepository;
+    // ADR-056 S7.b (2026-08-02): guard de Master suspendido.
+    private final com.sharemechat.master.repository.MasterRepository masterRepository;
 
     @Value("${auth.cookieDomain}")
     private String cookieDomain;
@@ -43,13 +45,15 @@ public class SecurityConfig {
             UserDetailsServiceImpl userDetailsService,
             ApiRateLimitService apiRateLimitService,
             ProductOperationalModeService productOperationalModeService,
-            UserRepository userRepository
+            UserRepository userRepository,
+            com.sharemechat.master.repository.MasterRepository masterRepository
     ) {
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
         this.apiRateLimitService = apiRateLimitService;
         this.productOperationalModeService = productOperationalModeService;
         this.userRepository = userRepository;
+        this.masterRepository = masterRepository;
     }
 
     @Bean
@@ -461,6 +465,16 @@ public class SecurityConfig {
                 .addFilterAfter(
                         new EmailVerifiedFilter(userRepository),
                         ProductOperationalModeFilter.class
+                )
+                // ADR-056 S7.b (2026-08-02): guard adicional de Master
+                // suspendido. Se registra DESPUÉS de EmailVerifiedFilter:
+                // un Master no-verificado se sigue bloqueando por email;
+                // si está verificado pero suspendido, este filter bloquea
+                // los POST/PATCH/DELETE sensibles (invitar modelos, editar
+                // %, payout-methods) — GET y payout final quedan permitidos.
+                .addFilterAfter(
+                        new MasterSuspendedFilter(userRepository, masterRepository),
+                        EmailVerifiedFilter.class
                 )
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))

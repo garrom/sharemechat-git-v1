@@ -21,6 +21,9 @@ public class MasterOverviewDTO {
     private String verificationStatus;
     private Boolean emailVerified;
     private Boolean contractAccepted;
+    // ADR-056 S7.b (2026-08-02): suspensión D11. suspendedAt=null → activo.
+    private LocalDateTime suspendedAt;
+    private String suspensionReason;
 
     public BigDecimal getBilledGrossEur30d() { return billedGrossEur30d; }
     public void setBilledGrossEur30d(BigDecimal billedGrossEur30d) { this.billedGrossEur30d = billedGrossEur30d; }
@@ -48,4 +51,10 @@ public class MasterOverviewDTO {
 
     public Boolean getContractAccepted() { return contractAccepted; }
     public void setContractAccepted(Boolean contractAccepted) { this.contractAccepted = contractAccepted; }
+
+    public LocalDateTime getSuspendedAt() { return suspendedAt; }
+    public void setSuspendedAt(LocalDateTime suspendedAt) { this.suspendedAt = suspendedAt; }
+
+    public String getSuspensionReason() { return suspensionReason; }
+    public void setSuspensionReason(String suspensionReason) { this.suspensionReason = suspensionReason; }
 }

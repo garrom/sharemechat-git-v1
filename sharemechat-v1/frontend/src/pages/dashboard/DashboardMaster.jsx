@@ -164,11 +164,31 @@ export default function DashboardMaster() {
 
   const balanceText = overview ? fmtEur(overview.balanceCurrent) : '';
 
-  // Banners de estado (email verify → KYC → contrato).
-  // Se muestran TODOS los que apliquen. Email verify es el mas critico
-  // porque bloquea todas las acciones operativas (Opcion Z, 2026-07-30).
+  // Banners de estado (suspensión → email verify → KYC → contrato).
+  // Se muestran TODOS los que apliquen. Suspensión primero (S7.b) porque
+  // es el más crítico: bloquea escrituras via MasterSuspendedFilter.
+  // Email verify también bloquea (Opcion Z, 2026-07-30).
   const banners = [];
   if (overview) {
+    if (overview.suspendedAt) {
+      banners.push(
+        <div key="suspended" style={BannerAlert} role="alert">
+          <div>
+            <strong>{i18n.t('masterDashboard.banners.suspendedTitle', { defaultValue: 'Cuenta suspendida' })}</strong>
+          </div>
+          <div style={{ marginTop: 4, fontSize: '0.88rem' }}>
+            {i18n.t('masterDashboard.banners.suspendedBody', {
+              defaultValue: 'Tu cuenta ha sido suspendida por administración. Puedes consultar tu historial y solicitar el retiro final de tu saldo, pero no puedes invitar modelos, editar acuerdos ni gestionar métodos de cobro. Contacta con soporte para más información.',
+            })}
+          </div>
+          {overview.suspensionReason && (
+            <div style={{ marginTop: 8, fontSize: '0.85rem' }}>
+              {i18n.t('masterDashboard.banners.suspendedReasonLabel', { defaultValue: 'Motivo' })}: {overview.suspensionReason}
+            </div>
+          )}
+        </div>
+      );
+    }
     if (overview.emailVerified === false) {
       banners.push(
         <div key="email" style={BannerAlert} role="alert">

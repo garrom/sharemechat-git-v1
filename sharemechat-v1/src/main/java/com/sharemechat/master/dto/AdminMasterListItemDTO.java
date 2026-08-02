@@ -23,6 +23,9 @@ public class AdminMasterListItemDTO {
     private BigDecimal balanceCurrent;
     private LocalDateTime onboardedAt;
     private LocalDateTime createdAt;
+    // ADR-056 S7.b (2026-08-02): suspensión D11.
+    private LocalDateTime suspendedAt;
+    private String suspensionReason;
 
     public Long getUserId() { return userId; }
     public void setUserId(Long userId) { this.userId = userId; }
@@ -62,4 +65,10 @@ public class AdminMasterListItemDTO {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public LocalDateTime getSuspendedAt() { return suspendedAt; }
+    public void setSuspendedAt(LocalDateTime suspendedAt) { this.suspendedAt = suspendedAt; }
+
+    public String getSuspensionReason() { return suspensionReason; }
+    public void setSuspensionReason(String suspensionReason) { this.suspensionReason = suspensionReason; }
 }

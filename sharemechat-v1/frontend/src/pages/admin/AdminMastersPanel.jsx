@@ -84,6 +84,7 @@ export default function AdminMastersPanel() {
   const [kycStatus, setKycStatus] = useState('');
   const [emailVerified, setEmailVerified] = useState(''); // '' | 'true' | 'false'
   const [contractAccepted, setContractAccepted] = useState('');
+  const [suspended, setSuspended] = useState(''); // '' | 'true' | 'false'
   const [pageSize, setPageSize] = useState(20);
 
   const [page, setPage] = useState(0);
@@ -105,8 +106,9 @@ export default function AdminMastersPanel() {
     if (kycStatus) params.set('kycStatus', kycStatus);
     if (emailVerified === 'true' || emailVerified === 'false') params.set('emailVerified', emailVerified);
     if (contractAccepted === 'true' || contractAccepted === 'false') params.set('contractAccepted', contractAccepted);
+    if (suspended === 'true' || suspended === 'false') params.set('suspended', suspended);
     return `/admin/masters?${params.toString()}`;
-  }, [q, kycStatus, emailVerified, contractAccepted, pageSize]);
+  }, [q, kycStatus, emailVerified, contractAccepted, suspended, pageSize]);
 
   const load = useCallback(async (targetPage) => {
     setLoading(true);
@@ -153,6 +155,51 @@ export default function AdminMastersPanel() {
     setSelectedId(null);
     setDetail(null);
     setDetailError('');
+  };
+
+  // === S7.b (2026-08-02): suspender / reactivar Master ===
+  const [suspendModal, setSuspendModal] = useState(null); // {userId, nickname}
+  const [suspendReason, setSuspendReason] = useState('');
+  const [suspendBusy, setSuspendBusy] = useState(false);
+
+  const openSuspendModal = (m) => {
+    setSuspendReason('');
+    setSuspendModal({ userId: m.userId, nickname: m.nickname || `#${m.userId}` });
+  };
+  const closeSuspendModal = () => {
+    setSuspendModal(null);
+    setSuspendReason('');
+    setSuspendBusy(false);
+  };
+  const confirmSuspend = async () => {
+    if (!suspendModal || suspendBusy) return;
+    setSuspendBusy(true);
+    try {
+      await apiFetch(`/admin/masters/${suspendModal.userId}/suspend`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: suspendReason || null }),
+      });
+      closeSuspendModal();
+      // Refrescar tanto listado como drill-down
+      load(page);
+      if (selectedId === suspendModal.userId) openDetail(suspendModal.userId);
+    } catch (err) {
+      alert(err?.data?.error || err?.message || 'Error al suspender el Master');
+      setSuspendBusy(false);
+    }
+  };
+
+  const handleReactivate = async (m) => {
+    // eslint-disable-next-line no-restricted-globals
+    if (!window.confirm(t('admin.masters.suspension.confirmReactivate', { defaultValue: '¿Reactivar el Master {{name}}? Las modelos que fueron liberadas NO se re-asignan automáticamente.', name: m.nickname || `#${m.userId}` }))) return;
+    try {
+      await apiFetch(`/admin/masters/${m.userId}/reactivate`, { method: 'POST' });
+      load(page);
+      if (selectedId === m.userId) openDetail(m.userId);
+    } catch (err) {
+      alert(err?.data?.error || err?.message || 'Error al reactivar el Master');
+    }
   };
 
   const total = data.totalElements;
@@ -209,6 +256,14 @@ export default function AdminMastersPanel() {
             </select>
           </div>
           <div style={FieldBlock}>
+            <span style={FieldLabel}>{t('admin.masters.filters.suspended', { defaultValue: 'Suspendido' })}</span>
+            <select style={Select} value={suspended} onChange={(e) => setSuspended(e.target.value)}>
+              <option value="">{t('admin.masters.filters.all', { defaultValue: 'Todos' })}</option>
+              <option value="false">{t('admin.masters.filters.suspendedNo', { defaultValue: 'Solo activos' })}</option>
+              <option value="true">{t('admin.masters.filters.suspendedYes', { defaultValue: 'Solo suspendidos' })}</option>
+            </select>
+          </div>
+          <div style={FieldBlock}>
             <span style={FieldLabel}>{t('admin.masters.filters.pageSize', { defaultValue: 'Página' })}</span>
             <select style={Select} value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>
               <option value={10}>10</option>
@@ -249,9 +304,16 @@ export default function AdminMastersPanel() {
                 </thead>
                 <tbody>
                   {data.items.map((m) => (
-                    <tr key={m.userId}>
+                    <tr key={m.userId} style={m.suspendedAt ? { background: 'rgba(220, 38, 38, 0.05)' } : undefined}>
                       <td style={{ ...Td, fontFamily: 'monospace', fontSize: '0.8rem', color: '#6b7280' }}>#{m.userId}</td>
-                      <td style={{ ...Td, fontWeight: 600 }}>{m.nickname || '—'}</td>
+                      <td style={{ ...Td, fontWeight: 600 }}>
+                        {m.nickname || '—'}
+                        {m.suspendedAt && (
+                          <span style={{ ...badge('danger'), marginLeft: 6 }}>
+                            {t('admin.masters.badges.suspended', { defaultValue: 'SUSPENDIDO' })}
+                          </span>
+                        )}
+                      </td>
                       <td style={Td}>{m.email || '—'}</td>
                       <td style={Td}>
                         {m.companyName || '—'}
@@ -316,10 +378,42 @@ export default function AdminMastersPanel() {
                 <div style={Subtitle}>{detail.master.email}</div>
               )}
             </div>
-            <button type="button" style={BtnSecondary} onClick={closeDetail}>
-              {t('common.close', { defaultValue: 'Cerrar' })}
-            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {detail?.master && !detail.master.suspendedAt && (
+                <button
+                  type="button"
+                  style={{ ...BtnSecondary, borderColor: '#dc2626', color: '#dc2626' }}
+                  onClick={() => openSuspendModal(detail.master)}
+                >
+                  {t('admin.masters.actions.suspend', { defaultValue: 'Suspender' })}
+                </button>
+              )}
+              {detail?.master && detail.master.suspendedAt && (
+                <button
+                  type="button"
+                  style={{ ...BtnSecondary, borderColor: '#16a34a', color: '#16a34a' }}
+                  onClick={() => handleReactivate(detail.master)}
+                >
+                  {t('admin.masters.actions.reactivate', { defaultValue: 'Reactivar' })}
+                </button>
+              )}
+              <button type="button" style={BtnSecondary} onClick={closeDetail}>
+                {t('common.close', { defaultValue: 'Cerrar' })}
+              </button>
+            </div>
           </div>
+
+          {detail?.master?.suspendedAt && (
+            <div style={{ ...ErrorBox, marginBottom: 20 }} role="alert">
+              <strong>{t('admin.masters.suspension.bannerTitle', { defaultValue: 'Master suspendido' })}</strong>{' '}
+              {t('admin.masters.suspension.since', { defaultValue: 'desde {{date}}', date: fmtDate(detail.master.suspendedAt) })}.
+              {detail.master.suspensionReason && (
+                <div style={{ marginTop: 6, fontSize: '0.85rem' }}>
+                  {t('admin.masters.suspension.reasonLabel', { defaultValue: 'Motivo' })}: {detail.master.suspensionReason}
+                </div>
+              )}
+            </div>
+          )}
 
           {detailError && <div style={ErrorBox} role="alert">{detailError}</div>}
 
@@ -398,6 +492,40 @@ export default function AdminMastersPanel() {
               )}
             </>
           )}
+        </div>
+      )}
+
+      {/* Modal suspender Master (S7.b) */}
+      {suspendModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }} onClick={closeSuspendModal}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: 24, maxWidth: 520, width: '100%', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 8px', fontSize: '1.1rem', fontWeight: 700, color: '#111827' }}>
+              {t('admin.masters.suspension.modalTitle', { defaultValue: 'Suspender Master' })}
+            </h3>
+            <div style={{ fontSize: '0.9rem', color: '#374151', marginBottom: 12 }}>
+              {t('admin.masters.suspension.modalIntro', { defaultValue: 'Vas a suspender a {{name}}. Las modelos bajo su cuenta quedarán liberadas como individuales. El Master podrá loguearse y solicitar el payout final del saldo pre-suspensión, pero no podrá invitar modelos ni gestionar métodos ni splits.', name: suspendModal.nickname })}
+            </div>
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+              {t('admin.masters.suspension.reasonLabel', { defaultValue: 'Motivo' })}
+            </label>
+            <textarea
+              value={suspendReason}
+              onChange={(e) => setSuspendReason(e.target.value)}
+              placeholder={t('admin.masters.suspension.reasonPlaceholder', { defaultValue: 'Introduce el motivo (opcional pero recomendado)' })}
+              maxLength={500}
+              rows={4}
+              style={{ width: '100%', padding: '9px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.9rem', fontFamily: 'inherit', boxSizing: 'border-box' }}
+              disabled={suspendBusy}
+            />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
+              <button type="button" style={BtnSecondary} onClick={closeSuspendModal} disabled={suspendBusy}>
+                {t('common.cancel', { defaultValue: 'Cancelar' })}
+              </button>
+              <button type="button" style={{ ...BtnSecondary, background: '#dc2626', color: '#fff', borderColor: '#dc2626' }} onClick={confirmSuspend} disabled={suspendBusy}>
+                {suspendBusy ? t('common.loading') : t('admin.masters.actions.suspend', { defaultValue: 'Suspender' })}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

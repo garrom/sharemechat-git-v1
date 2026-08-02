@@ -128,6 +128,14 @@ public class MasterOverviewService {
         out.setEmailVerified(user.getEmailVerifiedAt() != null);
         out.setContractAccepted(safeIsContractAccepted(user.getId()));
 
+        // ADR-056 S7.b (2026-08-02): estado de suspensión para el banner
+        // del dashboard Master. Un Master suspendido sigue pudiendo ver
+        // este endpoint (whitelist en MasterSuspendedFilter para GET).
+        masterRepository.findByUserId(user.getId()).ifPresent(m -> {
+            out.setSuspendedAt(m.getSuspendedAt());
+            out.setSuspensionReason(m.getSuspensionReason());
+        });
+
         log.debug("[MASTER-OVERVIEW] userId={} gross30d={} active={} pending={} balance={}",
                 user.getId(), out.getBilledGrossEur30d(),
                 out.getActiveModelsCount(), out.getPendingModelsCount(),

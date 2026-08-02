@@ -39,6 +39,21 @@ public class Master {
     @Column(name = "onboarded_at")
     private LocalDateTime onboardedAt;
 
+    /**
+     * ADR-056 S7.b (2026-08-02): suspensión D11. NULL = operativo. Cuando
+     * está seteado, el {@code MasterSuspendedFilter} bloquea POST/PATCH/
+     * DELETE sensibles bajo /api/masters/me/**. Las modelos bajo umbrella
+     * se liberaron a INDIVIDUAL en el momento de suspender (transaccional).
+     */
+    @Column(name = "suspended_at")
+    private LocalDateTime suspendedAt;
+
+    @Column(name = "suspended_by_user_id")
+    private Long suspendedByUserId;
+
+    @Column(name = "suspension_reason", length = 500)
+    private String suspensionReason;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -67,6 +82,17 @@ public class Master {
 
     public LocalDateTime getOnboardedAt() { return onboardedAt; }
     public void setOnboardedAt(LocalDateTime onboardedAt) { this.onboardedAt = onboardedAt; }
+
+    public LocalDateTime getSuspendedAt() { return suspendedAt; }
+    public void setSuspendedAt(LocalDateTime suspendedAt) { this.suspendedAt = suspendedAt; }
+
+    public Long getSuspendedByUserId() { return suspendedByUserId; }
+    public void setSuspendedByUserId(Long suspendedByUserId) { this.suspendedByUserId = suspendedByUserId; }
+
+    public String getSuspensionReason() { return suspensionReason; }
+    public void setSuspensionReason(String suspensionReason) { this.suspensionReason = suspensionReason; }
+
+    public boolean isSuspended() { return suspendedAt != null; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

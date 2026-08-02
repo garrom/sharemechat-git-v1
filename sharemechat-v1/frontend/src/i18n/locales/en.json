@@ -3323,6 +3323,9 @@
         "kyc": "KYC",
         "emailVerified": "Email verified",
         "contract": "Contract",
+        "suspended": "Suspended",
+        "suspendedNo": "Active only",
+        "suspendedYes": "Suspended only",
         "pageSize": "Page",
         "all": "All",
         "apply": "Apply"
@@ -3340,7 +3343,21 @@
         "actions": "Actions"
       },
       "actions": {
-        "viewDetail": "View detail"
+        "viewDetail": "View detail",
+        "suspend": "Suspend",
+        "reactivate": "Reactivate"
+      },
+      "badges": {
+        "suspended": "SUSPENDED"
+      },
+      "suspension": {
+        "modalTitle": "Suspend Master",
+        "modalIntro": "You are about to suspend {{name}}. Models under this account will be released as independents (history preserved). The Master will still be able to log in and request a final payout of the pre-suspension balance, but cannot invite models nor manage payout methods or splits.",
+        "reasonLabel": "Reason",
+        "reasonPlaceholder": "Enter a reason (optional but recommended)",
+        "bannerTitle": "Master suspended",
+        "since": "since {{date}}",
+        "confirmReactivate": "Reactivate Master {{name}}? Released models are NOT re-assigned automatically. To re-onboard them you will have to send a new invitation."
       },
       "pagination": {
         "info": "Page {{page}} of {{totalPages}} · {{total}} studios"
@@ -3884,7 +3901,10 @@
       "emailResendOk": "Email resent. Check your inbox.",
       "emailResendErr": "Could not resend. Please try again.",
       "kycCta": "Start KYC verification",
-      "contractCta": "Sign Master Contract"
+      "contractCta": "Sign Master Contract",
+      "suspendedTitle": "Account suspended",
+      "suspendedBody": "Your account has been suspended by administration. You can consult your history and request a final payout of your balance, but you cannot invite models, edit agreements or manage payout methods. Contact support for more information.",
+      "suspendedReasonLabel": "Reason"
     },
     "kpi": {
       "gross30d": "Gross billing 30d",

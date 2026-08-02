@@ -53,6 +53,8 @@ public class AdminController {
     private final com.sharemechat.service.AccountDormancyService dormancyService;
     // ADR-056 S7.a (2026-08-02): panel admin de Masters (listado + detalle).
     private final com.sharemechat.master.service.AdminMasterService adminMasterService;
+    // ADR-056 S7.b (2026-08-02): suspensión D11 desde admin.
+    private final com.sharemechat.master.service.MasterSuspensionService masterSuspensionService;
 
     public AdminController(
             AdminService adminService,
@@ -67,7 +69,8 @@ public class AdminController {
             PayoutRequestRepository payoutRequestRepository,
             TransactionService transactionService,
             com.sharemechat.service.AccountDormancyService dormancyService,
-            com.sharemechat.master.service.AdminMasterService adminMasterService
+            com.sharemechat.master.service.AdminMasterService adminMasterService,
+            com.sharemechat.master.service.MasterSuspensionService masterSuspensionService
     ) {
         this.adminService = adminService;
         this.backofficeAccessService = backofficeAccessService;
@@ -82,6 +85,7 @@ public class AdminController {
         this.transactionService = transactionService;
         this.dormancyService = dormancyService;
         this.adminMasterService = adminMasterService;
+        this.masterSuspensionService = masterSuspensionService;
     }
 
     // ============================================================
@@ -95,15 +99,63 @@ public class AdminController {
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String kycStatus,
             @RequestParam(required = false) Boolean emailVerified,
-            @RequestParam(required = false) Boolean contractAccepted) {
+            @RequestParam(required = false) Boolean contractAccepted,
+            @RequestParam(required = false) Boolean suspended) {
         return ResponseEntity.ok(adminMasterService.listMasters(
-                page, size, q, kycStatus, emailVerified, contractAccepted));
+                page, size, q, kycStatus, emailVerified, contractAccepted, suspended));
     }
 
     @GetMapping("/masters/{userId}")
     public ResponseEntity<?> getMasterDetail(@PathVariable Long userId) {
         try {
             return ResponseEntity.ok(adminMasterService.getDetail(userId));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(404).body(Map.of("error", ex.getMessage()));
+        }
+    }
+
+    // ============================================================
+    // ADR-056 S7.b: suspensión D11 desde admin
+    // ============================================================
+
+    /**
+     * Body request para POST /masters/{userId}/suspend. Estructura mínima
+     * para evitar crear un DTO Java dedicado — el reason es free-text.
+     */
+    public static class MasterSuspendRequestBody {
+        public String reason;
+    }
+
+    @PostMapping("/masters/{userId}/suspend")
+    public ResponseEntity<?> suspendMaster(@PathVariable Long userId,
+                                            @RequestBody(required = false) MasterSuspendRequestBody body,
+                                            Authentication auth) {
+        Long adminUserId = null;
+        try {
+            User admin = userService.findByEmail(auth.getName());
+            if (admin != null) adminUserId = admin.getId();
+        } catch (Exception ignore) {}
+
+        String reason = body != null ? body.reason : null;
+        try {
+            masterSuspensionService.suspend(userId, adminUserId, reason);
+            return ResponseEntity.ok(Map.of("status", "suspended"));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(404).body(Map.of("error", ex.getMessage()));
+        }
+    }
+
+    @PostMapping("/masters/{userId}/reactivate")
+    public ResponseEntity<?> reactivateMaster(@PathVariable Long userId, Authentication auth) {
+        Long adminUserId = null;
+        try {
+            User admin = userService.findByEmail(auth.getName());
+            if (admin != null) adminUserId = admin.getId();
+        } catch (Exception ignore) {}
+
+        try {
+            masterSuspensionService.reactivate(userId, adminUserId);
+            return ResponseEntity.ok(Map.of("status", "active"));
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(404).body(Map.of("error", ex.getMessage()));
         }

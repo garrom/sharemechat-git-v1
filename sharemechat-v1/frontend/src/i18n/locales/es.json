@@ -3323,6 +3323,9 @@
         "kyc": "KYC",
         "emailVerified": "Email verificado",
         "contract": "Contrato",
+        "suspended": "Suspendido",
+        "suspendedNo": "Solo activos",
+        "suspendedYes": "Solo suspendidos",
         "pageSize": "Página",
         "all": "Todos",
         "apply": "Aplicar"
@@ -3340,7 +3343,21 @@
         "actions": "Acciones"
       },
       "actions": {
-        "viewDetail": "Ver detalle"
+        "viewDetail": "Ver detalle",
+        "suspend": "Suspender",
+        "reactivate": "Reactivar"
+      },
+      "badges": {
+        "suspended": "SUSPENDIDO"
+      },
+      "suspension": {
+        "modalTitle": "Suspender Master",
+        "modalIntro": "Vas a suspender a {{name}}. Las modelos bajo su cuenta quedarán liberadas como individuales (mantienen historial). El Master podrá loguearse y solicitar el payout final del saldo pre-suspensión, pero no podrá invitar modelos ni gestionar métodos de cobro ni splits.",
+        "reasonLabel": "Motivo",
+        "reasonPlaceholder": "Introduce el motivo (opcional pero recomendado)",
+        "bannerTitle": "Master suspendido",
+        "since": "desde {{date}}",
+        "confirmReactivate": "¿Reactivar el Master {{name}}? Las modelos que fueron liberadas NO se re-asignan automáticamente. Si quieres re-onboardearlas tendrás que enviarles una nueva invitación."
       },
       "pagination": {
         "info": "Página {{page}} de {{totalPages}} · {{total}} estudios"
@@ -3884,7 +3901,10 @@
       "emailResendOk": "Email reenviado. Revisa tu bandeja.",
       "emailResendErr": "No se pudo reenviar. Inténtalo de nuevo.",
       "kycCta": "Iniciar verificación KYC",
-      "contractCta": "Firmar contrato Master"
+      "contractCta": "Firmar contrato Master",
+      "suspendedTitle": "Cuenta suspendida",
+      "suspendedBody": "Tu cuenta ha sido suspendida por administración. Puedes consultar tu historial y solicitar el retiro final de tu saldo, pero no puedes invitar modelos, editar acuerdos ni gestionar métodos de cobro. Contacta con soporte para más información.",
+      "suspendedReasonLabel": "Motivo"
     },
     "kpi": {
       "gross30d": "Facturación bruta 30d",
