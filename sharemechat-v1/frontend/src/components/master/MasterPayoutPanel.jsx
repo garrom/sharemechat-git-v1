@@ -147,7 +147,11 @@ export default function MasterPayoutPanel() {
   const [error, setError] = useState('');
 
   const [amount, setAmount] = useState('');
-  const [channel, setChannel] = useState('PAXUM');
+  // S6.b (2026-08-02): el string libre 'channel' se retira. El
+  // formulario ahora exige seleccionar uno de los payoutMethods del
+  // user (los que gestiona en la sección de abajo). Fallback vacío
+  // cuando aún no hay métodos.
+  const [selectedMethodId, setSelectedMethodId] = useState('');
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
@@ -190,23 +194,40 @@ export default function MasterPayoutPanel() {
   useEffect(() => { loadBalance(); }, [loadBalance]);
   useEffect(() => { loadMethods(); }, [loadMethods]);
 
+  // Autoseleccionar el método default (o el primero) cuando cargan.
+  // Si el user borra el método seleccionado o el default cambia, se
+  // recalcula. Solo actúa si no hay ya uno elegido para no pisar la
+  // interacción del user.
+  useEffect(() => {
+    if (!methods.length) {
+      setSelectedMethodId('');
+      return;
+    }
+    if (!selectedMethodId || !methods.find((m) => String(m.id) === String(selectedMethodId))) {
+      const def = methods.find((m) => m.default) || methods[0];
+      setSelectedMethodId(String(def.id));
+    }
+  }, [methods, selectedMethodId]);
+
   const amountNum = Number(amount);
-  const amountValid = Number.isInteger(amountNum)
+  const amountRangeOk = Number.isInteger(amountNum)
     && amountNum >= MIN_PAYOUT
     && amountNum <= MAX_PAYOUT
     && balance != null
     && amountNum <= Number(balance);
+  const methodOk = !!selectedMethodId;
+  const canSubmit = amountRangeOk && methodOk;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!amountValid || submitting) return;
+    if (!canSubmit || submitting) return;
     setSubmitting(true);
     setSubmitError('');
     setSubmitOk(null);
     try {
       const res = await masterApi.requestPayout({
         amount: amountNum,
-        channel,
+        payoutMethodId: Number(selectedMethodId),
         description: description || null,
       });
       setSubmitOk({ id: res?.payoutRequestId ?? res?.id, amount: amountNum });
@@ -377,24 +398,32 @@ export default function MasterPayoutPanel() {
             </div>
 
             <div style={FieldBlock}>
-              <label htmlFor="payout-channel" style={Label}>
-                {t('masterDashboard.payout.form.channel.label')}
+              <label htmlFor="payout-method" style={Label}>
+                {t('masterDashboard.payout.form.method.label')}
               </label>
-              <select
-                id="payout-channel"
-                value={channel}
-                onChange={(e) => setChannel(e.target.value)}
-                style={Select}
-                disabled={submitting}
-              >
-                {CHANNELS.map((c) => (
-                  <option key={c.key} value={c.key}>
-                    {t(`masterDashboard.payout.form.channel.options.${c.i18n}`)}
-                  </option>
-                ))}
-              </select>
+              {methods.length === 0 ? (
+                <div style={{ ...HelpText, padding: '8px 12px', background: '#fef3c7', color: '#92400e', borderRadius: 6, border: '1px solid #fcd34d' }}>
+                  {t('masterDashboard.payout.form.method.emptyNotice')}
+                </div>
+              ) : (
+                <select
+                  id="payout-method"
+                  value={selectedMethodId}
+                  onChange={(e) => setSelectedMethodId(e.target.value)}
+                  style={Select}
+                  disabled={submitting}
+                  required
+                >
+                  {methods.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {(m.displayAlias || railLabel(m.rail))} — {m.accountRef}
+                      {m.default ? ` · ${t('masterDashboard.payout.methods.badges.default')}` : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
               <span style={HelpText}>
-                {t('masterDashboard.payout.form.channel.help')}
+                {t('masterDashboard.payout.form.method.help')}
               </span>
             </div>
 
@@ -419,8 +448,8 @@ export default function MasterPayoutPanel() {
 
             <button
               type="submit"
-              style={BtnPrimary(!amountValid || submitting)}
-              disabled={!amountValid || submitting}
+              style={BtnPrimary(!canSubmit || submitting)}
+              disabled={!canSubmit || submitting}
             >
               {submitting ? t('masterDashboard.payout.form.submitting') : t('masterDashboard.payout.form.submit')}
             </button>

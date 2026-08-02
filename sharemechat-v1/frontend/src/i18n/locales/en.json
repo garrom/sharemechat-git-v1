@@ -3950,6 +3950,11 @@
             "sepa": "SEPA manual transfer"
           }
         },
+        "method": {
+          "label": "Payout method",
+          "help": "Select one of your payout methods. You can add or edit methods in the section below.",
+          "emptyNotice": "You don't have any payout method registered yet. Add one in the \"Payout methods\" section to request a payout."
+        },
         "description": {
           "label": "Notes for the team (optional)",
           "placeholder": "Add any useful reference (invoice number, target account, etc.).",

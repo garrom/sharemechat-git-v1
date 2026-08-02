@@ -3950,6 +3950,11 @@
             "sepa": "Transferencia SEPA manual"
           }
         },
+        "method": {
+          "label": "Método de cobro",
+          "help": "Selecciona uno de tus métodos de cobro. Puedes añadir o editar métodos en la sección inferior.",
+          "emptyNotice": "Aún no tienes ningún método de cobro registrado. Añade uno en la sección \"Métodos de cobro\" para poder solicitar el retiro."
+        },
         "description": {
           "label": "Notas para el equipo (opcional)",
           "placeholder": "Añade cualquier referencia útil (nº factura, cuenta destino, etc.).",

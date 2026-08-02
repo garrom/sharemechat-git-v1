@@ -5,6 +5,10 @@ import com.sharemechat.entity.PayoutRequest;
 import com.sharemechat.entity.Transaction;
 import com.sharemechat.entity.User;
 import com.sharemechat.master.dto.MasterPayoutRequestDTO;
+import com.sharemechat.payout.entity.PayoutMethod;
+import com.sharemechat.payout.repository.PayoutMethodRepository;
+import com.sharemechat.payout.service.PayoutAdapter;
+import com.sharemechat.payout.service.PayoutAdapterFactory;
 import com.sharemechat.repository.BalanceRepository;
 import com.sharemechat.repository.PayoutRequestRepository;
 import com.sharemechat.repository.TransactionRepository;
@@ -17,8 +21,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 /**
- * ADR-056 Fase S5.a.4: solicitud de retiro (payout) del Master
- * autenticado.
+ * ADR-056 Fase S5.a.4 (creación) + S6.b (refactor 2026-08-02):
+ * solicitud de retiro (payout) del Master autenticado.
  *
  * <p>Simetrico a {@link com.sharemechat.service.TransactionService#requestPayout}
  * pero:
@@ -30,7 +34,13 @@ import java.math.RoundingMode;
  *   <li>Reutiliza {@link PayoutRequest} con {@code modelUserId=masterId}
  *       (la columna se llama asi por legacy; en S7 admin discriminaremos
  *       por rol del usuario asociado).</li>
- *   <li>El {@code channel} es orientativo hasta S6 (adapters multi-rail).</li>
+ *   <li>S6.b: preferentemente vincula la solicitud a un
+ *       {@link PayoutMethod} pre-registrado del user
+ *       ({@code dto.payoutMethodId}). El adapter concreto se resuelve
+ *       via {@link PayoutAdapterFactory} y se ejecuta al aprobar admin
+ *       (S6.c pendiente). Coexistencia con el {@code channel} string
+ *       legacy: si no viene payoutMethodId se cae al comportamiento
+ *       previo con channel guardado en description.</li>
  * </ul>
  */
 @Service
@@ -43,18 +53,26 @@ public class MasterPayoutService {
     private final PayoutRequestRepository payoutRequestRepository;
     private final TransactionRepository transactionRepository;
     private final BalanceRepository balanceRepository;
+    private final PayoutMethodRepository payoutMethodRepository;
+    private final PayoutAdapterFactory payoutAdapterFactory;
 
     public MasterPayoutService(PayoutRequestRepository payoutRequestRepository,
                                 TransactionRepository transactionRepository,
-                                BalanceRepository balanceRepository) {
+                                BalanceRepository balanceRepository,
+                                PayoutMethodRepository payoutMethodRepository,
+                                PayoutAdapterFactory payoutAdapterFactory) {
         this.payoutRequestRepository = payoutRequestRepository;
         this.transactionRepository = transactionRepository;
         this.balanceRepository = balanceRepository;
+        this.payoutMethodRepository = payoutMethodRepository;
+        this.payoutAdapterFactory = payoutAdapterFactory;
     }
 
     /**
      * @return el {@link PayoutRequest} persistido con estado {@code REQUESTED}.
-     * @throws IllegalArgumentException si importe fuera de rango o saldo insuficiente.
+     * @throws IllegalArgumentException si importe fuera de rango, saldo
+     *         insuficiente, importe no entero o payoutMethodId no
+     *         pertenece al user.
      */
     @Transactional
     public PayoutRequest requestPayout(User masterUser, MasterPayoutRequestDTO dto) {
@@ -85,6 +103,26 @@ public class MasterPayoutService {
         }
 
         Long masterId = masterUser.getId();
+
+        // S6.b: resolver PayoutMethod si viene payoutMethodId. Guard
+        // ownership: el método debe pertenecer al user autenticado.
+        PayoutMethod method = null;
+        String railForLog = null;
+        if (dto.getPayoutMethodId() != null) {
+            method = payoutMethodRepository
+                    .findByIdAndUserId(dto.getPayoutMethodId(), masterId)
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "Método de cobro no encontrado o no pertenece al usuario"));
+            railForLog = method.getRail();
+            // Pre-resolver adapter aunque no se ejecute todavía; si el
+            // factory no encuentra ninguno (Noop siempre está), lanza
+            // IllegalStateException — fail fast en request time en vez
+            // de al aprobar admin.
+            PayoutAdapter adapter = payoutAdapterFactory.resolve(method.getRail());
+            log.debug("[MASTER-PAYOUT] adapter pre-resolved rail={} adapter={}",
+                    railForLog, adapter.getClass().getSimpleName());
+        }
+
         BigDecimal previousBalance = balanceRepository
                 .findTopByUserIdOrderByTimestampDescIdDesc(masterId)
                 .map(Balance::getBalance)
@@ -93,10 +131,11 @@ public class MasterPayoutService {
             throw new IllegalArgumentException("Saldo insuficiente para completar el retiro");
         }
 
-        // Reason del PayoutRequest: combinar description + channel (si viene) para
-        // trazabilidad, sin tocar el schema. Cuando S6 exista, el channel pasara
-        // a payout_methods.id.
-        String reason = combineReason(dto.getDescription(), dto.getChannel());
+        // Reason del PayoutRequest: combinar description + rail + methodId
+        // (o channel legacy si no viene payoutMethodId). Cuando exista FK
+        // dedicada en payout_requests, este string queda solo como audit
+        // trail extra.
+        String reason = buildReason(dto.getDescription(), method, dto.getChannel());
 
         PayoutRequest pr = new PayoutRequest();
         pr.setModelUserId(masterId);  // legacy: la columna se llama modelUserId
@@ -112,8 +151,7 @@ public class MasterPayoutService {
         tx.setUser(masterUser);
         tx.setAmount(signedAmount);
         tx.setOperationType("PAYOUT_REQUEST");
-        tx.setDescription("Payout request #" + savedPr.getId()
-                + (dto.getChannel() != null ? " (" + dto.getChannel() + ")" : ""));
+        tx.setDescription(buildTxDescription(savedPr.getId(), method, dto.getChannel()));
         Transaction savedTx = transactionRepository.save(tx);
 
         BigDecimal newBalance = previousBalance.add(signedAmount);
@@ -127,18 +165,39 @@ public class MasterPayoutService {
         b.setDescription(tx.getDescription());
         balanceRepository.save(b);
 
-        log.info("[MASTER-PAYOUT] requested masterId={} payoutRequestId={} amount={} channel={} newBalance={}",
-                masterId, savedPr.getId(), amountAbs, dto.getChannel(), newBalance);
+        log.info("[MASTER-PAYOUT] requested masterId={} payoutRequestId={} amount={} payoutMethodId={} rail={} channelLegacy={} newBalance={}",
+                masterId, savedPr.getId(), amountAbs,
+                method != null ? method.getId() : null,
+                railForLog,
+                (method == null && dto.getChannel() != null) ? dto.getChannel() : null,
+                newBalance);
         return savedPr;
     }
 
-    private String combineReason(String description, String channel) {
+    // ============================================================
+    // Helpers formato de audit strings
+    // ============================================================
+
+    private String buildReason(String description, PayoutMethod method, String legacyChannel) {
         StringBuilder sb = new StringBuilder();
         if (description != null && !description.isBlank()) sb.append(description.trim());
-        if (channel != null && !channel.isBlank()) {
+        if (method != null) {
             if (sb.length() > 0) sb.append(" ");
-            sb.append("[channel:").append(channel.trim()).append("]");
+            sb.append("[method:").append(method.getRail()).append("#").append(method.getId()).append("]");
+        } else if (legacyChannel != null && !legacyChannel.isBlank()) {
+            if (sb.length() > 0) sb.append(" ");
+            sb.append("[channel:").append(legacyChannel.trim()).append("]");
         }
         return sb.length() > 0 ? sb.toString() : null;
+    }
+
+    private String buildTxDescription(Long payoutRequestId, PayoutMethod method, String legacyChannel) {
+        StringBuilder sb = new StringBuilder("Payout request #").append(payoutRequestId);
+        if (method != null) {
+            sb.append(" (").append(method.getRail()).append("#").append(method.getId()).append(")");
+        } else if (legacyChannel != null && !legacyChannel.isBlank()) {
+            sb.append(" (").append(legacyChannel.trim()).append(")");
+        }
+        return sb.toString();
     }
 }
