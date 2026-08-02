@@ -3870,6 +3870,7 @@
         "subtitle": "Enter the amount and preferred channel. An agent will review the request.",
         "amount": {
           "label": "Amount (EUR)",
+          "placeholder": "eg. {{min}}",
           "help": "Between {{min}} and {{max}}."
         },
         "channel": {

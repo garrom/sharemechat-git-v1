@@ -362,11 +362,15 @@ export default function DashboardMaster() {
                       const thresholdText = tier.minGross === 0
                         ? '—'
                         : `${tier.minGross.toLocaleString('es-ES')} €`;
+                      // Iter (2026-08-02): color: #111827 explícito en todas las celdas.
+                      // Antes solo la primera columna (tier.code) tenía color; las otras
+                      // heredaban un gris claro del user-agent y no se leían sobre fondo
+                      // blanco.
                       return (
                         <tr key={tier.code}>
                           <td style={{ padding: '8px 6px', fontWeight: 600, color: '#111827', borderBottom: '1px solid #f3f4f6' }}>{tier.code}</td>
-                          <td style={{ padding: '8px 6px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', borderBottom: '1px solid #f3f4f6' }}>{thresholdText}</td>
-                          <td style={{ padding: '8px 6px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', borderBottom: '1px solid #f3f4f6' }}>{rangeText}</td>
+                          <td style={{ padding: '8px 6px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: '#111827', borderBottom: '1px solid #f3f4f6' }}>{thresholdText}</td>
+                          <td style={{ padding: '8px 6px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: '#111827', borderBottom: '1px solid #f3f4f6' }}>{rangeText}</td>
                         </tr>
                       );
                     })}

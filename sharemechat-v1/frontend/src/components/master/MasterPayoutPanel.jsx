@@ -155,6 +155,13 @@ export default function MasterPayoutPanel() {
             grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
           }
         }
+        /* Color de placeholder consistente (gris claro pero legible).
+           Los defaults del user-agent varían por navegador; explicitar
+           evita que un placeholder "100" parezca un valor real. */
+        .mp-input::placeholder {
+          color: #9ca3af;
+          opacity: 1;
+        }
       `}</style>
 
       <div style={Card}>
@@ -214,7 +221,8 @@ export default function MasterPayoutPanel() {
               max={MAX_PAYOUT}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              placeholder={String(MIN_PAYOUT)}
+              placeholder={t('masterDashboard.payout.form.amount.placeholder', { min: MIN_PAYOUT })}
+              className="mp-input"
               style={Input}
               disabled={submitting || loading}
               required
@@ -259,6 +267,7 @@ export default function MasterPayoutPanel() {
               onChange={(e) => setDescription(e.target.value)}
               placeholder={t('masterDashboard.payout.form.description.placeholder')}
               maxLength={500}
+              className="mp-input"
               style={Textarea}
               disabled={submitting}
             />
