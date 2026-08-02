@@ -3895,6 +3895,69 @@
       "errors": {
         "loadBalance": "No se pudo cargar el saldo disponible.",
         "submit": "No se pudo registrar la solicitud. Revisa el importe y vuelve a intentarlo."
+      },
+      "methods": {
+        "title": "Métodos de cobro",
+        "subtitle": "Da de alta las cuentas donde quieres recibir tus retiros. El método marcado como principal se usará por defecto.",
+        "empty": {
+          "title": "Aún no tienes métodos de cobro registrados.",
+          "hint": "Añade uno para poder solicitar tus retiros más rápido."
+        },
+        "cols": {
+          "rail": "Canal",
+          "accountRef": "Cuenta",
+          "alias": "Alias",
+          "status": "Estado",
+          "actions": "Acciones"
+        },
+        "badges": {
+          "default": "Principal",
+          "verified": "Verificado",
+          "unverified": "Pendiente de verificar"
+        },
+        "actions": {
+          "add": "Añadir método",
+          "edit": "Editar",
+          "delete": "Eliminar",
+          "setDefault": "Marcar como principal"
+        },
+        "confirmDelete": "¿Eliminar el método \"{{label}}\"?",
+        "modal": {
+          "newTitle": "Nuevo método de cobro",
+          "editTitle": "Editar método de cobro"
+        },
+        "form": {
+          "rail": "Canal",
+          "alias": "Alias (opcional)",
+          "aliasPlaceholder": "Ej. Paxum principal",
+          "setDefault": "Marcar como método principal",
+          "save": "Guardar",
+          "saving": "Guardando…",
+          "accountRefLabel": {
+            "PAXUM": "Email Paxum",
+            "YOURSAFE": "IBAN Yoursafe",
+            "NOWPAYMENTS_CRYPTO": "Dirección de wallet",
+            "SEPA_MANUAL": "IBAN"
+          },
+          "accountRefPlaceholder": {
+            "PAXUM": "Introduce tu email de Paxum",
+            "YOURSAFE": "Introduce tu IBAN",
+            "NOWPAYMENTS_CRYPTO": "Introduce la dirección de tu wallet",
+            "SEPA_MANUAL": "Introduce tu IBAN"
+          },
+          "accountRefHelp": {
+            "PAXUM": "El email debe coincidir con la cuenta Paxum donde recibirás los fondos.",
+            "YOURSAFE": "IBAN de la cuenta Yoursafe. 15-34 caracteres alfanuméricos.",
+            "NOWPAYMENTS_CRYPTO": "Dirección de la wallet donde recibir el cripto. Revisa el formato dos veces antes de guardar.",
+            "SEPA_MANUAL": "IBAN de la cuenta bancaria. 15-34 caracteres alfanuméricos."
+          }
+        },
+        "errors": {
+          "load": "No se pudieron cargar los métodos de cobro.",
+          "save": "No se pudo guardar el método. Revisa los datos.",
+          "delete": "No se pudo eliminar el método.",
+          "setDefault": "No se pudo marcar como principal."
+        }
       }
     },
     "historial": {

@@ -60,6 +60,54 @@ export async function getRecentActiveModels(opts = {}) {
 }
 
 // ============================================================
+// Payout methods (S6.a, 2026-08-02)
+// ============================================================
+
+/** GET /api/masters/me/payout-methods — lista métodos del Master. */
+export async function listPayoutMethods() {
+  return apiFetch('/masters/me/payout-methods');
+}
+
+/**
+ * POST /api/masters/me/payout-methods
+ * @param {{ rail: string, accountRef: string, displayAlias?: string, setAsDefault?: boolean }} body
+ */
+export async function createPayoutMethod(body) {
+  return apiFetch('/masters/me/payout-methods', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+/** PATCH /api/masters/me/payout-methods/{id} — actualiza rail/accountRef/alias. */
+export async function updatePayoutMethod(id, body) {
+  if (!id) throw new Error('id requerido');
+  return apiFetch(`/masters/me/payout-methods/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+/** PATCH /api/masters/me/payout-methods/{id}/default — marca como default. */
+export async function setDefaultPayoutMethod(id) {
+  if (!id) throw new Error('id requerido');
+  return apiFetch(`/masters/me/payout-methods/${encodeURIComponent(id)}/default`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+/** DELETE /api/masters/me/payout-methods/{id}. */
+export async function deletePayoutMethod(id) {
+  if (!id) throw new Error('id requerido');
+  return apiFetch(`/masters/me/payout-methods/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+}
+
+// ============================================================
 // Payout (S5.a.4)
 // ============================================================
 
@@ -157,6 +205,11 @@ export const masterApi = {
   getOverview,
   listTransactions,
   getRecentActiveModels,
+  listPayoutMethods,
+  createPayoutMethod,
+  updatePayoutMethod,
+  setDefaultPayoutMethod,
+  deletePayoutMethod,
   requestPayout,
   listModels,
   getModel,

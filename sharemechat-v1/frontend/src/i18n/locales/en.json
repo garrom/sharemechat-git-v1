@@ -3895,6 +3895,69 @@
       "errors": {
         "loadBalance": "Could not load available balance.",
         "submit": "Could not register the request. Check the amount and try again."
+      },
+      "methods": {
+        "title": "Payout methods",
+        "subtitle": "Register the accounts where you want to receive payouts. The one marked as primary is used by default.",
+        "empty": {
+          "title": "You don't have any payout methods yet.",
+          "hint": "Add one so you can request payouts faster."
+        },
+        "cols": {
+          "rail": "Channel",
+          "accountRef": "Account",
+          "alias": "Alias",
+          "status": "Status",
+          "actions": "Actions"
+        },
+        "badges": {
+          "default": "Primary",
+          "verified": "Verified",
+          "unverified": "Pending verification"
+        },
+        "actions": {
+          "add": "Add method",
+          "edit": "Edit",
+          "delete": "Delete",
+          "setDefault": "Set as primary"
+        },
+        "confirmDelete": "Delete method \"{{label}}\"?",
+        "modal": {
+          "newTitle": "New payout method",
+          "editTitle": "Edit payout method"
+        },
+        "form": {
+          "rail": "Channel",
+          "alias": "Alias (optional)",
+          "aliasPlaceholder": "e.g. Primary Paxum",
+          "setDefault": "Set as primary method",
+          "save": "Save",
+          "saving": "Saving…",
+          "accountRefLabel": {
+            "PAXUM": "Paxum email",
+            "YOURSAFE": "Yoursafe IBAN",
+            "NOWPAYMENTS_CRYPTO": "Wallet address",
+            "SEPA_MANUAL": "IBAN"
+          },
+          "accountRefPlaceholder": {
+            "PAXUM": "Enter your Paxum email",
+            "YOURSAFE": "Enter your IBAN",
+            "NOWPAYMENTS_CRYPTO": "Enter your wallet address",
+            "SEPA_MANUAL": "Enter your IBAN"
+          },
+          "accountRefHelp": {
+            "PAXUM": "The email must match the Paxum account where you will receive funds.",
+            "YOURSAFE": "IBAN of the Yoursafe account. 15-34 alphanumeric characters.",
+            "NOWPAYMENTS_CRYPTO": "Wallet address to receive crypto. Double check the format before saving.",
+            "SEPA_MANUAL": "Bank account IBAN. 15-34 alphanumeric characters."
+          }
+        },
+        "errors": {
+          "load": "Could not load payout methods.",
+          "save": "Could not save the method. Check the data.",
+          "delete": "Could not delete the method.",
+          "setDefault": "Could not set as primary."
+        }
       }
     },
     "historial": {

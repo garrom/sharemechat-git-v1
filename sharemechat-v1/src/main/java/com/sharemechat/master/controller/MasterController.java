@@ -14,6 +14,9 @@ import com.sharemechat.master.service.MasterContractService;
 import com.sharemechat.master.service.MasterOverviewService;
 import com.sharemechat.master.service.MasterPayoutService;
 import com.sharemechat.master.service.MasterService;
+import com.sharemechat.payout.dto.PayoutMethodDTO;
+import com.sharemechat.payout.dto.PayoutMethodRequestDTO;
+import com.sharemechat.payout.service.PayoutMethodService;
 import com.sharemechat.entity.PayoutRequest;
 import com.sharemechat.repository.TransactionRepository;
 import com.sharemechat.service.KycSessionService;
@@ -74,6 +77,8 @@ public class MasterController {
     // ADR-056 UX M1 (2026-08-01): batch lookup nicknames de modelos
     // atribuidas para enriquecer el historial Master.
     private final com.sharemechat.repository.UserRepository userRepository;
+    // ADR-056 S6.a (2026-08-02): CRUD autoservicio de PayoutMethod.
+    private final PayoutMethodService payoutMethodService;
 
     public MasterController(MasterService masterService,
                             MasterContractService masterContractService,
@@ -83,7 +88,8 @@ public class MasterController {
                             UserService userService,
                             TransactionRepository transactionRepository,
                             UserAcquisitionService userAcquisitionService,
-                            com.sharemechat.repository.UserRepository userRepository) {
+                            com.sharemechat.repository.UserRepository userRepository,
+                            PayoutMethodService payoutMethodService) {
         this.masterService = masterService;
         this.masterContractService = masterContractService;
         this.masterOverviewService = masterOverviewService;
@@ -93,6 +99,7 @@ public class MasterController {
         this.transactionRepository = transactionRepository;
         this.userAcquisitionService = userAcquisitionService;
         this.userRepository = userRepository;
+        this.payoutMethodService = payoutMethodService;
     }
 
     // ============================================================
@@ -353,6 +360,87 @@ public class MasterController {
         out.put("to", to.toString());
         out.put("items", items);
         return ResponseEntity.ok(out);
+    }
+
+    // ============================================================
+    // /me/payout-methods — CRUD autoservicio (S6.a, 2026-08-02)
+    // ============================================================
+
+    @GetMapping("/me/payout-methods")
+    public ResponseEntity<?> listPayoutMethods(Authentication auth) {
+        if (auth == null || auth.getName() == null) return ResponseEntity.status(401).body("No autenticado");
+        User user = userService.findByEmail(auth.getName());
+        if (user == null) return ResponseEntity.status(401).body("Usuario no encontrado");
+        if (!com.sharemechat.constants.Constants.Roles.MASTER.equals(user.getRole())) {
+            return ResponseEntity.status(403).body(Map.of("error", "Requiere rol MASTER"));
+        }
+        return ResponseEntity.ok(payoutMethodService.listByUser(user.getId()));
+    }
+
+    @PostMapping("/me/payout-methods")
+    public ResponseEntity<?> createPayoutMethod(@RequestBody @Valid PayoutMethodRequestDTO body,
+                                                 Authentication auth) {
+        if (auth == null || auth.getName() == null) return ResponseEntity.status(401).body("No autenticado");
+        User user = userService.findByEmail(auth.getName());
+        if (user == null) return ResponseEntity.status(401).body("Usuario no encontrado");
+        if (!com.sharemechat.constants.Constants.Roles.MASTER.equals(user.getRole())) {
+            return ResponseEntity.status(403).body(Map.of("error", "Requiere rol MASTER"));
+        }
+        try {
+            return ResponseEntity.ok(payoutMethodService.create(user.getId(), body));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        }
+    }
+
+    @org.springframework.web.bind.annotation.PatchMapping("/me/payout-methods/{id}")
+    public ResponseEntity<?> updatePayoutMethod(@org.springframework.web.bind.annotation.PathVariable Long id,
+                                                 @RequestBody @Valid PayoutMethodRequestDTO body,
+                                                 Authentication auth) {
+        if (auth == null || auth.getName() == null) return ResponseEntity.status(401).body("No autenticado");
+        User user = userService.findByEmail(auth.getName());
+        if (user == null) return ResponseEntity.status(401).body("Usuario no encontrado");
+        if (!com.sharemechat.constants.Constants.Roles.MASTER.equals(user.getRole())) {
+            return ResponseEntity.status(403).body(Map.of("error", "Requiere rol MASTER"));
+        }
+        try {
+            return ResponseEntity.ok(payoutMethodService.update(user.getId(), id, body));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        }
+    }
+
+    @org.springframework.web.bind.annotation.PatchMapping("/me/payout-methods/{id}/default")
+    public ResponseEntity<?> setDefaultPayoutMethod(@org.springframework.web.bind.annotation.PathVariable Long id,
+                                                     Authentication auth) {
+        if (auth == null || auth.getName() == null) return ResponseEntity.status(401).body("No autenticado");
+        User user = userService.findByEmail(auth.getName());
+        if (user == null) return ResponseEntity.status(401).body("Usuario no encontrado");
+        if (!com.sharemechat.constants.Constants.Roles.MASTER.equals(user.getRole())) {
+            return ResponseEntity.status(403).body(Map.of("error", "Requiere rol MASTER"));
+        }
+        try {
+            return ResponseEntity.ok(payoutMethodService.setDefault(user.getId(), id));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        }
+    }
+
+    @org.springframework.web.bind.annotation.DeleteMapping("/me/payout-methods/{id}")
+    public ResponseEntity<?> deletePayoutMethod(@org.springframework.web.bind.annotation.PathVariable Long id,
+                                                 Authentication auth) {
+        if (auth == null || auth.getName() == null) return ResponseEntity.status(401).body("No autenticado");
+        User user = userService.findByEmail(auth.getName());
+        if (user == null) return ResponseEntity.status(401).body("Usuario no encontrado");
+        if (!com.sharemechat.constants.Constants.Roles.MASTER.equals(user.getRole())) {
+            return ResponseEntity.status(403).body(Map.of("error", "Requiere rol MASTER"));
+        }
+        try {
+            payoutMethodService.delete(user.getId(), id);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        }
     }
 
     // ============================================================
