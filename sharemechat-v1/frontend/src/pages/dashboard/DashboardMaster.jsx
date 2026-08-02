@@ -10,6 +10,7 @@ import { useAppModals } from '../../components/useAppModals';
 import NavbarMaster from '../../components/navbar/NavbarMaster';
 import MasterModelosPanel from '../../components/master/MasterModelosPanel';
 import MasterHistorialPanel from '../../components/master/MasterHistorialPanel';
+import MasterPayoutPanel from '../../components/master/MasterPayoutPanel';
 import masterApi from '../../api/masterApi';
 
 // ============================================================
@@ -380,11 +381,7 @@ export default function DashboardMaster() {
 
         {activeTab === 'historial' && <MasterHistorialPanel />}
 
-        {activeTab === 'payout' && (
-          <div style={TabPlaceholder}>
-            <p>{i18n.t('masterDashboard.placeholders.payout')}</p>
-          </div>
-        )}
+        {activeTab === 'payout' && <MasterPayoutPanel />}
       </div>
     </div>
   );

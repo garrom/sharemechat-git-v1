@@ -3858,6 +3858,44 @@
     "placeholders": {
       "payout": "Solicitud de retiro multi-canal — se activa en la próxima entrega."
     },
+    "payout": {
+      "balance": {
+        "title": "Saldo disponible",
+        "subtitle": "Este es el importe que puedes solicitar como retiro.",
+        "available": "Disponible",
+        "hint": "Retiro mínimo por solicitud: {{min}}. Máximo por solicitud: {{max}}. Los retiros los procesa el equipo manualmente hasta que se activen los canales automatizados."
+      },
+      "form": {
+        "title": "Solicitar retiro",
+        "subtitle": "Indica el importe y el canal preferido. Un agente revisará la solicitud.",
+        "amount": {
+          "label": "Importe (EUR)",
+          "help": "Entre {{min}} y {{max}}."
+        },
+        "channel": {
+          "label": "Canal preferido",
+          "help": "Referencia comercial. El canal real se confirma con el equipo al procesar la solicitud.",
+          "options": {
+            "paxum": "Paxum",
+            "yoursafe": "Yoursafe",
+            "crypto": "Criptomonedas (NOWPayments)",
+            "sepa": "Transferencia SEPA manual"
+          }
+        },
+        "description": {
+          "label": "Notas para el equipo (opcional)",
+          "placeholder": "Añade cualquier referencia útil (nº factura, cuenta destino, etc.).",
+          "help": "{{chars}}/500 caracteres."
+        },
+        "submit": "Solicitar retiro",
+        "submitting": "Enviando…",
+        "successBody": "Solicitud registrada por {{amount}} {{id}}. El equipo revisará la operación y te confirmará por email."
+      },
+      "errors": {
+        "loadBalance": "No se pudo cargar el saldo disponible.",
+        "submit": "No se pudo registrar la solicitud. Revisa el importe y vuelve a intentarlo."
+      }
+    },
     "historial": {
       "title": "Historial de movimientos",
       "subtitle": "Ingresos por streaming y retiros solicitados de tu cuenta Master.",

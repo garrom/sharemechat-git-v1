@@ -3858,6 +3858,44 @@
     "placeholders": {
       "payout": "Multi-channel payout request — ships in the next iteration."
     },
+    "payout": {
+      "balance": {
+        "title": "Available balance",
+        "subtitle": "This is the amount you can request as a payout.",
+        "available": "Available",
+        "hint": "Minimum per request: {{min}}. Maximum per request: {{max}}. Payouts are processed manually by the team until automated channels go live."
+      },
+      "form": {
+        "title": "Request payout",
+        "subtitle": "Enter the amount and preferred channel. An agent will review the request.",
+        "amount": {
+          "label": "Amount (EUR)",
+          "help": "Between {{min}} and {{max}}."
+        },
+        "channel": {
+          "label": "Preferred channel",
+          "help": "Commercial reference. The actual channel is confirmed with the team when processing the request.",
+          "options": {
+            "paxum": "Paxum",
+            "yoursafe": "Yoursafe",
+            "crypto": "Crypto (NOWPayments)",
+            "sepa": "SEPA manual transfer"
+          }
+        },
+        "description": {
+          "label": "Notes for the team (optional)",
+          "placeholder": "Add any useful reference (invoice number, target account, etc.).",
+          "help": "{{chars}}/500 characters."
+        },
+        "submit": "Request payout",
+        "submitting": "Submitting…",
+        "successBody": "Request registered for {{amount}} {{id}}. The team will review the operation and confirm by email."
+      },
+      "errors": {
+        "loadBalance": "Could not load available balance.",
+        "submit": "Could not register the request. Check the amount and try again."
+      }
+    },
     "historial": {
       "title": "Transaction history",
       "subtitle": "Streaming income and payout requests from your Master account.",
