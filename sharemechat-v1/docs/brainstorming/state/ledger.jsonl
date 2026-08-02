@@ -85,3 +85,6 @@
 {"c":14,"t":"src","id":"S0018","u":"vias conexion GA4: MCP oficial Google / Data API script / paste; provision + caveat 90% Direct"}
 {"c":14,"t":"req","id":"R0008","k":"api","note":"conectar GA4 read-only; checklist provision + property ID + filtro trafico interno"}
 {"c":14,"t":"halt","note":"investigacion GA4 reportada; conexion util a montar YA, lectura util al llegar trafico; provision = operador"}
+{"c":15,"t":"src","id":"S0019","u":"GA4 conectado read-only: propiedad 525890409, ADC own-oauth-client, runReport OK"}
+{"c":15,"t":"resolve","id":"R0008","r":"GA4 conectado y verificado (snapshot 28d leido); pendiente filtro trafico interno operador"}
+{"c":15,"t":"note","note":"snapshot GA4 28d: Direct 174, Referral 137(solo 19u, sospecha bot), Organic 20; Direct contamina -> filtro IP pendiente"}
