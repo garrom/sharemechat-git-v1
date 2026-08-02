@@ -81,3 +81,7 @@
 {"c":13,"t":"fix","id":"A0001","r":"pago: principal sera tarjeta (S0016), no cripto"}
 {"c":13,"t":"blocker","note":"desplegar main a PROD para atribucion arrastraria Master Studio (V42/V43) -> se lia PROD. Camino minimo: deploy FRONT-only quirurgico de capa A sobre a7d18a1. Decide/ejecuta operador"}
 {"c":13,"t":"halt","note":"investigacion reportada; riesgo deploy confirmado y documentado; nada que ejecutar (frontera IA)"}
+{"c":14,"t":"input","src":"operator 2026-08-02: nivelaran+desplegaran seed a PROD hoy; trabajar en enchufar GA4"}
+{"c":14,"t":"src","id":"S0018","u":"vias conexion GA4: MCP oficial Google / Data API script / paste; provision + caveat 90% Direct"}
+{"c":14,"t":"req","id":"R0008","k":"api","note":"conectar GA4 read-only; checklist provision + property ID + filtro trafico interno"}
+{"c":14,"t":"halt","note":"investigacion GA4 reportada; conexion util a montar YA, lectura util al llegar trafico; provision = operador"}
