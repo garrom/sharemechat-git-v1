@@ -75,3 +75,9 @@
 {"c":12,"t":"rescore","id":"H0003","r":"reach 3->2, conf 0.58->0.50: canal directorios mas fino (solo alternativeto.net, con caution) + medicion bloqueada por capa A no desplegada"}
 {"c":12,"t":"blocker","note":"E0001/E0003 solo miden clics UTM hasta que se despliegue capa A (merge 08a4c07 a main + deploy PROD)"}
 {"c":12,"t":"halt","note":"investigacion reportada; correcciones aplicadas; sigue blocked+plateau + nuevo bloqueante capa-A-deploy"}
+{"c":13,"t":"input","src":"operator 2026-08-02: correccion pago (tarjeta principal) + investigar riesgo deploy"}
+{"c":13,"t":"src","id":"S0016","u":"operator: metodo pago PRINCIPAL = tarjeta Visa/MC (>80%), no cripto; repo pendiente"}
+{"c":13,"t":"src","id":"S0017","u":"riesgo deploy: PROD 92 commits tras main; capa A/B entrelazadas con Master Studio (V42/V43/V44); nivelacion controlada TEST->AUDIT->PROD"}
+{"c":13,"t":"fix","id":"A0001","r":"pago: principal sera tarjeta (S0016), no cripto"}
+{"c":13,"t":"blocker","note":"desplegar main a PROD para atribucion arrastraria Master Studio (V42/V43) -> se lia PROD. Camino minimo: deploy FRONT-only quirurgico de capa A sobre a7d18a1. Decide/ejecuta operador"}
+{"c":13,"t":"halt","note":"investigacion reportada; riesgo deploy confirmado y documentado; nada que ejecutar (frontera IA)"}

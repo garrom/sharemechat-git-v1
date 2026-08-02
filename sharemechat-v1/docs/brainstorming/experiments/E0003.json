@@ -4,4 +4,4 @@
 "ceiling":"REGLA DURA (S0008): signups waitlist = senal de canal, no validacion de negocio; conf(H0005) NO supera ~0.60 con datos de waitlist.",
 "steps":["cuenta Quora bio honesta","16 preguntas del cluster (real cam sites, Omegle alternative that works, are cam girls real or bots)","2 respuestas utiles/semana, mencion soft solo donde aporta, ~1 de cada 3-4 con link","medir views+clics UTM a 8 semanas + signups si capa A activa"],
 "exec":"lo lanza el operador (cuenta Quora = accion humana); la IA solo prepara",
-"blocker_medicion":"S0014: capa A NO desplegada en PROD (commit 08a4c07 fuera de main y del bundle vivo). Hasta merge+deploy, E0003 solo mide clics UTM en GA4, NO signups atribuidos."}
+"blocker_medicion":"S0014+S0017: capa A NO desplegada en PROD y entrelazada con batch Master Studio en main (V42/V43). Camino minimo para medir signups = deploy FRONT-only quirurgico de capa A sobre a7d18a1 (sin migracion, sin Master). Decide/ejecuta el operador. Mientras tanto E0003 solo mide clics UTM."}
