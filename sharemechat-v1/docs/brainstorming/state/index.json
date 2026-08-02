@@ -4,10 +4,10 @@
 "formula": "score=(reach+conv+brand+(5-eff)+(5-ban))*conf",
 "rank": [
 "H0002",
-"H0003",
 "H0001",
 "H0011",
 "H0014",
+"H0003",
 "H0005",
 "H0006",
 "H0004",
@@ -25,7 +25,7 @@
 },
 "H0003": {
 "st": "recommended",
-"score": 10.44,
+"score": 8.5,
 "ch": "review-dir",
 "f": true,
 "exp": [
@@ -114,5 +114,7 @@
 }
 },
 "ceiling_note": "conf<=0.60 aunque lleguen datos: signups waitlist=senal de canal, no validacion de negocio (S0008)",
-"policy": "H0014 early-access framing = politica por defecto mientras PROD en PRELAUNCH"
+"policy": "H0014 early-access framing = politica por defecto mientras PROD en PRELAUNCH",
+"fact_correction": "S0013: cripto NOWPayments integrado+activo en PROD (2026-07-17); tarjeta NO integrada. Corrige asuncion previa 'cripto no integrado'.",
+"blocker_capaA": "S0014: capa A atribucion NO desplegada en PROD (08a4c07 fuera de main/bundle); E0001/E0003 solo miden clics hasta merge+deploy."
 }

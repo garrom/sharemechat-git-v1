@@ -67,3 +67,11 @@
 {"c":11,"t":"approve","id":"E0003","st":"approved","note":"go, lo ejecuta el operador"}
 {"c":11,"t":"rule","note":"TECHO conf<=0.60 aunque lleguen datos: signups waitlist = senal de canal, no validacion de negocio (S0008). conf>0.60 solo con revenue post-lanzamiento"}
 {"c":11,"t":"halt","note":"blocked+plateau: E0001/E0003 aprobados esperando ejecucion del operador + capa A; nada mas que razonar productivamente hasta que vuelvan datos"}
+{"c":12,"t":"input","src":"investigacion operador 2026-07-31 (3 tareas read-only)"}
+{"c":12,"t":"src","id":"S0013","u":"negocio real: cripto NOWPayments LIVE, tarjeta no, wallet/packs, trial, revshare 75-79, KYC Didit, afiliados retirado"}
+{"c":12,"t":"src","id":"S0014","u":"capa A NO desplegada en PROD (08a4c07 fuera de main/bundle)"}
+{"c":12,"t":"src","id":"S0015","u":"auditoria directorios: solo alternativeto.net viable (caution)"}
+{"c":12,"t":"fix","id":"A0001","r":"corregido claim pago: cripto NOWPayments SI integrado en PROD; tarjeta NO. Versiones previas imprecisas"}
+{"c":12,"t":"rescore","id":"H0003","r":"reach 3->2, conf 0.58->0.50: canal directorios mas fino (solo alternativeto.net, con caution) + medicion bloqueada por capa A no desplegada"}
+{"c":12,"t":"blocker","note":"E0001/E0003 solo miden clics UTM hasta que se despliegue capa A (merge 08a4c07 a main + deploy PROD)"}
+{"c":12,"t":"halt","note":"investigacion reportada; correcciones aplicadas; sigue blocked+plateau + nuevo bloqueante capa-A-deploy"}

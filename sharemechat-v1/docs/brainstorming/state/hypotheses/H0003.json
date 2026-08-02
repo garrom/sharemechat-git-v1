@@ -1,7 +1,8 @@
 {"id":"H0003","cyc":1,"cyl":1,"ch":"review-dir","th":"Listar SharemeChat en directorios crowd-sourced client-facing (alternativeto.net cat. Omegle/LuckyCrush/random-video-chat + similares free) capta clientes en modo comparacion, coste 0, longevo",
 "as":["clientes usan estos directorios para elegir alternativa","el listado sobrevive meses/anios generando referral pasivo","aprobacion no bloquea por ser adult (categoria ya existe)"],
-"pv":[{"p":"src","s":"S0001"},{"p":"src","s":"S0005"}],
+"pv":[{"p":"src","s":"S0001"},{"p":"src","s":"S0005"},{"p":"src","s":"S0015"}],
+"downgrade":"2026-07-31 (S0015): reach bajado 3->2. La auditoria revela canal mas fino de lo asumido: solo alternativeto.net es free+client-facing+adult-tolerante (con framing SFW y riesgo de rechazo por su regla anti-porn); SaaSHub/ProductHunt NO-GO por audiencia B2B/tech; directorios adult pay-to-play. Ademas medicion clic->signup bloqueada hasta desplegar capa A (S0014).",
 "ft":"Crear entry en alternativeto.net + 3 directorios free con UTM; medir referral clicks + signups atribuidos a 60d. Exito = >=20 clicks/mes agregados a los 60d",
 "cost":{"eur":0,"type":"none"},
-"sc":{"reach":3,"conv":3,"eff":1,"ban":1,"brand":4,"conf":0.58},
+"sc":{"reach":2,"conv":3,"eff":1,"ban":1,"brand":4,"conf":0.5},
 "st":"recommended","kr":"","par":"","exp":["E0001"]}
