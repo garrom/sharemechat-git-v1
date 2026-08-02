@@ -168,9 +168,12 @@ const DashboardAdmin = () => {
     canReviewComplaints: adminView || hasBackofficePermission(user, 'complaints.review'),
     canViewCompliance: adminView || auditView || hasBackofficePermission(user, 'compliance.dashboard_view'),
     // ADR-056 S7.a (2026-08-02): panel admin de Masters. Lectura para
-    // ADMIN + AUDIT (patrón simétrico a compliance). Suspensión (S7.b)
-    // exigirá permission dedicada.
+    // ADMIN + AUDIT (patrón simétrico a compliance).
     canViewMasters: adminView || auditView,
+    // ADR-056 S7.b (2026-08-02): suspender/reactivar Master es
+    // operación destructiva — solo ADMIN puro. AUDIT ve el panel pero
+    // no ejecuta.
+    canManageMasters: adminView,
     canViewStreams: adminView || hasBackofficePermission(user, 'streams.read_active'),
     canKillStreams: adminView,
     canViewDb: adminView,
@@ -219,6 +222,7 @@ const DashboardAdmin = () => {
       capabilities.canViewComplaints ? 'complaints' : null,
       capabilities.canViewCompliance ? 'compliance' : null,
       capabilities.canViewSupport ? 'support' : null,
+      capabilities.canViewMasters ? 'masters' : null,
       capabilities.canViewFinance ? 'finance' : null,
       capabilities.canRefund ? 'finance-adjustments' : null,
       capabilities.canViewAudit ? 'control' : null,
@@ -703,7 +707,7 @@ const DashboardAdmin = () => {
               title={t('admin.masters.title', { defaultValue: 'Masters (Estudios)' })}
               subtitle={t('admin.masters.subtitle', { defaultValue: 'Listado, onboarding y detalle de estudios' })}
             >
-              <AdminMastersPanel />
+              <AdminMastersPanel canManage={capabilities.canManageMasters} />
             </AdminPage>
           )}
 

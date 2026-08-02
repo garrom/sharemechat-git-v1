@@ -130,15 +130,14 @@ public class AdminController {
     public ResponseEntity<?> suspendMaster(@PathVariable Long userId,
                                             @RequestBody(required = false) MasterSuspendRequestBody body,
                                             Authentication auth) {
-        Long adminUserId = null;
-        try {
-            User admin = userService.findByEmail(auth.getName());
-            if (admin != null) adminUserId = admin.getId();
-        } catch (Exception ignore) {}
-
+        User admin = resolveAdminUser(auth);
+        if (admin == null) {
+            return ResponseEntity.status(403).body(Map.of(
+                    "error", "Solo un ADMIN puede suspender un Master"));
+        }
         String reason = body != null ? body.reason : null;
         try {
-            masterSuspensionService.suspend(userId, adminUserId, reason);
+            masterSuspensionService.suspend(userId, admin.getId(), reason);
             return ResponseEntity.ok(Map.of("status", "suspended"));
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(404).body(Map.of("error", ex.getMessage()));
@@ -147,17 +146,33 @@ public class AdminController {
 
     @PostMapping("/masters/{userId}/reactivate")
     public ResponseEntity<?> reactivateMaster(@PathVariable Long userId, Authentication auth) {
-        Long adminUserId = null;
+        User admin = resolveAdminUser(auth);
+        if (admin == null) {
+            return ResponseEntity.status(403).body(Map.of(
+                    "error", "Solo un ADMIN puede reactivar un Master"));
+        }
         try {
-            User admin = userService.findByEmail(auth.getName());
-            if (admin != null) adminUserId = admin.getId();
-        } catch (Exception ignore) {}
-
-        try {
-            masterSuspensionService.reactivate(userId, adminUserId);
+            masterSuspensionService.reactivate(userId, admin.getId());
             return ResponseEntity.ok(Map.of("status", "active"));
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(404).body(Map.of("error", ex.getMessage()));
+        }
+    }
+
+    /**
+     * Devuelve el User autenticado solo si tiene role=ADMIN puro. AUDIT
+     * y SUPPORT del backoffice ven el panel Masters pero no pueden
+     * ejecutar acciones destructivas (S7.b hotfix, 2026-08-02).
+     */
+    private User resolveAdminUser(Authentication auth) {
+        if (auth == null || auth.getName() == null) return null;
+        try {
+            User u = userService.findByEmail(auth.getName());
+            if (u == null) return null;
+            if (!Constants.Roles.ADMIN.equals(u.getRole())) return null;
+            return u;
+        } catch (Exception ex) {
+            return null;
         }
     }
 

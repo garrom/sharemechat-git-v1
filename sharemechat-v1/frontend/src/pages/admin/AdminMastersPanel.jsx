@@ -78,7 +78,7 @@ const kycBadge = (status) => {
 // ============================================================
 // Componente principal
 // ============================================================
-export default function AdminMastersPanel() {
+export default function AdminMastersPanel({ canManage = false }) {
   // Filtros aplicados
   const [q, setQ] = useState('');
   const [kycStatus, setKycStatus] = useState('');
@@ -379,7 +379,7 @@ export default function AdminMastersPanel() {
               )}
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              {detail?.master && !detail.master.suspendedAt && (
+              {canManage && detail?.master && !detail.master.suspendedAt && (
                 <button
                   type="button"
                   style={{ ...BtnSecondary, borderColor: '#dc2626', color: '#dc2626' }}
@@ -388,7 +388,7 @@ export default function AdminMastersPanel() {
                   {t('admin.masters.actions.suspend', { defaultValue: 'Suspender' })}
                 </button>
               )}
-              {detail?.master && detail.master.suspendedAt && (
+              {canManage && detail?.master && detail.master.suspendedAt && (
                 <button
                   type="button"
                   style={{ ...BtnSecondary, borderColor: '#16a34a', color: '#16a34a' }}
