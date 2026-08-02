@@ -110,7 +110,9 @@ export default function MasterPayoutPanel() {
   useEffect(() => { loadBalance(); }, [loadBalance]);
 
   const amountNum = Number(amount);
-  const amountValid = Number.isFinite(amountNum)
+  // Iter S5.a.8b (2026-08-02): solo importes enteros por decisión de
+  // producto. `Number.isInteger` rechaza 100.5, 100.01, NaN, Infinity.
+  const amountValid = Number.isInteger(amountNum)
     && amountNum >= MIN_PAYOUT
     && amountNum <= MAX_PAYOUT
     && balance != null
@@ -216,12 +218,12 @@ export default function MasterPayoutPanel() {
             <input
               id="payout-amount"
               type="number"
-              step="0.01"
+              step="1"
               min={MIN_PAYOUT}
               max={MAX_PAYOUT}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              placeholder={t('masterDashboard.payout.form.amount.placeholder', { min: MIN_PAYOUT })}
+              placeholder={t('masterDashboard.payout.form.amount.placeholder')}
               className="mp-input"
               style={Input}
               disabled={submitting || loading}

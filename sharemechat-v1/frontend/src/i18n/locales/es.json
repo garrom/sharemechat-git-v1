@@ -3870,8 +3870,8 @@
         "subtitle": "Indica el importe y el canal preferido. Un agente revisará la solicitud.",
         "amount": {
           "label": "Importe (EUR)",
-          "placeholder": "ej. {{min}}",
-          "help": "Entre {{min}} y {{max}}."
+          "placeholder": "Introduce un importe",
+          "help": "Entre {{min}} y {{max}}. Solo importes enteros."
         },
         "channel": {
           "label": "Canal preferido",

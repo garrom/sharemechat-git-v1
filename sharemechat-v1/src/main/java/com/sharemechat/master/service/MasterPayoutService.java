@@ -66,7 +66,17 @@ public class MasterPayoutService {
             throw new IllegalArgumentException("El importe debe ser mayor a cero");
         }
 
-        BigDecimal amountAbs = dto.getAmount().setScale(2, RoundingMode.HALF_UP);
+        // Iter S5.a.8b (2026-08-02): solo importes enteros. Rechazo defensivo
+        // por si un cliente bypaseara el step=1 del frontend. Compara la
+        // parte decimal contra ZERO en escala 2 (equivalente a "no tiene
+        // céntimos"). Si BigDecimal("100.50") entra, stripTrailingZeros +
+        // scale > 0 → rechazo.
+        BigDecimal raw = dto.getAmount();
+        if (raw.stripTrailingZeros().scale() > 0) {
+            throw new IllegalArgumentException("Solo se aceptan importes enteros (sin céntimos)");
+        }
+
+        BigDecimal amountAbs = raw.setScale(2, RoundingMode.HALF_UP);
         if (amountAbs.compareTo(MIN_PAYOUT_EUR) < 0) {
             throw new IllegalArgumentException("El retiro minimo es de 100 EUR");
         }
