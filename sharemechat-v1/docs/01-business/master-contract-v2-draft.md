@@ -50,8 +50,7 @@ A efectos del presente contrato:
 - Representación: los administradores de la sociedad según registro mercantil vigente.
 - Contactos operativos:
   - General: `operations@sharemechat.com`.
-  - Protección de datos: `privacy@sharemechat.com`.
-  - Cumplimiento AML: `compliance@sharemechat.com`.
+  - Notificaciones legales, protección de datos (RGPD), DPO y cumplimiento AML: `legal@sharemechat.com`.
 
 **Parte B — Master**:
 - Persona física identificada mediante KYC del proveedor Didit.
@@ -203,11 +202,11 @@ Al momento de la aceptación del presente contrato, la tabla vigente es la que s
 
 9.6. **Transferencias internacionales**: los proveedores utilizados por SharemeChat para procesar datos personales están ubicados en la Unión Europea o en países con decisión de adecuación de la Comisión Europea. Cuando en el futuro sea necesario recurrir a proveedores en países terceros sin decisión de adecuación, se articularán mecanismos válidos conforme al Capítulo V RGPD (Cláusulas Contractuales Tipo, Reglas Corporativas Vinculantes, etc.), notificándolo al Master.
 
-9.7. **Delegado de Protección de Datos (DPO)**: SharemeChat ha designado un Delegado de Protección de Datos, dado el tratamiento a gran escala de datos biométricos (Art. 37.1.b RGPD). Contacto: `dpo@sharemechat.com`.
+9.7. **Delegado de Protección de Datos (DPO)**: SharemeChat ha designado un Delegado de Protección de Datos, dado el tratamiento a gran escala de datos biométricos (Art. 37.1.b RGPD). Contacto: `legal@sharemechat.com`.
 
 9.8. **Derechos del interesado**: el Master conserva los derechos que le reconoce el RGPD:
 - Acceso (art. 15), rectificación (art. 16), supresión (art. 17), oposición (art. 21), portabilidad (art. 20), limitación (art. 18).
-- Ejercicio: mediante escrito a `privacy@sharemechat.com`. SharemeChat responderá en el **plazo máximo de 30 días naturales**, prorrogable en dos meses adicionales cuando la solicitud sea compleja (art. 12.3 RGPD), notificándolo al Master.
+- Ejercicio: mediante escrito a `legal@sharemechat.com`. SharemeChat responderá en el **plazo máximo de 30 días naturales**, prorrogable en dos meses adicionales cuando la solicitud sea compleja (art. 12.3 RGPD), notificándolo al Master.
 - **Reclamación ante Autoridad de Control**: si el Master considera vulnerados sus derechos, puede presentar reclamación ante la Autoridad de Protección de Datos de Estonia (Andmekaitse Inspektsioon, `aki.ee`) o, alternativamente, ante la autoridad de control del Estado miembro de su residencia habitual.
 
 9.9. **Conservación**: SharemeChat conserva los datos personales del Master y de la aceptación del presente contrato durante el tiempo de vigencia de la relación contractual **y los plazos exigidos por normativa fiscal, contable y AML aplicable** (mínimo 10 años tras el fin de la relación para obligaciones AML de Estonia). Transcurrido el plazo, los datos se suprimen o anonimizan.
