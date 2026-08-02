@@ -163,6 +163,10 @@ class MasterModelInvitationServiceTest {
         CreateMasterModelRequestDTO dto = new CreateMasterModelRequestDTO();
         dto.setModelEmail("modelo@example.com");
         dto.setModelNickname("existente");
+        // ADR-056 Opción D (commit d21db3b): pacto obligatorio al invitar.
+        // Sin este set, el servicio lanza IllegalArgumentException antes
+        // de llegar al check de nickname.
+        dto.setInitialInternalSharePct(new BigDecimal("20"));
         when(userRepository.findByEmail("modelo@example.com")).thenReturn(Optional.empty());
         when(userRepository.existsByNickname("existente")).thenReturn(true);
 
