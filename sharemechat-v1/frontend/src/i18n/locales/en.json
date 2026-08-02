@@ -3304,6 +3304,73 @@
         "actionFailed": "Failed to execute action"
       }
     },
+    "masters": {
+      "title": "Masters (Studios)",
+      "subtitle": "List, onboarding and detail of registered studios",
+      "sidebar": {
+        "label": "Masters",
+        "meta": "Studios and models under their account"
+      },
+      "list": {
+        "title": "Registered studios",
+        "subtitle": "Filter by onboarding status to focus the work.",
+        "count": "{{n}} studios",
+        "empty": "No studios match the applied filters."
+      },
+      "filters": {
+        "search": "Search",
+        "searchPlaceholder": "Enter email, nickname or company",
+        "kyc": "KYC",
+        "emailVerified": "Email verified",
+        "contract": "Contract",
+        "pageSize": "Page",
+        "all": "All",
+        "apply": "Apply"
+      },
+      "cols": {
+        "id": "ID",
+        "nickname": "Nickname",
+        "email": "Email",
+        "company": "Company",
+        "emailVerified": "Email",
+        "kyc": "KYC",
+        "contract": "Contract",
+        "balance": "Balance",
+        "models": "Models",
+        "actions": "Actions"
+      },
+      "actions": {
+        "viewDetail": "View detail"
+      },
+      "pagination": {
+        "info": "Page {{page}} of {{totalPages}} · {{total}} studios"
+      },
+      "detail": {
+        "title": "Master detail",
+        "modelsTitle": "Models under this account",
+        "modelsEmpty": "No models registered under this Master yet."
+      },
+      "kpi": {
+        "balance": "Current balance",
+        "billed30d": "Billed 30d",
+        "payouts30d": "Payouts 30d",
+        "totalPaidOut": "Total paid out",
+        "modelsActive": "Active models",
+        "onboardedAt": "Onboarded"
+      },
+      "modelsCols": {
+        "id": "ID",
+        "nickname": "Nickname",
+        "kyc": "KYC",
+        "internalShare": "% agreed",
+        "rate": "Rate €/min",
+        "createdAt": "Registered"
+      },
+      "errors": {
+        "load": "Could not load studios list.",
+        "loadDetail": "Could not load studio detail."
+      }
+    },
     "support": {
       "title": "Support",
       "subtitle": "Escalated conversations and service identities",

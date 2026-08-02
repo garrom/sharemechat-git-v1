@@ -22,4 +22,10 @@ public interface ModelRepository extends JpaRepository<Model, Long> {
         "SELECT m.masterUserId FROM Model m WHERE m.userId = :modelUserId")
     Optional<Long> findMasterUserIdByModelUserId(
         @org.springframework.data.repository.query.Param("modelUserId") Long modelUserId);
+
+    /**
+     * ADR-056 S7.a: listado de modelos bajo la umbrella de un Master.
+     * Usado en el drill-down admin.
+     */
+    java.util.List<Model> findAllByMasterUserIdOrderByUserIdAsc(Long masterUserId);
 }

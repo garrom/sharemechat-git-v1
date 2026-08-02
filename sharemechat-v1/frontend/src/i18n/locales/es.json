@@ -3304,6 +3304,73 @@
         "actionFailed": "Error al ejecutar la acción"
       }
     },
+    "masters": {
+      "title": "Masters (Estudios)",
+      "subtitle": "Listado, onboarding y detalle de estudios registrados",
+      "sidebar": {
+        "label": "Masters",
+        "meta": "Estudios y modelos bajo su cuenta"
+      },
+      "list": {
+        "title": "Estudios registrados",
+        "subtitle": "Filtra por estado de onboarding para focalizar el trabajo.",
+        "count": "{{n}} estudios",
+        "empty": "No hay estudios con los filtros aplicados."
+      },
+      "filters": {
+        "search": "Buscar",
+        "searchPlaceholder": "Introduce email, nickname o empresa",
+        "kyc": "KYC",
+        "emailVerified": "Email verificado",
+        "contract": "Contrato",
+        "pageSize": "Página",
+        "all": "Todos",
+        "apply": "Aplicar"
+      },
+      "cols": {
+        "id": "ID",
+        "nickname": "Nickname",
+        "email": "Email",
+        "company": "Empresa",
+        "emailVerified": "Email",
+        "kyc": "KYC",
+        "contract": "Contrato",
+        "balance": "Saldo",
+        "models": "Modelos",
+        "actions": "Acciones"
+      },
+      "actions": {
+        "viewDetail": "Ver detalle"
+      },
+      "pagination": {
+        "info": "Página {{page}} de {{totalPages}} · {{total}} estudios"
+      },
+      "detail": {
+        "title": "Detalle del Master",
+        "modelsTitle": "Modelos bajo esta cuenta",
+        "modelsEmpty": "Sin modelos registradas todavía bajo este Master."
+      },
+      "kpi": {
+        "balance": "Saldo actual",
+        "billed30d": "Facturado 30d",
+        "payouts30d": "Payouts 30d",
+        "totalPaidOut": "Total pagado",
+        "modelsActive": "Modelos activas",
+        "onboardedAt": "Alta"
+      },
+      "modelsCols": {
+        "id": "ID",
+        "nickname": "Nickname",
+        "kyc": "KYC",
+        "internalShare": "% pactado",
+        "rate": "Tarifa €/min",
+        "createdAt": "Alta"
+      },
+      "errors": {
+        "load": "No se pudo cargar el listado de estudios.",
+        "loadDetail": "No se pudo cargar el detalle del estudio."
+      }
+    },
     "support": {
       "title": "Soporte",
       "subtitle": "Conversaciones escaladas e identidades de servicio",

@@ -51,6 +51,8 @@ public class AdminController {
     private final TransactionService transactionService;
     // Politica cuentas dormidas (2026-07-23): endpoint reactivate.
     private final com.sharemechat.service.AccountDormancyService dormancyService;
+    // ADR-056 S7.a (2026-08-02): panel admin de Masters (listado + detalle).
+    private final com.sharemechat.master.service.AdminMasterService adminMasterService;
 
     public AdminController(
             AdminService adminService,
@@ -64,7 +66,8 @@ public class AdminController {
             MessagesWsHandler messagesWsHandler,
             PayoutRequestRepository payoutRequestRepository,
             TransactionService transactionService,
-            com.sharemechat.service.AccountDormancyService dormancyService
+            com.sharemechat.service.AccountDormancyService dormancyService,
+            com.sharemechat.master.service.AdminMasterService adminMasterService
     ) {
         this.adminService = adminService;
         this.backofficeAccessService = backofficeAccessService;
@@ -78,6 +81,32 @@ public class AdminController {
         this.payoutRequestRepository = payoutRequestRepository;
         this.transactionService = transactionService;
         this.dormancyService = dormancyService;
+        this.adminMasterService = adminMasterService;
+    }
+
+    // ============================================================
+    // ADR-056 S7.a: panel admin Masters (listado + detalle drill-down)
+    // ============================================================
+
+    @GetMapping("/masters")
+    public ResponseEntity<Map<String, Object>> listMasters(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String kycStatus,
+            @RequestParam(required = false) Boolean emailVerified,
+            @RequestParam(required = false) Boolean contractAccepted) {
+        return ResponseEntity.ok(adminMasterService.listMasters(
+                page, size, q, kycStatus, emailVerified, contractAccepted));
+    }
+
+    @GetMapping("/masters/{userId}")
+    public ResponseEntity<?> getMasterDetail(@PathVariable Long userId) {
+        try {
+            return ResponseEntity.ok(adminMasterService.getDetail(userId));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(404).body(Map.of("error", ex.getMessage()));
+        }
     }
 
     /**

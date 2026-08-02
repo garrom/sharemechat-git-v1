@@ -22,6 +22,7 @@ import AdminProfilePage from './AdminProfilePage';
 import AdminStatsPanel from './AdminStatsPanel';
 import AdminSupportPanel from './AdminSupportPanel';
 import AdminContentPanel from './content/AdminContentPanel';
+import AdminMastersPanel from './AdminMastersPanel';
 import useSupportPendingCount from '../../hooks/useSupportPendingCount';
 import AdminLayout from './components/AdminLayout';
 import AdminPage from './components/AdminPage';
@@ -120,6 +121,10 @@ const DashboardAdmin = () => {
       title: t('admin.support.title', { defaultValue: 'Support' }),
       subtitle: t('admin.support.subtitle', { defaultValue: 'Escalated conversations and service profiles' }),
     },
+    masters: {
+      title: t('admin.masters.title', { defaultValue: 'Masters (Estudios)' }),
+      subtitle: t('admin.masters.subtitle', { defaultValue: 'Listado, onboarding y detalle de estudios' }),
+    },
     profile: {
       title: t('admin.shell.views.profile.title'),
       subtitle: t('admin.shell.views.profile.subtitle'),
@@ -162,6 +167,10 @@ const DashboardAdmin = () => {
     canViewComplaints: adminView || hasBackofficePermission(user, 'complaints.read_list'),
     canReviewComplaints: adminView || hasBackofficePermission(user, 'complaints.review'),
     canViewCompliance: adminView || auditView || hasBackofficePermission(user, 'compliance.dashboard_view'),
+    // ADR-056 S7.a (2026-08-02): panel admin de Masters. Lectura para
+    // ADMIN + AUDIT (patrón simétrico a compliance). Suspensión (S7.b)
+    // exigirá permission dedicada.
+    canViewMasters: adminView || auditView,
     canViewStreams: adminView || hasBackofficePermission(user, 'streams.read_active'),
     canKillStreams: adminView,
     canViewDb: adminView,
@@ -321,6 +330,11 @@ const DashboardAdmin = () => {
             label: t('admin.support.sidebar.label', { defaultValue: 'Support' }),
             meta: t('admin.support.sidebar.meta', { defaultValue: 'Human handling of escalated chats' }),
             badge: supportCounts.pendingUnassigned || 0,
+          } : null,
+          capabilities.canViewMasters ? {
+            key: 'masters',
+            label: t('admin.masters.sidebar.label', { defaultValue: 'Masters' }),
+            meta: t('admin.masters.sidebar.meta', { defaultValue: 'Estudios y modelos bajo su cuenta' }),
           } : null,
           capabilities.canViewFinance ? {
             key: 'finance',
@@ -681,6 +695,15 @@ const DashboardAdmin = () => {
               subtitle={t('admin.dashboard.pageSubtitles.content')}
             >
               <AdminContentPanel />
+            </AdminPage>
+          )}
+
+          {activeView === 'masters' && capabilities.canViewMasters && (
+            <AdminPage
+              title={t('admin.masters.title', { defaultValue: 'Masters (Estudios)' })}
+              subtitle={t('admin.masters.subtitle', { defaultValue: 'Listado, onboarding y detalle de estudios' })}
+            >
+              <AdminMastersPanel />
             </AdminPage>
           )}
 
