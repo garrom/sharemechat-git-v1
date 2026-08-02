@@ -1,0 +1,3 @@
+{"id":"E0002","h":"H0011","hyp":"Contenido SEO sobre age-verification (tailwind regulatorio) capta intencion de cliente emergente y poco competida","m":"impresiones + posicion media GSC del cluster 'age verified video chat'","thr":">=1 keyword del cluster en top-30 y >=50 impresiones/mes a 90d","cost":{"eur":0,"type":"none"},"st":"proposed","res":null,
+"steps":["generar 1 pillar via pipeline CMS existente (skills cms-*) con angulo 'age-verified 1-a-1: que significa la UK OSA para el usuario'","cluster de 2-3 articulos soporte (safe video chat, verified vs anonymous, legal adult chat UK)","publicar con internal linking correcto (evitar bug SEO conocido del pre-mortem)","medir GSC 90d"],
+"depends":["R0002"]}

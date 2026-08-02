@@ -1,0 +1,7 @@
+{"id":"H0010","cyc":1,"cyl":1,"ch":"chan-boards","th":"Presencia en 4chan /soc/ /b/ para captar consumidores adult-chat",
+"as":[],
+"pv":[{"p":"inf"}],
+"ft":"n/a - descartada",
+"cost":{"eur":0,"type":"none"},
+"sc":{"reach":2,"conv":1,"eff":3,"ban":4,"brand":1,"conf":0.2},
+"st":"killed","kr":"brand=1 y ban=4: entorno incompatible con marca KYC/compliance adult DSA; conversion basura, riesgo reputacional y de asociacion con contenido no moderado. Descartada sin experimento.","par":"","exp":[]}

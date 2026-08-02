@@ -1,0 +1,8 @@
+{"id":"H0002","cyc":1,"cyl":1,"ch":"content-usp","th":"Positioning 'modelos KYC-verificadas por documento+liveness, cero bots, cero catfish' ataca el dolor #1 del cliente de random video chat y es un multiplicador transversal de todos los canales",
+"as":["el dolor bots/fake/recordings es el principal freno de conversion del cliente","KYC real (Didit) es diferenciador defendible frente al 'video selfie badge' de competidores","el mensaje se puede inyectar en todo canal (landing, directorio, Quora, PR)"],
+"pv":[{"p":"src","s":"S0002"},{"p":"src","s":"S0003"}],
+"ft":"A/B del claim principal ('modelos verificadas por documento, cero bots' vs generico) en la primera superficie con trafico (landing o comentario Quora); medir CTR/signup-rate. Wedge, no canal: su test se acopla a H0003/H0005/H0011",
+"cost":{"eur":0,"type":"none"},
+"sc":{"reach":3,"conv":5,"eff":2,"ban":1,"brand":5,"conf":0.58},
+"decision":"2026-07-31: H0002 NO recibe experimento propio. Es la TESIS-MADRE (wedge de mensaje, reach=3 = multiplicador, no canal). Su test es intrinsecamente acoplado: no se puede probar 'el mensaje verificado/sin-bots convierte' sin un canal que lo transporte. Ya queda instanciada por E0001 (copy directorio), E0003 (respuestas Quora) y E0002 (contenido age-verified). Crear un experimento de 'contenido cornerstone' separado solo duplicaria la faceta de contenido de E0002. Su conf sube SOLO cuando esos experimentos devuelvan senal — y aun asi con tope <=0.60 mientras sea senal de canal/waitlist (S0008). Si E0001/E0003 muestran senal de canal, ENTONCES promover una landing cornerstone dedicada como experimento propio.",
+"st":"promoted","kr":"","par":"","exp":[]}

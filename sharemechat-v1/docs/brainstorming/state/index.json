@@ -1,0 +1,120 @@
+{
+"updated": "2026-07-31",
+"n": 14,
+"formula": "score=(reach+conv+brand+(5-eff)+(5-ban))*conf",
+"rank": [
+"H0002",
+"H0001",
+"H0011",
+"H0014",
+"H0003",
+"H0005",
+"H0006",
+"H0004",
+"H0013",
+"H0012",
+"H0007",
+"H0009"
+],
+"h": {
+"H0002": {
+"st": "promoted",
+"score": 11.6,
+"ch": "content-usp",
+"f": true
+},
+"H0003": {
+"st": "recommended",
+"score": 8.5,
+"ch": "review-dir",
+"f": true,
+"exp": [
+"E0001"
+]
+},
+"H0001": {
+"st": "promoted",
+"score": 9.35,
+"ch": "seo-alt-kw",
+"f": true
+},
+"H0011": {
+"st": "recommended",
+"score": 9.0,
+"ch": "seo-usp-timely",
+"f": true,
+"exp": [
+"E0002"
+]
+},
+"H0005": {
+"st": "recommended",
+"score": 7.0,
+"ch": "quora",
+"f": true,
+"exp": [
+"E0003"
+]
+},
+"H0013": {
+"st": "parked",
+"score": 5.1,
+"ch": "product-hook",
+"f": true,
+"par": "H0002"
+},
+"H0004": {
+"st": "parked",
+"score": 6.3,
+"ch": "listicle-outreach",
+"f": true
+},
+"H0006": {
+"st": "active",
+"score": 4.8,
+"ch": "crypto-niche",
+"f": true
+},
+"H0012": {
+"st": "parked",
+"score": 4.55,
+"ch": "partnership",
+"f": true
+},
+"H0009": {
+"st": "parked",
+"score": 3.0,
+"ch": "telegram",
+"f": true
+},
+"H0007": {
+"st": "parked",
+"score": 3.85,
+"ch": "x-nsfw",
+"f": true
+},
+"H0008": {
+"st": "killed",
+"score": null,
+"ch": "reddit-nsfw",
+"f": true
+},
+"H0010": {
+"st": "killed",
+"score": null,
+"ch": "chan-boards",
+"f": true
+},
+"H0014": {
+"st": "promoted",
+"score": 9.0,
+"ch": "funnel-framing",
+"f": true,
+"par": "H0002"
+}
+},
+"ceiling_note": "conf<=0.60 aunque lleguen datos: signups waitlist=senal de canal, no validacion de negocio (S0008)",
+"policy": "H0014 early-access framing = politica por defecto mientras PROD en PRELAUNCH",
+"fact_correction": "S0013: cripto NOWPayments integrado+activo en PROD (2026-07-17); tarjeta NO integrada. Corrige asuncion previa 'cripto no integrado'.",
+"blocker_capaA": "S0014: capa A atribucion NO desplegada en PROD (08a4c07 fuera de main/bundle); E0001/E0003 solo miden clics hasta merge+deploy."
+}

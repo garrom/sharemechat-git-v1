@@ -1,0 +1,7 @@
+{"id":"E0003","h":"H0005","hyp":"Respuestas utiles-primero en Quora al cluster 'bots/verificado' captan visitantes que se apuntan al early-access","m":"views de respuestas + clics UTM al sitio (GA4) + signups verificados atribuidos","thr":">=5 clics/8sem con >=16 respuestas publicadas; signups como senal secundaria","cost":{"eur":0,"type":"none"},"st":"approved","res":null,
+"framing":"EARLY-ACCESS (S0009): esqueleto A0002 v2, mencion soft = 'en acceso anticipado, lista de espera'. Sin precio/trial/uso-ya.",
+"attribution":"asume capa A (evento sign_up + utm_source cookie) del operador (S0010)",
+"ceiling":"REGLA DURA (S0008): signups waitlist = senal de canal, no validacion de negocio; conf(H0005) NO supera ~0.60 con datos de waitlist.",
+"steps":["cuenta Quora bio honesta","16 preguntas del cluster (real cam sites, Omegle alternative that works, are cam girls real or bots)","2 respuestas utiles/semana, mencion soft solo donde aporta, ~1 de cada 3-4 con link","medir views+clics UTM a 8 semanas + signups si capa A activa"],
+"exec":"lo lanza el operador (cuenta Quora = accion humana); la IA solo prepara",
+"blocker_medicion":"S0014+S0017: capa A NO desplegada en PROD y entrelazada con batch Master Studio en main (V42/V43). Camino minimo para medir signups = deploy FRONT-only quirurgico de capa A sobre a7d18a1 (sin migracion, sin Master). Decide/ejecuta el operador. Mientras tanto E0003 solo mide clics UTM."}
