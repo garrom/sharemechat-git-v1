@@ -3835,16 +3835,16 @@
       "title": "What the Master Program offers",
       "items": {
         "b1": {
-          "title": "Zero fees",
-          "text": "The Master program operates with no sign-up fees, no monthly fees and no per-model or per-transaction commissions."
+          "title": "No fees",
+          "text": "No fees, no subscription. The platform only keeps a small % of what you invoice."
         },
         "b2": {
-          "title": "Unified operations panel",
-          "text": "The Master program consolidates management of all studio models and their economic metrics into a single account."
+          "title": "Robust technology",
+          "text": "We provide robust technology to maximize the user experience."
         },
         "b3": {
-          "title": "Compliance built-in",
-          "text": "SharemeChat integrates identity verification, versioned Master contract and GDPR policy aligned with industry standard."
+          "title": "Optimize your earnings",
+          "text": "1-minute user verification, model presence detector, and many features to optimize your earnings."
         }
       }
     },

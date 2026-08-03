@@ -3835,16 +3835,16 @@
       "title": "Qué ofrece el programa Master",
       "items": {
         "b1": {
-          "title": "0 EUR de comisiones",
-          "text": "El programa Master opera sin cuotas de registro, sin mensualidades ni comisiones por modelo o transacción."
+          "title": "Sin cuotas",
+          "text": "Sin cuotas ni suscripción. La plataforma únicamente se queda con un % de lo facturado."
         },
         "b2": {
-          "title": "Panel operativo unificado",
-          "text": "El programa Master consolida en una sola cuenta la gestión de todas las modelos del estudio y sus métricas económicas."
+          "title": "Tecnología robusta",
+          "text": "Ofrecemos una tecnología robusta para maximizar la experiencia de los usuarios."
         },
         "b3": {
-          "title": "Cumplimiento normativo de serie",
-          "text": "SharemeChat integra verificación de identidad, contrato Master versionado y política GDPR alineada con el estándar del sector."
+          "title": "Optimiza tus ingresos",
+          "text": "Verificación de usuario en 1 minuto, detector de presencia de las modelos, y muchas ventajas para optimizar tus ingresos."
         }
       }
     },

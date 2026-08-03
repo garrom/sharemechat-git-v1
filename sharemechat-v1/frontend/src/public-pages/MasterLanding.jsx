@@ -28,8 +28,47 @@ const SectionTitle = { fontSize: '1.5rem', fontWeight: 700, color: '#111827', ma
 
 const CardsGrid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 };
 const Card = { background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 12, padding: '20px' };
+const CardIcon = { marginBottom: 12, lineHeight: 0 };
 const CardTitle = { fontSize: '1.05rem', fontWeight: 600, margin: '0 0 8px', color: '#111827' };
 const CardText = { fontSize: '0.92rem', color: '#4b5563', margin: 0, lineHeight: 1.6 };
+
+// SVG icons per benefit card (accent color #7c3aed matching landing).
+const BENEFIT_ICONS = {
+  b1: (
+    <svg width="44" height="44" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="24" cy="24" r="21" stroke="#7c3aed" strokeWidth="2" />
+      <circle cx="17" cy="17" r="3.5" fill="#7c3aed" />
+      <circle cx="31" cy="31" r="3.5" fill="#7c3aed" />
+      <line x1="14" y1="34" x2="34" y2="14" stroke="#7c3aed" strokeWidth="2.5" strokeLinecap="round" />
+    </svg>
+  ),
+  b2: (
+    <svg width="44" height="44" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="14" y="14" width="20" height="20" rx="2" stroke="#7c3aed" strokeWidth="2" fill="none" />
+      <rect x="19" y="19" width="10" height="10" rx="1" fill="#7c3aed" />
+      <line x1="19" y1="8" x2="19" y2="14" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" />
+      <line x1="24" y1="8" x2="24" y2="14" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" />
+      <line x1="29" y1="8" x2="29" y2="14" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" />
+      <line x1="19" y1="34" x2="19" y2="40" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" />
+      <line x1="24" y1="34" x2="24" y2="40" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" />
+      <line x1="29" y1="34" x2="29" y2="40" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" />
+      <line x1="8" y1="19" x2="14" y2="19" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" />
+      <line x1="8" y1="24" x2="14" y2="24" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" />
+      <line x1="8" y1="29" x2="14" y2="29" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" />
+      <line x1="34" y1="19" x2="40" y2="19" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" />
+      <line x1="34" y1="24" x2="40" y2="24" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" />
+      <line x1="34" y1="29" x2="40" y2="29" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  ),
+  b3: (
+    <svg width="44" height="44" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="20" cy="24" r="16" stroke="#7c3aed" strokeWidth="2" fill="none" />
+      <polyline points="20,15 20,24 27,28" stroke="#7c3aed" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <circle cx="36" cy="36" r="8" fill="#7c3aed" />
+      <polyline points="32,36 35,39 40,33" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </svg>
+  ),
+};
 
 const FaqItem = { padding: '16px 0', borderBottom: '1px solid #e5e7eb' };
 const FaqQuestion = { fontSize: '1rem', fontWeight: 600, color: '#111827', margin: '0 0 6px' };
@@ -107,6 +146,7 @@ export default function MasterLanding() {
               <div style={CardsGrid}>
                 {['b1', 'b2', 'b3'].map((k) => (
                   <div key={k} style={Card}>
+                    <div style={CardIcon}>{BENEFIT_ICONS[k]}</div>
                     <h3 style={CardTitle}>{t(`benefits.items.${k}.title`)}</h3>
                     <p style={CardText}>{t(`benefits.items.${k}.text`)}</p>
                   </div>
