@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Generador PDF del borrador Contrato Master v3.2 (docs/01-business/
+Generador PDF del Contrato Master v3.2 (docs/01-business/
 master-contract-v3-2-draft.md). Look and feel coherente con
 generate_legal_pdfs.py.
 
 Uso:
     python ops/legal-pdfs/generate_master_contract_v3_2_pdf.py
 Output:
-    .tmp/master-contract-v3-2-draft.pdf
+    .tmp/master-contract-v3-2.pdf
 """
 
 import os
@@ -79,7 +79,7 @@ def _draw_header_footer(canvas, doc):
     canvas.setFillColor(COLOR_MUTED)
     canvas.drawRightString(
         A4[0] - 2.5 * cm, A4[1] - 1.5 * cm,
-        'Contrato Master — v3.2 (borrador)'
+        'Contrato Master — v3.2'
     )
     canvas.setStrokeColor(COLOR_RULE)
     canvas.setLineWidth(0.4)
@@ -206,7 +206,7 @@ def main():
     md_path = os.path.join(repo_root, 'docs', '01-business', 'master-contract-v3-2-draft.md')
     out_dir = os.path.abspath(os.path.join(repo_root, '..', '.tmp'))
     os.makedirs(out_dir, exist_ok=True)
-    out_path = os.path.join(out_dir, 'master-contract-v3-2-draft.pdf')
+    out_path = os.path.join(out_dir, 'master-contract-v3-2.pdf')
 
     with open(md_path, 'r', encoding='utf-8') as f:
         md_text = f.read()
@@ -217,9 +217,9 @@ def main():
         out_path, pagesize=A4,
         leftMargin=2.5 * cm, rightMargin=2.5 * cm,
         topMargin=2.5 * cm, bottomMargin=2.5 * cm,
-        title='SharemeChat — Contrato Master v3.2 (borrador)',
+        title='SharemeChat — Contrato Master v3.2',
         author='Shareme Technologies OÜ',
-        subject='Contrato Master v3.2 borrador',
+        subject='Contrato Master v3.2',
         creator='SharemeChat legal export',
     )
     doc.build(flowables, onFirstPage=_draw_header_footer, onLaterPages=_draw_header_footer)

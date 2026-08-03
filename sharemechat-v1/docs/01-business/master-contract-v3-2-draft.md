@@ -1,6 +1,6 @@
-# Contrato Master ↔ SharemeChat — v3.2 (borrador)
+# Contrato Master ↔ SharemeChat — v3.2
 
-> **Versión propuesta**: master_contract_v32_2026-08-03.
+> **Versión**: master_contract_v32_2026-08-03.
 > **Ley aplicable**: Derecho de Estonia (*Võlaõigusseadus*, Law of Obligations Act).
 > **Jurisdicción**: tribunales de Tallinn, República de Estonia.
 > **Emisor**: Shareme Technologies OÜ ("SharemeChat").
@@ -315,4 +315,4 @@ La aceptación del contrato se registra en la plataforma al pulsar el botón "Ac
 
 ---
 
-**FIN DEL CONTRATO — Versión master_contract_v32_2026-08-03 (borrador)**
+**FIN DEL CONTRATO — Versión master_contract_v32_2026-08-03**

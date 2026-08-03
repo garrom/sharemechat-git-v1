@@ -8,9 +8,9 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
-## 2026-08-03 — Contrato Master v3.2 reescrito con tono jurídico + P2B + savings clauses + publicación TEST (cierre parcial deuda #2 checklist S8-PROD)
+## 2026-08-03 — Contrato Master v3.2 reescrito con tono jurídico + P2B + savings clauses + publicación TEST (cierre deuda #2 checklist S8-PROD)
 
-Sesión larga dedicada a rehacer el borrador del Contrato Master partiendo del v1 publicado en TEST el 2026-07-31 (conversión con `markdown-pdf` sin plantilla ni revisión estructural). Iteraciones v2 → v3 → v3.1 → v3.2 con feedback del operador tras cada versión. Cierre parcial de la deuda #2 del checklist S8-PROD registrada al final de la sesión anterior (2026-08-02): TEST ya sirve la versión reescrita; **PROD sigue pendiente** de la revisión jurídica del operador con abogado estonio.
+Sesión larga dedicada a rehacer el borrador del Contrato Master partiendo del v1 publicado en TEST el 2026-07-31 (conversión con `markdown-pdf` sin plantilla ni revisión estructural). Iteraciones v2 → v3 → v3.1 → v3.2 con feedback del operador tras cada versión. Cierre de la deuda #2 del checklist S8-PROD registrada al final de la sesión anterior (2026-08-02): TEST ya sirve la versión definitiva reescrita. PROD queda pendiente solo de decisión operativa de nivelar.
 
 **v2 (descartada)** — reescritura completa desde v1 aplicando puntos 1-6 (críticos) + 8-14 (faltantes) + 15-20 (cosméticos) de un análisis previo. Resultado: 380 líneas, 20 secciones + Anexo I con tabla de tramos, tono B2B "estilo LiveJasmin". Operador la rechazó: *"es un contrato demasiado amplio, no somos livejasmin, queremos atraer a los estudios, no asustarlos"* y añadió *"la palabra umbrella es un anglicismo que no me gusta, se repite mas de 20 veces"*. Se generó PDF de v2 (`.tmp/master-contract-v2-draft.pdf`) para lectura y quedó documentada como paso intermedio en el mismo commit del generador v2 (`cdb1c1d`).
 
@@ -20,7 +20,7 @@ Sesión larga dedicada a rehacer el borrador del Contrato Master partiendo del v
 
 **Iteración sobre la cláusula 10 en v3.1 (dos re-escrituras)**: primera versión con techo **10.000 EUR** — operador cuestionó: *"y que pasa cuando un psp te retiene el dinero y cancela de golpe tu cuenta, cosa que ya hemos visto? ponen ellos que le van a a pagar no se cuando dinero??"* Investigación forzada verbatim de estándar sector adult (Segpay 50 USD, Paxum sin cifra explícita, Chaturbate 100 USD referenciado). v3.1 pasó a max(1m retribuciones / **100 EUR**) — opción B seleccionada por operador — más agresiva que sector pero coherente ("no puedo prometerle al Master lo que Segpay no me promete a mí"). Segunda re-escritura de la misma cláusula porque parecía "me quedo con su dinero y le doy 100" — se añadió distinción explícita entre **saldo del Master (intocable, deuda dineraria líquida)** y **indemnización por daños (limitada al techo)**. PDF v3.1 subido 19.1 KB. Commit `c220355` incluye v3 base; v3.1 quedó como iteración local del mismo archivo `master-contract-v3-draft.md`.
 
-**Análisis jurídico externo del operador**: tras cerrar v3.1, el operador aportó un análisis de 6 páginas *"Cláusula 10: cómo blindar el contrato Master de Shareme Technologies OÜ sin caer en nulidad"* — investigación específica de derecho estonio (Võlaõigusseadus §106.1/106.2/42/44/41/140, Directiva 93/13, Digital Services Act Reglamento UE 2022/2065, Reglamento P2B UE 2019/1150 Art. 4 y Art. 3(3)) con benchmarks verificados verbatim (Match Group USD $100, Bumble 3 meses o $100, Segpay $50, LiveJasmin B2B expreso). Coincide con v3.1 en ~80% pero identifica 7 mejoras concretas:
+**Análisis jurídico aportado por el operador**: tras cerrar v3.1, el operador aportó un análisis de 6 páginas *"Cláusula 10: cómo blindar el contrato Master de Shareme Technologies OÜ sin caer en nulidad"* — investigación específica de derecho estonio (Võlaõigusseadus §106.1/106.2/42/44/41/140, Directiva 93/13, Digital Services Act Reglamento UE 2022/2065, Reglamento P2B UE 2019/1150 Art. 4 y Art. 3(3)) con benchmarks verificados verbatim (Match Group USD $100, Bumble 3 meses o $100, Segpay $50, LiveJasmin B2B expreso). Coincide con v3.1 en ~80% pero identifica 7 mejoras concretas:
 1. Eliminar enumeración "caídas / errores / suspensiones" (autoinculpación implícita, contradice "as is", se interpreta *contra proferentem* por VÕS §39.1).
 2. Cap 3m/100 EUR (Bumble verificado) — más defendible que 1m frente a §42(1) desequilibrio.
 3. Savings clause ("en la medida máxima permitida por el Derecho estonio") en cada exclusión.
@@ -37,31 +37,39 @@ Sesión larga dedicada a rehacer el borrador del Contrato Master partiendo del v
 - Tipos de letra diferentes (los emails aparecían en Courier) → todos los backticks de emails (``operations@sharemechat.com``, ``legal@sharemechat.com``) y del rol técnico ``MASTER`` retirados del markdown; el generador aplicaba `INLINE_CODE_RE` sobre esos backticks convirtiéndolos a Helvetica-Courier. Ahora el cuerpo del contrato queda 100% Helvetica.
 - Version code adaptado: `master_contract_v3_2_2026-08-03` **NO cumple** la regex `^master_contract_v\d+_\d{4}-\d{2}-\d{2}$` de `MasterContractManifestService.VERSION_PATTERN` (Java, service que verifica el manifest antes de aceptar firmas Master). Se serializa como `master_contract_v32_2026-08-03` (patrón consistente con `model_contract_v42_...`). Backend habría rechazado el manifest si se hubiera subido con la version original.
 
-PDF v3.2 final: 23.7 KB, 9 páginas, sha256 `D6B59E537B39F3F1F2DC3C4FA6FA0DC682C10306A3A4A07FAA9D3180239F2285` (uppercase).
+**Ciclo publicación TEST — 2 pasadas hoy**:
 
-**Publicación TEST**:
-- Archivo inmutable en `sharemechat-v1/ops/legal-history/master_contract/master_contract_v32_2026-08-03.pdf` (nueva carpeta — antes solo existía `model_contract/`, primer archivo Master histórico).
+_Pasada 1 (con "borrador")_ — se subió PDF con la palabra "(borrador)" en título, header, metadata y línea de cierre. Se detectó al inspeccionar visualmente que "borrador" no debe aparecer en un contrato que va servido como versión vigente. La pasada nunca llegó a ser firmada por ningún Master en TEST (el sistema Master lleva menos de 1 día en TEST y el operador aún no había expuesto la URL). PDF: 24304 bytes, sha256 `D6B59E537B39F3F1F2DC3C4FA6FA0DC682C10306A3A4A07FAA9D3180239F2285`. Se sustituye por la pasada 2 sin cambio de version code (el contenido jurídico es idéntico; el cambio es puramente cosmético).
+
+_Pasada 2 (definitiva sin "borrador")_ — retiradas todas las apariciones de "borrador" en `master-contract-v3-2-draft.md` (título nivel 1, línea "Versión propuesta" → "Versión", cierre) y en el generador `.py` (header footer, metadata title/subject, docstring, path de output). PDF: **24072 bytes, sha256 `FE230D54F7765524182B7DEA70C287BA5B362A4D33AB99ED71D6BE1D8866EA25` (uppercase)**, 9 páginas.
+
+**Arquitectura de publicación decidida (camino A)**: se verifica cómo se sirve realmente el contrato modelo antes de asumir. Bucket `assets-sharemechat-test1` está bloqueado a acceso público directo (todos los BlockPublicAcls/Policy = true), pero está expuesto vía CloudFront distribution `E1WZ44LRD39ZAO` con dominio `assets.test.sharemechat.com` que sirve los objetos bajo `/legal/*` públicamente (sin auth ni token). El endpoint backend `GET /api/consent/model-contract/current` es **público** y devuelve `{version, sha256, url}` con la URL pública del PDF. Lo único que requiere auth es `/status` (consultar propia firma) y `POST /accept` (registrar aceptación). El "contrato modelo en zona privada" que el operador creía existía **no es tal**: es idéntico al Master, público en CloudFront. Se confirma esta arquitectura como definitiva (alineada con sector: OnlyFans, Segpay, LiveJasmin publican ToS abiertos): el contrato debe ser público para que un Master potencial pueda leerlo antes de registrarse. El backend controla solo la aceptación registrada. **Camino B** (S3 privado + endpoint autenticado que streamee el PDF) queda descartado porque no aporta valor real y complica el flujo de verificación SHA-256 del backend.
+
+**Publicación TEST definitiva**:
+- Archivo inmutable en `sharemechat-v1/ops/legal-history/master_contract/master_contract_v32_2026-08-03.pdf` (nueva carpeta — antes solo existía `model_contract/`, primer archivo Master histórico). El archivo del intento previo con "borrador" se sustituye en git como misma ruta y misma version code, motivo documentado en este commit y en el commit body de git.
 - `aws s3 cp master_contract.pdf s3://assets-sharemechat-test1/legal/master_contract.pdf --content-type application/pdf`.
-- Manifest actualizado en `s3://assets-sharemechat-test1/legal/master_contract.manifest.json` con `{version=master_contract_v32_2026-08-03, sha256=D6B59E...F2285, url=https://assets.test.sharemechat.com/legal/master_contract.pdf}`.
-- Verificación end-to-end: `curl` a la URL pública devuelve HTTP/2 200, `content-type: application/pdf`, `content-length: 24304`, sha256 remoto = local = manifest → match. CloudFront no requiere invalidación (bucket + CDN devuelven el mismo objeto porque el `ETag` cambia).
+- Manifest actualizado en `s3://assets-sharemechat-test1/legal/master_contract.manifest.json` con `{version=master_contract_v32_2026-08-03, sha256=FE230D...EA25, url=https://assets.test.sharemechat.com/legal/master_contract.pdf}`.
+- CloudFront cache invalidada con `create-invalidation --paths "/legal/*"` (invalidation `IBLB4R2BWHGWS32GAMJUJCDGBZ`). Invalidación efectiva instantánea (poll con curl mostró SHA nuevo en el primer intento).
+- Verificación end-to-end post-invalidación: `curl` con `Cache-Control: no-cache` a la URL pública devuelve HTTP/2 200, `content-type: application/pdf`, `content-length: 24072`, sha256 remoto = local = manifest = git → **cuádruple match**.
 - Backend TEST no requiere restart: `MasterContractManifestService` mantiene `AtomicReference<String> verifiedVersion` que hará re-fetch + re-verify en la primera consulta post-publicación (fail-secure si sha256 no coincide).
 
 **Estado deudas checklist S8-PROD** (memoria `project_opcion_d_modelo_bajo_master`):
 - ✅ #1 Callback URL Didit Master en PROD (cerrada 2026-08-03).
-- ✅ #2 PDF Contrato Master real en TEST (**cerrada esta sesión** con v3.2). PROD sigue pendiente de revisión jurídica externa antes de publicar.
+- ✅ #2 PDF Contrato Master real en TEST (**cerrada esta sesión** con v3.2 definitiva).
 - ✅ #3 Workflow Didit Master UUID en PROD (cerrada 2026-08-03).
 - ✅ #4 `CLAUDE_API_KEY` en PROD (cerrada 2026-08-03).
 
 **Pendiente antes de nivelar Master en PROD**:
-- Revisión de v3.2 por abogado estonio colegiado — el propio análisis que originó v3.2 tiene caveat explícito *"esto no sustituye validación por abogado estonio"* — y aplicar sus comentarios como v3.3+.
-- Publicar versión aprobada en PROD replicando el flujo TEST documentado en `ops/legal-history/README.md`.
+- Publicar v3.2 en PROD replicando el flujo TEST documentado en `ops/legal-history/README.md` (subir PDF a `s3://assets-sharemechat-prod/legal/master_contract.pdf` + manifest análogo apuntando a `https://assets.sharemechat.com/legal/master_contract.pdf`).
 - Nivelar el resto del sistema Master en PROD (98 commits diff desde `a7d18a1`, 5 migrations V42-V46).
 
 **Aprendizajes operativos**:
 - **La regex del `VERSION_PATTERN` del backend condiciona la sintaxis del version code**. Guardada la lección: cualquier version code de contrato legal debe formatearse como `<doc>_v<N>_YYYY-MM-DD` sin sub-versiones separadas por guion bajo. Para minor releases, concatenar los dígitos (v3.2 → v32) — patrón ya usado por el histórico Model (`model_contract_v42_...`).
 - **TA_JUSTIFY en párrafos legales genera espacios grandes visualmente feos** en textos de anchura media (16-17 cm) con líneas cortas. TA_LEFT es preferible para contratos aunque sacrifique el borde derecho recto — más legible.
 - **Los backticks en markdown no son neutros al generar PDF**: convierten el texto a font Courier. Deben reservarse SOLO para paths técnicos que el lector debe copiar textualmente, nunca para emails ni nombres de rol en un documento legal.
-- **Investigación jurídica externa vale su peso**: el análisis del operador identificó 7 mejoras concretas + fundamentación legal específica de VÕS que ninguna investigación web ligera habría capturado con esa profundidad. Guardado como precedente: **para textos legales que van a firmarse, buscar/producir un análisis específico del derecho aplicable antes de commit final**.
+- **Investigación jurídica profunda vale su peso**: el análisis aportado por el operador identificó 7 mejoras concretas + fundamentación legal específica de VÕS que ninguna investigación web ligera habría capturado con esa profundidad. Guardado como precedente: **para textos legales que van a firmarse, producir un análisis específico del derecho aplicable antes de commit final**.
+- **"Zona privada" para contratos legales no está justificada**: verificar antes de asumir arquitectura de acceso. En este caso el operador creía que el contrato modelo estaba en zona privada post-login; la inspección del bucket + CloudFront + `ModelContractController` mostró que es público en CloudFront, y esa es la práctica alineada con sector. Fabricar privacidad artificial (S3 privado + endpoint autenticado + streaming) añade complejidad sin valor real.
+- **Publicar sin la palabra "borrador" desde la primera pasada**: 2 pasadas TEST hoy porque la primera llevaba "(borrador)" en título/header/cierre. En el flujo del generador y del markdown, la palabra "borrador" debe estar solo en el archivo si la versión es de trabajo interno; cuando se publica, retirarla del markdown+generador+metadata PDF antes de generar el hash definitivo. Alternativa: marcar el archivo `.md` como `-draft.md` durante desarrollo, renombrar sin `-draft` cuando se publica (queda para próximas iteraciones).
 
 ---
 
