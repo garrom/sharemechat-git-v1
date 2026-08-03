@@ -3836,15 +3836,15 @@
       "items": {
         "b1": {
           "title": "No fees",
-          "text": "No fees, no subscription. The platform only keeps a small % of what you invoice."
+          "text": "No subscription. The platform only keeps a small % of what you invoice."
         },
         "b2": {
           "title": "Robust technology",
-          "text": "We provide robust technology to maximize the user experience."
+          "text": "We provide advanced technology to maximize the user experience."
         },
         "b3": {
-          "title": "Optimize your earnings",
-          "text": "1-minute user verification, model presence detector, and many features to optimize your earnings."
+          "title": "Boost your earnings",
+          "text": "1-minute user verification, model presence detector, and many features to maximize your earnings."
         }
       }
     },

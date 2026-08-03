@@ -3836,15 +3836,15 @@
       "items": {
         "b1": {
           "title": "Sin cuotas",
-          "text": "Sin cuotas ni suscripción. La plataforma únicamente se queda con un % de lo facturado."
+          "text": "Sin suscripción. La plataforma únicamente se queda con un % de lo facturado."
         },
         "b2": {
           "title": "Tecnología robusta",
-          "text": "Ofrecemos una tecnología robusta para maximizar la experiencia de los usuarios."
+          "text": "Ofrecemos una tecnología avanzada para maximizar la experiencia de los usuarios."
         },
         "b3": {
           "title": "Optimiza tus ingresos",
-          "text": "Verificación de usuario en 1 minuto, detector de presencia de las modelos, y muchas ventajas para optimizar tus ingresos."
+          "text": "Verificación de usuario en 1 minuto, detector de presencia de modelos, y muchas ventajas para maximizar tus ingresos."
         }
       }
     },
