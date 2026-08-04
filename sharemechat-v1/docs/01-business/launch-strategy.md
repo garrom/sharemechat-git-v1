@@ -30,7 +30,7 @@ No son dos problemas independientes. Es **un problema real** (PSP tarjeta) más 
 La zona peer-to-peer gratis se estudió y se descarta. Los seis motivos operativos, en resumen:
 
 1. **Precedente Omegle/Chatroulette**: registro y KYC no resuelven moderación en tiempo real de contenido no consentido ni menores usando DNI de terceros. Bajo DSA (EU) y 2257 (US) la plataforma sería responsable como productor. Requiere estructura de moderación 24/7 fuera del alcance actual.
-2. **Canibaliza la propuesta de valor premium** (modelos verificadas, reparto 75-79% modelo del bruto según [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md)). Cliente potencial piensa "¿por qué pago si hay gratis?", modelo profesional piensa "¿esto me trata como profesional o como sala anónima?".
+2. **Canibaliza la propuesta de valor premium** (modelos verificadas, reparto 50-60% modelo del bruto según [ADR-056 §D3](../06-decisions/adr-056-sistema-master-studio.md)). Cliente potencial piensa "¿por qué pago si hay gratis?", modelo profesional piensa "¿esto me trata como profesional o como sala anónima?".
 3. **Coste operativo negativo**: bandwidth WebRTC + STUN/TURN + moderación + infra + soporte, todo pagado, con cero ingresos del canal.
 4. **Riesgo legal por gifts a "chicas normales no modelos"**: convertiría a la plataforma en operador de sex work no verificado sin contratos de talento, sin registros 2257, sin edad certificada por la plataforma. Riesgo penal, no administrativo.
 5. **Reduce opciones de PSP tarjeta**: broadcasting sin control es alérgeno directo para el underwriting adult de cualquier PSP tarjeta futuro.
@@ -62,7 +62,7 @@ Este movimiento no requiere trabajo nuevo salvo mantener la mecánica actual. El
 
 En vez de reclutar 30 modelos una a una, negociar con 2-3 estudios pequeños (candidatos: Colombia, Rumanía) que ya operan 10-15 modelos cada uno con audiencia propia. La plataforma ofrece:
 
-- **Reparto 75-79% modelo escalonado** por facturación bruta rolling 30d aplicable a cada modelo del estudio (mismo régimen que cualquier modelo independiente, ver [sistema-tiers-modelos.md](sistema-tiers-modelos.md)). Sin programa de afiliación adicional: el %reparto elevado ya sobre-incentiva la captación de clientes propios ([ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) §D11).
+- **Reparto 50-60% modelo escalonado** por facturación bruta rolling 30d aplicable a cada modelo del estudio (mismo régimen que cualquier modelo independiente, ver [sistema-tiers-modelos.md](sistema-tiers-modelos.md)). Cuando la modelo opera bajo Master, el 50-60% se abona al saldo del Master (no al de la modelo) y el reparto interno Master↔modelo es acuerdo privado. Sin programa de afiliación adicional: el %reparto sigue por encima del sector (LiveJasmin L1 30%, BongaCams ~35%) y sobre-incentiva la captación de clientes propios ([ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) §D11).
 - **Rango de precio autoservicio** por modelo dentro del tramo de facturación alcanzado (1 €/min T1 → hasta 9 €/min T4). Permite al estudio capturar willingness-to-pay superior de los clientes propios de cada modelo.
 - Página SEO por modelo con dominio de autoridad creciente como material de venta para el estudio.
 - Onboarding coordinado (los estudios manejan la mayor parte del soporte al talento).
@@ -103,7 +103,7 @@ Ejecución operativa, no aspiracional:
 1. **Lanzar infraestructura de página pública de modelo `/m/:slug`** con SEO + tracking de afiliación integrado. Aprovechar el CMS bilingüe, el prerender S3+CloudFront y el multi-asset Layer 2 ya existentes.
 2. **Pasar de coming-soon a soft-launch** con banner discreto en el header: "beta, pagos en cripto de momento, tarjeta próximamente". Cambio de percepción: de "empresa que no existe todavía" a "empresa que ya opera con limitación acotada".
 3. **Primer batch de 5-10 modelos verificadas** por dos vías paralelas: (a) 2-3 estudios pequeños Colombia/Rumanía como B2B, (b) modelos independientes activas en X con audiencia propia identificada.
-4. **Anuncio público del soft-launch**: post en r/CamGirlProblems (respetando el pipeline social-ops de [ADR-040](../06-decisions/adr-040-pivote-target-subs-social-ops.md), disclosure explicit + audiencia models), pin en X. Ángulo: plataforma nueva en beta con **reparto 75-79% modelo escalonado del bruto** (vs 50-60% habitual del sector), **rango de precio autoservicio** hasta 9 €/min y **Estatus Pro** para modelos que superen 1.500 €/mes (control opcional del trial).
+4. **Anuncio público del soft-launch**: post en r/CamGirlProblems (respetando el pipeline social-ops de [ADR-040](../06-decisions/adr-040-pivote-target-subs-social-ops.md), disclosure explicit + audiencia models), pin en X. Ángulo: plataforma nueva en beta con **reparto 50-60% modelo escalonado del bruto** (vs 30-35% habitual del sector adult cam entry: LiveJasmin L1 30%, BongaCams ~35%), **rango de precio autoservicio** hasta 9 €/min y **Estatus Pro** para modelos que superen 1.500 €/mes (control opcional del trial).
 
 ## 8. Referencias
 

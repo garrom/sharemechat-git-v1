@@ -68,7 +68,7 @@ La misma página sirve al operador como material de venta a estudios pequeños:
 - Cada modelo del estudio tiene su URL SEO en un dominio con autoridad creciente.
 - El estudio puede orquestar la publicación de las URLs de sus modelos en sus propias redes.
 - El pitch al estudio se apoya en material tangible ya funcionando, no en promesas.
-- **Propuesta económica al estudio**: reparto 75-79% escalonado por modelo ([ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md)) + rango de precio autoservicio (€1-9/min) por modelo. Sin programa de afiliación adicional. Los términos B2B adicionales por volumen o exclusividad se negocian caso por caso fuera del régimen estándar.
+- **Propuesta económica al estudio**: reparto 50-60% escalonado por modelo ([ADR-056 §D3](../06-decisions/adr-056-sistema-master-studio.md), umbrales 0/1.000/4.000/15.000 €) + rango de precio autoservicio (€1-9/min) por modelo. Cuando el estudio opera como Master, ese 50-60% se abona al saldo del Master; el reparto interno Master↔modelo es acuerdo privado. Sin programa de afiliación adicional. Los términos B2B adicionales por volumen o exclusividad se negocian caso por caso fuera del régimen estándar.
 
 Contexto operativo del pitch B2B en [launch-strategy.md](launch-strategy.md) § 4-D.
 

@@ -2,9 +2,9 @@
 
 > **Documento estratégico.** Conecta la proyección de tráfico orgánico (ver `seo/estrategia.md`) con la estructura real de costes para calcular margen neto mes a mes y horizonte de break-even.
 >
-> Versión 2.0 — 2026-07-25 (recalibración post-[ADR-052](../../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md); versión 1.0 del 17 jun 2026 con reparto 15-40% modelo archivada en git history).
+> Versión 2.1 — 2026-08-04 (actualización tras [ADR-056 §D3](../../06-decisions/adr-056-sistema-master-studio.md) que sobrescribió los tramos y umbrales de [ADR-052](../../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md)). Versión 2.0 del 2026-07-25 con reparto 75-79% queda superseded. Versión 1.0 del 17 jun 2026 con reparto 15-40% modelo archivada en git history.
 >
-> **Decisión tomada**: Alain asume el escenario pesimista como referencia operativa y financiera. Tras el rediseño estructural del reparto (ADR-052), el escenario pesimista es sustancialmente más costoso que la versión previa; se acepta explícitamente como consecuencia del cambio de propuesta comercial a la modelo (75-79% desde el minuto 1).
+> **Decisión tomada**: Alain asume el escenario pesimista como referencia operativa y financiera. Con el reparto vigente 50-60% (ADR-056), el escenario pesimista es menos exigente que el que planteaba ADR-052 (75-79%) pero sigue más costoso que la v1 (15-40%). El equilibrio elegido: propuesta a la modelo por encima del sector (50% en T1 vs 30% LiveJasmin L1) manteniendo margen empresa suficiente para operar (50% bruto en T1, ≥40% en cualquier tramo).
 
 ---
 
@@ -12,33 +12,35 @@
 
 El modelo cruza los volúmenes proyectados de tráfico (sesiones GA4 → signups → verificaciones → primeras compras → repeats) con la estructura de costes real.
 
-**Cambio estructural principal (2026-07-25)**: el reparto modelo pasa de **15-40%** (sistema de tiers previo) a **75-79%** (nuevo régimen escalonado, ADR-052). Consecuencia directa: el margen bruto empresa por transacción baja de **~73%** a **~15-18%** (según mix cripto/tarjeta). El horizonte de break-even se aleja significativamente.
+**Cambio estructural principal (2026-08-04)**: el reparto modelo evoluciona en dos pasos: v1 (15-40%, tiers previos) → v2 con ADR-052 (75-79%, umbrales 3.500/5.000/6.500) → **v3 vigente con [ADR-056 §D3](../../06-decisions/adr-056-sistema-master-studio.md) (50-60%, umbrales 1.000/4.000/15.000)**. Consecuencia directa: el margen bruto empresa por transacción se recalibra a **40-50%** (v3) frente al 15-18% que habría dejado ADR-052. El horizonte de break-even queda intermedio entre la v1 (~73% margen bruto) y la v2 (~15-18%).
 
 ### Estructura de costes vigente
 
 - **Costes fijos**: AWS (~€120/mes) + Companio (~€110/mes) + Sightengine Starter (~€27/mes) = **€257/mes** (sin cambio).
 - **Costes variables por transacción** (pack €10 modelo T1 a €1/min, mix 50/50 cripto/tarjeta):
-  - Pago a modelo: 75% × €10 = **€7,50**
+  - Pago a modelo: 50% × €10 = **€5,00**
   - Fees PSP: 50% × 1% (cripto) + 50% × 13% (tarjeta) × €10 = **€0,70**
   - Chargebacks tarjeta: 1% × €25 (prorrateados) = **€0,25**
   - Didit cliente (prorrateado): ~**€0,05**
-  - **Margen bruto por TX ≈ €1,50** (15% del pack).
+  - **Margen bruto por TX ≈ €4,00** (40% del pack).
 - **Sin capital inicial**: cada mes en pérdida se cubre con nómina externa de Alain.
 
 ### Resultados aproximados a 19 meses (jun 2026 → dic 2027)
 
-Estimación revisada con el nuevo régimen. Cifras exactas dependen del recálculo del xlsx (deuda pendiente #D-25 del operador; ver §7).
+Estimación revisada con el régimen vigente ADR-056 (reparto 50% T1, umbrales 1.000/4.000/15.000). Cifras exactas dependen del recálculo del xlsx (deuda pendiente #D-25 del operador; ver §7).
 
 | Métrica | Pesimista (referencia) | Normal |
 |---|---|---|
-| Break-even mensual TX/mes | ~170 TX/mes | ~170 TX/mes |
-| Margen neto acumulado 19m | **~−€4.700 a −€5.500** (peor que v1) | **negativo o marginalmente equilibrado** |
-| Gasto personal medio | **€250-290/mes** | **€10-100/mes** |
-| Break-even mensual (sostenido) | No alcanzado en 19m | Mes 20-24 (antes mes 15-16) |
+| Break-even mensual TX/mes | **~65 TX/mes** (€4,00 margen bruto por TX) | **~65 TX/mes** |
+| Margen neto acumulado 19m | **~−€2.800 a −€3.500** (mejor que v2 ADR-052, peor que v1) | **marginalmente equilibrado o levemente positivo** |
+| Gasto personal medio | **€150-200/mes** | **€0-50/mes** |
+| Break-even mensual (sostenido) | Mes 15-18 aprox | Mes 12-15 |
+
+Números indicativos; recalibración fina en el xlsx cuando el operador lo procese. Vs escenario ADR-052 (75-79%) el modelo mejora sustancialmente: el margen bruto por TX pasa de €1,50 a €4,00.
 
 ### Decisión
 
-Alain asume el escenario pesimista con el nuevo régimen como realista y se compromete a sostener **~€250-290/mes de gasto personal** durante el horizonte de 24 meses. La apuesta es que el reclutamiento agresivo (75% modelo desde el minuto 1) genera más volumen a medio plazo que el diferencial de margen unitario perdido.
+Alain asume el escenario pesimista con el régimen vigente como realista y se compromete a sostener **~€150-200/mes de gasto personal** durante el horizonte de 19-24 meses. La apuesta: el reclutamiento a **50% modelo T1** (por encima del sector: LiveJasmin L1 30%, BongaCams ~35%) sigue siendo competitivo, y el margen empresa recalibrado por ADR-056 (≥40% bruto) es sostenible con volumen moderado.
 
 ---
 
@@ -56,7 +58,7 @@ Sesiones GA4
             → Revenue bruto = TX × pack medio
             → Costes variables:
                - Pago a modelo: TX × pack × %reparto_tramo
-                 (T1: 75%, T2: 77%, T3: 78%, T4: 79%)
+                 (T1: 50%, T2: 54%, T3: 57%, T4: 60%) — ADR-056 §D3
                - Fees PSP: TX × pack × (mix_cripto × 1% + mix_tarjeta × 13%)
                - Chargebacks: TX × 1% × €25 (solo aplica al share tarjeta)
                - Didit clientes: verificados × €0.13
@@ -81,7 +83,7 @@ El Excel companion (`modelo-financiero.xlsx`) contiene el desglose completo mes 
 ### Costes variables (nuevos supuestos ADR-052)
 
 - **Pack medio asumido**: €10 pesimista / €12 normal (sin cambio respecto v1).
-- **Reparto a modelo**: **75% en T1** (tramo de entrada, donde estarán la mayoría de modelos nuevas al principio). Progresión a 77/78/79% al superar €3.500/€5.000/€6.500 mensuales de facturación bruta. Cálculo pesimista: asumir 100% modelos en T1 durante los primeros 12 meses.
+- **Reparto a modelo**: **50% en T1** (tramo de entrada, donde estarán la mayoría de modelos nuevas al principio). Progresión a 54/57/60% al superar €1.000/€4.000/€15.000 mensuales de facturación bruta ([ADR-056 §D3](../../06-decisions/adr-056-sistema-master-studio.md)). Cálculo pesimista: asumir 100% modelos en T1 durante los primeros 12 meses.
 - **Precio por minuto**: **€1/min plano en T1** (todas las modelos nuevas). Modelos T2/T3/T4 con tarifa autoservicio hasta €9/min no se modelan aún; su aparición esperada es post-mes 12 con volumen sostenido.
 - **Fees PSP (mix 50/50 cripto/tarjeta como asunción de arranque)**:
   - Cripto (NOWPayments, ADR-051): **~1% del importe**, sin fijo por transacción relevante.
@@ -155,7 +157,7 @@ Cada mes que el soft launch se retrasa, los **€257 fijos siguen corriendo**. S
 
 Antes el negocio era frágil por dependencia del SEO (funnel top). Ahora es frágil por **dependencia del volumen sostenido**: 170 TX/mes es un umbral realista solo con reclutamiento activo de modelos con audiencia propia, no con SEO orgánico puro. Si el reclutamiento se atasca (P4 del plan de captación Q3), el break-even no llega y el gasto personal se sostiene indefinidamente.
 
-**Mitigación**: el programa de afiliadas fue retirado por ADR-052 §D11 porque el reparto elevado ya sobre-incentiva a la modelo a traer clientes. Ese incentivo tiene que traducirse en volumen real; si no, el modelo financiero no cierra. **Métrica canónica a vigilar**: modelos con >€1.500 facturación bruta rolling 30d (elegibles para Estatus Pro, ADR-052 §D3). Es un indicador anticipado de conversión de reclutamiento en volumen sostenido.
+**Mitigación**: el programa de afiliadas fue retirado por ADR-052 §D11 porque el reparto elevado ya sobre-incentiva a la modelo a traer clientes; con el reparto vigente 50-60% (ADR-056) el incentivo sigue por encima del sector aunque menor que en la propuesta ADR-052. Ese incentivo tiene que traducirse en volumen real; si no, el modelo financiero no cierra. **Métrica canónica a vigilar**: modelos con >€1.500 facturación bruta rolling 30d (elegibles para Estatus Pro, umbral mantenido tras ADR-056). Es un indicador anticipado de conversión de reclutamiento en volumen sostenido.
 
 ---
 
@@ -166,7 +168,7 @@ Este modelo debe revisarse cuando se cumpla cualquiera de:
 1. **Mes 3 (sep 2026)**: revisión obligatoria. Comparar impresiones GSC reales vs proyección pesimista. Si están más cerca del normal, mantener plan. Si están en pesimista o por debajo, evaluar palancas.
 2. **Mes 6 (dic 2026)**: si las primeras compras reales están por debajo del pesimista en 3 meses consecutivos, **incorporar paid traffic** o pivotar.
 3. **Cuando se cierre PSP tarjeta**: actualizar el 13% asumido con las tarifas contractuales reales (fee variable + fijo + reserve + chargeback fees).
-4. **Cuando aparezca la primera modelo en T2 (>€3.500 facturación bruta rolling 30d)**: recalibrar el modelo con reparto ponderado por distribución de tramos.
+4. **Cuando aparezca la primera modelo en T2 (>€1.000 facturación bruta rolling 30d)**: recalibrar el modelo con reparto ponderado por distribución de tramos.
 5. **Cuando el mix real cripto/tarjeta se estabilice** (tras primeros 500 pagos reales): recalcular break-even con el mix observado.
 6. **Cuando se decida soft launch**: actualizar fechas y rehacer proyecciones desde ese mes.
 7. **Si los costes fijos cambian**: AWS reorganización, cambio de Companio, salto de Sightengine Starter → Pro (~€90/mes adicionales), etc.
@@ -191,7 +193,7 @@ Este modelo debe revisarse cuando se cumpla cualquiera de:
 
 El fichero `modelo-financiero.xlsx` sigue con la estructura v1 (reparto 15-40%, tarifa plana €1/min, fees CardBilling / Verotel). El operador lo recalibrará manualmente cuando disponga de tiempo, con los supuestos revisados que este `.md` ya recoge:
 
-- Reparto 75% pesimista (todas las modelos en T1 durante los primeros 12 meses).
+- Reparto **50% pesimista** (todas las modelos en T1 durante los primeros 12 meses; ADR-056 §D3).
 - Fees mix 50/50 cripto/tarjeta como asunción base (con pestaña de sensibilidad al mix).
 - Coste trial €0.20/signup absorbido.
 - Break-even TX/mes ~170 en mix 50/50; ver §3 tabla de sensibilidad para otros mix.
@@ -208,7 +210,8 @@ Mientras el xlsx no esté actualizado, este `.md` es la fuente de verdad estrat�
 - Pricing del producto al cliente: `docs/01-business/pricing.md`
 - Unit economics marco general: `docs/01-business/unit-economics.md`
 - Estado contable y costes operativos detallados: `docs/01-business/accounting-status.md`
-- [ADR-052](../../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) — rediseño estructural del reparto (fuente del cambio v1 → v2 de este modelo).
+- [ADR-052](../../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) — rediseño estructural del reparto (fuente del cambio v1 → v2 de este modelo; §D1 y §D5 sobrescritos posteriormente por ADR-056).
+- [ADR-056](../../06-decisions/adr-056-sistema-master-studio.md) — sistema Master/Studio: §D3 vigente para tramos y umbrales (fuente del cambio v2 → v2.1 de este modelo).
 - Excel companion con cálculo mes a mes: `modelo-financiero.xlsx` (junto a este documento; recalibración manual pendiente).
 
 ---

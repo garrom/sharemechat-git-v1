@@ -2,9 +2,9 @@
 
 > **Documento operativo.** Explica el sistema de retribución de modelos verificadas: reparto escalonado por facturación, rango de precio autoservicio, Estatus Pro y primer minuto trial.
 >
-> Versión 2.0 — 2026-07-24 (reescritura completa por [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md); versión 1.0 del 17 jun 2026 con 3 tiers `5-15 / 7-20 / 9-40` archivada en git history).
+> Versión 2.1 — 2026-08-04 (actualización por [ADR-056 §D3](../06-decisions/adr-056-sistema-master-studio.md) que sobrescribió los umbrales y porcentajes de ADR-052). Versión 2.0 del 2026-07-24 con `75-79%` y umbrales `3.500/5.000/6.500` queda superseded. Versión 1.0 del 17 jun 2026 con 3 tiers `5-15 / 7-20 / 9-40` archivada en git history.
 >
-> **Lectura clave**: la modelo cobra **75-79% del bruto** que paga el cliente, con progresión por facturación. Puede **elegir su tarifa por minuto** dentro del rango que su tramo le permite. El primer minuto de sesión trial es **para atraer al cliente**: se paga a la modelo a tarifa reducida (€0,07/min) y modelos con Estatus Pro pueden desactivarlo.
+> **Lectura clave**: la modelo cobra **50-60% del bruto** que paga el cliente, con progresión por facturación (umbrales 0 / 1.000 / 4.000 / 15.000 €). Puede **elegir su tarifa por minuto** dentro del rango que su tramo le permite. El primer minuto de sesión trial es **para atraer al cliente**: se paga a la modelo a tarifa reducida (€0,07/min) y modelos con Estatus Pro pueden desactivarlo.
 
 ---
 
@@ -12,12 +12,14 @@
 
 SharemeChat retribuye a las modelos verificadas mediante **cuatro tramos** determinados por la facturación bruta acumulada rolling 30 días. Cada tramo define dos cosas independientes:
 
-- El **% de reparto** que la modelo se lleva del bruto que paga el cliente (75-79%).
+- El **% de reparto** que la modelo se lleva del bruto que paga el cliente (50-60%).
 - El **rango de precio por minuto** dentro del que la modelo puede elegir su tarifa (1 €/min fijo en T1; 1-9 €/min en T4).
 
 Los tramos se recalculan **una vez al día** mediante un snapshot que mira la facturación bruta acumulada de los **últimos 30 días** (ventana móvil). El sistema es simétrico: al subir de tramo se desbloquea más margen de precio y mejora el %reparto; al bajar por debajo del umbral, se pierde el tramo en el siguiente snapshot.
 
 Adicionalmente, la modelo puede activar **Estatus Pro** al superar 1.500 €/mes: una feature opcional que le permite decidir si acepta clientes trial en su tarjeta o no.
+
+**Modalidad Master**: cuando la modelo opera bajo un Master (estudio), aplica **los mismos tramos y umbrales**. La única diferencia es el destinatario del ingreso: el 50-60% del bruto se abona al saldo del Master (no al de la modelo directamente); el reparto interno posterior Master↔modelo es privado ([ADR-056 §D4 revisión 2026-07-30](../06-decisions/adr-056-sistema-master-studio.md)).
 
 ---
 
@@ -25,13 +27,14 @@ Adicionalmente, la modelo puede activar **Estatus Pro** al superar 1.500 €/mes
 
 | Tramo | Facturación bruta acumulada (rolling 30d) | % modelo | % empresa (bruto) | Rango precio / min |
 |---|---|---:|---:|---|
-| **T1** (entrada) | 0 – 3.500 € | **75%** | 25% | **1 €/min fijo** |
-| **T2** | > 3.500 € | **77%** | 23% | 1 – 3 €/min |
-| **T3** | > 5.000 € | **78%** | 22% | 1 – 6 €/min |
-| **T4** | > 6.500 € | **79%** | 21% | 1 – 9 €/min |
+| **T1** (entrada) | 0 – 1.000 € | **50%** | 50% | **1 €/min fijo** |
+| **T2** | > 1.000 € | **54%** | 46% | 1 – 3 €/min |
+| **T3** | > 4.000 € | **57%** | 43% | 1 – 6 €/min |
+| **T4** | > 15.000 € | **60%** | 40% | 1 – 9 €/min |
 
 - **Umbral T4 es el más alto configurado hoy**. El techo de precio (€9/min) es una property configurable (`billing.pricing.rate-max-eur-per-min=9.00`); ampliaciones futuras a €15/min o superiores no requieren migration, solo cambio de property + fila de `model_pricing_tiers` para el rango.
-- **Los umbrales de reparto y de precio comparten los mismos escalones** (€3.500, €5.000, €6.500): cada desbloqueo de precio viene acompañado de mejora de reparto. Un solo gráfico comunica ambas dimensiones.
+- **Los umbrales de reparto y de precio comparten los mismos escalones** (€1.000, €4.000, €15.000): cada desbloqueo de precio viene acompañado de mejora de reparto. Un solo gráfico comunica ambas dimensiones.
+- SharemeChat retiene siempre **≥ 40% del bruto** (sostenibilidad protegida — [ADR-056 §D3](../06-decisions/adr-056-sistema-master-studio.md) justifica el nivel frente a fees PSP tarjeta ~10-15% + costes operativos).
 
 ---
 
@@ -41,9 +44,9 @@ Adicionalmente, la modelo puede activar **Estatus Pro** al superar 1.500 €/mes
 
 1. **Toda modelo nueva empieza en T1**, con 0 € de facturación bruta acumulada.
 2. Cuando la **facturación bruta acumulada rolling 30d** supera el umbral siguiente, la modelo pasa al tramo superior en el siguiente snapshot diario:
-   - Al superar **3.500 €** → sube a **T2** (77% + rango 1-3 €/min).
-   - Al superar **5.000 €** → sube a **T3** (78% + rango 1-6 €/min).
-   - Al superar **6.500 €** → sube a **T4** (79% + rango 1-9 €/min).
+   - Al superar **1.000 €** → sube a **T2** (54% + rango 1-3 €/min).
+   - Al superar **4.000 €** → sube a **T3** (57% + rango 1-6 €/min).
+   - Al superar **15.000 €** → sube a **T4** (60% + rango 1-9 €/min).
 3. **El paso no es inmediato durante la sesión**: el sistema ejecuta un snapshot diario que recalcula el tramo de cada modelo. El resultado del snapshot es la fila del día en `model_tier_daily_snapshots`.
 
 ### Cómo se baja de tramo
@@ -149,31 +152,31 @@ El precio mostrado al cliente es el mismo pase cripto o tarjeta ([ADR-052](../06
 ### Ejemplo A: sesión de 10 min a €1/min con modelo T1
 
 - Cliente paga: **€1 × 10 = €10** (menos el primer minuto trial si aplica; asumamos ya no aplica).
-- Modelo (75%): **€7,50**.
-- Empresa bruto (25%): **€2,50**.
+- Modelo (50%): **€5,00**.
+- Empresa bruto (50%): **€5,00**.
 - Empresa neto:
-  - Cripto (fees ~1%): €10 × 1% = €0,10 → **€2,40 neto** (24% neto sobre facturación).
-  - Tarjeta (fees ~13%): €10 × 13% = €1,30 → **€1,20 neto** (12% neto sobre facturación).
+  - Cripto (fees ~1%): €10 × 1% = €0,10 → **€4,90 neto** (49% neto sobre facturación).
+  - Tarjeta (fees ~13%): €10 × 13% = €1,30 → **€3,70 neto** (37% neto sobre facturación).
 
 ### Ejemplo B: sesión de 10 min a €3/min con modelo T2
 
 - Cliente paga: **€3 × 10 = €30**.
-- Modelo (77%): **€23,10**.
-- Empresa bruto (23%): **€6,90**.
+- Modelo (54%): **€16,20**.
+- Empresa bruto (46%): **€13,80**.
 - Empresa neto:
-  - Cripto: €30 × 1% = €0,30 → **€6,60 neto** (22% neto).
-  - Tarjeta: €30 × 13% = €3,90 → **€3,00 neto** (10% neto).
+  - Cripto: €30 × 1% = €0,30 → **€13,50 neto** (45% neto).
+  - Tarjeta: €30 × 13% = €3,90 → **€9,90 neto** (33% neto).
 
 ### Ejemplo C: sesión de 5 min a €9/min con modelo T4
 
 - Cliente paga: **€9 × 5 = €45**.
-- Modelo (79%): **€35,55**.
-- Empresa bruto (21%): **€9,45**.
+- Modelo (60%): **€27,00**.
+- Empresa bruto (40%): **€18,00**.
 - Empresa neto:
-  - Cripto: €45 × 1% = €0,45 → **€9,00 neto** (20% neto).
-  - Tarjeta: €45 × 13% = €5,85 → **€3,60 neto** (8% neto).
+  - Cripto: €45 × 1% = €0,45 → **€17,55 neto** (39% neto).
+  - Tarjeta: €45 × 13% = €5,85 → **€12,15 neto** (27% neto).
 
-**Lectura**: el margen empresa neto en tarjeta es delgado (8-12% según tramo) y sensible a chargebacks. Cripto es donde el margen empresa se sostiene con holgura (20-24% según tramo). Ver [unit-economics.md](unit-economics.md) para el análisis completo y para la sensibilidad al mix cripto/tarjeta.
+**Lectura**: el margen empresa neto es cómodo en cripto (39-49% según tramo) y aceptable en tarjeta (27-37% según tramo). El nivel se estableció por [ADR-056 §D3](../06-decisions/adr-056-sistema-master-studio.md) tras análisis del sector: SharemeChat sigue ofreciendo a la modelo mejor % que LiveJasmin L1 (30%) o BongaCams entry-level, con un margen para la plataforma que absorbe fees PSP + coste operativo + reserve. Ver [unit-economics.md](unit-economics.md) para el análisis completo y para la sensibilidad al mix cripto/tarjeta.
 
 ---
 
@@ -241,7 +244,7 @@ Estas métricas no están todavía implementadas — se deben definir cuando el 
 ## 11. Decisiones y restricciones del diseño actual
 
 - **4 tramos escalonados en %reparto y rango de precio** con umbrales compartidos: aprovecha el mismo gráfico mental para comunicar dos dimensiones a la modelo.
-- **75-79% modelo** como propuesta comercial agresiva frente al 50-60% habitual del sector adult cam. Palanca clave de reclutamiento en pre-launch.
+- **50-60% modelo** como propuesta comercial competitiva frente al 30-45% habitual del sector adult cam (LiveJasmin L1 30%, BongaCams entry ~35%). Palanca de reclutamiento en pre-launch alineada con el diseño Master (mismos tramos para libre y bajo Master, ver [ADR-056](../06-decisions/adr-056-sistema-master-studio.md)).
 - **Rango autoservicio de precio**: da a la modelo con marca propia palanca de captura de valor sobre sus clientes; la modelo generalista mantiene €1/min sin fricción.
 - **Estatus Pro desacoplado** (una feature única: control del trial): evita complicar el pack Pro en el arranque. Ampliaciones futuras (visibilidad, analytics) van por decisiones separadas.
 - **Umbrales sobre facturación bruta rolling 30d** (no earnings modelo, no mes calendario, no snapshot puntual): reutiliza la infraestructura del snapshot diario existente y evita "cliff-edge" al final de mes.
@@ -266,4 +269,4 @@ Estas métricas no están todavía implementadas — se deben definir cuando el 
 
 ---
 
-*Documento reescrito 2026-07-24 por [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md). Próxima revisión: cuando se replanteen los tramos, los umbrales, el techo de precio, la política de Estatus Pro o la mecánica del trial.*
+*Documento reescrito 2026-07-24 por [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md); actualizado 2026-08-04 por [ADR-056 §D3](../06-decisions/adr-056-sistema-master-studio.md) (nuevos tramos y umbrales) y §D4 revisión (motor INDIVIDUAL per modelo válido también para modalidad Master). Próxima revisión: cuando se replanteen los tramos, los umbrales, el techo de precio, la política de Estatus Pro o la mecánica del trial.*

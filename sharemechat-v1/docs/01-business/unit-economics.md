@@ -1,6 +1,6 @@
 # Unit economics
 
-Marco cuantitativo para razonar sobre el margen de contribución por transacción en SharemeChat. Este documento **cierra por primera vez** el reparto modelo/plataforma (75-79% escalonado por facturación bruta rolling 30d, ver [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md)) y aproxima los fees PSP con los valores conocidos de la fase soft launch cripto ([ADR-047](../06-decisions/adr-047-pivote-soft-launch-cripto-paxum.md), [ADR-051](../06-decisions/adr-051-psp-puente-cripto-nowpayments.md)).
+Marco cuantitativo para razonar sobre el margen de contribución por transacción en SharemeChat. Este documento cuantifica el reparto modelo/plataforma (50-60% escalonado por facturación bruta rolling 30d — vigente por [ADR-056 §D3](../06-decisions/adr-056-sistema-master-studio.md) que sobrescribió el 75-79% inicial de [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md)) y aproxima los fees PSP con los valores conocidos de la fase soft launch cripto ([ADR-047](../06-decisions/adr-047-pivote-soft-launch-cripto-paxum.md), [ADR-051](../06-decisions/adr-051-psp-puente-cripto-nowpayments.md)).
 
 El contexto económico subyacente (wallet, consumo por tiempo, gifts con reparto, payouts) está descrito en [business-model.md](business-model.md). La estructura de packs y el umbral mínimo de recarga están en [pricing.md](pricing.md). El detalle del sistema de tramos y del rango de precio autoservicio vive en [sistema-tiers-modelos.md](sistema-tiers-modelos.md). La estrategia de PSP en [psp-strategy.md](psp-strategy.md).
 
@@ -19,19 +19,20 @@ Para **tarjeta**, el PSP tarjeta está en negociación activa con nuevos candida
 
 ## Reparto modelo / plataforma
 
-Cerrado por [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) §D1 con 4 tramos escalonados por facturación bruta rolling 30d:
+Vigente por [ADR-056 §D3](../06-decisions/adr-056-sistema-master-studio.md) (sobrescribe [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) §D1 y §D5) con 4 tramos escalonados por facturación bruta rolling 30d:
 
 | Tramo | Facturación bruta acumulada (rolling 30d) | % modelo | % empresa (bruto) |
 |---|---|---:|---:|
-| T1 | 0 – 3.500 € | **75%** | 25% |
-| T2 | > 3.500 € | **77%** | 23% |
-| T3 | > 5.000 € | **78%** | 22% |
-| T4 | > 6.500 € | **79%** | 21% |
+| T1 | 0 – 1.000 € | **50%** | 50% |
+| T2 | > 1.000 € | **54%** | 46% |
+| T3 | > 4.000 € | **57%** | 43% |
+| T4 | > 15.000 € | **60%** | 40% |
 
-- Los tramos se recalculan diariamente por snapshot sobre la ventana rolling 30d de facturación bruta ([ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) §D6).
+- Los tramos se recalculan diariamente por snapshot sobre la ventana rolling 30d de facturación bruta ([ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) §D6 sigue vigente en este aspecto).
 - El reparto se aplica al **minuto 2 en adelante** de cada sesión. El **primer minuto trial** tiene régimen propio: la plataforma paga €0,07/min plano a la modelo, el cliente no paga.
 - El precio por minuto NO es plano: la modelo elige dentro del rango que su tramo le permite (€1 T1; €1-3 T2; €1-6 T3; €1-9 T4). Ver [pricing.md](pricing.md).
-- La **política de payouts** a la modelo mantiene el canal Wise ya cableado en `PayoutRequest`; la cadencia concreta (semanal / mensual) sigue pendiente de definición operativa, no bloqueante para este marco.
+- **Modalidad Master (modelo bajo estudio)**: aplica los mismos tramos y umbrales. La única diferencia económica es el destinatario del `STREAM_EARNING` (Master en lugar de modelo); el reparto interno Master↔modelo es acuerdo privado. Motor unificado — [ADR-056 §D4 revisión 2026-07-30](../06-decisions/adr-056-sistema-master-studio.md).
+- La **política de payouts** mantiene los canales cableados en `PayoutRequest`; la cadencia concreta (semanal / mensual) sigue pendiente de definición operativa, no bloqueante para este marco.
 
 ## Costes que absorbe el %empresa bruto
 
@@ -74,7 +75,7 @@ Donde:
 
 - **ingreso bruto** está cerrado por pack (ver [pricing.md](pricing.md)).
 - **comisión PSP**: **~1% cripto**, **~13% tarjeta** (aproximaciones vigentes; tarjeta se sustituye por cifra real cuando el PSP cierre contrato).
-- **reparto modelo**: 75-79% según tramo (cerrado por [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md)).
+- **reparto modelo**: 50-60% según tramo (vigente por [ADR-056 §D3](../06-decisions/adr-056-sistema-master-studio.md)).
 - **costes asignados**: fijos mensuales por transacción según volumen (pendiente decidir método de imputación exacto por transacción; para análisis de margen unitario se desprecian fijos).
 
 ## Márgenes netos por tramo y método de pago
@@ -83,34 +84,34 @@ Asumiendo consumo de un pack tipo con reparto aplicado al minuto 2 en adelante:
 
 ### Ejemplo A: pack 10 € consumido en modelo T1 (tarifa €1/min)
 
-- Modelo (75%): **€7,50**
-- Empresa bruto (25%): **€2,50**
+- Modelo (50%): **€5,00**
+- Empresa bruto (50%): **€5,00**
 - Empresa neto:
-  - **Cripto** (fees ~1%): 2,50 − 0,10 = **€2,40 neto** (24% neto sobre facturación).
-  - **Tarjeta** (fees ~13%): 2,50 − 1,30 = **€1,20 neto** (12% neto sobre facturación).
+  - **Cripto** (fees ~1%): 5,00 − 0,10 = **€4,90 neto** (49% neto sobre facturación).
+  - **Tarjeta** (fees ~13%): 5,00 − 1,30 = **€3,70 neto** (37% neto sobre facturación).
 
 ### Ejemplo B: pack 20 € consumido en modelo T2 (tarifa €1/min)
 
-- Modelo (77%): **€15,40**
-- Empresa bruto (23%): **€4,60**
+- Modelo (54%): **€10,80**
+- Empresa bruto (46%): **€9,20**
 - Empresa neto:
-  - **Cripto**: 4,60 − 0,20 = **€4,40 neto** (22% neto).
-  - **Tarjeta**: 4,60 − 2,60 = **€2,00 neto** (10% neto).
+  - **Cripto**: 9,20 − 0,20 = **€9,00 neto** (45% neto).
+  - **Tarjeta**: 9,20 − 2,60 = **€6,60 neto** (33% neto).
 
 ### Ejemplo C: sesión 5 min en modelo T4 (tarifa €9/min = 45 €)
 
-- Modelo (79%): **€35,55**
-- Empresa bruto (21%): **€9,45**
+- Modelo (60%): **€27,00**
+- Empresa bruto (40%): **€18,00**
 - Empresa neto:
-  - **Cripto**: 9,45 − 0,45 = **€9,00 neto** (20% neto).
-  - **Tarjeta**: 9,45 − 5,85 = **€3,60 neto** (8% neto).
+  - **Cripto**: 18,00 − 0,45 = **€17,55 neto** (39% neto).
+  - **Tarjeta**: 18,00 − 5,85 = **€12,15 neto** (27% neto).
 
 ### Lectura sistémica
 
-- **Cripto sostiene margen** empresa con holgura (20-24% neto según tramo). Base sana para la fase soft launch.
-- **Tarjeta es delgada** (8-12% neto según tramo). Sensible a chargebacks: un chargeback fee de €25 sobre un ticket de €10 devora ~10% del ticket, además del %fee normal. Un solo chargeback puede llevar la transacción a margen negativo.
-- **Mix realista 50/50 cripto/tarjeta** en el arranque: margen neto agregado **12-19% sobre facturación** según tramo predominante.
-- **Sensibilidad principal del negocio**: el mix cripto/tarjeta y el volumen (para renegociar fees PSP). El %reparto queda fijo estructuralmente.
+- **Cripto sostiene margen** empresa con mucha holgura (39-49% neto según tramo). Base robusta para fase soft launch y crecimiento.
+- **Tarjeta ya no es delgada** con el nuevo reparto ADR-056: 27-37% neto según tramo. Aceptable, aunque los chargeback fees (~€25/chargeback) siguen siendo un riesgo real sobre tickets bajos (€25 sobre €10 devora 250% del ticket, no del margen).
+- **Mix realista 50/50 cripto/tarjeta** en el arranque: margen neto agregado **32-43% sobre facturación** según tramo predominante — muy por encima del 12-19% que habría con el reparto ADR-052 original.
+- **Sensibilidad principal del negocio**: chargebacks sobre tickets bajos, y volumen (para renegociar fees PSP tarjeta a la baja). El %reparto queda fijo estructuralmente por diseño ADR-056.
 
 ## Interacción con Estatus Pro y trial
 
@@ -123,11 +124,11 @@ El reparto de gifts (**90% modelo / 10% plataforma**, sobre el bruto pagado por 
 
 ## Programa de afiliados (retirado)
 
-El programa de afiliadas modelos (30% revshare por cliente atribuido) queda **retirado** por [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) §D11. El nuevo reparto escalonado 75-79% sobre-incentiva a la modelo a traer clientes propios sin necesidad de programa adicional. Ya no hay coste adicional de revshare a afiliados que restar del margen empresa. Ver [affiliate-program.md](affiliate-program.md) (stub de retirada) y [`../_deprecated/registro.md`](../_deprecated/registro.md) para el contenido histórico.
+El programa de afiliadas modelos (30% revshare por cliente atribuido) queda **retirado** por [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) §D11. Aunque el reparto pasó de 75-79% a 50-60% con [ADR-056](../06-decisions/adr-056-sistema-master-studio.md), el %reparto sigue siendo competitivo frente al sector (LiveJasmin L1 30%, BongaCams ~35%) y no se justifica reintroducir el revshare de afiliadas. Ya no hay coste adicional de revshare a afiliados que restar del margen empresa. Ver [affiliate-program.md](affiliate-program.md) (stub de retirada) y [`../_deprecated/registro.md`](../_deprecated/registro.md) para el contenido histórico.
 
 ## Estado de este documento
 
-Documento **cuantitativamente cerrado** en su parte estructural (reparto 75-79% + fees cripto ~1%) y **aproximado** en la parte tarjeta hasta que el PSP tarjeta cierre contrato. Cuando ese cierre ocurra, se sustituyen los fees ~13% asumidos por las cifras contractuales reales (fijo, variable, reserve, chargeback fees, refund fees).
+Documento **cuantitativamente cerrado** en su parte estructural (reparto 50-60% [ADR-056 §D3](../06-decisions/adr-056-sistema-master-studio.md) + fees cripto ~1%) y **aproximado** en la parte tarjeta hasta que el PSP tarjeta cierre contrato. Cuando ese cierre ocurra, se sustituyen los fees ~13% asumidos por las cifras contractuales reales (fijo, variable, reserve, chargeback fees, refund fees).
 
 Adicionalmente pendiente de recalibrar tras ADR-052:
 
@@ -145,4 +146,5 @@ Adicionalmente pendiente de recalibrar tras ADR-052:
 - [ADR-012](../06-decisions/adr-012-bfpm-platform-funded-bonus.md) — mecánica de ledger del consumo (reparto cliente/modelo/plataforma).
 - [ADR-047](../06-decisions/adr-047-pivote-soft-launch-cripto-paxum.md) — pivote soft launch cripto + Paxum.
 - [ADR-051](../06-decisions/adr-051-psp-puente-cripto-nowpayments.md) — PSP puente cripto (NOWPayments).
-- [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) — rediseño estructural del reparto y del rango de precio (vigente).
+- [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) — rediseño estructural del reparto y del rango de precio (§D1 y §D5 sobrescritos por ADR-056; resto vigente).
+- [ADR-056](../06-decisions/adr-056-sistema-master-studio.md) — sistema Master/Studio: §D3 vigente para tramos y umbrales (50-60%, 0/1000/4000/15000 €); §D4 revisión 2026-07-30 unifica motor en INDIVIDUAL per modelo.

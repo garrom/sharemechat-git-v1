@@ -1,6 +1,6 @@
 # Modelo de precio
 
-SharemeChat monetiza con un modelo **pay-per-use, sin suscripción**. El cliente compra saldo prepago en EUR a través de la wallet interna y lo consume por tiempo en sesiones de videochat 1:1, además de en gifts. El mecanismo económico subyacente (wallet, consumo por tiempo, gifts con reparto entre modelo y plataforma, payouts a modelos) está descrito en [business-model.md](business-model.md). La estructura de packs y el umbral mínimo se decidieron en [ADR-011](../06-decisions/adr-011-pricing-simplification-and-minimum-threshold.md). El régimen de reparto modelo/plataforma, rango de precio autoservicio y Estatus Pro vigente está formalizado en [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) y detallado en [sistema-tiers-modelos.md](sistema-tiers-modelos.md).
+SharemeChat monetiza con un modelo **pay-per-use, sin suscripción**. El cliente compra saldo prepago en EUR a través de la wallet interna y lo consume por tiempo en sesiones de videochat 1:1, además de en gifts. El mecanismo económico subyacente (wallet, consumo por tiempo, gifts con reparto entre modelo y plataforma, payouts a modelos) está descrito en [business-model.md](business-model.md). La estructura de packs y el umbral mínimo se decidieron en [ADR-011](../06-decisions/adr-011-pricing-simplification-and-minimum-threshold.md). El régimen de reparto modelo/plataforma, rango de precio autoservicio y Estatus Pro vigente está formalizado en [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) y actualizado por [ADR-056](../06-decisions/adr-056-sistema-master-studio.md) (§D3 sobrescribe tramos y umbrales; §D4 revisión 2026-07-30 unifica motor en INDIVIDUAL per modelo). Detalle operativo en [sistema-tiers-modelos.md](sistema-tiers-modelos.md).
 
 ## Packs vigentes
 
@@ -14,14 +14,14 @@ El pack mínimo es de 10 €. La fuente de verdad es el **saldo comprado en EUR*
 
 ## Precio por minuto: rango autoservicio por modelo
 
-**El precio por minuto NO es plano**. Cada modelo elige su tarifa dentro del rango que su tramo le permite ([ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) §D2):
+**El precio por minuto NO es plano**. Cada modelo elige su tarifa dentro del rango que su tramo le permite. Los umbrales y porcentajes vigentes son los definidos por [ADR-056 §D3](../06-decisions/adr-056-sistema-master-studio.md) (sobrescribe ADR-052 §D5 y §D1):
 
-| Tramo de la modelo | Rango de precio / min |
-|---|---|
-| T1 (entrada, 0 – 3.500 €/mes) | **1 €/min fijo** |
-| T2 (> 3.500 €/mes) | 1 – 3 €/min |
-| T3 (> 5.000 €/mes) | 1 – 6 €/min |
-| T4 (> 6.500 €/mes) | 1 – 9 €/min |
+| Tramo de la modelo | Facturación bruta acumulada (30d) | % modelo | Rango de precio / min |
+|---|---|---:|---|
+| **T1** (entrada) | 0 – 1.000 € | **50%** | 1 €/min fijo |
+| **T2** | > 1.000 € | **54%** | 1 – 3 €/min |
+| **T3** | > 4.000 € | **57%** | 1 – 6 €/min |
+| **T4** | > 15.000 € | **60%** | 1 – 9 €/min |
 
 - El techo actual es **€9/min** (property configurable). Ampliaciones futuras (€15/min o superior) no requieren migration.
 - La tarifa elegida por cada modelo se **muestra claramente en su tarjeta de home y en la vista de perfil `/m/:slug`**. Sin precio visible, hay fricción de conversión y disputas.
@@ -29,6 +29,10 @@ El pack mínimo es de 10 €. La fuente de verdad es el **saldo comprado en EUR*
 - **Cripto y tarjeta pagan el mismo precio**. La empresa absorbe el diferencial de fees entre métodos como margen operativo, sin comunicar diferencia al cliente ni a la modelo.
 
 Detalle completo del sistema (mecánica de tramos, rangos, snapshot diario, panel de la modelo) en [sistema-tiers-modelos.md](sistema-tiers-modelos.md).
+
+### Modalidad Master (modelo bajo estudio)
+
+La modelo que opera bajo un Master (estudio) usa **los mismos tramos y los mismos umbrales**. La diferencia es únicamente el destinatario del ingreso: el 50-60% del bruto se abona al saldo del Master (no al de la modelo directamente); la modelo cobra después según acuerdo privado con el Master (`internal_share_pct` registrado en la plataforma como referencia auditable). El motor de cálculo es idéntico ([ADR-056 §D4 revisión 2026-07-30](../06-decisions/adr-056-sistema-master-studio.md): INDIVIDUAL per modelo, el Master recibe la suma de los payouts individuales).
 
 ## Fricción conocida entre rango de precio y packs vigentes
 
@@ -66,4 +70,5 @@ Este documento describe la estructura de precio de cara al cliente. El análisis
 - [sistema-tiers-modelos.md](sistema-tiers-modelos.md) — sistema de tramos, rango de precio, Estatus Pro, primer minuto trial y reparto por método de pago.
 - [unit-economics.md](unit-economics.md) — margen neto por método (cripto / tarjeta) y sensibilidad al mix.
 - [ADR-011](../06-decisions/adr-011-pricing-simplification-and-minimum-threshold.md) — packs 10 / 20 / 40 y umbral mínimo de recarga.
-- [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) — rediseño estructural del reparto y del rango de precio (vigente).
+- [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) — rediseño estructural del reparto y del rango de precio (parcialmente superseded por ADR-056 §D3 en umbrales y porcentajes; motor unificado y demás sigue vigente).
+- [ADR-056](../06-decisions/adr-056-sistema-master-studio.md) — sistema Master/Studio: §D3 vigente para tramos y umbrales; §D4 revisión 2026-07-30 unifica motor en INDIVIDUAL per modelo.

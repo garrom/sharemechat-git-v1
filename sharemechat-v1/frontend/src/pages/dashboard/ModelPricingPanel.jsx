@@ -227,16 +227,16 @@ const formatRate = (v) => {
 };
 
 // -------- Referencia estatica de los tramos (para la tabla) --------
-// Fuente de verdad: backend model_pricing_tiers. Se muestran las 4 filas
-// estatica aqui como REFERENCIA visual (misma info que sirve el backend
-// via /economics.tierMinBilledGrossEur30d + rateMin/Max + share). Si en
-// el futuro cambian los tramos, el DTO seguira siendo la fuente para
-// la resolucion; esta tabla es solo educativa.
+// Fuente de verdad: backend model_pricing_tiers (target_type=INDIVIDUAL,
+// filas vigentes tras V42+V43). Esta tabla es SOLO REFERENCIA VISUAL —
+// el DTO /economics.tierMinBilledGrossEur30d + rateMin/Max + share es
+// la fuente autoritativa para renderizar la ficha actual de la modelo.
+// Si vuelven a cambiar los tramos en BD, actualizar tambien aqui.
 const TIER_REFERENCE = [
-  { code: 'T1', minGross: 0,    share: 75, rateMin: 1, rateMax: 1 },
-  { code: 'T2', minGross: 3500, share: 77, rateMin: 1, rateMax: 3 },
-  { code: 'T3', minGross: 5000, share: 78, rateMin: 1, rateMax: 6 },
-  { code: 'T4', minGross: 6500, share: 79, rateMin: 1, rateMax: 9 },
+  { code: 'T1', minGross: 0,     share: 50, rateMin: 1, rateMax: 1 },
+  { code: 'T2', minGross: 1000,  share: 54, rateMin: 1, rateMax: 3 },
+  { code: 'T3', minGross: 4000,  share: 57, rateMin: 1, rateMax: 6 },
+  { code: 'T4', minGross: 15000, share: 60, rateMin: 1, rateMax: 9 },
 ];
 
 // ADR-056 Opcion D (2026-08-02): tramos regimen MASTER. Fuente de verdad:
