@@ -2,6 +2,10 @@
 
 Registro de deudas detectadas durante operación o auditoría que no son incidencias urgentes pero conviene no perder. Cuando una deuda se cierre, mover su sección a `incident-notes.md` con marca de resolución y eliminar de aquí.
 
+## 2026-08-04 — Deuda por evolutivo panel admin Master (ADR-056)
+
+**#D-27 — Columna "Régimen (libre / bajo estudio)" en panel admin de modelos — ABIERTA**. En el panel admin de modelos (`AdminModelsPanel.jsx` frontend product/admin bundle, backend `/api/admin/models` en `AdminController.java`), el listado actual muestra columnas estándar (nickname, email, KYC, estado, saldo) pero **no distingue visualmente entre modelo libre y modelo bajo estudio Master**. Tras el lanzamiento del sistema Master en PROD (2026-08-04), es cada vez más útil que el admin vea de un vistazo qué modelos están bajo qué Master. **Cambio propuesto**: añadir columna "Régimen" con dos valores posibles: "Libre" (`models.master_user_id IS NULL`) y "Bajo estudio: {nombre_master}" (`models.master_user_id IS NOT NULL` — mostrar nickname o email truncado del Master). Idealmente filtro tri-state también ("libre" / "bajo estudio" / "todos"). **Alcance**: (a) backend `AdminService.listModels` o equivalente añade `masterUserId` + `masterNickname` al DTO; (b) frontend `AdminModelsPanel.jsx` añade columna + filtro. Cero cambios BD (los datos ya están en `models.master_user_id`). **Prioridad**: media — el admin puede consultarlo por SQL en el ínterin, pero es UX obvia post-Master. **Referencia**: [ADR-056 §D9](../06-decisions/adr-056-sistema-master-studio.md) (visibilidad admin sobre relación Master↔modelo). Solicitud del operador 2026-08-04 al cierre de la sesión de nivelación Master en PROD.
+
 ## 2026-07-24 — Deudas nuevas por rediseño estructural del reparto (ADR-052)
 
 Bloque de deudas generadas por el rediseño estructural del reparto modelo/plataforma introducido por [`../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md`](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md). El ADR es declarativo (cero implementación); las deudas siguientes son consecuencias directas a resolver en frentes posteriores.
