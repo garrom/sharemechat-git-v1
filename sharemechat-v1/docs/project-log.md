@@ -8,6 +8,72 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-08-04 — Nivelación completa TEST → AUDIT → PROD: fix TIER_REFERENCE + docs ADR-056, Contrato Master v3.2 en PROD, Sistema Master activo en PROD (S8-PROD cerrado)
+
+Sesión larga de nivelación en tres frentes encadenados. Cierre completo del sistema Master en los tres entornos, publicación del contrato Master v3.2 en PROD y arreglo de una discrepancia significativa entre BD y frontend detectada por el operador. **Primera aparición del rol Master en PROD** — no es un pulido, es un lanzamiento.
+
+**Frente 1 — Discrepancia detectada por operador**: al inspeccionar el panel `/model/economics`, el operador vio "T1 = 50%" en la ficha actual (viene del DTO backend, correcto por ADR-056 §D3) al lado de una tabla de referencia que decía "T1 = 75%, siguiente escalón a 3.500 €" (obsoleta ADR-052). Investigación en profundidad (backend `ModelTierService`, BD `model_pricing_tiers`, frontend `TIER_REFERENCE` y `TIER_REFERENCE_MASTER`, 8 docs business, contrato Master v3.2, landing `/for-studios`) confirmó:
+
+- BD y motor backend correctos con ADR-056 §D3 (T1=0/50%, T2=1000/54%, T3=4000/57%, T4=15000/60%, umbrales 0/1000/4000/15000).
+- Frontend `TIER_REFERENCE_MASTER` (`DashboardMaster.jsx`, `MasterModelosPanel.jsx`, `ModelPricingPanel.jsx`) correcto con umbrales post-ADR-056.
+- Frontend `TIER_REFERENCE` (modelo libre en `ModelPricingPanel.jsx`) **obsoleto**: 75/77/78/79% + 0/3500/5000/6500.
+- Docs `pricing.md`, `sistema-tiers-modelos.md v2.0`, `business-model.md`, `unit-economics.md`, `launch-strategy.md`, `model-profile-strategy.md`, `financiero/modelo-financiero.md v2.0`, `financiero/modelo-financiero-tablas.md` todos con datos ADR-052 (75-79%, umbrales 3500/5000/6500).
+
+**Aprendizaje**: la actualización de ADR-056 §D3 se propagó al backend (V42 seed + V43 retirada MASTER + `ModelTierService` operando solo con INDIVIDUAL) y al panel Master, pero se olvidó el panel de la modelo libre y toda la documentación de negocio. Registrado como frente separado hoy.
+
+**Frente 2 — Fix + barrido docs** (commit `3984e54`): `TIER_REFERENCE` actualizado a 50/54/57/60% + 0/1000/4000/15000; 8 docs actualizados con valores vigentes ADR-056 §D3 (v3.0 → v3.1 en modelo-financiero.md; v2.0 → v2.1 en sistema-tiers-modelos.md; ejemplos numéricos A/B/C recalculados en unit-economics.md con nuevos márgenes 39-49% cripto y 27-37% tarjeta; recalibración break-even 170 → 65 TX/mes y margen neto 19m -4700 → -2800 en modelo-financiero.md). Añadida sección "Modalidad Master" en 4 docs core para dejar explícito que modelo libre y modelo bajo Master aplican los mismos tramos (motor unificado tras revisión 2026-07-30 de ADR-056 §D4). Fuera de scope quedaron `current-phase.md` y `plan-captacion-trafico-2026-q3.md` (frente separado).
+
+Deploy TEST + AUDIT del fix TIER (bundle nuevo `main.4d6c03f4.js`): ambos entornos verificados vía inspección del chunk `807.d20d56aa.chunk.js` (contiene `TIER_REFERENCE` con 50/54/57/60% + `TIER_REFERENCE_MASTER` con umbrales 0/1000/4000/15000, sin trazas de 75/77/78/79 ni 3500/5000/6500).
+
+**Frente 3 — Publicación Contrato Master v3.2 en AUDIT + PROD**: extensión del ciclo de ayer (v3.2 solo estaba en TEST). AUDIT (fase 1 hoy): PDF + manifest + invalidación CloudFront `E2NC4TEJAWOI3L`, verificado HTTP/2 200 + sha `FE230D…EA25` match. PROD (fase 2 hoy): igual flujo, CloudFront `E3UAOU6AUNI0CM` invalidado, verificado en `https://assets.sharemechat.com/legal/master_contract.pdf`.
+
+**Frente 4 — Lanzamiento Sistema Master en PROD** (nivelación completa desde `a7d18a1` del 2026-07-27, ~100 commits diff, 5 migrations V42-V46):
+
+- Preparación: SSH `prod-backend` OK, AWS `sharemechat-deployer` OK, `mvn 3.9.9 + JDK 17.0.14` OK, env vars PROD verificadas presentes (`KYC_DIDIT_MASTER_CALLBACK_URL` 51 chars, `KYC_DIDIT_MASTER_WORKFLOW_ID` 36 chars, `CLAUDE_API_KEY` 108 chars, `PRODUCT_ACCESS_MODE`, `SPRING_FLYWAY_ENABLED`, `JWT_SECRET_PROD`, `CONSENT_SECRET_PROD`).
+- **Snapshot RDS PROD**: bloqueador inicial por permisos IAM (perfil default `sharemechat-deployer` no tiene `rds:CreateDBSnapshot`). Resolución: usar perfil `sharemechat-provisioner` (documentado en `backend-and-seo-deploy-2026-06-23.md`). Snapshot `pre-master-launch-prod-20260804` creado OK, encrypted, storage 20 GB.
+- Compilación JAR: SHA256 `79d2fbc4a230f5892844dd6a27e6744281d7338692436f738f0b0fb320f10cff` — idéntico al desplegado en AUDIT desde 2026-08-02 (cero cambios backend en 2 días). Es el mismo binario probado en AUDIT.
+- Hygiene de backup: eliminado `.bak-pre-t6-20260727T212215Z` previo antes del deploy (respeta memoria `feedback_backend_deploy_backup_hygiene` N=1). Backup nuevo `.bak-pre-master-launch-20260804T174725Z` creado.
+- Deploy backend: `scp` JAR nuevo → `/tmp/sharemechat-v1-new.jar` → verify sha256 match remoto → `mv` + `chown ec2-user:ec2-user` + `systemctl restart sharemechat-prod.service`. Flyway aplicó las 5 migrations V42-V46 en **2.7 segundos** (V42 master studio system → V43 retire master pricing tiers → V44 user acquisition → V45 payout methods → V46 master suspension). Backend arrancado en **37.4 segundos**. Sin errores en journal.
+- Smoke tests backend: `/api/users/me` → 401 ✅, `/api/clients/me` → 503 (PRELAUNCH) ✅, `/api/masters/me/{contract,overview,payout-methods}` → 401 sin auth ✅, `/api/consent/model-contract/current` → 200 con manifest v4 ✅ (regresión OK).
+- **Falso positivo inicial en smoke**: probé `/api/consent/master-contract/current` (path asumido por simetría con modelo) que devuelve 500 porque **no existe** — el path Master real es `/api/masters/me/contract` (con auth). Aclarado y verificado el correcto.
+- `update-manifest-backend.ps1 -Environment prod -RemoteVerify -AssumeYesNonCritical`: manifest `prod.yaml` actualizado con `git_commit=35a13b9`, `jar_sha256=79d2fbc4…`, `deployed_at=2026-08-04T17:51:45Z`. Verificación remote sha256 match.
+- Deploy frontend PROD both surfaces: bundle `main.4d6c03f4.js` publicado en `sharemechat-frontend-prod` bucket, prerender blog completo (13 URLs `/blog/es/*` + `/blog/en/*`), invalidación CloudFront `E2FWNC80D4QDJC` + admin `E3O40LHJ4PC6LE`.
+- Verificación end-to-end: `https://sharemechat.com/` → 200, `/for-studios` → 200, bundle → 200, chunk 807 → 200.
+
+**Nota sobre CloudFront frontend público PROD**: distribution `E2FWNC80D4QDJC` sigue apuntando al bucket `sharemechat-landing-prod` (landing legacy). El deploy publica en `sharemechat-frontend-prod` bucket pero el público sigue viendo la landing legacy hasta el "switch público" (cambio de origin), pendiente como frente separado. El deploy prepara el bundle listo para ese día.
+
+**Estado final tras la sesión**:
+
+- **TEST**: HEAD `35a13b9`, bundle `main.4d6c03f4.js`, backend `bacb5cf`, contrato Master v3.2. Idéntico a AUDIT y PROD.
+- **AUDIT**: HEAD `35a13b9`, bundle `main.4d6c03f4.js`, backend `bacb5cf`, contrato Master v3.2. Idéntico a TEST y PROD.
+- **PROD**: HEAD `35a13b9`, bundle `main.4d6c03f4.js`, backend `35a13b9` (JAR `79d2fbc4`), 5 migrations V42-V46 aplicadas, contrato Master v3.2 publicado, Sistema Master **activo** (persistido en `masters` table via V42, `MasterContractService` activo, endpoints `/api/masters/**` responden).
+- **Modo operativo PROD**: sigue `PRELAUNCH` (usuarios producto responden 503 en endpoints protegidos; Sistema Master está técnicamente disponible pero no expuesto públicamente hasta el switch de CloudFront origin).
+
+**Checklist S8-PROD final**:
+- ✅ #1 Callback URL Didit Master en PROD.
+- ✅ #2 PDF Contrato Master real publicado en PROD (`master_contract_v32_2026-08-03`, sha `FE230D…EA25`).
+- ✅ #3 Workflow Didit Master UUID en PROD.
+- ✅ #4 `CLAUDE_API_KEY` en PROD.
+- ✅ Sistema Master completo en PROD (98 commits + V42-V46 aplicadas).
+
+**Aprendizajes operativos**:
+
+- **`ModelTierService` vs `TIER_REFERENCE` desincronización**: los cambios de umbrales/porcentajes en un ADR estructural deben propagarse a TRES capas simultáneamente: BD (migration), backend (código de resolución) y frontend (constantes de referencia). Si una queda atrás, la modelo ve dos cifras del mismo tramo. Registrar como patrón: cada ADR económico debe checkear las tres capas en su "impacto en código".
+- **Perfil AWS por operación**: `sharemechat-deployer` no tiene todos los permisos que se necesitan para deploy end-to-end en PROD. Para operaciones RDS destructivas o de snapshot, cambiar a `sharemechat-provisioner`. Documentado en `backend-and-seo-deploy-2026-06-23.md` pero no repetido en `access-and-tooling.md` — deuda de documentación aparte.
+- **Nombres de endpoint entre servicios asimétricos**: contrato modelo vive en `/api/consent/model-contract/{current,status,accept}` (público current); contrato Master vive dentro del namespace `/api/masters/me/contract` (siempre autenticado). Simetría rota — puede confundir en smoke tests. Documentar en `docs/02-architecture/api-conventions.md` si acaba habiendo colisiones futuras.
+- **Build Java determinista con JDK 17 + Maven 3.9**: el JAR compilado 2 días después con el mismo código produce SHA256 idéntico (`79d2fbc4…`). Ventaja operativa: el binario que se despliega en PROD es literalmente el que ya lleva 2 días probado en AUDIT, verificable por sha256sum en remoto.
+
+**Pendiente / frentes abiertos**:
+
+- Switch público CloudFront PROD (cambiar origin `sharemechat-landing-prod` → `sharemechat-frontend-prod`). Decisión mayor, fuera del scope de esta nivelación.
+- `current-phase.md` (1 línea histórica con 75-79%) y `plan-captacion-trafico-2026-q3.md` (~10 menciones vivas al reclutamiento con 75-79%) siguen con datos ADR-052 previos. Frente separado si se decide addendum.
+- `modelo-financiero.xlsx` recalibración manual pendiente (el `.md` ya recoge los supuestos vigentes, pero el Excel companion sigue con reparto 15-40% del sistema previo a ADR-052).
+- Snapshot manual `pre-master-launch-prod-20260804` creado hoy — política de rotación por definir (mantener indefinido / borrar tras N días si no hay incidentes).
+
+**Siguiente frente según agenda del operador**: **login con Google** (post-nivelación completa, según agenda declarada 2026-08-03 al final de la sesión).
+
+---
+
 ## 2026-08-03 — Contrato Master v3.2 reescrito con tono jurídico + P2B + savings clauses + publicación TEST (cierre deuda #2 checklist S8-PROD)
 
 Sesión larga dedicada a rehacer el borrador del Contrato Master partiendo del v1 publicado en TEST el 2026-07-31 (conversión con `markdown-pdf` sin plantilla ni revisión estructural). Iteraciones v2 → v3 → v3.1 → v3.2 con feedback del operador tras cada versión. Cierre de la deuda #2 del checklist S8-PROD registrada al final de la sesión anterior (2026-08-02): TEST ya sirve la versión definitiva reescrita. PROD queda pendiente solo de decisión operativa de nivelar.
