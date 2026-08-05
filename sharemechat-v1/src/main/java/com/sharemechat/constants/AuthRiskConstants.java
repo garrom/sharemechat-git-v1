@@ -29,6 +29,10 @@ public final class AuthRiskConstants {
         }
 
         public static final String PRODUCT = "product";
+        /** Canal para separar telemetria de login federado (Sign in with Google)
+         *  del login clasico email+password. Permite filtrar dashboards y
+         *  reglas de rate-limit por origen. */
+        public static final String PRODUCT_GOOGLE = "product-google";
     }
 
     public static final class Reasons {

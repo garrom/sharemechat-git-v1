@@ -158,6 +158,18 @@
 			<artifactId>qrcodegen</artifactId>
 			<version>1.8.0</version>
 		</dependency>
+
+		<!-- Login federado con Google (Sign in with Google via Google Identity Services).
+		     Libreria oficial Google para verificar ID tokens firmados por Google:
+		     GoogleIdTokenVerifier valida firma (JWKS auto-cacheada), iss, aud y exp.
+		     No usamos OAuth2 authorization code flow, solo verificacion de ID token
+		     recibido del cliente. Se integra en el pipeline auth propio (JWT stateless
+		     custom), no en Spring Security OAuth2 client. -->
+		<dependency>
+			<groupId>com.google.api-client</groupId>
+			<artifactId>google-api-client</artifactId>
+			<version>2.7.2</version>
+		</dependency>
 	</dependencies>
 
 	<build>

@@ -8,6 +8,58 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-08-05 — ADR-058 login federado Google (Fase 1 backend): OAuth consent screen + endpoint público + endpoints link/password + tests OK
+
+Frente nuevo iniciado tras cerrar el S8-PROD Master (2026-08-04). Objetivo: implementar "Sign in with Google" para reducir fricción de registro CLIENT y alinearse con precedente adult moderno (OnlyFans). El operador aportó estudio profundo previo con datos verificados del sector (`Sharemechat_Aplicaciones/SECURIZACION/Login-google.pdf`, 7 páginas con fuentes citadas) que confirmó: (a) cam sites tradicionales (Chaturbate, Stripchat, LiveJasmin, BongaCams, Jerkmate, CooMeet) usan email/username+password puro; (b) OnlyFans es la única plataforma adult grande con Google Sign-In documentado, con patrón fan/creator (SSO ligero consumidor, KYC pesado talento); (c) Google API Services User Data Policy no prohíbe apps adult para autenticación pura con scopes non-sensitive; (d) age verification y SSO son ejes ortogonales — SharemeChat debe mantener age-gate/KYC propios independientemente. Correcciones al plan del asistente (frente al diseño inicial cliente+modelo): estudio recomienda solo CLIENT en Fase 1 y política linking híbrida P2/P3 (no P3 puro). Aceptadas ambas.
+
+**FASE 0 — Google Cloud Console (operador, ~30 min)**: proyecto nuevo `sharemechat-auth` creado en organización `garromtrading-org` (mantenido separado del `sharemechat-analytics`, renombrado desde `My First Project`, que ya alberga la infra ADC/GA4 documentada en brainstorming S0019). Identity Toolkit API habilitada. OAuth consent screen configurado: App name `SharemeChat`, support email `garromtrading@gmail.com` (no `operations@sharemechat.com` porque este es mailbox externo no cuenta Google; error IAM `AccessDenied` documentado como precedente), authorized domain `sharemechat.com`, scopes non-sensitive (`openid`, `.../userinfo.email`, `.../userinfo.profile`). OAuth Client ID Web application creado con 3 orígenes autorizados (`https://sharemechat.com`, `https://test.sharemechat.com`, `https://audit.sharemechat.com`), sin redirect URIs. App en modo Testing con 2 emails Gmail del operador como test users.
+
+**Decisión sobre proyecto Cloud**: mantener `sharemechat-analytics` (analytics GA4 ADC) y `sharemechat-auth` (login público) **separados** en lugar de mezclar OAuth clients en un solo proyecto. Motivo: el consent screen `sharemechat-ga4` actual está diseñado para uso interno con scopes sensitive (`analytics.readonly + cloud-platform`) y modificarlo para público impactaría el flujo ADC del operador. Aislamiento IAM + brand verification separada + no impacto cruzado si Google revoca uno de los OAuth clients.
+
+**FASE 1 — Backend Java (asistente)**:
+
+- Migration V47: tabla `oauth_accounts` multi-provider (id, user_id FK, provider, provider_user_id UNIQUE, email_at_signup, google_hd, picture_url, created_at, last_used_at, revoked_at) con constraint `CHECK provider IN ('google', 'apple', 'twitter')` y índices apropiados. Diseñada para futuros providers sin cambio de schema.
+- Migration V48: `users.password` pasa a NULLABLE. Semántica: `password IS NULL` = user Google-only. No se añade `password_set_at` redundante — la presencia de `password` es la fuente autoritativa.
+- Dependencia `com.google.api-client:google-api-client:2.7.2` añadida en `pom.xml`. Rechazado explícitamente `spring-boot-starter-oauth2-client` (traería session management + redirect flow que rompen el modelo actual custom JWT stateless).
+- Entity `OAuthAccount` + `OAuthAccountRepository` con queries `findByProviderAndProviderUserIdAndRevokedAtIsNull`, `findByUserIdAndRevokedAtIsNull`, `existsByUserIdAndProviderAndRevokedAtIsNull`.
+- Servicio `GoogleIdTokenVerifierService` que envuelve `GoogleIdTokenVerifier` de la librería oficial. Verifica firma + iss (accounts.google.com) + aud (CLIENT_ID) + exp. JWKS cache 24h con retry automático. Fail-secure: si Google JWKS caído devuelve null (no lanza). Log del sufijo del clientId en INFO al arrancar.
+- Property `auth.google.client-id=${GOOGLE_OAUTH_CLIENT_ID:}` en `application.properties`. Sin default (vacía si no configurada). Cuando vacía: el bean del servicio existe pero `isConfigured()` devuelve false y el endpoint retorna 503 en vez de fallar el arranque.
+- DTO `GoogleAuthRequestDTO` con `idToken` + `intent ∈ {login, register-client}` + `locale` opcional. Validaciones `@NotBlank` + `@Size`.
+- Endpoint público `POST /api/auth/google` en nuevo `AuthGoogleController` replicando el pipeline COMPLETO de `AuthController.login` (consent age-gate + rate-limit IP + country-access + auth-risk + backoffice deny + account status + JWT cookies HttpOnly SameSite=None + dormancy recordActivity). Diferencia: verifica ID token Google en lugar de password. Nuevo canal auth-risk `Channels.PRODUCT_GOOGLE` en `AuthRiskConstants` para separar telemetría de login federado del clásico.
+- Política account linking híbrida P2/P3 implementada en el flujo del endpoint: auto-link SOLO si `email_verified=true` del ID token Google AND `email_verified_at` poblado en el user existente en BD. Si el user existente no verificó email → 409 `EMAIL_COLLISION_NEEDS_PASSWORD` (usuario debe entrar con password primero). Nunca auto-link ciego por email solo (vector de account takeover documentado por Clerk/Ory/WorkOS).
+- Identificador federado: claim `sub` de Google (no email) — doc oficial *"Don't use email address as an identifier because a Google Account can have multiple email addresses at different points in time"*. Se congela en `oauth_accounts.provider_user_id` con UNIQUE(provider, provider_user_id).
+- Creación de nickname automática para user CLIENT nuevo: `<base-email>-<últimos6-del-sub>` (probabilísticamente único, sin query O(N) sobre users).
+- Códigos JSON explícitos por response: `INVALID_TOKEN`, `INVALID_TOKEN_PAYLOAD`, `GOOGLE_EMAIL_NOT_VERIFIED`, `NO_ACCOUNT_FOR_EMAIL`, `EMAIL_COLLISION_NEEDS_PASSWORD`, `INVALID_INTENT`, `GOOGLE_AUTH_UNAVAILABLE`.
+- Endpoints autenticados `/api/users/me/...` en nuevo `OAuthAccountController`:
+  - `GET /oauth`: lista vinculaciones activas + `hasPassword` (para la sección "Cuentas vinculadas" del perfil).
+  - `POST /oauth/google/link`: vincular Google al user autenticado (patrón P3 estricto — user ya logueado + segundo factor Google).
+  - `DELETE /oauth/google`: unlink Google. Rechaza `NEEDS_PASSWORD_FIRST` si el user no tiene password (evita quedarse sin método de login).
+  - `POST /password/initial`: set primera password para user Google-only (solo si `password IS NULL`). Rechaza `PASSWORD_ALREADY_SET` en caso contrario.
+- Nuevos DTOs `OAuthLinkRequestDTO` y `SetInitialPasswordRequest` con validaciones.
+- `SecurityConfig` actualizado: `permitAll` para `POST /api/auth/google`. Endpoints `/api/users/me/oauth/**` y `/api/users/me/password/**` cubiertos por el matcher genérico `/api/users/**` existente.
+
+**Alcance intencionalmente NO incluido en Fase 1** (frentes separados):
+- Rol MODEL y rol MASTER siguen con email+password + KYC pesado (patrón fan/creator OnlyFans validado por el estudio). Extensión a MODEL reversible con 1 línea de frontend si datos de adopción CLIENT lo justifican.
+- Sign in with Apple: diferido a Fase 2 (obligatorio si se publica app iOS con otros SSO — App Store guideline 4.8). SharemeChat es web-only en soft-launch.
+- Magic link / passkeys: diferidos a Fase 3+. Passkeys es la dirección futura del sector (Bumble/Badoo ya los ofrecen).
+- Facebook Login: NO priorizado (retirada estructural en sector — Hinge retiró tras update Meta, Bumble opcional no web, OkCupid desactivado en iOS).
+
+**Verificación**: `mvn compile -DskipTests` OK sin warnings. `mvn test` OK con **746/746 tests pasando** (741 previos + 5 nuevos del `GoogleIdTokenVerifierServiceTest`: configurado con client-id válido, no configurado con blank/null/whitespace, token bogus devuelve null sin lanzar, token vacío/null devuelve null). Cero regresiones.
+
+**Pendiente Fase 1**:
+- Frontend: cargar script GIS (`https://accounts.google.com/gsi/client`) en `index.html`. Componente reutilizable `GoogleSignInButton`. Integración en `LoginModalContent.jsx` vistas `login` y `register-client` (NO `register-model`, NO `register-master`). Handler `handleGoogleAuth(idToken, intent)` POST `/api/auth/google`. Perfil sección "Cuentas vinculadas".
+- CSP nginx: ampliar `script-src` y `frame-src` con `https://accounts.google.com`.
+- Deploy TEST: env var `GOOGLE_OAUTH_CLIENT_ID` en `/opt/sharemechat/config.env` de TEST, deploy backend (aplica V47+V48), deploy frontend product. Smoke: `POST /api/auth/google` con token válido de test user → 200 + cookies.
+- Publicación consent screen a Production en Google Cloud Console cuando TEST/AUDIT/PROD validen flujo — riesgo empírico adult brand verification a validar aquí.
+
+**Aprendizajes operativos**:
+- **Proyecto Cloud dedicado para OAuth público** aunque parezca redundante: separar `sharemechat-auth` del `sharemechat-analytics` protege el flujo ADC del operador si Google revoca uno, y facilita brand verification (nombre proyecto = nombre marca). Costes cero — mismos IAM roles heredados de la org.
+- **Support email OAuth NO es alias**: Google Cloud IAM solo acepta cuentas Google reales (Gmail personal o Google Workspace). `operations@sharemechat.com` es mailbox externo (probablemente Namecheap o Zoho, no Workspace); fallará con `AccessDenied` en IAM Add Principal. `garromtrading@gmail.com` como support email es correcto — no aparece al usuario final en el consent normal, solo lo ve Google para comunicaciones internas (brand verification, cambios de política).
+- **Client Secret NO usado en flujo GIS con ID tokens**: aunque Google Cloud lo genera automáticamente al crear OAuth Client Web application, no se consume en nuestro flujo (solo `google.oauth.client-id`). Sí se consumiría si migrásemos a OAuth code flow tradicional (redirect + code exchange), que rechazamos por complejidad.
+- **Property con default vacío + `isConfigured()` es mejor que fail-fast al arrancar**: el backend arranca en cualquier entorno aunque no tenga `GOOGLE_OAUTH_CLIENT_ID` poblado; el endpoint devuelve 503 documentado y el resto del sistema funciona. Diferencia con el patrón `kyc.didit.api-key` (que fallaría con placeholder no resuelto). Este patrón es más resiliente para features opcionales.
+
+---
+
 ## 2026-08-04 — Nivelación completa TEST → AUDIT → PROD: fix TIER_REFERENCE + docs ADR-056, Contrato Master v3.2 en PROD, Sistema Master activo en PROD (S8-PROD cerrado)
 
 Sesión larga de nivelación en tres frentes encadenados. Cierre completo del sistema Master en los tres entornos, publicación del contrato Master v3.2 en PROD y arreglo de una discrepancia significativa entre BD y frontend detectada por el operador. **Primera aparición del rol Master en PROD** — no es un pulido, es un lanzamiento.

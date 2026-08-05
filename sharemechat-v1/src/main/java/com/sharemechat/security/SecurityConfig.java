@@ -67,6 +67,10 @@ public class SecurityConfig {
                         // PUBLIC
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/users/register/**", "/api/auth/login", "/api/auth/refresh", "/api/auth/logout", "/api/admin/auth/login").permitAll()
+                        // Login federado Sign in with Google (Fase 1 solo CLIENT).
+                        // Endpoint publico simetrico a /api/auth/login pero
+                        // recibiendo ID token de Google Identity Services.
+                        .requestMatchers(HttpMethod.POST, "/api/auth/google").permitAll()
                         // ADR-056 S2: registro Master (persona fisica) publico,
                         // simetrico a /api/users/register/model. El resto de
                         // /api/masters/me/** exige autenticacion (matcher abajo).
