@@ -6,6 +6,7 @@ import { apiFetch } from '../../config/http';
 import { useAppModals } from '../../components/useAppModals';
 import i18n from '../../i18n';
 import LocaleSwitcher from '../../components/LocaleSwitcher';
+import LinkedAccountsCard from '../../components/LinkedAccountsCard';
 
 // Navbar unificado
 import {
@@ -475,6 +476,10 @@ const PerfilClient = () => {
                   </Hint>
                 </CardBody>
               </MediaCard>
+
+              {/* ADR-058: sección "Cuentas vinculadas" con estado Google,
+                  link/unlink y set-password inicial para users Google-only. */}
+              <LinkedAccountsCard />
 
               <SecurityCard>
                 <CardHeader>

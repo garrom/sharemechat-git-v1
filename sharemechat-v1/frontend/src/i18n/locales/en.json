@@ -134,6 +134,7 @@
     "sendMessage": "Send message",
     "networkError": "Network error",
     "loading": "Loading…",
+    "saving": "Saving…",
     "ratePerMin": "€{{rate}}/min",
     "actions": {
       "addToFavorites": "Add to favorites",
@@ -181,6 +182,37 @@
         "message": "Type a message…",
         "inactive": "Chat inactive"
       }
+    }
+  },
+  "linkedAccounts": {
+    "title": "Linked accounts",
+    "subtitle": "Add external providers to sign in without a password.",
+    "google": {
+      "linked": "linked",
+      "notLinked": "not linked",
+      "unlink": "Unlink Google",
+      "linkedOk": "Google linked successfully.",
+      "unlinkedOk": "Google unlinked."
+    },
+    "password": {
+      "title": "Add password",
+      "hint": "Recommended if you only use Google: it lets you sign in even if Google is unavailable.",
+      "newPassword": "New password (min. 8 characters)",
+      "submit": "Save password",
+      "setOk": "Password set successfully."
+    },
+    "errors": {
+      "load": "Could not load your linked accounts.",
+      "link": "Could not link Google.",
+      "unlink": "Could not unlink Google.",
+      "password": "Could not save the password.",
+      "passwordMin": "Password must be at least 8 characters.",
+      "alreadyLinked": "Google is already linked to this account.",
+      "subOtherUser": "This Google account is already linked to another SharemeChat account.",
+      "googleEmailNotVerified": "Your Google account email is not verified.",
+      "invalidToken": "Could not verify your Google account.",
+      "needsPasswordFirst": "Set a password before unlinking Google, or you will lose access.",
+      "passwordAlreadySet": "You already have a password. Use the change password flow."
     }
   },
   "profileCommon": {
@@ -828,7 +860,17 @@
     "registerGender": {
       "title": "Join as",
       "male": "Man",
-      "female": "Woman"
+      "female": "Woman",
+      "orGoogle": "or continue with Google (as a client)"
+    },
+    "google": {
+      "orSeparator": "or",
+      "errors": {
+        "emailCollision": "An account with this email already exists. Sign in with your password and then link Google from your profile.",
+        "noAccount": "You don't have an account yet. Register with Google from the sign-up form first.",
+        "unavailable": "Google Sign-In is not available right now.",
+        "invalidToken": "Could not verify your Google account. Please try again."
+      }
     },
     "registerClient": {
       "title": "Sign up",

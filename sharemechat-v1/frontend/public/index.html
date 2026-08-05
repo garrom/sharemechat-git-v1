@@ -42,6 +42,16 @@
     <!-- Tipografia -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&display=swap">
 
+    <!--
+      Google Identity Services (Sign in with Google, ADR-058).
+      Carga la biblioteca oficial de Google que renderiza el boton oficial
+      "Sign in with Google" y expone la callback con el ID token JWT firmado
+      por Google. Async + defer para no bloquear el first paint.
+      FedCM habilitado por defecto en navegadores modernos -> evita depender
+      de third-party cookies (bug conocido documentado por OnlyFans).
+    -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
     <!-- Open Graph -->
     <!--
       og:image / twitter:image: card raster generica de marca 1200x630

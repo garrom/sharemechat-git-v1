@@ -5,6 +5,8 @@ import { apiFetch } from '../config/http';
 import RegisterClientModalContent from './RegisterClientModalContent';
 import RegisterModelModalContent from './RegisterModelModalContent';
 import RegisterMasterModalContent from './RegisterMasterModalContent';
+import GoogleSignInButton from './GoogleSignInButton';
+import useGoogleAuth from '../hooks/useGoogleAuth';
 import { useSession } from '../components/SessionProvider';
 import {
   StyledForm, StyledInput, StyledButton, StyledLinkButton,
@@ -57,6 +59,18 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) =
     setFieldErrors(fe);
     return !fe.email && !fe.password;
   };
+
+  // ADR-058: handler del flujo Google Sign-In extraido a hook para
+  // testeo unitario limpio (useGoogleAuth). Se pasa a
+  // <GoogleSignInButton onIdToken={handleGoogleAuth} />.
+  const handleGoogleAuth = useGoogleAuth({
+    setError,
+    setStatus,
+    setLoading,
+    refresh,
+    safeNavigate,
+    onLoginSuccess,
+  });
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -234,6 +248,29 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) =
           >
             {i18n.t('auth.login.actions.forgotPassword')}
           </StyledLinkButton>
+
+          {/* ADR-058: separador + boton Google Sign-In para login. */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              margin: '12px 0 8px',
+              color: '#6b7280',
+              fontSize: 12,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+            }}
+          >
+            <span style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
+            <span>{i18n.t('auth.google.orSeparator')}</span>
+            <span style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
+          </div>
+          <GoogleSignInButton
+            intent="login"
+            onIdToken={handleGoogleAuth}
+            onError={(msg) => setError(msg)}
+          />
         </>
       )}
 
@@ -250,6 +287,35 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) =
               {i18n.t('auth.registerGender.female')}
             </StyledButton>
           </RegisterGenderRow>
+
+          {/* ADR-058 §D2: Google Sign-In solo aplica al rol CLIENT en Fase 1
+              (patron fan/creator OnlyFans). Se ofrece explicitamente como
+              opcion alternativa en la seleccion de rol. */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              margin: '16px 0 8px',
+              color: '#6b7280',
+              fontSize: 12,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+            }}
+          >
+            <span style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
+            <span>{i18n.t('auth.google.orSeparator')}</span>
+            <span style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
+          </div>
+          <div style={{ textAlign: 'center', color: '#4b5563', fontSize: 13, marginBottom: 6 }}>
+            {i18n.t('auth.registerGender.orGoogle')}
+          </div>
+          <GoogleSignInButton
+            intent="register-client"
+            onIdToken={handleGoogleAuth}
+            onError={(msg) => setError(msg)}
+          />
+          {error && <StyledError role="alert" style={{ marginTop: 8 }}>{error}</StyledError>}
         </>
       )}
 
