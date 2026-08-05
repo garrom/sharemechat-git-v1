@@ -1,7 +1,8 @@
-{"id":"H0015","cyc":16,"cyl":1,"ch":"ai-referral","th":"Referral de asistentes IA (ChatGPT y similares) es un canal organico REAL de captacion de clientes: usuarios que preguntan a un LLM por videochat verificado/alternativa Omegle y llegan ya con intencion; optimizar presencia/menciones en respuestas de LLM (GEO) es palanca de bajo esfuerzo y sin coste",
-"as":["los LLM recomiendan sites y generan trafico de alta intencion","SharemeChat es citable por su USP verificado (encaja con lo que un LLM recomendaria como 'seguro/sin bots')","la presencia en fuentes que los LLM ingieren (contenido propio, directorios, Quora) influye en que te citen"],
-"pv":[{"p":"src","s":"S0020"}],
-"ft":"Medir via user_acquisition la proporcion de signups con utm_source IN ('chatgpt.com','perplexity.ai','gemini','copilot') a 30/60d; y probar accion GEO: publicar 1 pieza optimizada para ser citada por LLM sobre 'verified video chat sin bots' y ver si sube. Exito: >=3 signups atribuidos a IA-referral en 60d",
+{"id":"H0015","cyc":16,"cyl":1,"ch":"ai-referral","th":"Visibilidad en asistentes de IA (ser recomendado/citado por ChatGPT, Perplexity, Gemini, Copilot cuando alguien pregunta por videochat verificado / alternativa a Omegle) como canal organico de captacion de clientes de alta intencion y coste 0 (GEO: generative engine optimization)",
+"as":["los LLM ya generan trafico real a sharemechat (chatgpt 5 sesiones, 1 signup atribuido, S0021)","ese trafico es de alta intencion (embudo apretado: 2 form_start / 5 sesiones)","se puede INFLUIR en que los LLM te citen publicando contenido citable + presencia en fuentes que ingieren (conecta con H0002 USP y H0011 age-verif)"],
+"pv":[{"p":"src","s":"S0020"},{"p":"src","s":"S0021"}],
+"adversario":"CAVEAT DURO (S0021): el referral chatgpt actual es probablemente BRANDED/incidental, NO recomendacion organica -> sharemechat NO aparece en WebSearch para 'verified omegle alternative' y el claim verificado/sin-bots esta saturado por competidores. Ademas Google organic trae MAS trafico (19 vs 5). N=1 signup. Por tanto la tesis 'ser recomendado organicamente' AUN NO esta probada; lo probado es 'existe trafico via IA'. El camino para hacerlo organico = GEO (contenido citable), que es donde se cruza con H0002/H0011.",
+"ft":"E0004: sondear sistematicamente ChatGPT/Perplexity/Gemini/Copilot con las queries del cliente ('best verified video chat','omegle alternative no bots','safe random video chat') y registrar SI/COMO aparece sharemechat (baseline hoy = NO en generico). Luego accion GEO (via H0002/H0011) y re-medir. Exito: pasar de 0 a >=1 asistente que cite sharemechat en query generica en 60-90d, y user_acquisition con >=3 signups IA-referral",
 "cost":{"eur":0,"type":"none"},
-"sc":{"reach":2,"conv":4,"eff":2,"ban":1,"brand":4,"conf":0.5},
-"st":"active","kr":"","par":"","exp":[]}
+"sc":{"reach":2,"conv":4,"eff":1,"ban":1,"brand":4,"conf":0.5},
+"st":"recommended","kr":"","par":"H0002","exp":["E0004"]}

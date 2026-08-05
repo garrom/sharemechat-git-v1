@@ -96,3 +96,12 @@
 {"c":17,"t":"diag","note":"hueco GA4 diagnosticado: contenedor GTM-T7BNJP4M NO tiene trigger/tag para evento sign_up (front SI lo empuja al dataLayer; GA4 config G-6D5KSSCH2C envia page_view ok). Fix = crear trigger custom-event sign_up + tag GA4 event + publicar (operador, GTM UI). Caida GA4 3-ago = operador dejo de autonavegar + filtro interno, NO bug. Capa B cubre atribucion."}
 {"c":18,"t":"fix","note":"hueco GA4 CERRADO por operador: GTM-T7BNJP4M v3 publicada con trigger 'CE - sign_up' (custom event) + tag GA4 event sign_up -> config G-6D5KSSCH2C. Verificado en gtm.js publicado (sign_up presente). Front empuja sign_up SOLO en PROD (en TEST hace console.info 'no-prod NO enviado a GA4' por diseno). PENDIENTE: confirmar end-to-end con proximo alta REAL en sharemechat.com desde IP externa. Capa B (BBDD) sigue capturando atribucion mientras tanto."}
 {"c":19,"t":"note","note":"GCP project renombrado 'My First Project' -> 'sharemechat-analytics' (id project-ed4b68ce-3147-48b6-9fd y numero 975580876685 sin cambio). S0019 actualizado. Se documenta ademas en docs/04-operations/access-and-tooling.md (seccion GA4)."}
+{"c":20,"t":"input","src":"operator 2026-08-05: reactivar bucle, señal nueva atribucion viva"}
+{"c":20,"t":"data","note":"PROD: 9 registros USER+CLIENT total; desde capa B (~3-ago) solo 1 nuevo (user44); user_acquisition 1 fila = chatgpt.com"}
+{"c":20,"t":"src","id":"S0021","u":"registros PROD + embudo GA4 por fuente + probe GEO"}
+{"c":21,"t":"crit","note":"ADVERSARIO: referral chatgpt probablemente branded/incidental, NO recomendacion organica (sharemechat ausente en WebSearch generico; claim verificado saturado). Google organic trae MAS trafico (19 vs 5). N=1 signup. Tesis 'recomendado por IA' aun no probada; lo probado es 'existe trafico IA'."}
+{"c":22,"t":"promote","id":"H0015","note":"elevada a recommended: unico canal con conversion real atribuida + esfuerzo 0 + alta intencion; eff 2->1"}
+{"c":22,"t":"exp","id":"E0004","st":"proposed","note":"GEO probe: baseline visibilidad IA + accion + re-medir"}
+{"c":22,"t":"req","id":"R0009","k":"experiment","note":"sondeo baseline a ChatGPT/Perplexity/Gemini/Copilot (operador)"}
+{"c":22,"t":"link","note":"GEO cluster: H0015 (ai-referral) <- alimentado por H0002 (USP citable) + H0011 (age-verif content). Ser citable por LLM = mecanismo comun."}
+{"c":22,"t":"halt","note":"batch hecho; señal real N=1 (chatgpt), elevada H0015 con caveat honesto; siguiente = operador sondea IA (R0009) + GA4 sign_up empezara a medir proximas altas"}

@@ -1,15 +1,17 @@
 {
-"last_cycle": 11,
-"halt": "blocked+plateau",
-"cycles_this_run": "9-11",
-"date": "2026-07-31",
+"last_cycle": 22,
+"halt": "batch (senal real ingerida N=1)",
+"cycles_this_run": "20-22",
+"date": "2026-08-05",
 "top5": [
 "H0002",
-"H0003",
+"H0015",
 "H0001",
 "H0011",
 "H0014"
 ],
+"titular_2026-08-05": "Canal que trae gente REAL hoy (externo, organico, esfuerzo 0): Google organic (19 users/28d, el mayor) + ChatGPT (5 users). El UNICO con signup atribuido = ChatGPT (1, user44). IA/LLM = ~16% del trafico externo y 100% de los signups atribuidos, pero N=1. CAVEAT: probablemente branded/incidental, no recomendacion organica (sharemechat ausente en WebSearch generico). Google organic trae mas pero aun 0 conversion atribuida.",
+"senal_nueva": "S0021: atribucion viva. H0015 (ai-referral/GEO) elevada a recommended (esfuerzo 0 + unica conversion real), con E0004 (probe visibilidad IA) + R0009. GEO cluster: H0015 <- H0002 + H0011.",
 "recommended_ready_now": [
 "H0003 (E0001 directorios)",
 "H0005 (E0003 Quora)"
