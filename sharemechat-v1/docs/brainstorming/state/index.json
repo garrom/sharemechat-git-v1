@@ -1,12 +1,13 @@
 {
-"updated": "2026-07-31",
-"n": 14,
+"updated": "2026-08-05",
+"n": 15,
 "formula": "score=(reach+conv+brand+(5-eff)+(5-ban))*conf",
 "rank": [
 "H0002",
 "H0001",
 "H0011",
 "H0014",
+"H0015",
 "H0003",
 "H0005",
 "H0006",
@@ -111,10 +112,17 @@
 "ch": "funnel-framing",
 "f": true,
 "par": "H0002"
+},
+"H0015": {
+"st": "active",
+"score": 8.5,
+"ch": "ai-referral",
+"f": true
 }
 },
 "ceiling_note": "conf<=0.60 aunque lleguen datos: signups waitlist=senal de canal, no validacion de negocio (S0008)",
 "policy": "H0014 early-access framing = politica por defecto mientras PROD en PRELAUNCH",
 "fact_correction": "S0013: cripto NOWPayments integrado+activo en PROD (2026-07-17); tarjeta NO integrada. Corrige asuncion previa 'cripto no integrado'.",
-"blocker_capaA": "S0014: capa A atribucion NO desplegada en PROD (08a4c07 fuera de main/bundle); E0001/E0003 solo miden clics hasta merge+deploy."
+"blocker_capaA": "S0014: capa A atribucion NO desplegada en PROD (08a4c07 fuera de main/bundle); E0001/E0003 solo miden clics hasta merge+deploy.",
+"milestone": "2026-08-05: capa B (atribucion BBDD) operativa; 1er cliente potencial via chatgpt.com (user44). Capa A GA4 aun sin disparar (consent/GTM)."
 }
