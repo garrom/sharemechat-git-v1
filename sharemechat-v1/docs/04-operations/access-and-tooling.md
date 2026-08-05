@@ -128,6 +128,48 @@ Salida esperada en orden: versión AWS CLI v2, ARN del usuario IAM, `ok` del SSH
 
 Si alguna línea falla, resolver antes de operar. Para SSH a otros entornos sustituir `test-backend` por `audit-backend` o `prod-backend` según convenga.
 
+## Analítica: acceso de lectura a GA4 (Google Analytics 4)
+
+Conexión **solo lectura** a Google Analytics 4 para consultar métricas de tráfico y atribución (Data API + Admin API). Establecida el 2026-08-02.
+
+**Identificadores** (no sensibles):
+
+| Recurso | Valor |
+|---|---|
+| GCP project (nombre) | `sharemechat-analytics` (renombrado 2026-08-05 desde "My First Project") |
+| GCP project ID / número | `project-ed4b68ce-3147-48b6-9fd` / `975580876685` (fijos, no cambian) |
+| GA4 propiedad | `properties/525890409` (nombre "Sharemechat") |
+| GA4 measurement ID | `G-6D5KSSCH2C` |
+| Contenedor GTM | `GTM-T7BNJP4M` (dispara en TEST/AUDIT/PROD) |
+
+**Método de autenticación**: ADC (Application Default Credentials) vía **OAuth client propio de escritorio**, no service account. Motivo: la política de organización `iam.disableServiceAccountKeyCreation` bloquea las claves de service account, y el client por defecto de gcloud tiene bloqueado el scope `analytics.readonly`. Por eso se creó un OAuth client de escritorio propio (pantalla de consentimiento `sharemechat-ga4`, `garromtrading@gmail.com` como usuario de prueba).
+
+Alta de la credencial (una vez; ya hecha):
+
+```powershell
+gcloud auth application-default login --client-id-file="<client_secret_...json>" --scopes=https://www.googleapis.com/auth/analytics.readonly,https://www.googleapis.com/auth/cloud-platform
+gcloud auth application-default set-quota-project project-ed4b68ce-3147-48b6-9fd
+```
+
+La credencial ADC queda en `~/AppData/Roaming/gcloud/application_default_credentials.json`.
+
+**Consulta read-only** (obtener token y llamar a la API):
+
+```bash
+GC="/c/Users/<user>/AppData/Local/Google/Cloud SDK/google-cloud-sdk/bin/gcloud.cmd"
+TOK=$("$GC" auth application-default print-access-token)
+# Data API (informes): runReport
+curl -s -X POST -H "Authorization: Bearer $TOK" -H "Content-Type: application/json" \
+  "https://analyticsdata.googleapis.com/v1beta/properties/525890409:runReport" -d '{...}'
+# Admin API (listar cuentas/propiedades): accountSummaries
+curl -s -H "Authorization: Bearer $TOK" "https://analyticsadmin.googleapis.com/v1beta/accountSummaries"
+```
+
+Notas operativas:
+
+- **Filtro de tráfico interno** activo en GA4 (excluye la IP del operador). Las visitas del propio operador **no** aparecen en informes ni realtime — usar IP externa para verificar eventos.
+- **Atribución de captación**: el evento GA4 `sign_up` se reenvía vía GTM (trigger `CE - sign_up` + tag GA4 event, publicado 2026-08-05); el front solo lo envía en PROD. En paralelo, la tabla `user_acquisition` (BBDD, migration V44) persiste el origen (`utm_source/medium/campaign`) por usuario, independiente del navegador/consentimiento.
+
 ## Skills y scripts que dependen de estos accesos
 
 | Pieza | Necesita | Documentación |
