@@ -93,3 +93,4 @@
 {"c":16,"t":"gen","id":"H0015","note":"referral-IA (ChatGPT) canal organico real, 1er signup atribuido"}
 {"c":16,"t":"milestone","note":"primer dato real fluyendo por capa B (BBDD): atribucion usuario-fuente operativa; primer cliente potencial via ChatGPT"}
 {"c":16,"t":"gap","note":"capa A (sign_up en GA4) no dispara: sospecha consent-mode cookies UE o falta tag GTM; capa B cubre la atribucion"}
+{"c":17,"t":"diag","note":"hueco GA4 diagnosticado: contenedor GTM-T7BNJP4M NO tiene trigger/tag para evento sign_up (front SI lo empuja al dataLayer; GA4 config G-6D5KSSCH2C envia page_view ok). Fix = crear trigger custom-event sign_up + tag GA4 event + publicar (operador, GTM UI). Caida GA4 3-ago = operador dejo de autonavegar + filtro interno, NO bug. Capa B cubre atribucion."}
