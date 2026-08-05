@@ -12,6 +12,7 @@
 ],
 "titular_2026-08-05": "Canal que trae gente REAL hoy (externo, organico, esfuerzo 0): Google organic (19 users/28d, el mayor) + ChatGPT (5 users). El UNICO con signup atribuido = ChatGPT (1, user44). IA/LLM = ~16% del trafico externo y 100% de los signups atribuidos, pero N=1. CAVEAT: probablemente branded/incidental, no recomendacion organica (sharemechat ausente en WebSearch generico). Google organic trae mas pero aun 0 conversion atribuida.",
 "senal_nueva": "S0021: atribucion viva. H0015 (ai-referral/GEO) elevada a recommended (esfuerzo 0 + unica conversion real), con E0004 (probe visibilidad IA) + R0009. GEO cluster: H0015 <- H0002 + H0011.",
+"analisis_modelos_2026-08-06": "S0022+S0023 (R0010): por que no entra ninguna modelo (foco Colombia). FIRME (config): registro modelo ABIERTO (flag true); Colombia PERMITIDA para modelos (allowlist 46), BLOQUEADA para clientes (allowlist 28); PRELAUNCH bloquea sesiones no registro; SEO ES/EN+hreflang; landing con seccion earn/75%. DATO (N debil): Colombia 0 visitas 28d, LATAM casi ausente. CONCLUSION: NO es bloqueo de config -> es reach 0 (nadie de CO/LATAM llega) + no hay funnel de captacion de MODELOS (todo el esfuerzo es cliente-centrico) + cold-start PRELAUNCH sin clientes/ingresos vivos. Captacion de modelos FUERA del mandato SEED (solo clientes) -> R0010 decision operador.",
 "recommended_ready_now": [
 "H0003 (E0001 directorios)",
 "H0005 (E0003 Quora)"

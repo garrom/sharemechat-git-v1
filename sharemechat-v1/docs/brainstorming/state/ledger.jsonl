@@ -105,3 +105,9 @@
 {"c":22,"t":"req","id":"R0009","k":"experiment","note":"sondeo baseline a ChatGPT/Perplexity/Gemini/Copilot (operador)"}
 {"c":22,"t":"link","note":"GEO cluster: H0015 (ai-referral) <- alimentado por H0002 (USP citable) + H0011 (age-verif content). Ser citable por LLM = mecanismo comun."}
 {"c":22,"t":"halt","note":"batch hecho; señal real N=1 (chatgpt), elevada H0015 con caveat honesto; siguiente = operador sondea IA (R0009) + GA4 sign_up empezara a medir proximas altas"}
+{"c":23,"t":"input","src":"operator 2026-08-06: investigar por que no entra ninguna modelo, foco Colombia (read-only)"}
+{"c":23,"t":"src","id":"S0022","u":"config firme: registro modelo ABIERTO, Colombia permitida modelos/bloqueada clientes, PRELAUNCH, SEO ES/EN"}
+{"c":23,"t":"src","id":"S0023","u":"GA4 pais 28d: Colombia 0, N minusculo, Spain interno-dominado"}
+{"c":23,"t":"finding","note":"No entran modelos NO por config (registro modelo abierto + CO permitida) sino por CERO reach a mercados de modelos (0 trafico CO/LATAM) + no hay funnel de captacion de modelos + cold-start PRELAUNCH sin clientes/ingresos vivos. Captacion de modelos esta FUERA del mandato SEED (solo clientes)."}
+{"c":23,"t":"req","id":"R0010","k":"data","note":"decision operador: frente aparte captacion modelos LATAM vs mantener SEED solo-clientes"}
+{"c":23,"t":"halt","note":"investigacion pais/config reportada; hallazgo firme (no es bloqueo, es reach 0 + cold-start); R0010 al operador"}
