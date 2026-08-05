@@ -88,3 +88,8 @@
 {"c":15,"t":"src","id":"S0019","u":"GA4 conectado read-only: propiedad 525890409, ADC own-oauth-client, runReport OK"}
 {"c":15,"t":"resolve","id":"R0008","r":"GA4 conectado y verificado (snapshot 28d leido); pendiente filtro trafico interno operador"}
 {"c":15,"t":"note","note":"snapshot GA4 28d: Direct 174, Referral 137(solo 19u, sospecha bot), Organic 20; Direct contamina -> filtro IP pendiente"}
+{"c":16,"t":"input","src":"operator 2026-08-05: alta real cliente potencial en PROD"}
+{"c":16,"t":"src","id":"S0020","u":"capa B verificada: user 44 origen chatgpt.com; capa A GA4 sin confirmar (realtime vacio)"}
+{"c":16,"t":"gen","id":"H0015","note":"referral-IA (ChatGPT) canal organico real, 1er signup atribuido"}
+{"c":16,"t":"milestone","note":"primer dato real fluyendo por capa B (BBDD): atribucion usuario-fuente operativa; primer cliente potencial via ChatGPT"}
+{"c":16,"t":"gap","note":"capa A (sign_up en GA4) no dispara: sospecha consent-mode cookies UE o falta tag GTM; capa B cubre la atribucion"}
