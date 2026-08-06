@@ -909,6 +909,9 @@
         "email": "Email",
         "password": "Password (minimum 8 characters)"
       },
+      "labels": {
+        "dateOfBirth": "Date of birth"
+      },
       "checks": {
         "over18": "I'm over 18 years old",
         "acceptPrefix": "I accept the",

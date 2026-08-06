@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import i18n from '../i18n';
 import { apiFetch } from '../config/http';
 import { getResolvedLocale } from '../i18n/localeUtils';
-import { Form as RegForm, Title, Input, Button, Error as ErrorText, Field, FieldError, CheckRow, CheckInput, CheckText } from '../styles/public-styles/RegisterClientModelStyles';
+import { Form as RegForm, Title, Input, Button, Error as ErrorText, Field, FieldError, Label, CheckRow, CheckInput, CheckText } from '../styles/public-styles/RegisterClientModelStyles';
 import { useAppModals } from './useAppModals';
 import { pushSignUp, getAcquisitionPayload } from '../utils/attribution';
 
@@ -112,7 +112,8 @@ const RegisterModelModalContent = ({ onClose }) => {
       </Field>
 
       <Field>
-        <Input type="date" value={dateOfBirth} onChange={e => { setDateOfBirth(e.target.value); if (fieldErrors.dateOfBirth) setFieldErrors(f => ({ ...f, dateOfBirth: '' })); }} required aria-invalid={!!fieldErrors.dateOfBirth} aria-describedby={fieldErrors.dateOfBirth ? 'dob-error' : undefined} autoComplete="bday" />
+        <Label htmlFor="registerModel-dob">{i18n.t('auth.registerModel.labels.dateOfBirth')}</Label>
+        <Input id="registerModel-dob" type="date" value={dateOfBirth} onChange={e => { setDateOfBirth(e.target.value); if (fieldErrors.dateOfBirth) setFieldErrors(f => ({ ...f, dateOfBirth: '' })); }} required aria-invalid={!!fieldErrors.dateOfBirth} aria-describedby={fieldErrors.dateOfBirth ? 'dob-error' : undefined} autoComplete="bday" />
         {fieldErrors.dateOfBirth && <FieldError id="dob-error">{fieldErrors.dateOfBirth}</FieldError>}
       </Field>
 

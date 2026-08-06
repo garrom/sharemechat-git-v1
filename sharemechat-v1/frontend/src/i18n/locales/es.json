@@ -909,6 +909,9 @@
         "email": "Email",
         "password": "Contraseña (mínimo 8 caracteres)"
       },
+      "labels": {
+        "dateOfBirth": "Fecha de nacimiento"
+      },
       "checks": {
         "over18": "Soy mayor de 18 años",
         "acceptPrefix": "Acepto los",

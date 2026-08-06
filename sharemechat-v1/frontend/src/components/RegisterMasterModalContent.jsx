@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import i18n from '../i18n';
 import { apiFetch } from '../config/http';
 import { getResolvedLocale } from '../i18n/localeUtils';
-import { Form as RegForm, Title, Input, Button, LinkButton, Error as ErrorText, Field, FieldError, CheckRow, CheckInput, CheckText } from '../styles/public-styles/RegisterClientModelStyles';
+import { Form as RegForm, Title, Input, Button, LinkButton, Error as ErrorText, Field, FieldError, Label, CheckRow, CheckInput, CheckText } from '../styles/public-styles/RegisterClientModelStyles';
 import { useAppModals } from './useAppModals';
 import { pushSignUp, getAcquisitionPayload } from '../utils/attribution';
 
@@ -172,7 +172,9 @@ const RegisterMasterModalContent = ({ onClose, onBack }) => {
       </Field>
 
       <Field>
+        <Label htmlFor="registerMaster-dob">{i18n.t('auth.registerMaster.labels.dateOfBirth')}</Label>
         <Input
+          id="registerMaster-dob"
           type="date"
           value={dateOfBirth}
           onChange={(e) => { setDateOfBirth(e.target.value); if (fieldErrors.dateOfBirth) setFieldErrors((f) => ({ ...f, dateOfBirth: '' })); }}

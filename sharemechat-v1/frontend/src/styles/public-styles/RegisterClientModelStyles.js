@@ -69,6 +69,11 @@ export const Input = styled.input`
   padding: 13px 16px;
   outline: none;
   transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+  /* iOS: sin -webkit-appearance:none, el type="date" añade padding interno
+     propio y sale mas ancho/alto que los otros inputs. Uniformamos aqui. */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
   &::placeholder { color: #9ca3af; }
   &:focus {
     border-color: #00f59d;
@@ -80,6 +85,17 @@ export const Input = styled.input`
     background: #1f1f1f;
     cursor: not-allowed;
   }
+`;
+
+/* Label pequeño encima de un input. Usado principalmente para input
+   type="date" en iOS, que no muestra placeholder ni contenido cuando
+   esta vacio (a diferencia del desktop Chrome, que renderiza dd/mm/aaaa). */
+export const Label = styled.label`
+  display: block;
+  color: #9ca3af;
+  font-size: 0.85rem;
+  margin-bottom: 6px;
+  padding-left: 4px;
 `;
 
 export const FieldError = styled.div`
