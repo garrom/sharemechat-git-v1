@@ -293,7 +293,6 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) =
       {view === 'register-client' && (
         <RegisterClientModalContent
           onClose={onClose}
-          onBack={() => setView('register-gender')}
           onGoogleAuth={handleGoogleAuth}
         />
       )}
@@ -301,7 +300,6 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) =
       {view === 'register-model' && (
         <RegisterModelModalContent
           onClose={onClose}
-          onBack={() => setView('register-gender')}
         />
       )}
 

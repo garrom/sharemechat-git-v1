@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import i18n from '../i18n';
 import { apiFetch } from '../config/http';
 import { getResolvedLocale } from '../i18n/localeUtils';
-import { Form as RegForm, Title, Input, Button, LinkButton, Error as ErrorText, Field, FieldError, CheckRow, CheckInput, CheckText } from '../styles/public-styles/RegisterClientModelStyles';
+import { Form as RegForm, Title, Input, Button, Error as ErrorText, Field, FieldError, CheckRow, CheckInput, CheckText } from '../styles/public-styles/RegisterClientModelStyles';
 import { useAppModals } from './useAppModals';
 import { pushSignUp, getAcquisitionPayload } from '../utils/attribution';
 
@@ -15,7 +15,7 @@ const InlineForm = styled(RegForm)`
   padding: 0;
 `;
 
-const RegisterModelModalContent = ({ onClose, onBack }) => {
+const RegisterModelModalContent = ({ onClose }) => {
 
   const { alert } = useAppModals();
   const [nickname, setNickname] = useState('');
@@ -127,7 +127,6 @@ const RegisterModelModalContent = ({ onClose, onBack }) => {
       </CheckRow>
 
       <Button type="button" disabled={loading} onClick={handleRegister}>{loading ? i18n.t('auth.registerModel.actions.loading') : i18n.t('auth.registerModel.actions.submit')}</Button>
-      {onBack && <LinkButton type="button" onClick={onBack}>{i18n.t('common.back')}</LinkButton>}
     </InlineForm>
   );
 };

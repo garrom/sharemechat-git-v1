@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import i18n from '../i18n';
 import { apiFetch } from '../config/http';
 import { getResolvedLocale } from '../i18n/localeUtils';
-import { Form as RegForm, Title, Input, Button, LinkButton, Error as ErrorText, Field, FieldError, CheckRow, CheckInput, CheckText } from '../styles/public-styles/RegisterClientModelStyles';
+import { Form as RegForm, Title, Input, Button, Error as ErrorText, Field, FieldError, CheckRow, CheckInput, CheckText } from '../styles/public-styles/RegisterClientModelStyles';
 import { useAppModals } from './useAppModals';
 import { pushSignUp, getAcquisitionPayload } from '../utils/attribution';
 import GoogleSignInButton from './GoogleSignInButton';
@@ -16,7 +16,7 @@ const InlineForm = styled(RegForm)`
   padding: 0;
 `;
 
-const RegisterClientModalContent = ({ onClose, onBack, onGoogleAuth }) => {
+const RegisterClientModalContent = ({ onClose, onGoogleAuth }) => {
 
   const { alert } = useAppModals();
   const [nickname, setNickname] = useState('');
@@ -120,7 +120,6 @@ const RegisterClientModalContent = ({ onClose, onBack, onGoogleAuth }) => {
       </CheckRow>
 
       <Button type="button" disabled={loading} onClick={handleRegister}>{loading ? i18n.t('auth.registerClient.actions.loading') : i18n.t('auth.registerClient.actions.submit')}</Button>
-      {onBack && <LinkButton type="button" onClick={onBack}>{i18n.t('common.back')}</LinkButton>}
 
       {/* ADR-058: Google Sign-In como atajo dentro del form de registro cliente.
           Se coloca despues del boton principal para no competir con el flujo
