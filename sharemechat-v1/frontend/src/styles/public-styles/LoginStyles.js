@@ -34,16 +34,21 @@ export const StyledForm = styled.form`
 
   /* ModalBase con hideChrome=true renderiza este form directo en el Dialog
      sin el <Body> con scroll. Para formularios largos (RegisterMasterModalContent
-     con 7 campos + 3 checkboxes) hay que ceñirse a la viewport y scrollear
-     el propio form cuando desborde. */
+     con 7 campos + 3 checkboxes, o RegisterClientModalContent con Google Sign-In)
+     hay que ceñirse a la viewport y scrollear el propio form cuando desborde.
+     Usamos 100dvh (dynamic viewport) para que en iOS Safari/Chrome el modal
+     no se corte bajo la barra URL: 100vh en iOS mide el viewport SIN la barra,
+     100dvh se adapta cuando aparece/desaparece. */
   max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
   overflow-y: auto;
 
   @media (max-width: ${bp.md}) {
-    max-width: ${p => p.$wide ? '100%' : '92%'};
+    max-width: ${p => p.$wide ? '100%' : '100%'};
     padding: ${p => p.$wide ? '26px 16px 24px' : '24px 20px'};
     border-radius: 20px;
     max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
   }
 
 `;
