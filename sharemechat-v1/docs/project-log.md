@@ -8,6 +8,40 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-08-06 (tarde) — ADR-058 Fase 2 PROD BLOQUEADA por Fase 0.3 (publicar consent Google Cloud a Production) — decisión de NO nivelar
+
+Tras cerrar Fase 1 end-to-end en TEST (entrada anterior de hoy), el asistente propuso al operador arrancar Fase 2: nivelar AUDIT y PROD. El operador aportó contexto clave sobre PROD: la landing pública actualmente muestra `<PreLaunchScreen/>` (coming soon) porque `PRODUCT_ACCESS_MODE=PRELAUNCH`; el público general no accede al perfil ni al flow de login. Este contexto puso en primer plano un tema latente que hasta ahora era teórico: el OAuth consent screen en Google Cloud Console sigue en modo **Testing** con 2 test users (los emails Gmail del operador configurados en Fase 0 el 2026-08-05).
+
+**Decisión operativa cerrada**: **NO nivelar PROD hoy**. Fase 2 backend + frontend a PROD queda BLOQUEADA hasta completar Fase 0.3 (publicar consent screen a modo Production en Google Cloud Console + pasar brand verification adult). Documentado como bloqueo visible en `docs/07-roadmap/pending-hardening.md` sección 5.2 (Login con Google — ADR-058) con la secuencia obligatoria de pasos y la advertencia explícita de no invertir el orden.
+
+**Razones para el bloqueo**:
+
+1. **Consent en Testing solo autoriza a los test users configurados**. En modo Testing, cualquier Gmail que no esté en la lista de test users verá al pulsar "Iniciar sesión con Google" el error de Google *"This app is being tested. If you're a developer, add yourself as a tester."* — mensaje control de Google, no puede saltarse desde nuestro código. Si Fase 2 va a PROD con consent aún en Testing y en algún momento se baja PRELAUNCH, el 100% de los usuarios reales que intenten Google verán el error de Google en la cara. Bomba de tiempo.
+
+2. **PRELAUNCH oculta el problema pero no lo elimina**. Hoy nadie externo llega al modal Login en PROD (landing coming-soon), así que el botón Google técnicamente estaría desplegado pero inaccesible al público. Pero el momento en que marketing decida abrir → problema explícito instantáneo.
+
+3. **Fase 0.3 (publicar consent) requiere brand verification, que es empírica para plataformas adult**. Google no publica lista formal de sectores prohibidos ni criterios explícitos para adult. Riesgo real de rechazo o de exigencia de disclaimers/screenshots/videos del flow. Coste esperado: 1-2 sesiones del operador + **3-8 semanas de revisión de Google en el peor caso**. Este plazo debe planificarse **antes** de la ventana de lanzamiento, no en paralelo o después.
+
+4. **Escenario de rechazo definitivo por Google**: si brand verification para adult resulta imposible, ADR-058 se retira en PROD (mantener en TEST/AUDIT como sandbox interna). El coste de deployar Fase 2 a PROD ANTES de conocer este resultado y luego tener que revertir sería mayor que esperar.
+
+**Secuencia obligatoria (nunca invertir)**:
+1. **Fase 0.3**: publicar consent screen a Production + brand verification adult en Google Cloud Console.
+2. Sólo si (1) resuelve OK: **Fase 2 backend + frontend a PROD** (JAR con V47+V48, env var `GOOGLE_OAUTH_CLIENT_ID`, bundle frontend con botón GIS + LinkedAccountsCard).
+3. **Bajar PRODUCT_ACCESS_MODE** de PRELAUNCH cuando marketing esté listo.
+
+**Fase 2 AUDIT NO bloqueada**: sí es ejecutable cuando el operador quiera. AUDIT tiene el mismo perfil operativo que TEST (test users Gmail del operador validan el flow, no usuarios reales externos). Consent en Testing es suficiente. Se ha dejado esta opción abierta y sin agenda concreta.
+
+**Estado tras esta sesión**:
+- TEST: Fase 1 completa, funcional end-to-end, verificado batería 5+bonus pruebas.
+- AUDIT: pendiente Fase 2 (ejecutable sin bloqueos, decisión del operador cuándo).
+- PROD: **BLOQUEADO** hasta Fase 0.3 completada.
+- Fase 0.3: pendiente de planificación explícita. Debe agendarse con anticipación por el plazo largo de revisión Google (hasta 8 semanas).
+
+**Aprendizajes operativos**:
+- **No confundir "endpoint desplegado" con "endpoint utilizable por el público"**. En OAuth federado con consent screen en Testing, el backend puede responder 200 desde el punto de vista técnico y aun así el usuario final no puede completar el flow por bloqueo del vendor (Google). El deploy backend/frontend NO es suficiente en este tipo de integraciones — el gate del vendor manda.
+- **Plazos de vendor son planificación, no ejecución**. Brand verification 3-8 semanas obliga a planificar Fase 0.3 con lead time antes de la ventana de lanzamiento. Considerarlo parte del proceso de "salir de PRELAUNCH", no un paso técnico separado.
+- **PRELAUNCH sirve de red de seguridad pero no de solución**. Ocultar el botón al público (efecto de PRELAUNCH) evita el problema visible, no lo resuelve. El commit "deploy Fase 2 PROD" y el commit "baja PRELAUNCH" están acoplados con Fase 0.3 — no se pueden decouplear temporalmente sin riesgo.
+
 ## 2026-08-06 — ADR-058 Fase 1 completada end-to-end en TEST: frontend + cascada de 5 bugs diagnosticada + refactor account linking
 
 Continuación del frente iniciado el 2026-08-05 (backend + Fase 0 Google Cloud). Objetivo: cerrar Fase 1 con frontend + diagnóstico full stack en TEST hasta que un CLIENT nuevo pueda registrarse, verificarse (Didit age estimation), navegar al dashboard, gestionar vinculaciones desde perfil (link/unlink/relink Google + añadir password fallback), y hacer login clásico con la password recién puesta. Cinco bugs en cascada tuvieron que destaparse antes de conseguirlo — todos con fix aplicado; ninguno era regresión: dos preexistentes latentes (nunca ejercitados) y tres nuevos introducidos por Fase 1.

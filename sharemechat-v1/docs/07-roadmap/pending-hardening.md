@@ -452,23 +452,44 @@ separar la gestión de **incidencias** (problemas reales con posible compensaci�
 
 Reutilización estructural del ADR-046 (chat soporte + panel humano) para el canal de comunicación y del panel financiero admin actual (`AdminFinancePanel` + `TransactionService.manualRefundToClient`) para la compensación económica — zero refactor del ledger contable.
 
-### 5.2 Login con Google (OAuth2)
+### 5.2 Login con Google (OAuth2) — ADR-058
 
-Estado: **pendiente de análisis previo bloqueante**, cero implementación técnica.
+**Estado: Fase 1 completada end-to-end en TEST (2026-08-06). Fase 2 (deploy AUDIT + PROD) BLOQUEADA por Fase 0.3.**
 
-Objetivo:
-reducir fricción en el registro de clientes ofreciendo "Continuar con Google" como alternativa al registro tradicional email + password. Alineado con la estrategia de captación masiva del futuro frente PSP tarjeta.
+Ver ADR-058 para el diseño y decisiones aceptadas. Referencia de implementación: entrada bitácora `docs/project-log.md#2026-08-06`.
 
-**Bloqueante previo obligatorio**: revisar los TOS de Google OAuth2 respecto a aplicaciones adult-oriented antes de invertir tiempo técnico. Google puede restringir o prohibir el uso de OAuth para plataformas del sector. Si TOS bloquea, la línea entera se retira. Si permite con condiciones (revisión OAuth explícita, disclaimers), evaluar coste operativo.
+Alcance implementado (Fase 1, sólo rol CLIENT, patrón fan/creator OnlyFans validado):
+- Backend: migraciones V47 (tabla `oauth_accounts` multi-provider) + V48 (`users.password` NULLABLE). Endpoint público `POST /api/auth/google` con pipeline completo de auth (age-gate + rate-limit + country + auth-risk + backoffice deny + status + cookies JWT). Endpoints autenticados `/api/users/me/oauth/*` para link/unlink/relink y `/api/users/me/password/initial` para añadir password fallback a users Google-only. `GoogleIdTokenVerifierService` con la librería oficial `google-api-client:2.7.2` (rechazado explícitamente `spring-boot-starter-oauth2-client`). Política account linking **híbrida P2/P3**: auto-link solo si `email_verified=true` en ambos lados (Google claim + BD); si no, `EMAIL_COLLISION_NEEDS_PASSWORD` (usuario debe login clásico y vincular desde perfil). Identificador federado: claim `sub` de Google (no email, por spec).
+- Frontend: componente `GoogleSignInButton` reutilizable con GIS oficial (`renderButton`). Integración en `LoginModalContent` (vista login) y `RegisterClientModalContent` (vista register-client). Card "Cuentas vinculadas" en `/perfil-client` con estado + unlink + sub-form contextual "Añadir contraseña". Hook `useGoogleAuth` con mapping exhaustivo de códigos backend a i18n. Tests 17/17 verde.
+- Fase 0 Google Cloud: proyecto `sharemechat-auth` separado del `sharemechat-analytics`; OAuth Client Web application con 3 orígenes autorizados; consent screen en modo **Testing** con 2 test users Gmail del operador.
 
-Decisiones de dominio a tomar antes de tocar código (si TOS permite):
-- Mapping user existente: si email Google coincide con `users.email` registrado con password, ¿ligamos automáticamente o rechazamos?
-- Alcance de rol: primera versión solo para `CLIENT`; `MODEL` mantiene registro tradicional (más control anti-fraude en onboarding modelo).
-- KYC Didit sigue siendo obligatorio pre-primer-pago; Google OAuth NO reemplaza verificación de identidad.
-- `users.password_hash` puede quedar NULL en users Google-only; `/forgot-password` responde con mensaje específico.
-- Al primer login Google forzar pantalla de aceptación T&C + privacidad (auditable, equivalente al checkbox del registro tradicional).
+---
 
-Estimación técnica (si TOS permite y decisiones cerradas): 1 sesión + tests + deploy. Solo cliente en primera versión. Stack `Spring Security oauth2Login()` estándar, callback `/login/oauth2/code/google`, mapper custom user Google → user interno, emisión del cookie JWT propio como siempre (no propagamos el `id_token` de Google).
+> **⚠️ BLOQUEO — NO NIVELAR PROD SIN ANTES COMPLETAR FASE 0.3**
+>
+> Antes de desplegar el frente Google Sign-In a **PROD** hay que **publicar el OAuth consent screen a modo Production en Google Cloud Console**. Sin este paso, cualquier Gmail que no esté en la lista de test users (2 configurados en modo Testing) verá al pulsar el botón Google el error **"This app is being tested. If you're a developer, add yourself as a tester."**
+>
+> **Por qué esto no impide desplegar Fase 2 a AUDIT** ni bloqueó Fase 1 en TEST: en TEST/AUDIT el operador (test user) es quien valida. Cualquier user real ajeno al operador no debe usarlo hasta PROD.
+>
+> **Por qué esto es blocker para PROD**: PROD sirve a usuarios reales. Aunque hoy PROD está en `PRODUCT_ACCESS_MODE=PRELAUNCH` (landing coming-soon, sin perfil accesible al público general), en el momento en que se salga de PRELAUNCH cualquier registro por Google fallará con el error de Google descrito arriba si el consent aún está en Testing. La secuencia obligatoria es:
+> 1. Publicar consent screen a Production en Google Cloud Console → **Fase 0.3**.
+> 2. Pasar brand verification (empírica para adult; Google no publica lista formal — riesgo residual real, posible rechazo o requisitos añadidos como disclaimers específicos).
+> 3. Sólo después: deploy Fase 2 backend + frontend a PROD (JAR con V47+V48, env var `GOOGLE_OAUTH_CLIENT_ID`, bundle frontend con botón GIS).
+> 4. Bajar `PRODUCT_ACCESS_MODE` de PRELAUNCH cuando marketing esté listo.
+>
+> **NO invertir el orden**. Desplegar Fase 2 a PROD antes de publicar el consent = bomba de tiempo cuando se salga de PRELAUNCH.
+>
+> **Riesgo asociado a Fase 0.3**: Google puede rechazar brand verification para plataforma adult, o exigir disclaimers/screenshots/videos del flow. Si rechaza definitivamente, ADR-058 se retira en PROD (no en TEST/AUDIT si sirven de sandbox). Coste esperado: 1-2 sesiones del operador + 3-8 semanas de revisión de Google en el peor caso.
+
+---
+
+Fase 2 AUDIT (no bloqueada, ejecutable cuando el operador quiera):
+- SSH audit-backend: añadir `GOOGLE_OAUTH_CLIENT_ID` a `/opt/sharemechat/config.env`.
+- Deploy backend (Flyway aplica V47+V48 en RDS AUDIT).
+- Deploy frontend audit (product + admin surfaces).
+- Smoke: `POST /api/auth/google` con token inválido → 401/403 esperado (endpoint vivo).
+- Los 2 test users Gmail del operador pueden hacer flow completo en `audit.sharemechat.com`.
+- Estimación: ~20 min end-to-end.
 
 ### 5.3 Traductor automático en chat P2P favoritos
 
