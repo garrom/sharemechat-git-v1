@@ -190,7 +190,7 @@ export default function LinkedAccountsCard() {
                       />
                     </FormFieldNew>
                   </FormGridNew>
-                  <ProfilePrimaryButton type="submit" disabled={savingPassword}>
+                  <ProfilePrimaryButton type="submit" disabled={savingPassword} style={{ marginTop: 12 }}>
                     {savingPassword
                       ? t('common.saving')
                       : t('linkedAccounts.password.submit')}
