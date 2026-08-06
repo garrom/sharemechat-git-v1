@@ -111,3 +111,5 @@
 {"c":23,"t":"finding","note":"No entran modelos NO por config (registro modelo abierto + CO permitida) sino por CERO reach a mercados de modelos (0 trafico CO/LATAM) + no hay funnel de captacion de modelos + cold-start PRELAUNCH sin clientes/ingresos vivos. Captacion de modelos esta FUERA del mandato SEED (solo clientes)."}
 {"c":23,"t":"req","id":"R0010","k":"data","note":"decision operador: frente aparte captacion modelos LATAM vs mantener SEED solo-clientes"}
 {"c":23,"t":"halt","note":"investigacion pais/config reportada; hallazgo firme (no es bloqueo, es reach 0 + cold-start); R0010 al operador"}
+{"c":24,"t":"exec","id":"E0001","note":"operador creo cuenta alternativeto con hello@sharemechat.com + email validado 2026-08-06. BLOQUEO: envio de app exige cuenta >=7 dias (anti-spam) -> desbloqueado 2026-08-13 16:53 Estocolmo. E0001 st=blocked_until. Retomar ese dia con copy A0001."}
+{"c":24,"t":"note","id":"S0015","note":"friccion nueva directorios: alternativeto tiene gate de edad de cuenta 7 dias antes de poder enviar app"}
