@@ -59,6 +59,8 @@ export default function useGoogleAuth({
         setError(backendMessage || i18n.t('auth.google.errors.emailCollision'));
       } else if (code === 'NO_ACCOUNT_FOR_EMAIL') {
         setError(backendMessage || i18n.t('auth.google.errors.noAccount'));
+      } else if (code === 'ACCOUNT_INACTIVE') {
+        setError(backendMessage || i18n.t('auth.google.errors.accountInactive'));
       } else if (code === 'GOOGLE_AUTH_UNAVAILABLE') {
         setError(i18n.t('auth.google.errors.unavailable'));
       } else if (statusCode === 401) {

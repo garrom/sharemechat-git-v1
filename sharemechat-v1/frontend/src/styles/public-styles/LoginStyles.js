@@ -44,7 +44,13 @@ export const StyledForm = styled.form`
   overflow-y: auto;
 
   @media (max-width: ${bp.md}) {
-    max-width: ${p => p.$wide ? '100%' : '100%'};
+    /* Dialog (padre) con hideChrome=true tiene width:auto — sin min-width
+       aqui, el shrink-wrap del padre colapsa el form al ancho intrinseco
+       del contenido, dejandolo enano. min(calc(100vw - 32px), 520/720) fuerza
+       ancho util respetando el max-width del Dialog por size. Solo aplica
+       en movil; desktop mantiene el layout original de auto-fit. */
+    min-width: min(calc(100vw - 32px), ${p => p.$wide ? '720px' : '520px'});
+    max-width: 100%;
     padding: ${p => p.$wide ? '26px 16px 24px' : '24px 20px'};
     border-radius: 20px;
     max-height: calc(100vh - 32px);

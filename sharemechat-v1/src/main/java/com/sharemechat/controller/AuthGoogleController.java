@@ -197,6 +197,10 @@ public class AuthGoogleController {
                 authRiskService.record(AuthRiskConstants.Events.LOGIN_FAILURE, riskCtx);
                 throw new InvalidCredentialsException("Cuenta invalida");
             }
+            // Validar user antes de tocar el oauth_account (rol, backoffice,
+            // status/unsubscribe). Devuelve response explicita si esta inactivo.
+            Optional<ResponseEntity<?>> block = validateAndBlockIfInactive(user, riskCtx);
+            if (block.isPresent()) return block.get();
             // Actualiza last_used_at (best-effort).
             linked.get().setLastUsedAt(LocalDateTime.now());
             oauthRepository.save(linked.get());
@@ -207,6 +211,13 @@ public class AuthGoogleController {
                 user = byEmail.get();
                 boolean userEmailVerified = user.getEmailVerifiedAt() != null;
                 if (googleEmailVerified && userEmailVerified) {
+                    // Validar ANTES del save para no dejar oauth_accounts
+                    // huerfanos si el user esta inactivo/unsubscribed. Antes
+                    // el rollback transaccional los limpiaba, pero fiar la
+                    // integridad al rollback es fragil (basta con capturar
+                    // la excepcion aguas arriba para dejar huella).
+                    Optional<ResponseEntity<?>> block = validateAndBlockIfInactive(user, riskCtx);
+                    if (block.isPresent()) return block.get();
                     // Auto-link seguro.
                     OAuthAccount link = newLink(user.getId(), sub, email, hd, pictureUrl);
                     oauthRepository.save(link);
@@ -248,37 +259,13 @@ public class AuthGoogleController {
             }
         }
 
-        // 7) Validaciones post-carga (mismas que login clasico).
-        String role = user.getRole();
-        if (!Constants.Roles.USER.equals(role)
-                && !Constants.Roles.CLIENT.equals(role)
-                && !Constants.Roles.MODEL.equals(role)
-                && !Constants.Roles.MASTER.equals(role)) {
-            log.warn("[AUTH-GOOGLE] rol no permitido en endpoint publico userId={} role={}",
-                    user.getId(), role);
-            authRiskService.record(AuthRiskConstants.Events.LOGIN_FAILURE, riskCtx.withUserId(user.getId()));
-            throw new InvalidCredentialsException("Credenciales inválidas");
-        }
-
-        BackofficeAccessService.BackofficeAccessProfile profile =
-                backofficeAccessService.loadProfile(user.getId(), user.getRole());
-        if (!profile.roles().isEmpty()) {
-            log.warn("[AUTH-GOOGLE] user con roles backoffice intentando login publico userId={}", user.getId());
-            authRiskService.record(AuthRiskConstants.Events.LOGIN_FAILURE, riskCtx.withUserId(user.getId()));
-            throw new InvalidCredentialsException("Credenciales inválidas");
-        }
-
-        String accountStatus = user.getAccountStatus();
-        if (accountStatus == null || accountStatus.isBlank()) {
-            accountStatus = Constants.AccountStatuses.ACTIVE;
-        } else {
-            accountStatus = accountStatus.trim().toUpperCase(Locale.ROOT);
-        }
-        if (Boolean.TRUE.equals(user.getUnsubscribe())
-                || !Constants.AccountStatuses.ACTIVE.equals(accountStatus)) {
-            authRiskService.record(AuthRiskConstants.Events.LOGIN_FAILURE, riskCtx.withUserId(user.getId()));
-            throw new InvalidCredentialsException("Credenciales inválidas");
-        }
+        // 7) Validaciones post-carga.
+        // Camino A y B ya validaron ANTES de tocar oauth_account. Camino C
+        // (user recien creado) no puede fallar aqui — es ACTIVE por defecto.
+        // Se llama defensivamente para consistencia y por si alguien reordena
+        // el flujo en el futuro. Es idempotente y barato.
+        Optional<ResponseEntity<?>> finalBlock = validateAndBlockIfInactive(user, riskCtx);
+        if (finalBlock.isPresent()) return finalBlock.get();
 
         // 8) Emitir cookies JWT.
         String access = jwtUtil.generateAccessToken(user.getEmail(), user.getRole(), user.getId());
@@ -307,6 +294,64 @@ public class AuthGoogleController {
     // =========================================================
     // HELPERS
     // =========================================================
+
+    /**
+     * Valida que el usuario cargado pueda autenticarse por el endpoint publico
+     * de Google. Se llama ANTES de tocar oauth_account para no dejar links
+     * huerfanos si el user esta inactivo/unsubscribed.
+     *
+     * Devuelve:
+     * - Optional.empty() si el usuario esta OK para continuar.
+     * - Optional.of(response) con codigo ACCOUNT_INACTIVE si esta unsubscribed
+     *   o su account_status no es ACTIVE. El frontend distingue este caso del
+     *   401 generico "token invalido".
+     *
+     * Lanza InvalidCredentialsException (401) para casos de seguridad donde
+     * NO queremos filtrar info al cliente (rol invalido, backoffice intentando
+     * login publico).
+     */
+    private Optional<ResponseEntity<?>> validateAndBlockIfInactive(
+            User user,
+            AuthRiskContext riskCtx
+    ) {
+        String role = user.getRole();
+        if (!Constants.Roles.USER.equals(role)
+                && !Constants.Roles.CLIENT.equals(role)
+                && !Constants.Roles.MODEL.equals(role)
+                && !Constants.Roles.MASTER.equals(role)) {
+            log.warn("[AUTH-GOOGLE] rol no permitido en endpoint publico userId={} role={}",
+                    user.getId(), role);
+            authRiskService.record(AuthRiskConstants.Events.LOGIN_FAILURE, riskCtx.withUserId(user.getId()));
+            throw new InvalidCredentialsException("Credenciales inválidas");
+        }
+
+        BackofficeAccessService.BackofficeAccessProfile profile =
+                backofficeAccessService.loadProfile(user.getId(), user.getRole());
+        if (!profile.roles().isEmpty()) {
+            log.warn("[AUTH-GOOGLE] user con roles backoffice intentando login publico userId={}", user.getId());
+            authRiskService.record(AuthRiskConstants.Events.LOGIN_FAILURE, riskCtx.withUserId(user.getId()));
+            throw new InvalidCredentialsException("Credenciales inválidas");
+        }
+
+        String accountStatus = user.getAccountStatus();
+        if (accountStatus == null || accountStatus.isBlank()) {
+            accountStatus = Constants.AccountStatuses.ACTIVE;
+        } else {
+            accountStatus = accountStatus.trim().toUpperCase(Locale.ROOT);
+        }
+        if (Boolean.TRUE.equals(user.getUnsubscribe())
+                || !Constants.AccountStatuses.ACTIVE.equals(accountStatus)) {
+            log.info("[AUTH-GOOGLE] usuario inactivo/unsubscribed userId={} status={} unsubscribe={}",
+                    user.getId(), accountStatus, user.getUnsubscribe());
+            authRiskService.record(AuthRiskConstants.Events.LOGIN_FAILURE, riskCtx.withUserId(user.getId()));
+            return Optional.of(ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of(
+                            "code", "ACCOUNT_INACTIVE",
+                            "message", "Esta cuenta no está activa. Contacta con soporte."
+                    )));
+        }
+        return Optional.empty();
+    }
 
     private User createClientUser(String email, String sub, String locale, HttpServletRequest req) {
         User u = new User();

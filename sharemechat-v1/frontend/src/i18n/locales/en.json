@@ -867,6 +867,7 @@
       "errors": {
         "emailCollision": "An account with this email already exists. Sign in with your password and then link Google from your profile.",
         "noAccount": "You don't have an account yet. Register with Google from the sign-up form first.",
+        "accountInactive": "This account is not active. Contact support if you believe this is a mistake.",
         "unavailable": "Google Sign-In is not available right now.",
         "invalidToken": "Could not verify your Google account. Please try again."
       }

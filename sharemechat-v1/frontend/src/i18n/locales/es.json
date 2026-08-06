@@ -867,6 +867,7 @@
       "errors": {
         "emailCollision": "Ya existe una cuenta con este email. Entra con tu contraseña y vincula Google desde tu perfil.",
         "noAccount": "No tienes cuenta. Regístrate primero con Google desde el formulario de registro.",
+        "accountInactive": "Esta cuenta no está activa. Contacta con soporte si crees que es un error.",
         "unavailable": "Inicio de sesión con Google no disponible en este momento.",
         "invalidToken": "No se pudo verificar tu cuenta de Google. Inténtalo de nuevo."
       }

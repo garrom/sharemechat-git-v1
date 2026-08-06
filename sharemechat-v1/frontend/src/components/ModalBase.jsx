@@ -115,7 +115,7 @@ const ModalBase = ({
           aria-labelledby="modal-title"
           data-variant={variant}
           $size={size}
-          style={hideChrome ? { background: 'transparent', boxShadow: 'none', padding: 0, border: 'none' } : undefined}
+          style={hideChrome ? { background: 'transparent', boxShadow: 'none', padding: 0, border: 'none', width: 'auto' } : undefined}
           data-hidechrome={hideChrome ? 'true' : 'false'}
         >
 
