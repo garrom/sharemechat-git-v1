@@ -58,14 +58,33 @@ const writeCachedConversationId = (id) => {
  *   clearConversation: () => void,
  * }}
  */
-export default function useSupportChat() {
-  const [conversationId, setConversationId] = useState(() => readCachedConversationId());
+/**
+ * @param {object} [options]
+ * @param {number|null} [options.pinnedConversationId] - si viene, el hook
+ *   fija la conversacion a ese id (no lee ni escribe localStorage). Uso:
+ *   vista de detalle de un ticket, donde el chat debe estar scoped a la
+ *   conversacion vinculada al ticket (ADR-054 D8). Sin este parametro,
+ *   comportamiento historico: cache en localStorage de la conversacion
+ *   activa unica del user.
+ */
+export default function useSupportChat(options) {
+  const pinnedConversationId = options && options.pinnedConversationId
+    ? Number(options.pinnedConversationId)
+    : null;
+  const isPinned = pinnedConversationId != null && Number.isFinite(pinnedConversationId);
+
+  const [conversationId, setConversationId] = useState(() =>
+    isPinned ? pinnedConversationId : readCachedConversationId()
+  );
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
   const [resolutionStatus, setResolutionStatus] = useState(null);
   const [escalated, setEscalated] = useState(false);
+  // ADR-054 D8: meta de la conversacion para pintar el badge en la UI.
+  // Solo poblada cuando pinnedConversationId != null (vista de ticket).
+  const [meta, setMeta] = useState(null);
   const [rateLimitState, setRateLimitState] = useState({
     messagesRemainingToday: null,
     tokensRemainingToday: null,
@@ -76,39 +95,57 @@ export default function useSupportChat() {
   // Serial guard: solo la carga inicial más reciente actualiza state.
   const loadTokenRef = useRef(0);
 
-  // Persistir conversationId en localStorage cuando cambie.
+  // Si el pinnedConversationId del padre cambia, re-sincroniza.
   useEffect(() => {
-    writeCachedConversationId(conversationId);
-  }, [conversationId]);
+    if (isPinned && pinnedConversationId !== conversationId) {
+      setConversationId(pinnedConversationId);
+      setMessages([]);
+      setMeta(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pinnedConversationId]);
 
-  // Carga inicial del historial si hay conversationId cacheado.
+  // Persistir conversationId en localStorage cuando cambie (solo si NO
+  // esta pinned; en modo pinned el chat esta scoped al ticket y no debe
+  // afectar al chat "vivo" del user en /client Soporte).
+  useEffect(() => {
+    if (isPinned) return;
+    writeCachedConversationId(conversationId);
+  }, [conversationId, isPinned]);
+
+  // Carga inicial del historial + meta (si es pinned) cuando hay conversationId.
   useEffect(() => {
     if (!conversationId) return;
     const token = ++loadTokenRef.current;
     setLoading(true);
     setError(null);
-    supportApi.getHistory(conversationId)
-      .then((rows) => {
+    const historyP = supportApi.getHistory(conversationId);
+    const metaP = isPinned ? supportApi.getConversationMeta(conversationId) : Promise.resolve(null);
+    Promise.all([historyP, metaP])
+      .then(([rows, metaResp]) => {
         if (token !== loadTokenRef.current) return;
         setMessages(Array.isArray(rows) ? rows : []);
+        if (metaResp) {
+          setMeta(metaResp);
+          if (metaResp.resolutionStatus) setResolutionStatus(metaResp.resolutionStatus);
+        }
       })
       .catch(() => {
         if (token !== loadTokenRef.current) return;
-        // Fix bug 1 post-B.3.3: recuperacion silenciosa. El id cacheado en
-        // LS puede pertenecer a otra sesion (otro user en el mismo navegador,
-        // conversacion resuelta hace mucho, cambio de schema). El 400 del
-        // backend es housekeeping interno, no un error accionable por el
-        // user, y pintarlo como banner rojo tras login rompe la UX. Se
-        // limpia state + LS y se arranca de cero sin mostrar nada al user.
+        // Modo unpinned (chat vivo /client Soporte): el id cacheado en LS
+        // puede pertenecer a otra sesion; se limpia silenciosamente. En
+        // modo pinned (vista ticket) NO se limpia el id — el fallo es
+        // accionable (bug de scoping o permiso) y se propaga como error.
         setMessages([]);
-        setConversationId(null);
+        if (!isPinned) setConversationId(null);
+        else setError('No se pudo cargar el historial de esta conversación');
       })
       .finally(() => {
         if (token === loadTokenRef.current) setLoading(false);
       });
     // Solo depende del conversationId; ignoramos ESLint del cierre.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversationId]);
+  }, [conversationId, isPinned]);
 
   const sendMessage = useCallback(async (text) => {
     const clean = typeof text === 'string' ? text.trim() : '';
@@ -302,6 +339,7 @@ export default function useSupportChat() {
     rateLimitState,
     resolutionStatus,
     escalated,
+    meta,
     sendMessage,
     requestEscalation,
     clearConversation,

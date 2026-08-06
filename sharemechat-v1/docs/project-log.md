@@ -8,6 +8,49 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-08-07 (madrugada) — ADR-054 D8: split view ficha ticket + chat scoped + badge dinámico + puente admin
+
+Frente disparado por feedback UX del operador durante el testing de ADR-058: al abrir un ticket de incidencias en `/client` (tab tickets) veía la ficha del ticket (categoría/estado/descripción) apilada verticalmente CON el chat del Agente IA en el mismo scroll, dando la sensación de que "el ticket ES un chat con la IA". El diseño original ADR-054 D8 preveía badges y separación visual, pero se implementó como `TicketDetail` monolítico que embebía `<SupportChat/>` sin `conversationId` scope.
+
+**Root cause técnico**: el hook `useSupportChat` asumía "1 conversación activa por user" cacheada en localStorage. Cuando el user tenía ticket abierto, la vista del ticket embebía el chat pero éste operaba sobre la conv activa del user, no sobre `ticket.linkedConversationId`. En el caso de un solo ticket abierto coincidían, en múltiples tickets (rate limit permite 2) era indeterminado. Además el header pintaba "Agente IA" siempre aunque un técnico ya hubiera reclamado la conv (badge dinámico prometido en ADR-054 D8, nunca implementado).
+
+**Análisis previo**: exploración full-stack con agente Explore. Se plantearon 3 opciones al operador — A (drawer bajo demanda), B (split view 1:2 ficha izq / chat der), C (soporte separado del ticket como frentes independientes). Elegida B por: (a) resuelve el bug de scoping de forma natural (obliga pasar `conversationId`), (b) cierra la deuda D8 del badge, (c) patrón visual estándar Zendesk / Linear / Intercom / JIRA Service Desk, (d) el móvil no empeora vs A/C (los 3 apilan en móvil). Confirmaciones del operador aceptadas: chat read-only tras resolución (no oculto), badge dinámico "🤖 Agente IA" ↔ "👤 Técnico: {nombre}", proporción 1:2 (ficha ~35% / chat ~65%).
+
+**Backend**:
+- Nuevo DTO `SupportConversationMetaDTO` (id + resolutionStatus + assignedToHuman + assignedProfileDisplayName). Distinto del `SupportConversationSummaryDTO` que usa admin: no expone `assignedAgentId` ni `assignedProfileId` (IDs internos backoffice sin valor cliente), solo el display name resuelto.
+- Nuevo método `SupportBotService.getConversationMeta(userId, conversationId)` con validación de ownership uniforme ("no encontrada" para no filtrar oracle de IDs). Resuelve el `displayName` desde `BackofficeAgentProfileRepository` cuando `assignedProfileId != null`.
+- Nuevo endpoint `GET /api/support/conversations/{id}/meta` en `SupportController`.
+- Sin migraciones. Toda la info ya está en `support_conversations` (V15 + campos `assigned_*` del ADR-046).
+- Guard backend read-only NO necesario: `POST /message` va a la conv activa del user, no acepta `conversationId` — no hay vector para escribir en conv de ticket cerrado por API directa. El read-only se aplica visualmente en frontend.
+
+**Frontend cliente**:
+- `useSupportChat({ pinnedConversationId })`: hook acepta ahora `pinnedConversationId` opcional. Con él: (a) el id se fija (no lee/escribe localStorage; el chat scoped al ticket no debe contaminar el chat "vivo" del user en `/client` Soporte), (b) carga meta + history en paralelo al mount, (c) expone `meta` en el return. Sin él: comportamiento histórico intacto (retrocompat para `/client` Soporte cuando `selectedFav?.isBot`).
+- `SupportChat({ pinnedConversationId, readOnly })`: header dinámico basado en `meta.assignedToHuman` → muestra "Técnico: {name}" en verde si asignado, "Agente IA" en default (badge D8). `readOnly=true` oculta el input row + botón escalar y muestra banner informativo `support.chat.readOnlyBanner`.
+- `ClientTicketsPanel.TicketDetail` reescrito: layout split view responsive `minmax(0, 1fr) minmax(0, 2fr)` desktop (35/65), apilado móvil (<900px via `window.innerWidth` listener). Columna izq: ficha densa (categoría/estado/compensación/descripción/notas/timeline con created + verificationLastAt + resolvedAt). Columna der: `<SupportChat pinnedConversationId={ticket.linkedConversationId} readOnly={isResolved(ticket.status)}/>`. Estados considerados "resolved-like" para el read-only: `RESOLVED_*`, `REJECTED_INVALID`, `ABANDONED`.
+- i18n `es`+`en`: nuevas keys `support.chat.readOnlyBanner`, `support.tickets.detail.descriptionLabel`, `support.tickets.detail.timelineLabel/Created/Verified/Resolved`.
+
+**Frontend admin**:
+- Admin ya tenía UX separada por tabs (`conversations` para chat, `tickets` para caso — layouts independientes). NO se aplica split view espejo porque no había mezcla que arreglar.
+- Mejora contextual añadida: puente ticket → conversación. Botón "Ver conversación" en `AdminTicketDetail` (solo visible si `ticket.linkedConversationId != null` y el user tiene `canHandle`) que cambia de tab a `conversations` y preselecciona la conv del ticket. Evita el paseo manual "cambio de tab, busco por id". Cableado en `AdminSupportPanel` como callback `onGoToConversation`.
+- i18n `es`+`en`: `admin.support.tickets.detail.goToConversation` + tooltip.
+
+**Deuda cerrada**:
+- ADR-054 D8 "cliente lo ve con `SupportChat.jsx` con un badge arriba" — el badge existe ahora y es dinámico según asignación.
+- Bug latente de scoping `useSupportChat` con múltiples tickets abiertos (rate limit permite 2) — ahora cada ficha muestra su chat propio pinned al `linkedConversationId`.
+
+**Deploy TEST**:
+- Backend JAR (nuevo endpoint + service method + repo autowire) `active`.
+- Frontend both surfaces: admin `main.c49b373f.js`, product `main.4bf2131e.js`.
+- Manifest test.yaml nivelado.
+
+**Fuera de scope (apuntado en pending-hardening o memoria proyecto)**:
+- Notificación push/WS de nuevos mensajes: sigue siendo deuda #D-47 ADR-054 (hoy el user solo ve nuevos mensajes al recargar la página del ticket). No bloqueante para el fix UX de hoy.
+- Timeline extendido con eventos de status transitions (INVESTIGATING, RESOLVED) desde una tabla de eventos: hoy timeline solo muestra 3 hitos derivables del propio `SupportTicket`. Suficiente para MVP UX; mejora futura si aumentan las transiciones.
+
+**Aprendizajes operativos**:
+- **Deudas de diseño documentadas sin implementar acumulan fricción real**: el badge D8 estaba en ADR-054 aceptado hace 10 días pero no se implementó, y el operador tropezó con la falta visual justo al probar otra cosa (ADR-058). Cerrar deudas de UX pequeñas al mismo tiempo que se aceptan evita re-descubrimiento con overhead.
+- **Los 3-way tradeoff de UX (A/B/C) benefician la decisión aunque el operador ya intuya una preferencia**: enseñar A ("drawer bajo demanda") con sus contras — 1 click extra por mensaje, contexto perdido al chatear, notificaciones ocultas, ambigüedad conceptual "¿es el mismo chat que el navbar?" — hizo que la elección B saliera fundamentada, no por defecto.
+
 ## 2026-08-06 (tarde) — ADR-058 Fase 2 PROD BLOQUEADA por Fase 0.3 (publicar consent Google Cloud a Production) — decisión de NO nivelar
 
 Tras cerrar Fase 1 end-to-end en TEST (entrada anterior de hoy), el asistente propuso al operador arrancar Fase 2: nivelar AUDIT y PROD. El operador aportó contexto clave sobre PROD: la landing pública actualmente muestra `<PreLaunchScreen/>` (coming soon) porque `PRODUCT_ACCESS_MODE=PRELAUNCH`; el público general no accede al perfil ni al flow de login. Este contexto puso en primer plano un tema latente que hasta ahora era teórico: el OAuth consent screen en Google Cloud Console sigue en modo **Testing** con 2 test users (los emails Gmail del operador configurados en Fase 0 el 2026-08-05).

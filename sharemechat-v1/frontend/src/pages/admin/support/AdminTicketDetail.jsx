@@ -86,7 +86,7 @@ function formatDate(iso) {
   try { return new Date(iso).toLocaleString(); } catch { return iso; }
 }
 
-export default function AdminTicketDetail({ ticketId, onBack, onChanged }) {
+export default function AdminTicketDetail({ ticketId, onBack, onChanged, onGoToConversation }) {
   const [ticket, setTicket] = useState(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
@@ -186,9 +186,24 @@ export default function AdminTicketDetail({ ticketId, onBack, onChanged }) {
           <h2 style={title}>{i18n.t('admin.support.tickets.detail.title', { id: ticket.id })}</h2>
           <div style={sub}>{formatDate(ticket.createdAt)}</div>
         </div>
-        <button type="button" style={btn('ghost')} onClick={onBack}>
-          {i18n.t('admin.support.tickets.detail.back')}
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {/* ADR-054 D8 (2026-08-06): puente ticket → conversación. Admin
+              gestiona ticket + chat en tabs distintas; este botón evita el
+              paseo manual "cambio a tab conversations, busco por id". */}
+          {ticket.linkedConversationId && typeof onGoToConversation === 'function' && (
+            <button
+              type="button"
+              style={btn('primary')}
+              onClick={() => onGoToConversation(ticket.linkedConversationId)}
+              title={i18n.t('admin.support.tickets.detail.goToConversationTooltip')}
+            >
+              {i18n.t('admin.support.tickets.detail.goToConversation')}
+            </button>
+          )}
+          <button type="button" style={btn('ghost')} onClick={onBack}>
+            {i18n.t('admin.support.tickets.detail.back')}
+          </button>
+        </div>
       </div>
 
       {err && <div style={errBox}>{err}</div>}

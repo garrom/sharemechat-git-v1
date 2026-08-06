@@ -3,6 +3,7 @@ package com.sharemechat.support.controller;
 import com.sharemechat.config.IpConfig;
 import com.sharemechat.entity.User;
 import com.sharemechat.service.UserService;
+import com.sharemechat.support.dto.SupportConversationMetaDTO;
 import com.sharemechat.support.dto.SupportMessageDTO;
 import com.sharemechat.support.dto.SupportMessageRequestDTO;
 import com.sharemechat.support.dto.SupportMessageResponseDTO;
@@ -59,6 +60,23 @@ public class SupportController {
             Long userId = requireUserId(auth);
             List<SupportMessageDTO> history = botService.getConversationHistory(userId, id);
             return ResponseEntity.ok(history);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        }
+    }
+
+    /**
+     * ADR-054 D8 (2026-08-06): meta ligera de la conversacion para pintar el
+     * badge de estado en la vista del ticket del cliente (Agente IA vs Tecnico
+     * asignado) y decidir read-only sin exponer IDs internos de backoffice.
+     */
+    @GetMapping("/conversations/{id}/meta")
+    public ResponseEntity<?> getConversationMeta(@PathVariable Long id,
+                                                  Authentication auth) {
+        try {
+            Long userId = requireUserId(auth);
+            SupportConversationMetaDTO meta = botService.getConversationMeta(userId, id);
+            return ResponseEntity.ok(meta);
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
         }

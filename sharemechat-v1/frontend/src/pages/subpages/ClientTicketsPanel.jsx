@@ -72,18 +72,52 @@ function formatDate(iso) {
   } catch { return iso; }
 }
 
-// Detalle de un ticket. Reutiliza SupportChat cuando la conversación
-// asociada existe (linked_conversation_id no null). SupportChat ya
-// gestiona su propia carga de historial por user, y como cada usuario
-// tiene solo una conversación activa a la vez, con reusar el componente
-// vale (T3 dejó la conv del ticket como la conversación activa cuando
-// la oferta fue aceptada; para tickets abiertos por formulario, la
-// conversación nueva es también la más reciente HUMAN_HANDLING).
+// ADR-054 D8 (2026-08-06): estados en los que el ticket ya no admite
+// nueva actividad conversacional. El chat queda read-only.
+const RESOLVED_LIKE_STATUSES = new Set([
+  'RESOLVED_COMPENSATED_PENDING_CREDIT',
+  'RESOLVED_COMPENSATED',
+  'RESOLVED_NO_COMPENSATION',
+  'REJECTED_INVALID',
+  'ABANDONED',
+]);
+
+// Ancho envolvente distinto en detalle: la split view 1:2 aprovecha mejor
+// hasta 1400px que 1200. En movil el ancho lo controla el propio media
+// wrapper (mediaGrid).
+const wrapDetail = { padding: '24px 16px 64px', maxWidth: 1400, margin: '0 auto' };
+
+// Split view desktop 1:2 (ficha compacta izq, chat ancho der). En pantallas
+// <900px se apila. minmax(0, 1fr) para que el chat pueda encoger sin
+// desbordar el grid.
+const splitGrid = {
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 2fr)',
+  gap: 16,
+  alignItems: 'start',
+};
+
+// Detalle de un ticket. Layout split view (ADR-054 D8):
+// - Izquierda: ficha (categoria, estado, compensacion, descripcion, notas,
+//   timeline minimo).
+// - Derecha: SupportChat scoped a la conversacion vinculada al ticket
+//   (pinnedConversationId), con readOnly cuando el ticket esta cerrado.
 function TicketDetail({ ticket, onBack }) {
   const categoryLabel = i18n.t(`support.tickets.categories.${ticket.category}`, { defaultValue: ticket.category });
   const statusLabel = i18n.t(`support.tickets.statuses.${ticket.status}`, { defaultValue: ticket.status });
+  const isResolved = RESOLVED_LIKE_STATUSES.has(ticket.status);
+
+  const [isNarrow, setIsNarrow] = React.useState(
+    typeof window !== 'undefined' ? window.innerWidth < 900 : false
+  );
+  React.useEffect(() => {
+    const onResize = () => setIsNarrow(window.innerWidth < 900);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
   return (
-    <div style={wrap}>
+    <div style={wrapDetail}>
       <div style={headerRow}>
         <div>
           <h2 style={title}>{i18n.t('support.tickets.detail.title', { id: ticket.id })}</h2>
@@ -94,55 +128,83 @@ function TicketDetail({ ticket, onBack }) {
         </button>
       </div>
 
-      <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 10, padding: 12, marginBottom: 16 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, color: '#cbd5e1', fontSize: 13 }}>
-          <div>
-            <div style={{ fontSize: 11, opacity: 0.7, textTransform: 'uppercase' }}>
-              {i18n.t('support.tickets.detail.categoryLabel')}
-            </div>
-            <div>{categoryLabel}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: 11, opacity: 0.7, textTransform: 'uppercase' }}>
-              {i18n.t('support.tickets.detail.statusLabel')}
-            </div>
-            <div><span style={statusPillStyle(ticket.status)}>{statusLabel}</span></div>
-          </div>
-          {ticket.compensatedAmountEur && (
+      <div style={isNarrow ? { display: 'flex', flexDirection: 'column', gap: 16 } : splitGrid}>
+        {/* IZQUIERDA — ficha del ticket */}
+        <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 10, padding: 14 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, color: '#cbd5e1', fontSize: 13 }}>
             <div>
               <div style={{ fontSize: 11, opacity: 0.7, textTransform: 'uppercase' }}>
-                {i18n.t('support.tickets.detail.compensationLabel')}
+                {i18n.t('support.tickets.detail.categoryLabel')}
               </div>
-              <div>{ticket.compensatedAmountEur} €</div>
+              <div style={{ marginTop: 2 }}>{categoryLabel}</div>
             </div>
+            <div>
+              <div style={{ fontSize: 11, opacity: 0.7, textTransform: 'uppercase' }}>
+                {i18n.t('support.tickets.detail.statusLabel')}
+              </div>
+              <div style={{ marginTop: 4 }}><span style={statusPillStyle(ticket.status)}>{statusLabel}</span></div>
+            </div>
+            {ticket.compensatedAmountEur && (
+              <div>
+                <div style={{ fontSize: 11, opacity: 0.7, textTransform: 'uppercase' }}>
+                  {i18n.t('support.tickets.detail.compensationLabel')}
+                </div>
+                <div style={{ marginTop: 2 }}>{ticket.compensatedAmountEur} €</div>
+              </div>
+            )}
+            <div>
+              <div style={{ fontSize: 11, opacity: 0.7, textTransform: 'uppercase' }}>
+                {i18n.t('support.tickets.detail.descriptionLabel')}
+              </div>
+              <div style={{ marginTop: 6, background: '#0f172a', padding: 10, borderRadius: 6, color: '#e2e8f0', whiteSpace: 'pre-wrap', fontSize: 13 }}>
+                {ticket.description}
+              </div>
+            </div>
+            {ticket.resolutionNotes && (
+              <div>
+                <div style={{ fontSize: 11, opacity: 0.7, textTransform: 'uppercase' }}>
+                  {i18n.t('support.tickets.detail.resolutionNotesLabel')}
+                </div>
+                <div style={{ marginTop: 4, color: '#f8fafc', fontSize: 13, whiteSpace: 'pre-wrap' }}>
+                  {ticket.resolutionNotes}
+                </div>
+              </div>
+            )}
+            {(ticket.verificationLastAt || ticket.resolvedAt) && (
+              <div style={{ borderTop: '1px solid #334155', paddingTop: 10 }}>
+                <div style={{ fontSize: 11, opacity: 0.7, textTransform: 'uppercase', marginBottom: 6 }}>
+                  {i18n.t('support.tickets.detail.timelineLabel')}
+                </div>
+                <div style={{ fontSize: 12, color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div>· {i18n.t('support.tickets.detail.timelineCreated')}: {formatDate(ticket.createdAt)}</div>
+                  {ticket.verificationLastAt && (
+                    <div>· {i18n.t('support.tickets.detail.timelineVerified')}: {formatDate(ticket.verificationLastAt)}</div>
+                  )}
+                  {ticket.resolvedAt && (
+                    <div>· {i18n.t('support.tickets.detail.timelineResolved')}: {formatDate(ticket.resolvedAt)}</div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* DERECHA — conversacion scoped al ticket */}
+        <div>
+          <h3 style={{ fontSize: 15, color: '#f8fafc', margin: '0 0 8px 0' }}>
+            {i18n.t('support.tickets.detail.conversationTitle')}
+          </h3>
+          {ticket.linkedConversationId ? (
+            <div style={{ background: '#fff', borderRadius: 10, height: isNarrow ? 480 : 560, overflow: 'hidden' }}>
+              <SupportChat
+                pinnedConversationId={ticket.linkedConversationId}
+                readOnly={isResolved}
+              />
+            </div>
+          ) : (
+            <div style={empty}>{i18n.t('support.tickets.detail.conversationEmpty')}</div>
           )}
         </div>
-        <div style={{ marginTop: 12, background: '#0f172a', padding: 10, borderRadius: 6, color: '#e2e8f0', whiteSpace: 'pre-wrap', fontSize: 13 }}>
-          {ticket.description}
-        </div>
-        {ticket.resolutionNotes && (
-          <div style={{ marginTop: 12 }}>
-            <div style={{ fontSize: 11, opacity: 0.7, textTransform: 'uppercase', color: '#cbd5e1' }}>
-              {i18n.t('support.tickets.detail.resolutionNotesLabel')}
-            </div>
-            <div style={{ marginTop: 4, color: '#f8fafc', fontSize: 13, whiteSpace: 'pre-wrap' }}>
-              {ticket.resolutionNotes}
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div>
-        <h3 style={{ fontSize: 15, color: '#f8fafc', margin: '0 0 8px 0' }}>
-          {i18n.t('support.tickets.detail.conversationTitle')}
-        </h3>
-        {ticket.linkedConversationId ? (
-          <div style={{ background: '#fff', borderRadius: 10, minHeight: 380, overflow: 'hidden' }}>
-            <SupportChat />
-          </div>
-        ) : (
-          <div style={empty}>{i18n.t('support.tickets.detail.conversationEmpty')}</div>
-        )}
       </div>
     </div>
   );

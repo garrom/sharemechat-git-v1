@@ -72,5 +72,17 @@ export async function escalateManual(conversationId, reason) {
   });
 }
 
-export const supportApi = { sendMessage, getHistory, escalateManual };
+/**
+ * ADR-054 D8 (2026-08-06): meta ligera de la conversacion para pintar el
+ * badge de estado en la vista del ticket (Agente IA vs Tecnico asignado).
+ *
+ * @param {number|string} conversationId
+ * @returns {Promise<{id: number, resolutionStatus: string, assignedToHuman: boolean, assignedProfileDisplayName: string|null}>}
+ */
+export async function getConversationMeta(conversationId) {
+  if (!conversationId) throw new Error('conversationId requerido');
+  return apiFetch(`/support/conversations/${encodeURIComponent(conversationId)}/meta`);
+}
+
+export const supportApi = { sendMessage, getHistory, escalateManual, getConversationMeta };
 export default supportApi;

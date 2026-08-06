@@ -5,10 +5,12 @@ import com.sharemechat.entity.User;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.support.config.ClaudeApiProperties;
 import com.sharemechat.support.dto.ClaudeApiResponse;
+import com.sharemechat.support.dto.SupportConversationMetaDTO;
 import com.sharemechat.support.dto.SupportMessageDTO;
 import com.sharemechat.support.dto.SupportMessageResponseDTO;
 import com.sharemechat.support.entity.SupportConversation;
 import com.sharemechat.support.entity.SupportMessage;
+import com.sharemechat.support.repository.BackofficeAgentProfileRepository;
 import com.sharemechat.support.repository.SupportConversationRepository;
 import com.sharemechat.support.repository.SupportMessageRepository;
 import org.slf4j.Logger;
@@ -94,6 +96,11 @@ public class SupportBotService {
     private final TicketOfferPendingCache offerCache;
     private final TicketService ticketService;
 
+    // ADR-054 D8 (2026-08-06): meta de conversacion para pintar badge dinamico
+    // en el cliente (Agente IA vs Tecnico asignado). Se resuelve el display
+    // name del perfil asignado desde este repo.
+    private final BackofficeAgentProfileRepository profileRepo;
+
     public SupportBotService(SupportConversationRepository conversationRepo,
                               SupportMessageRepository messageRepo,
                               SupportRateLimitService rateLimitService,
@@ -104,7 +111,8 @@ public class SupportBotService {
                               UserRepository userRepository,
                               TicketOfferHeuristicService offerHeuristic,
                               TicketOfferPendingCache offerCache,
-                              TicketService ticketService) {
+                              TicketService ticketService,
+                              BackofficeAgentProfileRepository profileRepo) {
         this.conversationRepo = conversationRepo;
         this.messageRepo = messageRepo;
         this.rateLimitService = rateLimitService;
@@ -116,6 +124,7 @@ public class SupportBotService {
         this.claudeClient = claudeClient;
         this.props = props;
         this.userRepository = userRepository;
+        this.profileRepo = profileRepo;
     }
 
     @Transactional
@@ -280,6 +289,35 @@ public class SupportBotService {
                     m.getContent(),
                     m.getCreatedAt()
             ));
+        }
+        return out;
+    }
+
+    /**
+     * Devuelve la meta ligera de una conversacion propiedad del usuario
+     * (ADR-054 D8 — cliente, para pintar badge y decidir read-only sin
+     * exponer campos internos como assignedAgentId o assignedProfileId).
+     *
+     * Valida ownership igual que {@link #getConversationHistory}:
+     * respuesta uniforme "no encontrada" para no filtrar oraculo de ids.
+     */
+    @Transactional(readOnly = true)
+    public SupportConversationMetaDTO getConversationMeta(Long userId, Long conversationId) {
+        if (userId == null) throw new IllegalArgumentException("userId requerido");
+        if (conversationId == null) throw new IllegalArgumentException("conversationId requerido");
+        SupportConversation conv = conversationRepo.findById(conversationId)
+                .orElseThrow(() -> new IllegalArgumentException("Conversacion no encontrada"));
+        if (!userId.equals(conv.getUserId())) {
+            throw new IllegalArgumentException("Conversacion no encontrada");
+        }
+        SupportConversationMetaDTO out = new SupportConversationMetaDTO();
+        out.setId(conv.getId());
+        out.setResolutionStatus(conv.getResolutionStatus());
+        boolean human = conv.getAssignedAgentId() != null;
+        out.setAssignedToHuman(human);
+        if (human && conv.getAssignedProfileId() != null) {
+            profileRepo.findById(conv.getAssignedProfileId())
+                    .ifPresent(p -> out.setAssignedProfileDisplayName(p.getDisplayName()));
         }
         return out;
     }

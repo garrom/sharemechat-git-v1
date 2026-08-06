@@ -88,6 +88,15 @@ const AdminSupportPanel = ({
             ticketId={ticketDetailId}
             onBack={() => setTicketDetailId(null)}
             onChanged={handleActionRefresh}
+            /* ADR-054 D8 (2026-08-06): salto ticket → conversación asociada.
+               Cambia de tab a "conversations" y preselecciona la conv del ticket.
+               Requiere canHandle; sin ese permiso el botón no aparece porque
+               onGoToConversation llegaría como no-op. */
+            onGoToConversation={canHandle ? (convId) => {
+              setTicketDetailId(null);
+              setDetailId(convId);
+              setSubTab('conversations');
+            } : undefined}
           />
         ) : (
           <AdminTicketsView

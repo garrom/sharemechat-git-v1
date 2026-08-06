@@ -3656,7 +3656,9 @@
           "notesPlaceholder": "Reason for the resolution (visible to the client)",
           "notesRequired": "Reason is required.",
           "compensationLabel": "Compensation",
-          "compensationLinked": "Transaction #{{txId}} — {{amount}} €"
+          "compensationLinked": "Transaction #{{txId}} — {{amount}} €",
+          "goToConversation": "Open conversation",
+          "goToConversationTooltip": "Open the conversation linked to this ticket in the Conversations tab"
         },
         "compensate": {
           "modalTitle": "Compensate ticket #{{id}}",
@@ -3743,7 +3745,8 @@
       "systemAssigned": {
         "bannerHint": "A support agent from the team is handling your case.",
         "fallback": "Your case has been assigned to the support team."
-      }
+      },
+      "readOnlyBanner": "This ticket is closed. You can view the history but cannot send new messages."
     },
     "escalate": {
       "button": "Talk to a support agent",
@@ -3812,11 +3815,16 @@
         "back": "Back to list",
         "categoryLabel": "Category",
         "statusLabel": "Status",
+        "descriptionLabel": "Description",
         "createdAtLabel": "Created",
         "compensationLabel": "Compensation",
         "resolutionNotesLabel": "Team notes",
         "conversationTitle": "Conversation with the team",
-        "conversationEmpty": "No messages in this ticket yet."
+        "conversationEmpty": "No messages in this ticket yet.",
+        "timelineLabel": "Timeline",
+        "timelineCreated": "Created",
+        "timelineVerified": "Verified by team",
+        "timelineResolved": "Resolved"
       },
       "errors": {
         "loadFailed": "Could not load your tickets.",

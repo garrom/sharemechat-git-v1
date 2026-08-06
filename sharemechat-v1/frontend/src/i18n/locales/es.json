@@ -3656,7 +3656,9 @@
           "notesPlaceholder": "Motivo de la resolución (visible para el cliente)",
           "notesRequired": "El motivo es obligatorio.",
           "compensationLabel": "Compensación",
-          "compensationLinked": "Transaction #{{txId}} — {{amount}} €"
+          "compensationLinked": "Transaction #{{txId}} — {{amount}} €",
+          "goToConversation": "Ver conversación",
+          "goToConversationTooltip": "Abrir la conversación asociada a este ticket en la pestaña Conversaciones"
         },
         "compensate": {
           "modalTitle": "Compensar incidencia #{{id}}",
@@ -3743,7 +3745,8 @@
       "systemAssigned": {
         "bannerHint": "Un técnico del equipo de soporte está atendiendo tu caso.",
         "fallback": "Tu caso ha sido asignado al equipo de soporte."
-      }
+      },
+      "readOnlyBanner": "Esta incidencia está cerrada. Puedes consultar el historial pero no enviar más mensajes."
     },
     "escalate": {
       "button": "Hablar con un técnico",
@@ -3812,11 +3815,16 @@
         "back": "Volver al listado",
         "categoryLabel": "Categoría",
         "statusLabel": "Estado",
+        "descriptionLabel": "Descripción",
         "createdAtLabel": "Creado",
         "compensationLabel": "Compensación",
         "resolutionNotesLabel": "Notas del equipo",
         "conversationTitle": "Conversación con el equipo",
-        "conversationEmpty": "Aún no hay mensajes en esta incidencia."
+        "conversationEmpty": "Aún no hay mensajes en esta incidencia.",
+        "timelineLabel": "Cronología",
+        "timelineCreated": "Creado",
+        "timelineVerified": "Verificado por el equipo",
+        "timelineResolved": "Resuelto"
       },
       "errors": {
         "loadFailed": "No se han podido cargar tus incidencias.",

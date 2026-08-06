@@ -193,7 +193,18 @@ const typingBubbleStyle = {
   maxWidth: '60%',
 };
 
-export default function SupportChat() {
+/**
+ * @param {object} props
+ * @param {number|null} [props.pinnedConversationId] - si viene, el chat
+ *   queda scoped a esa conversacion (uso: vista de detalle del ticket
+ *   ADR-054 D8). Sin prop, comportamiento historico (conv activa cacheada).
+ * @param {boolean} [props.readOnly] - si true, oculta el input y el boton
+ *   escalar (uso: ticket resuelto — historico consultable pero no
+ *   editable). Backend no permite escribir en tickets resueltos porque
+ *   `sendMessage` va a la conv activa, no a la pinned; el guard visual
+ *   evita que el user pierda su mensaje.
+ */
+export default function SupportChat({ pinnedConversationId, readOnly } = {}) {
   const {
     messages,
     conversationId,
@@ -203,9 +214,10 @@ export default function SupportChat() {
     rateLimitState,
     resolutionStatus,
     escalated,
+    meta,
     sendMessage,
     requestEscalation,
-  } = useSupportChat();
+  } = useSupportChat({ pinnedConversationId });
 
   const [input, setInput] = useState('');
   const [escalateOpen, setEscalateOpen] = useState(false);
@@ -268,18 +280,30 @@ export default function SupportChat() {
           alt=""
           style={avatarImgStyle}
         />
-        <strong>{i18n.t('support.chat.agentName')}</strong>
+        {/* Badge dinamico (ADR-054 D8): si un tecnico ya reclamo la conv,
+            mostramos su nombre en lugar de "Agente IA". Solo aplica cuando
+            el hook tiene meta (modo pinned del ticket). Fuera del ticket
+            el header sigue comportandose como antes. */}
+        <strong>
+          {meta && meta.assignedToHuman
+            ? (meta.assignedProfileDisplayName
+                ? `Técnico: ${meta.assignedProfileDisplayName}`
+                : i18n.t('support.chat.systemAssigned.fallback'))
+            : i18n.t('support.chat.agentName')}
+        </strong>
 
-        <button
-          type="button"
-          style={escalateBtnStyle(!canEscalate)}
-          onClick={() => setEscalateOpen(true)}
-          disabled={!canEscalate}
-          title={escalateTooltip}
-        >
-          <FontAwesomeIcon icon={faUserTie} />
-          <span>{i18n.t('support.escalate.button')}</span>
-        </button>
+        {!readOnly && (
+          <button
+            type="button"
+            style={escalateBtnStyle(!canEscalate)}
+            onClick={() => setEscalateOpen(true)}
+            disabled={!canEscalate}
+            title={escalateTooltip}
+          >
+            <FontAwesomeIcon icon={faUserTie} />
+            <span>{i18n.t('support.escalate.button')}</span>
+          </button>
+        )}
       </header>
 
       {humanHandling && (
@@ -332,38 +356,46 @@ export default function SupportChat() {
         )}
       </div>
 
-      <div style={inputRowStyle}>
-        <textarea
-          style={textareaStyle}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={i18n.t('support.chat.inputPlaceholder')}
-          maxLength={MAX_INPUT}
-          rows={1}
-          disabled={rateLimited || sending}
-          aria-label={i18n.t('support.chat.inputPlaceholder')}
-        />
-        <button
-          type="button"
-          style={sendBtnResolvedStyle(sendHover, !canSend)}
-          onClick={handleSend}
-          onMouseEnter={() => setSendHover(true)}
-          onMouseLeave={() => setSendHover(false)}
-          onFocus={() => setSendHover(true)}
-          onBlur={() => setSendHover(false)}
-          disabled={!canSend}
-        >
-          <FontAwesomeIcon icon={faPaperPlane} />
-          <span>{i18n.t('support.chat.sendButton')}</span>
-        </button>
-      </div>
+      {readOnly ? (
+        <div style={{ ...bannerInfo, marginTop: 8 }} role="status">
+          {i18n.t('support.chat.readOnlyBanner')}
+        </div>
+      ) : (
+        <div style={inputRowStyle}>
+          <textarea
+            style={textareaStyle}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={i18n.t('support.chat.inputPlaceholder')}
+            maxLength={MAX_INPUT}
+            rows={1}
+            disabled={rateLimited || sending}
+            aria-label={i18n.t('support.chat.inputPlaceholder')}
+          />
+          <button
+            type="button"
+            style={sendBtnResolvedStyle(sendHover, !canSend)}
+            onClick={handleSend}
+            onMouseEnter={() => setSendHover(true)}
+            onMouseLeave={() => setSendHover(false)}
+            onFocus={() => setSendHover(true)}
+            onBlur={() => setSendHover(false)}
+            disabled={!canSend}
+          >
+            <FontAwesomeIcon icon={faPaperPlane} />
+            <span>{i18n.t('support.chat.sendButton')}</span>
+          </button>
+        </div>
+      )}
 
-      <SupportEscalateModal
-        open={escalateOpen}
-        onClose={() => setEscalateOpen(false)}
-        onConfirm={handleEscalate}
-      />
+      {!readOnly && (
+        <SupportEscalateModal
+          open={escalateOpen}
+          onClose={() => setEscalateOpen(false)}
+          onConfirm={handleEscalate}
+        />
+      )}
     </div>
   );
 }
