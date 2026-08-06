@@ -6,6 +6,7 @@ import { getResolvedLocale } from '../i18n/localeUtils';
 import { Form as RegForm, Title, Input, Button, LinkButton, Error as ErrorText, Field, FieldError, CheckRow, CheckInput, CheckText } from '../styles/public-styles/RegisterClientModelStyles';
 import { useAppModals } from './useAppModals';
 import { pushSignUp, getAcquisitionPayload } from '../utils/attribution';
+import GoogleSignInButton from './GoogleSignInButton';
 
 const InlineForm = styled(RegForm)`
   background: transparent;
@@ -15,7 +16,7 @@ const InlineForm = styled(RegForm)`
   padding: 0;
 `;
 
-const RegisterClientModalContent = ({ onClose, onBack }) => {
+const RegisterClientModalContent = ({ onClose, onBack, onGoogleAuth }) => {
 
   const { alert } = useAppModals();
   const [nickname, setNickname] = useState('');
@@ -120,6 +121,35 @@ const RegisterClientModalContent = ({ onClose, onBack }) => {
 
       <Button type="button" disabled={loading} onClick={handleRegister}>{loading ? i18n.t('auth.registerClient.actions.loading') : i18n.t('auth.registerClient.actions.submit')}</Button>
       {onBack && <LinkButton type="button" onClick={onBack}>{i18n.t('common.back')}</LinkButton>}
+
+      {/* ADR-058: Google Sign-In como atajo dentro del form de registro cliente.
+          Se coloca despues del boton principal para no competir con el flujo
+          nativo (email+password). Solo se muestra si el padre provee handler. */}
+      {onGoogleAuth && (
+        <>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              margin: '12px 0 8px',
+              color: '#6b7280',
+              fontSize: 12,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+            }}
+          >
+            <span style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
+            <span>{i18n.t('auth.google.orSeparator')}</span>
+            <span style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
+          </div>
+          <GoogleSignInButton
+            intent="register-client"
+            onIdToken={onGoogleAuth}
+            onError={(msg) => setError(msg)}
+          />
+        </>
+      )}
     </InlineForm>
   );
 };

@@ -860,8 +860,7 @@
     "registerGender": {
       "title": "Únete como",
       "male": "Hombre",
-      "female": "Mujer",
-      "orGoogle": "o continúa con Google (como cliente)"
+      "female": "Mujer"
     },
     "google": {
       "orSeparator": "o",

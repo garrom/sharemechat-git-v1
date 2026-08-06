@@ -21,64 +21,93 @@ import React, { useEffect, useRef, useState } from 'react';
  * body de la request al backend (login vs register-client). No afecta
  * al render del botón GIS.
  */
-export default function GoogleSignInButton({ onIdToken, onError, intent = 'login', width = 320 }) {
+export default function GoogleSignInButton({ onIdToken, onError, intent = 'login' }) {
   const containerRef = useRef(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState(null);
+  // Ancho medido dinámicamente para que el botón oficial GIS
+  // ocupe el mismo ancho que los botones nativos del formulario.
+  // GIS renderButton acepta un número (px) con máximo 400.
+  const [measuredWidth, setMeasuredWidth] = useState(0);
+  const [gisReadyTick, setGisReadyTick] = useState(0);
 
   const clientId = process.env.REACT_APP_GOOGLE_OAUTH_CLIENT_ID;
 
+  // Fase 1: espera a que el script GIS esté cargado y marca ready.
   useEffect(() => {
     if (!clientId) {
       setError('Google Sign-In no está configurado en este entorno');
       return;
     }
-    // Espera a que el script GIS haya cargado. Timeout defensivo 3s
-    // por si un adblocker lo bloquea.
     let attempts = 0;
-    const maxAttempts = 30; // 30 * 100ms = 3s
+    const maxAttempts = 30; // 30 * 100ms = 3s (defensa adblocker)
     const interval = setInterval(() => {
       attempts += 1;
       if (window.google && window.google.accounts && window.google.accounts.id) {
         clearInterval(interval);
-        try {
-          window.google.accounts.id.initialize({
-            client_id: clientId,
-            callback: (response) => {
-              if (response && response.credential) {
-                onIdToken(response.credential, intent);
-              } else if (onError) {
-                onError('Sin credencial en la respuesta de Google');
-              }
-            },
-            use_fedcm_for_prompt: true, // evita third-party cookies
-          });
-          if (containerRef.current) {
-            window.google.accounts.id.renderButton(containerRef.current, {
-              type: 'standard',
-              theme: 'outline',
-              size: 'large',
-              text: intent === 'register-client' ? 'signup_with' : 'signin_with',
-              shape: 'rectangular',
-              logo_alignment: 'left',
-              width,
-            });
-            setReady(true);
-          }
-        } catch (e) {
-          setError('No se pudo inicializar Google Sign-In');
-          if (onError) onError(e && e.message ? e.message : 'GIS init error');
-        }
+        setGisReadyTick((t) => t + 1);
       } else if (attempts >= maxAttempts) {
         clearInterval(interval);
         setError('Google Sign-In no disponible (¿bloqueado por adblocker?)');
       }
     }, 100);
     return () => clearInterval(interval);
-    // Solo re-render si cambia clientId o intent. `onIdToken`/`onError` se
-    // asumen estables desde el padre (envolver con useCallback si no).
+  }, [clientId]);
+
+  // Fase 2: mide el ancho del contenedor y re-mide en resize.
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const measure = () => {
+      if (!containerRef.current) return;
+      const w = Math.round(containerRef.current.getBoundingClientRect().width);
+      // GIS limita a [200, 400]. Clamp para evitar warning y look raro.
+      const clamped = Math.min(400, Math.max(200, w || 320));
+      setMeasuredWidth((prev) => (prev === clamped ? prev : clamped));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, []);
+
+  // Fase 3: renderiza el botón GIS cada vez que cambia el ancho medido,
+  // el intent o cuando GIS acaba de cargar. Limpia el contenedor antes
+  // porque renderButton adjunta, no reemplaza.
+  useEffect(() => {
+    if (!clientId) return;
+    if (!measuredWidth) return;
+    if (!containerRef.current) return;
+    if (!(window.google && window.google.accounts && window.google.accounts.id)) return;
+    try {
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: (response) => {
+          if (response && response.credential) {
+            onIdToken(response.credential, intent);
+          } else if (onError) {
+            onError('Sin credencial en la respuesta de Google');
+          }
+        },
+        use_fedcm_for_prompt: true, // evita third-party cookies
+      });
+      containerRef.current.innerHTML = '';
+      window.google.accounts.id.renderButton(containerRef.current, {
+        type: 'standard',
+        theme: 'outline',
+        size: 'large',
+        text: intent === 'register-client' ? 'signup_with' : 'signin_with',
+        shape: 'rectangular',
+        logo_alignment: 'left',
+        width: measuredWidth,
+      });
+      setReady(true);
+    } catch (e) {
+      setError('No se pudo inicializar Google Sign-In');
+      if (onError) onError(e && e.message ? e.message : 'GIS init error');
+    }
+    // onIdToken/onError se asumen estables desde el padre (envolver con
+    // useCallback si no).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clientId, intent]);
+  }, [clientId, intent, measuredWidth, gisReadyTick]);
 
   if (error) {
     return (
@@ -93,7 +122,7 @@ export default function GoogleSignInButton({ onIdToken, onError, intent = 'login
       data-testid="google-signin-button"
       data-ready={ready ? 'true' : 'false'}
       ref={containerRef}
-      style={{ margin: '8px 0' }}
+      style={{ margin: '8px 0', width: '100%', display: 'block' }}
     />
   );
 }

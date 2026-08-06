@@ -287,35 +287,6 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) =
               {i18n.t('auth.registerGender.female')}
             </StyledButton>
           </RegisterGenderRow>
-
-          {/* ADR-058 §D2: Google Sign-In solo aplica al rol CLIENT en Fase 1
-              (patron fan/creator OnlyFans). Se ofrece explicitamente como
-              opcion alternativa en la seleccion de rol. */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              margin: '16px 0 8px',
-              color: '#6b7280',
-              fontSize: 12,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-            }}
-          >
-            <span style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
-            <span>{i18n.t('auth.google.orSeparator')}</span>
-            <span style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
-          </div>
-          <div style={{ textAlign: 'center', color: '#4b5563', fontSize: 13, marginBottom: 6 }}>
-            {i18n.t('auth.registerGender.orGoogle')}
-          </div>
-          <GoogleSignInButton
-            intent="register-client"
-            onIdToken={handleGoogleAuth}
-            onError={(msg) => setError(msg)}
-          />
-          {error && <StyledError role="alert" style={{ marginTop: 8 }}>{error}</StyledError>}
         </>
       )}
 
@@ -323,6 +294,7 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) =
         <RegisterClientModalContent
           onClose={onClose}
           onBack={() => setView('register-gender')}
+          onGoogleAuth={handleGoogleAuth}
         />
       )}
 

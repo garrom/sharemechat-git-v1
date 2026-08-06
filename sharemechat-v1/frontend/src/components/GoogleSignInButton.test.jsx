@@ -45,9 +45,9 @@ describe('GoogleSignInButton', () => {
     const renderButton = jest.fn();
     window.google = { accounts: { id: { initialize, renderButton } } };
 
-    render(<GoogleSignInButton onIdToken={() => {}} intent="login" width={280} />);
+    render(<GoogleSignInButton onIdToken={() => {}} intent="login" />);
 
-    await waitFor(() => expect(initialize).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(initialize).toHaveBeenCalled());
     expect(initialize).toHaveBeenCalledWith(
       expect.objectContaining({
         client_id: 'test-client-id.apps.googleusercontent.com',
@@ -55,16 +55,19 @@ describe('GoogleSignInButton', () => {
         callback: expect.any(Function),
       })
     );
-    expect(renderButton).toHaveBeenCalledTimes(1);
-    expect(renderButton).toHaveBeenCalledWith(
-      expect.any(HTMLElement),
+    await waitFor(() => expect(renderButton).toHaveBeenCalled());
+    // Width se mide del contenedor (JSDOM getBoundingClientRect=0 → clamp a 200).
+    // Solo comprobamos que sea un número dentro del rango permitido por GIS.
+    const [, opts] = renderButton.mock.calls[0];
+    expect(opts).toEqual(
       expect.objectContaining({
         text: 'signin_with',
-        width: 280,
         theme: 'outline',
         size: 'large',
       })
     );
+    expect(opts.width).toBeGreaterThanOrEqual(200);
+    expect(opts.width).toBeLessThanOrEqual(400);
     expect(screen.getByTestId('google-signin-button')).toHaveAttribute('data-ready', 'true');
   });
 
