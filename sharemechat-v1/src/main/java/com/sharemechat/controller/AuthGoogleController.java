@@ -14,6 +14,7 @@ import com.sharemechat.repository.RefreshTokenRepository;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.security.JwtUtil;
 import com.sharemechat.service.AccountDormancyService;
+import com.sharemechat.service.AgeGatePolicyService;
 import com.sharemechat.service.ApiRateLimitService;
 import com.sharemechat.service.AuthRiskContext;
 import com.sharemechat.service.AuthRiskService;
@@ -87,6 +88,7 @@ public class AuthGoogleController {
     private final AuthRiskService authRiskService;
     private final BackofficeAccessService backofficeAccessService;
     private final AccountDormancyService dormancyService;
+    private final AgeGatePolicyService ageGatePolicyService;
 
     @Value("${auth.cookieDomain}")
     private String cookieDomain;
@@ -105,7 +107,8 @@ public class AuthGoogleController {
             ConsentService consentService,
             AuthRiskService authRiskService,
             BackofficeAccessService backofficeAccessService,
-            AccountDormancyService dormancyService
+            AccountDormancyService dormancyService,
+            AgeGatePolicyService ageGatePolicyService
     ) {
         this.googleVerifier = googleVerifier;
         this.userRepository = userRepository;
@@ -118,6 +121,7 @@ public class AuthGoogleController {
         this.authRiskService = authRiskService;
         this.backofficeAccessService = backofficeAccessService;
         this.dormancyService = dormancyService;
+        this.ageGatePolicyService = ageGatePolicyService;
     }
 
     @PostMapping
@@ -367,6 +371,14 @@ public class AuthGoogleController {
         u.setUserType(Constants.UserTypes.FORM_CLIENT);
         u.setUiLocale(sanitizeLocale(locale));
         u.setConfirAdult(true); // el consent age-gate lo garantiza en la ruta anterior
+        // Aceptacion de terminos + version vigente: sin esto,
+        // AgeGatePolicyService.resolve() devuelve consentCompliant=false y el
+        // frontend redirige al AuthenticatedConsentModal antes del dashboard.
+        // El registro clasico (UserService.registerClient) hace lo mismo.
+        // Racional: el operador acepta al pulsar "Registrarse con Google" —
+        // los enlaces a Terminos y Privacidad estan visibles en el modal.
+        u.setAcceptTerm(LocalDateTime.now());
+        u.setTermVersion(ageGatePolicyService.getCurrentTermsVersion());
         u.setEmailVerifiedAt(LocalDateTime.now()); // Google ya verifica email
         u.setRegistIp(IpConfig.getClientIp(req));
         u.setIsActive(true);
