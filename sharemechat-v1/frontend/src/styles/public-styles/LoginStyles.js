@@ -127,6 +127,11 @@ export const FieldError = styled.div`
 export const StyledButton = styled.button`
   ${buttonBase}
   width: 100%;
+  /* Alineado al ancho maximo permitido por Google GIS renderButton (400px).
+     Sin este cap, en desktop el boton nativo era mas ancho que "Iniciar
+     sesion con Google" (limite duro de Google) y se veian desalineados. */
+  max-width: 400px;
+  align-self: center;
   padding: 14px 18px;
   margin-top: 4px;
   border-radius: 999px;

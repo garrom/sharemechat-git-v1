@@ -122,7 +122,17 @@ export default function GoogleSignInButton({ onIdToken, onError, intent = 'login
       data-testid="google-signin-button"
       data-ready={ready ? 'true' : 'false'}
       ref={containerRef}
-      style={{ margin: '8px 0', width: '100%', display: 'block' }}
+      style={{
+        margin: '8px auto',
+        width: '100%',
+        // Alineado al max-width de los botones nativos (StyledButton/Button)
+        // porque GIS renderButton tiene limite duro de 400px. Sin esto, el
+        // contenedor era 100% del form (~460px en desktop) y el boton GIS
+        // renderizado a 400px quedaba alineado a la izquierda dentro del div,
+        // desalineado con los botones nativos que ocupaban el ancho completo.
+        maxWidth: 400,
+        display: 'block',
+      }}
     />
   );
 }
