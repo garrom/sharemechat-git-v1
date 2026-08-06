@@ -133,28 +133,50 @@ public class OAuthAccountController {
                     .body(Map.of("code", "GOOGLE_EMAIL_NOT_VERIFIED"));
         }
 
-        // Comprobar que el sub Google NO esta ya vinculado a otro user.
-        Optional<OAuthAccount> existingLink = oauthRepository
-                .findByProviderAndProviderUserIdAndRevokedAtIsNull("google", sub);
-        if (existingLink.isPresent() && !existingLink.get().getUserId().equals(u.getId())) {
-            log.warn("[OAUTH] intento de vincular sub ya vinculado a otro user userId={} attempted-sub-owner={}",
-                    u.getId(), existingLink.get().getUserId());
+        // Buscar cualquier fila existente (activa O revocada) por (provider, sub).
+        // Necesario porque la UNIQUE constraint fisica es (provider, provider_user_id)
+        // sin considerar revoked_at: si el user desvinculo antes, la fila quedo
+        // revocada pero sigue ocupando esa clave. Un INSERT nuevo violaria la
+        // constraint. Reactivamos en su lugar.
+        Optional<OAuthAccount> existing = oauthRepository
+                .findByProviderAndProviderUserId("google", sub);
+
+        if (existing.isPresent() && !existing.get().getUserId().equals(u.getId())) {
+            // Sub ya vinculado a OTRO user (activo o revocado). No reactivar entre
+            // usuarios: el link es (sub Google → cuenta sharemechat), y el sub
+            // pertenece a esa cuenta Google concreta.
+            log.warn("[OAUTH] intento de vincular sub ya vinculado a otro user userId={} attempted-sub-owner={} revoked={}",
+                    u.getId(), existing.get().getUserId(), existing.get().getRevokedAt() != null);
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(Map.of("code", "SUB_ALREADY_LINKED_TO_OTHER_USER"));
         }
 
-        OAuthAccount link = new OAuthAccount();
-        link.setUserId(u.getId());
-        link.setProvider("google");
-        link.setProviderUserId(sub);
-        link.setEmailAtSignup(email.trim().toLowerCase());
-        link.setGoogleHd((String) payload.get("hd"));
-        link.setPictureUrl((String) payload.get("picture"));
-        link.setLastUsedAt(LocalDateTime.now());
+        OAuthAccount link;
+        if (existing.isPresent()) {
+            // Mismo user re-vinculando su Google previo → reactivar.
+            link = existing.get();
+            link.setRevokedAt(null);
+            link.setEmailAtSignup(email.trim().toLowerCase());
+            link.setGoogleHd((String) payload.get("hd"));
+            link.setPictureUrl((String) payload.get("picture"));
+            link.setLastUsedAt(LocalDateTime.now());
+            log.info("[OAUTH] relink ok (reactivated revoked) userId={} provider=google sub=***{}", u.getId(),
+                    sub.length() >= 6 ? sub.substring(sub.length() - 6) : sub);
+        } else {
+            // Primera vez que este sub aparece en BD → insert nuevo.
+            link = new OAuthAccount();
+            link.setUserId(u.getId());
+            link.setProvider("google");
+            link.setProviderUserId(sub);
+            link.setEmailAtSignup(email.trim().toLowerCase());
+            link.setGoogleHd((String) payload.get("hd"));
+            link.setPictureUrl((String) payload.get("picture"));
+            link.setLastUsedAt(LocalDateTime.now());
+            log.info("[OAUTH] link ok userId={} provider=google sub=***{}", u.getId(),
+                    sub.length() >= 6 ? sub.substring(sub.length() - 6) : sub);
+        }
         oauthRepository.save(link);
 
-        log.info("[OAUTH] link ok userId={} provider=google sub=***{}", u.getId(),
-                sub.length() >= 6 ? sub.substring(sub.length() - 6) : sub);
         return ResponseEntity.ok(Map.of("linked", true));
     }
 

@@ -222,9 +222,9 @@ public class AuthGoogleController {
                     // la excepcion aguas arriba para dejar huella).
                     Optional<ResponseEntity<?>> block = validateAndBlockIfInactive(user, riskCtx);
                     if (block.isPresent()) return block.get();
-                    // Auto-link seguro.
-                    OAuthAccount link = newLink(user.getId(), sub, email, hd, pictureUrl);
-                    oauthRepository.save(link);
+                    // Auto-link seguro (usa saveOrReactivate por si existe
+                    // fila revocada previa con este sub para el mismo user).
+                    saveOrReactivateLink(user.getId(), sub, email, hd, pictureUrl);
                     log.info("[AUTH-GOOGLE] auto-link userId={} sub=***{}", user.getId(), lastChars(sub, 6));
                 } else {
                     // Sin auto-link: exige login previo con password para vincular.
@@ -256,8 +256,7 @@ public class AuthGoogleController {
                             .body(Map.of("code", "GOOGLE_EMAIL_NOT_VERIFIED"));
                 }
                 user = createClientUser(email, sub, body.getLocale(), req);
-                OAuthAccount link = newLink(user.getId(), sub, email, hd, pictureUrl);
-                oauthRepository.save(link);
+                saveOrReactivateLink(user.getId(), sub, email, hd, pictureUrl);
                 log.info("[AUTH-GOOGLE] user CLIENT creado userId={} via google sub=***{}",
                         user.getId(), lastChars(sub, 6));
             }
@@ -386,16 +385,41 @@ public class AuthGoogleController {
         return userRepository.save(u);
     }
 
-    private OAuthAccount newLink(Long userId, String sub, String email, String hd, String pictureUrl) {
-        OAuthAccount link = new OAuthAccount();
-        link.setUserId(userId);
-        link.setProvider("google");
-        link.setProviderUserId(sub);
+    /**
+     * Insert nuevo OAuthAccount O reactivar una fila revocada existente para
+     * el mismo (provider, sub). Necesario porque la UNIQUE constraint fisica
+     * es (provider, provider_user_id) sin considerar revoked_at: un INSERT
+     * nuevo violaria la constraint si existe una fila revocada previa (p.ej.
+     * el user desvinculo Google desde su perfil y ahora vuelve a hacer login
+     * con Google). Devuelve la entidad guardada.
+     *
+     * Si el sub pertenece a OTRO userId (incluso si esta revocado), NO se
+     * reactiva: el sub Google es propiedad de esa cuenta Google, y no debe
+     * "pasar" entre usuarios sharemechat.
+     */
+    private OAuthAccount saveOrReactivateLink(Long userId, String sub, String email, String hd, String pictureUrl) {
+        Optional<OAuthAccount> existing = oauthRepository
+                .findByProviderAndProviderUserId("google", sub);
+        if (existing.isPresent() && !existing.get().getUserId().equals(userId)) {
+            log.error("[AUTH-GOOGLE] sub ya vinculado a otro userId={} vs current userId={} revoked={}",
+                    existing.get().getUserId(), userId, existing.get().getRevokedAt() != null);
+            throw new IllegalStateException("SUB_ALREADY_LINKED_TO_OTHER_USER");
+        }
+        OAuthAccount link;
+        if (existing.isPresent()) {
+            link = existing.get();
+            link.setRevokedAt(null);
+        } else {
+            link = new OAuthAccount();
+            link.setUserId(userId);
+            link.setProvider("google");
+            link.setProviderUserId(sub);
+        }
         link.setEmailAtSignup(email);
         link.setGoogleHd(hd);
         link.setPictureUrl(pictureUrl);
         link.setLastUsedAt(LocalDateTime.now());
-        return link;
+        return oauthRepository.save(link);
     }
 
     private String sanitizeLocale(String locale) {

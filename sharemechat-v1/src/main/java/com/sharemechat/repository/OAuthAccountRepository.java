@@ -19,4 +19,11 @@ public interface OAuthAccountRepository extends JpaRepository<OAuthAccount, Long
     /** True si el user ya tiene vinculacion activa con el provider indicado.
      *  Usado para prevenir doble link del mismo provider. */
     boolean existsByUserIdAndProviderAndRevokedAtIsNull(Long userId, String provider);
+
+    /** Busca cualquier vinculacion (activa O revocada) por (provider, sub).
+     *  Usada al re-vincular tras un unlink: la UNIQUE constraint fisica
+     *  (provider, provider_user_id) rechaza INSERT nuevo, hay que reactivar
+     *  la revocada. */
+    Optional<OAuthAccount> findByProviderAndProviderUserId(
+            String provider, String providerUserId);
 }
