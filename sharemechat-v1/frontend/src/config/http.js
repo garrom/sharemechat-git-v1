@@ -126,8 +126,17 @@ const getPreferredLocaleHeader = () => {
   return FALLBACK_LOCALE;
 };
 
+// Solo saltan el auto-refresh los propios endpoints de auth (llamarlos en
+// bucle no tiene sentido). /users/me SÍ debe pasar por auto-refresh cuando
+// devuelve 401: el access_token dura 15 min y el refresh_token 14 días, y
+// sin este reintento el usuario "pierde sesión" cada 15 min silenciosamente
+// aunque su refresh_token siga válido. Además arregla un race condition en
+// el flow post-registro con Google en Firefox tras FedCM: el navegador a
+// veces no incluye la cookie access_token recién puesta en la request
+// inmediata a /users/me — con auto-refresh se recupera sin fricción para
+// el usuario.
 const shouldSkipRefresh = (path) =>
-  typeof path === 'string' && (path.startsWith('/auth/') || path.startsWith('/admin/auth/') || path === '/users/me');
+  typeof path === 'string' && (path.startsWith('/auth/') || path.startsWith('/admin/auth/'));
 
 const refreshSession = async () => {
   if (!refreshPromise) {
