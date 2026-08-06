@@ -56,9 +56,21 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             authorities.add(new SimpleGrantedAuthority(BackofficeAuthorities.permissionAuthority(permissionCode)));
         }
 
+        // ADR-058: los users Google-only tienen password NULL en BD. Spring
+        // Security's User constructor lanza IllegalArgumentException con null,
+        // lo que rompe el flow autenticado (JWT valido pero SecurityContext
+        // se limpia → 401). Como aqui solo importamos el email+authorities
+        // (el password nunca se compara: la auth es via JWT en cookie), un
+        // placeholder no-null es seguro. El prefijo {noop} le dice al
+        // DelegatingPasswordEncoder que este password no esta encoded, para
+        // que si alguien intentara compararlo NO explote.
+        String password = user.getPassword();
+        if (password == null || password.isBlank()) {
+            password = "{noop}oauth-only-account";
+        }
         return new User(
                 user.getEmail(),
-                user.getPassword(),
+                password,
                 authorities
         );
     }
