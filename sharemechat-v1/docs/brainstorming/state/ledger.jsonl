@@ -140,3 +140,9 @@
 {"c":29,"t":"req","id":"R0014","k":"data","note":"decision anadir Madagascar/Africa a allowlist modelo (config+compliance+payout)"}
 {"c":29,"t":"req","id":"R0015","k":"data","note":"70% founder registrado OK; implementacion tecnica = operador"}
 {"c":29,"t":"halt","note":"sesion modelos+clientes: reparto real corregido, Madagascar bloqueado (R0014), 70% founder coherente, Spain-first explicado (red operador no demanda). Pendiente operador R0014/R0013/R0012/R0011."}
+{"c":30,"t":"input","src":"operator 2026-08-06: anadir Madagascar; reclutamiento agencia-style (Ananamedia) + estudios via /for-studios; 70% founder OK; seguir analisis"}
+{"c":30,"t":"src","id":"S0029","u":"Didit 220+ paises (MG cubierto, test KYC); /for-studios Programa Master construido; ecosistema agencias Colombia; 2 vectores (A directo lidera, B estudios medio plazo); modelo 50-70% vs 10-15% estudio"}
+{"c":30,"t":"resolve","id":"R0013","r":"vector A reclutamiento directo estilo-agencia + vector B estudios; liderar con A + Founding 70%"}
+{"c":30,"t":"resolve","id":"R0014","r":"anadir Madagascar; Didit 220+ cubre MG (confirmar con 1 KYC test); payout cripto; config = operador"}
+{"c":30,"t":"fix","id":"A0004","r":"anadida seccion vectores captacion modelos (A directo/agencia PRIORIDAD, B estudios medio plazo) + paso Madagascar/Didit"}
+{"c":30,"t":"halt","note":"analisis modelos: Madagascar viable (Didit+cripto, test KYC), 2 vectores captacion (liderar reclutamiento directo con 70% founder; estudios medio plazo via for-studios ya construido). Pendiente operador: config MG, ejecutar reclutamiento, X/Y gatillo, config 70% founder."}
