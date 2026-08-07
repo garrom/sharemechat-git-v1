@@ -3746,7 +3746,8 @@
         "bannerHint": "A support agent from the team is handling your case.",
         "fallback": "Your case has been assigned to the support team."
       },
-      "readOnlyBanner": "This ticket is closed. You can view the history but cannot send new messages."
+      "readOnlyBanner": "This ticket is closed. You can view the history but cannot send new messages.",
+      "teamPending": "Support team"
     },
     "escalate": {
       "button": "Talk to a support agent",

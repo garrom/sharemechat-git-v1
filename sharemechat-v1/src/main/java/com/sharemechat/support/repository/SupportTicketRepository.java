@@ -32,6 +32,16 @@ public interface SupportTicketRepository extends JpaRepository<SupportTicket, Lo
             Long userId, String status, LocalDateTime since);
 
     /**
+     * ADR-054 D8 (2026-08-07): true si la conversación indicada está
+     * vinculada a algún ticket. Se usa para silenciar el bot LLM cuando
+     * el user escribe en una conv de ticket: los tickets son casos
+     * formales — solo humanos responden, el bot podría confundir dando
+     * respuestas "cerradas" cuando en realidad hay que esperar al
+     * técnico. El acuse rápido se sirve con un mensaje SYSTEM.
+     */
+    boolean existsByLinkedConversationId(Long linkedConversationId);
+
+    /**
      * Listado admin con filtros opcionales (null = ignorar). Ordena por updatedAt DESC.
      */
     @Query("SELECT t FROM SupportTicket t " +

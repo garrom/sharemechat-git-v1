@@ -280,15 +280,20 @@ export default function SupportChat({ pinnedConversationId, readOnly } = {}) {
           alt=""
           style={avatarImgStyle}
         />
-        {/* Badge dinamico (ADR-054 D8): si un tecnico ya reclamo la conv,
-            mostramos su nombre en lugar de "Agente IA". Solo aplica cuando
-            el hook tiene meta (modo pinned del ticket). Fuera del ticket
-            el header sigue comportandose como antes. */}
+        {/* Badge dinamico (ADR-054 D8):
+            - Sin meta (modo unpinned = chat casual /client Soporte) → "Agente IA".
+            - Con meta + assignedToHuman → "Técnico: {name}" (verde).
+            - Con meta + !assignedToHuman (ticket sin asignar) → "Equipo de
+              soporte" (2026-08-07 refinement: en tickets el bot LLM está
+              silenciado por backend, solo responden humanos con SYSTEM de
+              acuse en el interin — mostrar "Agente IA" era confuso). */}
         <strong>
-          {meta && meta.assignedToHuman
-            ? (meta.assignedProfileDisplayName
-                ? `Técnico: ${meta.assignedProfileDisplayName}`
-                : i18n.t('support.chat.systemAssigned.fallback'))
+          {meta
+            ? (meta.assignedToHuman
+                ? (meta.assignedProfileDisplayName
+                    ? `Técnico: ${meta.assignedProfileDisplayName}`
+                    : i18n.t('support.chat.systemAssigned.fallback'))
+                : i18n.t('support.chat.teamPending'))
             : i18n.t('support.chat.agentName')}
         </strong>
 

@@ -8,6 +8,46 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-08-07 — ADR-054 D8 refinement: silenciar bot LLM en convs vinculadas a ticket + badge "Equipo de soporte"
+
+Iteración inmediata sobre el frente cerrado esta misma madrugada. El operador verificó el split view en TEST y detectó un punto conceptual: aunque el chat ya estaba scoped al ticket, el Agente IA (LLM) SEGUÍA respondiendo dentro de la vista del ticket cuando el user escribía y aún no había técnico asignado (`assigned_agent_id == null`). Su reacción textual: *"pensaba que no iba haber interacción con Agente IA"*.
+
+**Diagnóstico**: no era un bug del split view sino del comportamiento heredado de `SupportBotService.handleUserMessage`, que decide skip LLM SOLO si hay técnico asignado. En una conv de ticket sin asignar todavía, el bot llenaba el vacío — pero racionalmente el ticket ES el escalado formal, el bot no debe seguir hablando ahí. La deuda estructural detrás: el sistema tiene 2 canales conceptuales (chat casual con IA + ticket formal con humano) usando el MISMO `SupportConversation` y las MISMAS reglas de LLM.
+
+**Análisis** de las 3 opciones planteadas al operador — A (backend silencia bot en conv ticket-bound + SYSTEM de acuse), B (frontend read-only hasta asignación), C (bot con role acotado "acuse + escalado directo"). Elegida **A** por: (a) separación conceptual limpia — ticket = solo humanos, chat casual = IA; (b) mantiene la sensación "recibido inmediato" con SYSTEM tras cada mensaje del user, sin fingir conversación real; (c) mínimo cambio backend + trivial en frontend.
+
+**Backend**:
+- `SupportTicketRepository.existsByLinkedConversationId(Long)` nuevo (query derivada, sin JPQL manual).
+- `SupportBotService` inyecta `SupportTicketRepository` + constante `TICKET_ACK_MESSAGE_ES` = "Recibido. Un técnico del equipo revisará tu ticket lo antes posible.".
+- Nuevo guard en `handleUserMessage` DESPUÉS del guard de `assignedAgentId != null` y ANTES del hook T3 de oferta de ticket. Si `ticketRepository.existsByLinkedConversationId(conv.getId())` → skip LLM, no consume rate-limit, persist `SupportMessage` sender=SYSTEM con `TICKET_ACK_MESSAGE_ES`, respuesta 200 con `reply=TICKET_ACK_MESSAGE_ES`, `resolutionStatus=<actual>`, `humanHandling=false`, `escalated=false`. La conversación sigue en su status original (OPEN/ESCALATED/HUMAN_HANDLING según cómo se creó).
+- **Racional del acuse SYSTEM** en vez de reply del bot: el `SupportMessageBubble` renderiza SYSTEM sin avatar de "Agente IA" — se ve como un aviso del sistema (correcto), no como respuesta de bot (confuso).
+- **Sobre rate-limit**: no cuenta en este camino. Es simétrico al guard `assignedAgentId` — no hay tokens Claude que cobrar, no debe consumir cuota.
+
+**Frontend**:
+- `SupportChat` header actualizado: badge dinámico ahora tiene 3 estados en vez de 2:
+  - **Sin meta** (chat casual `/client` Soporte) → "Agente IA".
+  - **Con meta + `assignedToHuman`** → "Técnico: {nombre}" (verde, con `assignedProfileDisplayName`).
+  - **Con meta + `!assignedToHuman`** (ticket sin asignar) → nueva key `support.chat.teamPending` = "Equipo de soporte" / "Support team". Antes de este refinement pintaba "Agente IA" espurio dentro del ticket, confundiendo al user (le hacía creer que el bot estaba conversando cuando el backend YA lo tenía silenciado si intentaba escribir — es-decir, el header mentía sobre quién responde).
+- i18n `es` + `en`: nueva key `support.chat.teamPending`.
+
+**Comportamiento tras el fix**:
+- User abre ticket #1 → ve chat scoped a `linkedConversationId`. Header dice "Equipo de soporte". Historial previo (mensajes LLM anteriores al fix) permanece visible como parte del histórico.
+- User escribe "necesito X" → backend recibe → detecta ticket-bound → skip LLM → persist USER + SYSTEM ack → respuesta 200 con reply=ack. Frontend pinta el ack como mensaje SYSTEM (plano, sin avatar bot).
+- Cuando el técnico reclama la conv (assigned_agent_id != null) → header pasa a "Técnico: {nombre}", y el sender de nuevos mensajes será PROFILE.
+
+**Deuda no cerrada** (apuntada, no bloqueante):
+- Los mensajes LLM previos al fix quedan visibles en el historial de tickets ya creados. No es problemático (contexto útil) y no vale la pena migrarlos. Nuevos tickets creados desde ahora nunca tendrán mensajes LLM en su conv.
+- Deuda D-47 (notificación push cuando técnico responde) sigue en pie — el fix de hoy hace que la ansiedad "¿me está oyendo alguien?" caiga en un mensaje SYSTEM más neutral, no la elimina.
+
+**Deploy TEST**:
+- Backend JAR con guard nuevo + repo method.
+- Frontend product bundle `main.b1d2a3d9.js` (admin bundle no requería cambios en este iterada).
+- Manifest test.yaml nivelado.
+
+**Aprendizajes operativos**:
+- **"Same table, different semantics" es una fuente latente de fricción UX**: `SupportConversation` sirve al mismo tiempo al chat casual (con IA) y al ticket formal (con humano). No es error de datos — ambos son "conversaciones" — pero la política de LLM debe ser distinta por caso. Detectar tarde este diseño obliga a añadir guards ad-hoc en el servicio; en un rediseño futuro, un flag `conversation_kind` (CASUAL/TICKET) en `support_conversations` sería más explícito. Por ahora el `existsByLinkedConversationId` cumple pragmáticamente.
+- **Pedir feedback visual del operador entre fixes intermedios paga**: si hubiera esperado a "terminar todo el frente" antes de mostrarlo, este refinement habría llegado como bug de PROD y no como iteración de TEST. El split view + este refinement en la misma sesión de trabajo hacen un ciclo natural.
+
 ## 2026-08-07 (madrugada) — ADR-054 D8: split view ficha ticket + chat scoped + badge dinámico + puente admin
 
 Frente disparado por feedback UX del operador durante el testing de ADR-058: al abrir un ticket de incidencias en `/client` (tab tickets) veía la ficha del ticket (categoría/estado/descripción) apilada verticalmente CON el chat del Agente IA en el mismo scroll, dando la sensación de que "el ticket ES un chat con la IA". El diseño original ADR-054 D8 preveía badges y separación visual, pero se implementó como `TicketDetail` monolítico que embebía `<SupportChat/>` sin `conversationId` scope.

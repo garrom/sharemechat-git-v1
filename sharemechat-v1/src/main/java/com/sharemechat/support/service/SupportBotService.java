@@ -13,6 +13,7 @@ import com.sharemechat.support.entity.SupportMessage;
 import com.sharemechat.support.repository.BackofficeAgentProfileRepository;
 import com.sharemechat.support.repository.SupportConversationRepository;
 import com.sharemechat.support.repository.SupportMessageRepository;
+import com.sharemechat.support.repository.SupportTicketRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
@@ -101,6 +102,13 @@ public class SupportBotService {
     // name del perfil asignado desde este repo.
     private final BackofficeAgentProfileRepository profileRepo;
 
+    // ADR-054 D8 refinement (2026-08-07): silenciar bot en convs vinculadas
+    // a ticket. Se consulta con existsByLinkedConversationId(convId).
+    private final SupportTicketRepository ticketRepository;
+
+    static final String TICKET_ACK_MESSAGE_ES =
+            "Recibido. Un técnico del equipo revisará tu ticket lo antes posible.";
+
     public SupportBotService(SupportConversationRepository conversationRepo,
                               SupportMessageRepository messageRepo,
                               SupportRateLimitService rateLimitService,
@@ -112,7 +120,8 @@ public class SupportBotService {
                               TicketOfferHeuristicService offerHeuristic,
                               TicketOfferPendingCache offerCache,
                               TicketService ticketService,
-                              BackofficeAgentProfileRepository profileRepo) {
+                              BackofficeAgentProfileRepository profileRepo,
+                              SupportTicketRepository ticketRepository) {
         this.conversationRepo = conversationRepo;
         this.messageRepo = messageRepo;
         this.rateLimitService = rateLimitService;
@@ -125,6 +134,7 @@ public class SupportBotService {
         this.props = props;
         this.userRepository = userRepository;
         this.profileRepo = profileRepo;
+        this.ticketRepository = ticketRepository;
     }
 
     @Transactional
@@ -152,6 +162,28 @@ public class SupportBotService {
             out.setReply(null);
             out.setResolutionStatus(Constants.SupportResolutionStatuses.HUMAN_HANDLING);
             out.setHumanHandling(true);
+            out.setEscalated(false);
+            out.setMessagesRemainingToday(rateLimitService.remainingMessages(userId));
+            out.setTokensRemainingToday(rateLimitService.remainingTokens(userId));
+            return out;
+        }
+
+        // ADR-054 D8 refinement (2026-08-07): silenciar bot en convs vinculadas
+        // a ticket, aunque no haya técnico asignado todavia. Racional operador:
+        // "el ticket es un caso formal; que el bot conteste como en el chat
+        // casual confunde al user, que espera respuesta humana con SLA".
+        // El bot NO llama al LLM, no consume rate-limit y responde con un
+        // SYSTEM de acuse que se persiste para verse en el historial. El
+        // frontend renderiza SYSTEM sin avatar "Agente IA" — parece un
+        // aviso del sistema, no una respuesta del bot.
+        if (ticketRepository != null && ticketRepository.existsByLinkedConversationId(conv.getId())) {
+            log.info("[SUPPORT-BOT] skip LLM userId={} conversationId={} (ticket-bound)",
+                    userId, conv.getId());
+            persistMessage(conv.getId(), Constants.SupportSenderTypes.SYSTEM, TICKET_ACK_MESSAGE_ES,
+                    null, null, null, null, null);
+            out.setReply(TICKET_ACK_MESSAGE_ES);
+            out.setResolutionStatus(conv.getResolutionStatus());
+            out.setHumanHandling(false);
             out.setEscalated(false);
             out.setMessagesRemainingToday(rateLimitService.remainingMessages(userId));
             out.setTokensRemainingToday(rateLimitService.remainingTokens(userId));
