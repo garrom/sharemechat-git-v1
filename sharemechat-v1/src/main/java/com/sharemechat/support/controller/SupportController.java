@@ -82,6 +82,27 @@ public class SupportController {
         }
     }
 
+    /**
+     * ADR-054 D8 Fase F (2026-08-07): mensaje del user dentro de la conv de
+     * un ticket, SCOPED a `id` y SIN pasar por el bot LLM. Contraparte
+     * ticket del POST /message (chat casual con bot). Persiste USER en la
+     * conv indicada + SYSTEM de acuse. Usa el frontend desde la vista del
+     * ticket cuando el hook useSupportChat esta en modo pinned.
+     */
+    @PostMapping("/conversations/{id}/message")
+    public ResponseEntity<?> sendTicketMessage(@PathVariable Long id,
+                                                @RequestBody SupportMessageRequestDTO body,
+                                                Authentication auth) {
+        try {
+            Long userId = requireUserId(auth);
+            SupportMessageResponseDTO out = botService.handleTicketMessage(
+                    userId, id, body == null ? null : body.getMessage());
+            return ResponseEntity.ok(out);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        }
+    }
+
     @PostMapping("/conversations/{id}/escalate-manual")
     public ResponseEntity<?> escalateManual(@PathVariable Long id,
                                              @RequestBody(required = false) Map<String, String> body,

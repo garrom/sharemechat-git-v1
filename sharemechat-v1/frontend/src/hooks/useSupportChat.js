@@ -162,8 +162,17 @@ export default function useSupportChat(options) {
     setSending(true);
     setError(null);
     try {
-      const resp = await supportApi.sendMessage(clean);
-      if (resp?.conversationId && resp.conversationId !== conversationId) {
+      // ADR-054 D8 Fase F (2026-08-07): en modo pinned (vista de ticket)
+      // usamos el endpoint SCOPED que persiste en la conv del ticket
+      // (sin bot). En modo unpinned (chat casual) seguimos con el POST
+      // /message que resuelve conv activa + bot LLM.
+      const resp = isPinned
+        ? await supportApi.sendTicketMessage(pinnedConversationId, clean)
+        : await supportApi.sendMessage(clean);
+      // Solo actualizamos conversationId cuando NO está pinned. En modo
+      // pinned el id es fijo — si el backend devolviera otro (no debería,
+      // pero por defensa) lo ignoramos para no cambiar de contexto.
+      if (!isPinned && resp?.conversationId && resp.conversationId !== conversationId) {
         setConversationId(resp.conversationId);
       }
       const now = new Date().toISOString();
@@ -175,7 +184,9 @@ export default function useSupportChat(options) {
       const replyMsg = resp?.reply
         ? {
             id: resp.messageId ?? `reply-${Date.now()}`,
-            sender: resp.rateLimited ? 'SYSTEM' : 'LLM',
+            // En modo pinned el reply SIEMPRE es SYSTEM (acuse del backend
+            // sin bot). En unpinned puede ser LLM o SYSTEM (rateLimited).
+            sender: isPinned || resp.rateLimited ? 'SYSTEM' : 'LLM',
             content: resp.reply,
             createdAt: resp.timestamp || now,
           }
@@ -206,7 +217,7 @@ export default function useSupportChat(options) {
     } finally {
       setSending(false);
     }
-  }, [conversationId, rateLimitState.rateLimited]);
+  }, [conversationId, rateLimitState.rateLimited, isPinned, pinnedConversationId]);
 
   // Polling B.3.3 (ADR-046). Se activa cuando el status entra en
   // HUMAN_HANDLING (via respuesta de POST /message tras el claim del agente).

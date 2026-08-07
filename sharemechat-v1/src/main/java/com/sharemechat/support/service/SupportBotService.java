@@ -289,6 +289,63 @@ public class SupportBotService {
     }
 
     /**
+     * ADR-054 D8 Fase F (2026-08-07): mensaje del user directo a la conv del
+     * ticket, SIN pasar por el bot LLM. Escribe scoped a `conversationId`
+     * (no a "la conv activa" del user), valida ownership y que la conv esté
+     * ticket-bound (defensa — el uso legitimo viene desde la vista del
+     * ticket). Persist USER + SYSTEM de acuse. No consume rate-limit.
+     *
+     * Contraparte de handleUserMessage: aquel es para el chat casual con
+     * bot, este es para el ticket sin bot. Endpoints separados por diseño
+     * (ver SupportController).
+     */
+    @Transactional
+    public SupportMessageResponseDTO handleTicketMessage(Long userId, Long conversationId, String rawMessage) {
+        if (userId == null) throw new IllegalArgumentException("userId requerido");
+        if (conversationId == null) throw new IllegalArgumentException("conversationId requerido");
+        String message = rawMessage == null ? "" : rawMessage.trim();
+        if (message.isEmpty()) throw new IllegalArgumentException("message vacio");
+        if (message.length() > MAX_USER_MESSAGE_LENGTH) {
+            throw new IllegalArgumentException("message demasiado largo (>" + MAX_USER_MESSAGE_LENGTH + ")");
+        }
+
+        SupportConversation conv = conversationRepo.findById(conversationId)
+                .orElseThrow(() -> new IllegalArgumentException("Conversacion no encontrada"));
+        if (!userId.equals(conv.getUserId())) {
+            throw new IllegalArgumentException("Conversacion no encontrada");
+        }
+        // Defensa: el endpoint scoped es SOLO para convs de ticket. Un cliente
+        // malicioso desde DevTools podria intentar POSTear a la conv casual
+        // por este endpoint para evitar el bot; el guard lo previene.
+        if (ticketRepository == null || !ticketRepository.existsByLinkedConversationId(conversationId)) {
+            throw new IllegalArgumentException("Conversacion no vinculada a ticket");
+        }
+
+        persistMessage(conversationId, Constants.SupportSenderTypes.USER, message,
+                null, null, null, null, null);
+
+        String ack = "Recibido. Un tecnico del equipo revisara tu ticket lo antes posible.";
+        SupportMessage sysMsg = persistMessage(conversationId, Constants.SupportSenderTypes.SYSTEM, ack,
+                null, null, null, null, null);
+
+        conv.setUpdatedAt(LocalDateTime.now());
+        conversationRepo.save(conv);
+
+        SupportMessageResponseDTO out = new SupportMessageResponseDTO();
+        out.setConversationId(conversationId);
+        out.setMessageId(sysMsg.getId());
+        out.setReply(ack);
+        out.setResolutionStatus(conv.getResolutionStatus());
+        out.setHumanHandling(false);
+        out.setEscalated(false);
+        out.setRateLimited(false);
+        out.setMessagesRemainingToday(rateLimitService.remainingMessages(userId));
+        out.setTokensRemainingToday(rateLimitService.remainingTokens(userId));
+        out.setTimestamp(LocalDateTime.now());
+        return out;
+    }
+
+    /**
      * Devuelve la meta ligera de una conversacion propiedad del usuario
      * (ADR-054 D8 — cliente, para pintar badge y decidir read-only sin
      * exponer campos internos como assignedAgentId o assignedProfileId).

@@ -73,6 +73,31 @@ export async function escalateManual(conversationId, reason) {
 }
 
 /**
+ * ADR-054 D8 Fase F (2026-08-07): mensaje del user SCOPED a la conv del
+ * ticket, sin pasar por el bot. Contraparte del POST /message (chat casual):
+ * este va a la conv indicada por conversationId, persiste USER + SYSTEM
+ * de acuse, no llama LLM. Uso: vista del ticket cuando el hook está en
+ * modo pinned.
+ *
+ * @param {number|string} conversationId
+ * @param {string} text - mensaje del user (max 4000 chars)
+ * @returns {Promise<{conversationId: number, messageId: number, reply: string, resolutionStatus: string, ...}>}
+ */
+export async function sendTicketMessage(conversationId, text) {
+  if (!conversationId) throw new Error('conversationId requerido');
+  const trimmed = typeof text === 'string' ? text.trim() : '';
+  if (!trimmed) throw new Error('Mensaje vacío');
+  const body = trimmed.length > MAX_USER_MESSAGE_LENGTH
+    ? trimmed.slice(0, MAX_USER_MESSAGE_LENGTH)
+    : trimmed;
+  return apiFetch(`/support/conversations/${encodeURIComponent(conversationId)}/message`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: body }),
+  });
+}
+
+/**
  * ADR-054 D8 (2026-08-06): meta ligera de la conversacion para pintar el
  * badge de estado en la vista del ticket (Agente IA vs Tecnico asignado).
  *
@@ -84,5 +109,5 @@ export async function getConversationMeta(conversationId) {
   return apiFetch(`/support/conversations/${encodeURIComponent(conversationId)}/meta`);
 }
 
-export const supportApi = { sendMessage, getHistory, escalateManual, getConversationMeta };
+export const supportApi = { sendMessage, sendTicketMessage, getHistory, escalateManual, getConversationMeta };
 export default supportApi;
