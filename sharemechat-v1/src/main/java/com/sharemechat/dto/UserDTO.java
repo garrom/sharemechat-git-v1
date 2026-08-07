@@ -27,6 +27,7 @@ public class UserDTO {
     private Boolean unsubscribe;
     private LocalDateTime createdAt;
     private String uiLocale;
+    private String preferredChatLang;
 
     private String accountStatus;
     private LocalDateTime suspendedUntil;
@@ -109,6 +110,9 @@ public class UserDTO {
 
     public String getUiLocale() { return uiLocale; }
     public void setUiLocale(String uiLocale) { this.uiLocale = uiLocale; }
+
+    public String getPreferredChatLang() { return preferredChatLang; }
+    public void setPreferredChatLang(String preferredChatLang) { this.preferredChatLang = preferredChatLang; }
 
     public String getAccountStatus() { return accountStatus; }
     public void setAccountStatus(String accountStatus) { this.accountStatus = accountStatus; }

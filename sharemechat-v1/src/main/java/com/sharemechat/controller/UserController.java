@@ -237,6 +237,27 @@ public class UserController {
         return ResponseEntity.ok(updatedUser);
     }
 
+    // pending-hardening §5.3: setter del idioma preferido para chat P2P.
+    // Acepta null / blank en el body para volver al fallback (uiLocale).
+    // Valida contra SupportedChatLanguages; devuelve 400 si no es soportado.
+    @PutMapping("/me/preferred-chat-lang")
+    public ResponseEntity<?> updateMyPreferredChatLang(@RequestBody Map<String, String> body,
+                                                       Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            return ResponseEntity.status(401).body(null);
+        }
+        String preferredChatLang = body != null ? body.get("preferredChatLang") : null;
+        try {
+            UserDTO updatedUser = userService.updatePreferredChatLang(authentication.getName(), preferredChatLang);
+            return ResponseEntity.ok(updatedUser);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "code", "UNSUPPORTED_LANG",
+                    "message", e.getMessage()
+            ));
+        }
+    }
+
     // Usamos /me usa para referirse al usuario en curso en el frontal
     @GetMapping("/me")
     public ResponseEntity<UserDTO> getCurrentUser(Authentication authentication) {

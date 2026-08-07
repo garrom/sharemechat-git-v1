@@ -419,6 +419,31 @@ public class UserService {
         return mapToDTO(updatedUser);
     }
 
+    /**
+     * pending-hardening §5.3: setter para el idioma preferido de chat P2P.
+     * Acepta null / blank para volver al fallback (uiLocale). Valida contra
+     * {@link com.sharemechat.constants.SupportedChatLanguages}.
+     */
+    @Transactional
+    public UserDTO updatePreferredChatLang(String email, String preferredChatLang) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
+
+        String normalized = null;
+        if (preferredChatLang != null && !preferredChatLang.trim().isEmpty()) {
+            normalized = com.sharemechat.constants.SupportedChatLanguages.normalize(preferredChatLang);
+            if (normalized == null) {
+                throw new IllegalArgumentException("preferredChatLang no soportado: " + preferredChatLang);
+            }
+        }
+
+        user.setPreferredChatLang(normalized);
+        user.setUpdatedAt(LocalDateTime.now());
+
+        User updatedUser = userRepository.save(user);
+        return mapToDTO(updatedUser);
+    }
+
     @Transactional
     public void updatePassword(Long userId, String newPlainPassword) {
         User user = userRepository.findById(userId)
@@ -785,6 +810,7 @@ public class UserService {
         dto.setUnsubscribe(user.getUnsubscribe());
         dto.setCreatedAt(user.getCreatedAt());
         dto.setUiLocale(user.getUiLocale());
+        dto.setPreferredChatLang(user.getPreferredChatLang());
 
         dto.setAccountStatus(user.getAccountStatus());
         dto.setSuspendedUntil(user.getSuspendedUntil());
