@@ -132,3 +132,11 @@
 {"c":28,"t":"req","id":"R0012","k":"spend","note":"incentivo perks vs garantia cash"}
 {"c":28,"t":"req","id":"R0013","k":"data","note":"canal reclutamiento modelas colombianas (liga R0010)"}
 {"c":28,"t":"halt","note":"convergencia hecha: 1 movimiento (A0004 Founding Models). Pendiente operador: incentivo (R0012), canal modelas (R0013), X/Y gatillo (R0011). Nada que ejecutar la IA (oferta fuera de mandato + acciones externas)."}
+{"c":29,"t":"input","src":"operator 2026-08-06: 3 modelos reales (1 CO + 2 Madagascar), founding 70% forever, sesion tambien sobre modelos; analizar clientes/Spain-vs-US"}
+{"c":29,"t":"src","id":"S0027","u":"reparto real 50-60% (no 75-79, doc drift); ADR-056 pivote estudios; Madagascar bloqueado; 70% founder=piso 30% coherente; 0 modelos en PROD"}
+{"c":29,"t":"src","id":"S0028","u":"clientes: 9 altas (ES 7, US 1, NL 1), locale es 8/en 1, 0 modelos; Spain-first=red del operador no demanda; US sin probar"}
+{"c":29,"t":"fix","id":"A0004","r":"v2: economia real 50-60%, 70% founder=optimo (piso 30%), 3 modelos reales, Madagascar bloqueado, vector Founding Studios"}
+{"c":29,"t":"realign","note":"MODELOS elevado a parte clave del motor por decision operador (antes fuera de mandato SEED). Supply-first ahora con 3 modelos reales via contacto directo (resuelve el 'acceso' que ADR-056 dice es el fallo). Correccion firme: reparto 50-60% no 75-79%; doc sistema-tiers-modelos.md desactualizada (flag repo)."}
+{"c":29,"t":"req","id":"R0014","k":"data","note":"decision anadir Madagascar/Africa a allowlist modelo (config+compliance+payout)"}
+{"c":29,"t":"req","id":"R0015","k":"data","note":"70% founder registrado OK; implementacion tecnica = operador"}
+{"c":29,"t":"halt","note":"sesion modelos+clientes: reparto real corregido, Madagascar bloqueado (R0014), 70% founder coherente, Spain-first explicado (red operador no demanda). Pendiente operador R0014/R0013/R0012/R0011."}
