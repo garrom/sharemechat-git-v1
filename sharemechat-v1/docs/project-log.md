@@ -8,6 +8,64 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-08-07 (tarde) — ADR-054 D8 rediseño: canales separados chat casual / ticket + 5 categorías nuevas + offset AUTO_INCREMENT + prompt bot actualizado
+
+Rediseño estructural del sistema soporte tras feedback UX del operador tras el rediseño anterior de esta misma sesión (mañana). El operador articuló su modelo mental correcto (que había estado implícito en ADR-054 pero implementado de forma cruzada):
+
+- **Canal 1 (Agente IA)**: chat conversacional para DUDAS de negocio. Si detecta problema operativo → dice al user "abre incidencia desde el botón", nunca la abre por él.
+- **Canal 2 (Tickets)**: incidencias con categorías predeterminadas, gestión formal desde admin, sólo humanos.
+- **Sin relación entre canales** (más allá del enlace narrativo del prompt que menciona el botón).
+- **Números de incidencia** deben partir de un ID grande para no dar aspecto de app recién estrenada.
+
+El diseño heredado tenía UNA `SupportConversation` "activa" por user que servía a los dos canales simultáneamente + un hook T3 que abría tickets desde el chat automáticamente + guards emergency (introducidos las últimas 24h) para silenciar el bot en convs ticket-bound. Todo un parche sobre otro parche que este rediseño limpia.
+
+**Fases ejecutadas hoy (4 commits separados)**:
+
+**Fase A — Separación canales a nivel conversación** (commit `3c4e556`)
+- `SupportConversationRepository`: nuevo `findByUserIdAndResolutionStatusInOrderByIdDesc` (List, sin First). La versión "First" no permitía discriminar convs ticket-bound.
+- `SupportBotService.getOrCreateActiveConversation`: itera la lista de convs activas del user descartando las que `ticketRepository.existsByLinkedConversationId(convId)=true`. Si ninguna casual libre, crea nueva OPEN. Con esto el chat casual del navbar nunca reutiliza una conv de ticket.
+- `TicketService.openTicket`: eliminado el overload con `existingConversationId`. SIEMPRE crea conv fresh vinculada al ticket. El cruce con la conv casual del user (que era la raíz del problema) desaparece por diseño.
+- `SupportBotService`: eliminado el hook T3 completo (`handleTicketOfferHook` + `persistSystemReply` + `humanCategoryLabel` + constante `TICKET_ACK_MESSAGE_ES` + guard `existsByLinkedConversationId` en `handleUserMessage`). Los beans `TicketOfferHeuristicService`, `TicketOfferPendingCache` y `TicketService` salen del constructor del bot. Los servicios sobreviven en el codebase (para no romper autowire en otros componentes si los hubiera) pero sin uso desde el bot.
+- Tests: `SupportBotServiceTicketOfferTest.java` eliminado (testeaba T3, obsoleto). `SupportBotServiceTest` actualizado (mock del nuevo método `findBy...` List). `TicketServiceTest` ajustado por el subido de `MAX_OPEN_TICKETS_PER_USER` (2→5, feedback anterior de esta misma sesión).
+- 740/740 tests verde.
+
+**Fase E — 5 nuevas categorías de tickets** (commit `e6261a4`)
+Estudio de benchmark previo con agente Explore + WebSearch sobre Chaturbate, Stripchat, LiveJasmin, BongaCams, OnlyFans, Twitch. Categorías presentes en ≥3 plataformas que Sharemechat no tenía: 5 seleccionadas para añadir.
+- Migration V49: `DROP + ADD chk_ticket_category CHECK` con los 10 valores (5 previos + 5 nuevos). MySQL 8.4 no admite `ALTER CONSTRAINT`, hay que dropear y recrear.
+- Nuevas: `PAYOUT_ISSUE` (separa payout modelo de charge cliente), `KYC_VERIFICATION` (Didit / age estimation / Master onboarding), `ACCOUNT_SECURITY` (2FA, sospecha de acceso, Google mal vinculado), `REFUND_REQUEST` (flujo distinto de PAYMENT_NOT_CREDITED), `ABUSE_REPORT` (denuncia proactiva contra otro user — requisito DSA art. 16 notice-and-action).
+- `TicketService.VALID_CATEGORIES`: 10 valores en sync con V49.
+- Frontend `NewTicketModal` + i18n es+en (4 bloques `categories`, client + admin, 2 por locale).
+- Total: 10 categorías top-level (en el límite alto del sizing recomendado 8-10). `TicketOfferHeuristicService` no actualizado (bean muerto post-Fase A).
+
+**Fase B — Prompt bot actualizado** (data BD, sin commit)
+- UPDATE al `support_bot_prompts.content` del `case_key='comportamiento-agente-ia'`: añadida sección "Ámbito: dudas versus incidencias operativas" al final del prompt existente (no reescrito, es sólido). Reglas explícitas:
+  - Rol: DUDAS (cómo funciona el producto, políticas, UI).
+  - NO gestiona problemas operativos.
+  - Si detecta problema → responde con texto fijo que redirige al botón "Mis incidencias" + enumera las 10 categorías disponibles.
+  - Nunca abre ticket por el user (el hook T3 ya no existe — este cambio en el prompt alinea la conducta con el nuevo diseño).
+- Ejecutado como `UPDATE support_bot_prompts SET content = CONCAT(content, '...'), version = version + 1, updated_at = NOW() WHERE case_key = ...`. Prompt pasa de version 2 → 3, 12003 chars totales.
+- Backend reiniciado para invalidar cache Caffeine de `KnowledgeBaseService` (podría usarse `POST /api/admin/knowledge-base/reload` con auth admin, pero restart es más rápido cuando ya hay otro deploy planificado).
+- Sin commit git — el contenido del prompt es data operacional gestionable desde backoffice (`KnowledgeBaseAdminController`), no schema versionable. En AUDIT/PROD el mismo UPDATE se ejecuta manual cuando corresponda.
+
+**Fase C — Offset AUTO_INCREMENT ticket a 10001** (commit pending este mismo mensaje)
+- Migration V50: `ALTER TABLE support_tickets AUTO_INCREMENT = 10001`.
+- Racional UX: "Incidencia #3" da aspecto de app recién estrenada; "#10007" transmite madurez sin comprometer nada operativo.
+- Idempotente: si en el futuro hay tickets con id ≥ 10001, MySQL respeta max(id)+1 automaticamente.
+- TEST verificado: `SHOW TABLE STATUS` reporta `Auto_increment: 10001`. Próximo INSERT nacerá con ese id.
+
+**Fase D — Estudio benchmark categorías** (research, sin commit — insumo de Fase E)
+Ejecutado con agente background paralelo a Fase A. Fuentes: Chaturbate (help center + PissedConsumer), Stripchat (dual FAQ user/model), LiveJasmin (routing por tipo cuenta), BongaCams, OnlyFans (departamentos), Twitch (categorización top-level + campos). Recomendación integra 5 nuevas + 5 anti-recomendaciones descartadas (rutas PSP como categorías, Studio Account de LJ, Promo/Subscriptions, Tax/W9 como top-level, Shipping/Delivery, Media/Press).
+
+**Estado tras esta sesión**:
+- TEST: refactor completo end-to-end, funcional. BD limpia (5 tickets test previos borrados).
+- AUDIT: aplica igual (Flyway auto-migrates V49+V50, UPDATE del prompt manual).
+- PROD: mismo procedimiento (bloqueo Fase 2 ADR-058 no aplica aquí — este frente es refactor de sistema soporte, no de auth).
+
+**Aprendizajes operativos**:
+- **"Una tabla dos canales" es un antipatrón de dominio**: `SupportConversation` sirviendo simultáneamente al chat casual con IA y al ticket formal con humano hacía que cualquier guard aplicado por conv afectase a los dos canales. La solución no fue añadir más guards (los 2-3 que introduje en las 24h previas eran parches sobre parche); fue separar la resolución de "conv activa" a nivel service para respetar la separación conceptual. Cuando aparezcan dos flujos con reglas opuestas sobre la misma entidad, refactorizar antes que añadir guards.
+- **Prompt bot como config, no como código**: el system prompt vive en `support_bot_prompts` (BD, editable desde backoffice via `KnowledgeBaseAdminController`), no hardcoded. Cambiar la conducta del bot es un UPDATE + reload, no un deploy. Aprendizaje aplicable a cualquier otra config-como-datos futura.
+- **Estudio de benchmark antes que intuición**: las 5 categorías nuevas salieron de mirar qué usan de forma consistente los competidores directos. Aunque el operador tenía intuición ("hay que estudiar y añadir"), la lista concreta salió del research en paralelo mientras se ejecutaba el refactor. 30 min de investigación evitaron adivinar.
+
 ## 2026-08-07 — ADR-054 D8 refinement: silenciar bot LLM en convs vinculadas a ticket + badge "Equipo de soporte"
 
 Iteración inmediata sobre el frente cerrado esta misma madrugada. El operador verificó el split view en TEST y detectó un punto conceptual: aunque el chat ya estaba scoped al ticket, el Agente IA (LLM) SEGUÍA respondiendo dentro de la vista del ticket cuando el user escribía y aún no había técnico asignado (`assigned_agent_id == null`). Su reacción textual: *"pensaba que no iba haber interacción con Agente IA"*.
