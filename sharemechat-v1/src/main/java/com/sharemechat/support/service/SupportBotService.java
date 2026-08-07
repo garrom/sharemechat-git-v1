@@ -89,25 +89,20 @@ public class SupportBotService {
     private final ClaudeApiProperties props;
     private final UserRepository userRepository;
 
-    // ADR-054 T3: deteccion heuristica + oferta de apertura de ticket con
-    // confirmacion explicita. Opcionales — si el bean no esta cargado (p.ej.
-    // tests unitarios legacy que instancian SupportBotService a mano sin
-    // T3), el hook queda desactivado y el flujo funciona como antes de T3.
-    private final TicketOfferHeuristicService offerHeuristic;
-    private final TicketOfferPendingCache offerCache;
-    private final TicketService ticketService;
-
     // ADR-054 D8 (2026-08-06): meta de conversacion para pintar badge dinamico
     // en el cliente (Agente IA vs Tecnico asignado). Se resuelve el display
     // name del perfil asignado desde este repo.
     private final BackofficeAgentProfileRepository profileRepo;
 
-    // ADR-054 D8 refinement (2026-08-07): silenciar bot en convs vinculadas
-    // a ticket. Se consulta con existsByLinkedConversationId(convId).
+    // ADR-054 D8 refinement (2026-08-07): repositorio de tickets consultado
+    // desde getOrCreateActiveConversation para SALTAR convs ticket-bound y
+    // devolver siempre la conv casual "activa" del user (canales separados).
+    // Antes tambien silenciaba el bot en convs ticket-bound + T3 hook ofrecia
+    // abrir ticket desde el chat, ambos eliminados con este refinement:
+    // canales completamente separados, el bot NUNCA interactua con la conv
+    // de un ticket, y el usuario abre tickets explicitamente desde tab
+    // "Mis incidencias".
     private final SupportTicketRepository ticketRepository;
-
-    static final String TICKET_ACK_MESSAGE_ES =
-            "Recibido. Un técnico del equipo revisará tu ticket lo antes posible.";
 
     public SupportBotService(SupportConversationRepository conversationRepo,
                               SupportMessageRepository messageRepo,
@@ -117,18 +112,12 @@ public class SupportBotService {
                               ClaudeApiClient claudeClient,
                               ClaudeApiProperties props,
                               UserRepository userRepository,
-                              TicketOfferHeuristicService offerHeuristic,
-                              TicketOfferPendingCache offerCache,
-                              TicketService ticketService,
                               BackofficeAgentProfileRepository profileRepo,
                               SupportTicketRepository ticketRepository) {
         this.conversationRepo = conversationRepo;
         this.messageRepo = messageRepo;
         this.rateLimitService = rateLimitService;
         this.kbService = kbService;
-        this.offerHeuristic = offerHeuristic;
-        this.offerCache = offerCache;
-        this.ticketService = ticketService;
         this.router = router;
         this.claudeClient = claudeClient;
         this.props = props;
@@ -168,40 +157,14 @@ public class SupportBotService {
             return out;
         }
 
-        // ADR-054 D8 refinement (2026-08-07): silenciar bot en convs vinculadas
-        // a ticket, aunque no haya técnico asignado todavia. Racional operador:
-        // "el ticket es un caso formal; que el bot conteste como en el chat
-        // casual confunde al user, que espera respuesta humana con SLA".
-        // El bot NO llama al LLM, no consume rate-limit y responde con un
-        // SYSTEM de acuse que se persiste para verse en el historial. El
-        // frontend renderiza SYSTEM sin avatar "Agente IA" — parece un
-        // aviso del sistema, no una respuesta del bot.
-        if (ticketRepository != null && ticketRepository.existsByLinkedConversationId(conv.getId())) {
-            log.info("[SUPPORT-BOT] skip LLM userId={} conversationId={} (ticket-bound)",
-                    userId, conv.getId());
-            persistMessage(conv.getId(), Constants.SupportSenderTypes.SYSTEM, TICKET_ACK_MESSAGE_ES,
-                    null, null, null, null, null);
-            out.setReply(TICKET_ACK_MESSAGE_ES);
-            out.setResolutionStatus(conv.getResolutionStatus());
-            out.setHumanHandling(false);
-            out.setEscalated(false);
-            out.setMessagesRemainingToday(rateLimitService.remainingMessages(userId));
-            out.setTokensRemainingToday(rateLimitService.remainingTokens(userId));
-            return out;
-        }
-
-        // ADR-054 T3 (D2 b2): hook de oferta de ticket. Antes del rate limit
-        // + LLM para que la oferta y su confirmacion no gasten tokens ni
-        // cuenten en la cuota. 3 caminos:
-        //   (a) hay pending offer + user acepta -> abrir ticket + reply
-        //   (b) hay pending offer + user rechaza -> limpiar + continuar LLM
-        //   (c) sin pending + heuristica detecta -> guardar + ofrecer + terminar
-        // Requiere que los beans T3 esten cargados (test-safe: si null, skip).
-        if (offerHeuristic != null && offerCache != null && ticketService != null) {
-            SupportMessageResponseDTO ticketHookOut = handleTicketOfferHook(
-                    userId, conv, message, out);
-            if (ticketHookOut != null) return ticketHookOut;
-        }
+        // ADR-054 D8 refinement (2026-08-07): guard "ticket-bound skip LLM" y
+        // hook T3 (oferta+confirmación de ticket desde el chat) ELIMINADOS. Con
+        // la nueva arquitectura "canales separados", las convs ticket-bound
+        // NO llegan a este punto — el getOrCreateActiveConversation las salta
+        // y devuelve/crea una conv casual limpia. El bot opera SIEMPRE en su
+        // conv casual y para "abrir ticket" el rol del bot pasa a ser textual
+        // (guía al user al botón de Incidencias vía system prompt). Elimina
+        // el riesgo de cruce accidental entre canales y simplifica el flow.
 
         // 3) rate limit check
         if (rateLimitService.shouldRateLimit(userId)) {
@@ -380,14 +343,25 @@ public class SupportBotService {
      * cuando el user envia otro mensaje.
      */
     private SupportConversation getOrCreateActiveConversation(Long userId) {
-        return conversationRepo.findFirstByUserIdAndResolutionStatusInOrderByIdDesc(
-                        userId, ACTIVE_STATUSES)
-                .orElseGet(() -> {
-                    SupportConversation nu = new SupportConversation();
-                    nu.setUserId(userId);
-                    nu.setResolutionStatus(Constants.SupportResolutionStatuses.OPEN);
-                    return conversationRepo.save(nu);
-                });
+        // ADR-054 D8 refinement (2026-08-07): el chat casual con IA y los
+        // tickets son CANALES SEPARADOS. Al buscar la conv "activa" del user
+        // para el chat casual, saltamos las convs ticket-bound (esas viven
+        // solo dentro de su ticket). Si no hay ninguna casual disponible,
+        // creamos una nueva OPEN. Retrocompat: el 99% del tiempo el user
+        // tiene 0-1 convs activas, así que el bucle es de longitud 0-N con
+        // N muy pequeño.
+        List<SupportConversation> candidates = conversationRepo
+                .findByUserIdAndResolutionStatusInOrderByIdDesc(userId, ACTIVE_STATUSES);
+        for (SupportConversation candidate : candidates) {
+            if (ticketRepository == null
+                    || !ticketRepository.existsByLinkedConversationId(candidate.getId())) {
+                return candidate;
+            }
+        }
+        SupportConversation nu = new SupportConversation();
+        nu.setUserId(userId);
+        nu.setResolutionStatus(Constants.SupportResolutionStatuses.OPEN);
+        return conversationRepo.save(nu);
     }
 
     private SupportMessage persistMessage(Long conversationId, String sender, String content,
@@ -490,106 +464,5 @@ public class SupportBotService {
     private static String safeTrim(String s, int max) {
         if (s == null) return null;
         return s.length() > max ? s.substring(0, max) : s;
-    }
-
-    // ============================================================
-    // ADR-054 T3: hook oferta de ticket
-    // ============================================================
-
-    /**
-     * Devuelve {@code SupportMessageResponseDTO} si el hook manejo el mensaje
-     * (oferta emitida, o confirmacion aceptada/rechazada), o {@code null} si
-     * el flujo debe continuar al rate limit + LLM normal.
-     *
-     * <p>El mensaje del user ya esta persistido antes de este hook, ver
-     * {@link #handleUserMessage}. El reply generado aqui se persiste como
-     * SYSTEM message para que aparezca en el historial de conversacion.
-     */
-    private SupportMessageResponseDTO handleTicketOfferHook(Long userId,
-                                                             SupportConversation conv,
-                                                             String message,
-                                                             SupportMessageResponseDTO out) {
-        Optional<TicketOfferPendingCache.PendingOffer> pending = offerCache.get(conv.getId());
-        if (pending.isPresent()) {
-            TicketOfferHeuristicService.ConfirmationDecision decision =
-                    offerHeuristic.interpretConfirmation(message);
-            if (decision == TicketOfferHeuristicService.ConfirmationDecision.ACCEPT) {
-                offerCache.clear(conv.getId());
-                try {
-                    var ticket = ticketService.openTicket(
-                            userId,
-                            pending.get().category,
-                            pending.get().originalMessage,
-                            null, null, null,
-                            conv.getId());
-                    String reply = "He abierto el ticket #" + ticket.getId() +
-                            " (" + pending.get().category + "). Un miembro del equipo lo revisara pronto.";
-                    persistSystemReply(userId, conv.getId(), reply, out);
-                    // openTicket ya puso la conv en HUMAN_HANDLING (D8).
-                    out.setResolutionStatus(Constants.SupportResolutionStatuses.HUMAN_HANDLING);
-                    out.setHumanHandling(true);
-                    log.info("[TICKET-OFFER] user accepted convId={} ticketId={} category={}",
-                            conv.getId(), ticket.getId(), pending.get().category);
-                    return out;
-                } catch (TicketService.RateLimitExceededException ex) {
-                    String reply = "No puedo abrir el ticket ahora: " + ex.getMessage();
-                    persistSystemReply(userId, conv.getId(), reply, out);
-                    out.setResolutionStatus(conv.getResolutionStatus());
-                    return out;
-                } catch (Exception ex) {
-                    log.warn("[TICKET-OFFER] openTicket FAIL convId={}: {}", conv.getId(), ex.getMessage());
-                    String reply = "No he podido abrir el ticket ahora, intentalo mas tarde o " +
-                            "usa el formulario 'Reportar incidencia' desde tu dashboard.";
-                    persistSystemReply(userId, conv.getId(), reply, out);
-                    out.setResolutionStatus(conv.getResolutionStatus());
-                    return out;
-                }
-            } else if (decision == TicketOfferHeuristicService.ConfirmationDecision.REJECT) {
-                offerCache.clear(conv.getId());
-                String reply = "Entendido, sigo como consulta normal. Cuentame en que te ayudo.";
-                persistSystemReply(userId, conv.getId(), reply, out);
-                out.setResolutionStatus(conv.getResolutionStatus());
-                log.info("[TICKET-OFFER] user rejected convId={}", conv.getId());
-                return out;
-            } else {
-                String reply = "Responde 'si' para abrir un ticket de incidencia, o 'no' para seguir como consulta.";
-                persistSystemReply(userId, conv.getId(), reply, out);
-                out.setResolutionStatus(conv.getResolutionStatus());
-                return out;
-            }
-        }
-
-        Optional<String> detected = offerHeuristic.detectCategory(message);
-        if (detected.isPresent()) {
-            offerCache.put(conv.getId(), detected.get(), message);
-            String categoryLabel = humanCategoryLabel(detected.get());
-            String reply = "Parece que estas reportando un problema de " + categoryLabel + ". " +
-                    "Quieres que abra un ticket para investigarlo? Responde 'si' o 'no'.";
-            persistSystemReply(userId, conv.getId(), reply, out);
-            out.setResolutionStatus(conv.getResolutionStatus());
-            log.info("[TICKET-OFFER] offered convId={} category={}", conv.getId(), detected.get());
-            return out;
-        }
-        return null;
-    }
-
-    private void persistSystemReply(Long userId, Long conversationId, String reply,
-                                     SupportMessageResponseDTO out) {
-        SupportMessage msg = persistMessage(conversationId, Constants.SupportSenderTypes.SYSTEM,
-                reply, null, null, null, null, null);
-        out.setReply(reply);
-        out.setMessageId(msg.getId());
-        out.setMessagesRemainingToday(rateLimitService.remainingMessages(userId));
-        out.setTokensRemainingToday(rateLimitService.remainingTokens(userId));
-    }
-
-    private static String humanCategoryLabel(String category) {
-        switch (category) {
-            case "STREAM_INTERRUPTED":    return "corte de streaming";
-            case "PAYMENT_NOT_CREDITED":  return "pago no acreditado";
-            case "MODERATION_FALSE_POSITIVE": return "moderacion incorrecta";
-            case "ACCOUNT_ISSUE":         return "cuenta";
-            default:                       return "servicio";
-        }
     }
 }

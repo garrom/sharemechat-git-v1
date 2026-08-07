@@ -73,8 +73,10 @@ class SupportBotServiceTest {
             }
             return m;
         });
-        when(convRepo.findFirstByUserIdAndResolutionStatusInOrderByIdDesc(anyLong(), anyCollection()))
-                .thenReturn(Optional.empty());
+        // ADR-054 D8 refinement (2026-08-07): getOrCreateActiveConversation
+        // ahora usa la variante List (para filtrar convs ticket-bound).
+        when(convRepo.findByUserIdAndResolutionStatusInOrderByIdDesc(anyLong(), anyCollection()))
+                .thenReturn(java.util.Collections.emptyList());
         // Frente B.3.1: race check post-LLM devuelve 1 (aun sin claim). Los
         // tests especificos de race override este stub.
         when(convRepo.touchIfStillUnassigned(anyLong(), any(LocalDateTime.class))).thenReturn(1);
@@ -88,7 +90,7 @@ class SupportBotServiceTest {
         // preservar el flujo legacy sin cambios. Los tests especificos del
         // hook viven en SupportBotServiceTicketOfferTest.
         svc = new SupportBotService(convRepo, msgRepo, rateLimit, kbService, router,
-                claudeClient, props, userRepo, null, null, null, null, null);
+                claudeClient, props, userRepo, null, null);
     }
 
     @Test
@@ -278,8 +280,11 @@ class SupportBotServiceTest {
         java.lang.reflect.Field idF = SupportConversation.class.getDeclaredField("id");
         idF.setAccessible(true);
         idF.set(existing, 55L);
-        when(convRepo.findFirstByUserIdAndResolutionStatusInOrderByIdDesc(eq(7L), anyCollection()))
-                .thenReturn(Optional.of(existing));
+        // ADR-054 D8 refinement (2026-08-07): getOrCreateActiveConversation
+        // usa findByUserIdAndResolutionStatusInOrderByIdDesc (List) para
+        // filtrar convs ticket-bound. Mock devuelve la conv existente.
+        when(convRepo.findByUserIdAndResolutionStatusInOrderByIdDesc(eq(7L), anyCollection()))
+                .thenReturn(java.util.List.of(existing));
 
         SupportMessageResponseDTO out = svc.handleUserMessage(7L, "sigo esperando", "1.2.3.4");
 

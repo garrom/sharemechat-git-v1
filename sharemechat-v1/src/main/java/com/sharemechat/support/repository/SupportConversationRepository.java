@@ -22,6 +22,16 @@ public interface SupportConversationRepository
     Optional<SupportConversation> findFirstByUserIdAndResolutionStatusInOrderByIdDesc(
             Long userId, Collection<String> resolutionStatuses);
 
+    /**
+     * ADR-054 D8 refinement (2026-08-07): variante que devuelve LISTA ordenada
+     * de convs activas del user. Necesaria para "conv activa casual" del chat
+     * bot: recorremos la lista descartando las que están vinculadas a un
+     * ticket (ticket-bound) hasta encontrar una casual libre. La antigua
+     * `findFirst...` no permitía discriminar por ticket-bound.
+     */
+    List<SupportConversation> findByUserIdAndResolutionStatusInOrderByIdDesc(
+            Long userId, Collection<String> resolutionStatuses);
+
     List<SupportConversation> findAllByUserIdOrderByIdDesc(Long userId);
 
     // ============================================================

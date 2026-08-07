@@ -85,9 +85,10 @@ class TicketServiceTest {
     }
 
     @Test
-    @DisplayName("openTicket rate limit: rechaza si user tiene ya 2 tickets abiertos")
-    void openTicket_rejects_when_2_open() {
-        when(ticketRepo.countByUserIdAndStatusIn(eq(1L), anyCollection())).thenReturn(2L);
+    @DisplayName("openTicket rate limit: rechaza si user tiene ya 5 tickets abiertos")
+    void openTicket_rejects_when_max_open_reached() {
+        // MAX_OPEN_TICKETS_PER_USER=5 tras el subido de 2026-08-07 (UX feedback).
+        when(ticketRepo.countByUserIdAndStatusIn(eq(1L), anyCollection())).thenReturn(5L);
         assertThrows(TicketService.RateLimitExceededException.class,
                 () -> svc.openTicket(1L, "OTHER", "desc", null, null, null));
         verify(ticketRepo, never()).save(any());
