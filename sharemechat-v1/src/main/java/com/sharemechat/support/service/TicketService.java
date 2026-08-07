@@ -46,7 +46,14 @@ public class TicketService {
     );
 
     // D7 anti-fraude: limites.
-    public static final int MAX_OPEN_TICKETS_PER_USER = 2;
+    // 2026-08-07: subido de 2 a 5 tickets abiertos simultáneos por feedback UX.
+    // 2 era demasiado restrictivo — un user con dos incidencias legítimas (p.ej.
+    // corte de streaming + pago no acreditado) topaba el límite sin poder
+    // reportar otras nuevas mientras las anteriores seguían en investigación.
+    // 5 sigue siendo defensa razonable contra abuso masivo (spam creando
+    // decenas). El ceiling absoluto de 30 días (MAX_TICKETS_PER_30D=5) sigue
+    // gobernando el volumen total en la ventana rolling.
+    public static final int MAX_OPEN_TICKETS_PER_USER = 5;
     public static final int MAX_TICKETS_PER_30D = 5;
     public static final int HIGH_HISTORY_COMPENSATED_THRESHOLD = 3;
     public static final int HIGH_HISTORY_WINDOW_DAYS = 90;

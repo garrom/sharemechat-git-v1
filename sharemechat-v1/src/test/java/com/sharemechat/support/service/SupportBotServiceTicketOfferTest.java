@@ -75,7 +75,7 @@ class SupportBotServiceTicketOfferTest {
         when(rateLimit.shouldRateLimit(anyLong())).thenReturn(false);
 
         svc = new SupportBotService(convRepo, msgRepo, rateLimit, kbService, router,
-                claudeClient, props, userRepo, heuristic, cache, ticketService);
+                claudeClient, props, userRepo, heuristic, cache, ticketService, null, null);
     }
 
     @Test

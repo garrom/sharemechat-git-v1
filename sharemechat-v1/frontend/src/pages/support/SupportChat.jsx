@@ -274,44 +274,42 @@ export default function SupportChat({ pinnedConversationId, readOnly } = {}) {
 
   return (
     <div style={containerStyle}>
-      <header style={headerStyle}>
-        <img
-          src="/img/icono-agente-ia.png"
-          alt=""
-          style={avatarImgStyle}
-        />
-        {/* Badge dinamico (ADR-054 D8):
-            - Sin meta (modo unpinned = chat casual /client Soporte) → "Agente IA".
-            - Con meta + assignedToHuman → "Técnico: {name}" (verde).
-            - Con meta + !assignedToHuman (ticket sin asignar) → "Equipo de
-              soporte" (2026-08-07 refinement: en tickets el bot LLM está
-              silenciado por backend, solo responden humanos con SYSTEM de
-              acuse en el interin — mostrar "Agente IA" era confuso). */}
-        <strong>
-          {meta
-            ? (meta.assignedToHuman
-                ? (meta.assignedProfileDisplayName
-                    ? `Técnico: ${meta.assignedProfileDisplayName}`
-                    : i18n.t('support.chat.systemAssigned.fallback'))
-                : i18n.t('support.chat.teamPending'))
-            : i18n.t('support.chat.agentName')}
-        </strong>
+      {/* Header solo en modo unpinned (chat casual /client Soporte). En modo
+          pinned (ticket) 2026-08-07: no aporta — el título "Conversación con
+          el equipo" fuera del chat ya identifica el contexto; el avatar bot
+          confunde porque en tickets el bot está silenciado; "Hablar con un
+          técnico" es escalado dentro de escalado, redundante. La info del
+          técnico asignado se propaga al banner de status humano abajo. */}
+      {!pinnedConversationId && (
+        <header style={headerStyle}>
+          <img
+            src="/img/icono-agente-ia.png"
+            alt=""
+            style={avatarImgStyle}
+          />
+          <strong>{i18n.t('support.chat.agentName')}</strong>
+          {!readOnly && (
+            <button
+              type="button"
+              style={escalateBtnStyle(!canEscalate)}
+              onClick={() => setEscalateOpen(true)}
+              disabled={!canEscalate}
+              title={escalateTooltip}
+            >
+              <FontAwesomeIcon icon={faUserTie} />
+              <span>{i18n.t('support.escalate.button')}</span>
+            </button>
+          )}
+        </header>
+      )}
 
-        {!readOnly && (
-          <button
-            type="button"
-            style={escalateBtnStyle(!canEscalate)}
-            onClick={() => setEscalateOpen(true)}
-            disabled={!canEscalate}
-            title={escalateTooltip}
-          >
-            <FontAwesomeIcon icon={faUserTie} />
-            <span>{i18n.t('support.escalate.button')}</span>
-          </button>
-        )}
-      </header>
-
-      {humanHandling && (
+      {/* Banner con nombre del técnico en modo pinned + humano asignado. */}
+      {pinnedConversationId && meta && meta.assignedToHuman && meta.assignedProfileDisplayName && (
+        <div style={bannerInfo} role="status">
+          {i18n.t('support.chat.assignedByName', { name: meta.assignedProfileDisplayName })}
+        </div>
+      )}
+      {humanHandling && !(pinnedConversationId && meta && meta.assignedProfileDisplayName) && (
         <div style={bannerInfo} role="status">
           {i18n.t('support.chat.systemAssigned.bannerHint')}
         </div>

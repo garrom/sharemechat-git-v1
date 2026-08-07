@@ -3747,7 +3747,8 @@
         "fallback": "Tu caso ha sido asignado al equipo de soporte."
       },
       "readOnlyBanner": "Esta incidencia está cerrada. Puedes consultar el historial pero no enviar más mensajes.",
-      "teamPending": "Equipo de soporte"
+      "teamPending": "Equipo de soporte",
+      "assignedByName": "{{name}} está atendiendo tu caso."
     },
     "escalate": {
       "button": "Hablar con un técnico",
