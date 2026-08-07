@@ -204,7 +204,7 @@ const typingBubbleStyle = {
  *   `sendMessage` va a la conv activa, no a la pinned; el guard visual
  *   evita que el user pierda su mensaje.
  */
-export default function SupportChat({ pinnedConversationId, readOnly } = {}) {
+export default function SupportChat({ pinnedConversationId, readOnly, ticketContext } = {}) {
   const {
     messages,
     conversationId,
@@ -303,13 +303,19 @@ export default function SupportChat({ pinnedConversationId, readOnly } = {}) {
         </header>
       )}
 
-      {/* Banner con nombre del técnico en modo pinned + humano asignado. */}
+      {/* Banner con nombre del técnico en modo pinned + humano asignado real.
+          2026-08-07: solo se muestra si hay técnico REAL asignado (assignedToHuman +
+          assignedProfileDisplayName con valor). En modo pinned SIN asignación real
+          el banner genérico "un técnico está atendiendo" era engañoso (la conv de
+          ticket nace con status HUMAN_HANDLING desde TicketService.openTicket pero
+          sin agent asignado hasta que un admin la reclama). El contexto del ticket
+          + SLA se comunica en el empty state contextual del ticketEmptyState. */}
       {pinnedConversationId && meta && meta.assignedToHuman && meta.assignedProfileDisplayName && (
         <div style={bannerInfo} role="status">
           {i18n.t('support.chat.assignedByName', { name: meta.assignedProfileDisplayName })}
         </div>
       )}
-      {humanHandling && !(pinnedConversationId && meta && meta.assignedProfileDisplayName) && (
+      {humanHandling && !pinnedConversationId && (
         <div style={bannerInfo} role="status">
           {i18n.t('support.chat.systemAssigned.bannerHint')}
         </div>
@@ -335,7 +341,12 @@ export default function SupportChat({ pinnedConversationId, readOnly } = {}) {
         )}
         {!loading && messages.length === 0 && (
           <div style={emptyStateStyle}>
-            {i18n.t('support.chat.emptyState')}
+            {ticketContext
+              ? i18n.t('support.chat.ticketEmptyState', {
+                  name: ticketContext.userName || '',
+                  ticketId: ticketContext.ticketId,
+                })
+              : i18n.t('support.chat.emptyState')}
           </div>
         )}
         {messages.map((m) => {

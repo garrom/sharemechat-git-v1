@@ -3748,7 +3748,8 @@
       },
       "readOnlyBanner": "This ticket is closed. You can view the history but cannot send new messages.",
       "teamPending": "Support team",
-      "assignedByName": "{{name}} is handling your case."
+      "assignedByName": "{{name}} is handling your case.",
+      "ticketEmptyState": "Hi {{name}}, ticket #{{ticketId}} has been registered. We will get back to you in less than 4 hours."
     },
     "escalate": {
       "button": "Talk to a support agent",

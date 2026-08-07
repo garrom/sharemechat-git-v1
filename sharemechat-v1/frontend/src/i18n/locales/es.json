@@ -3748,7 +3748,8 @@
       },
       "readOnlyBanner": "Esta incidencia está cerrada. Puedes consultar el historial pero no enviar más mensajes.",
       "teamPending": "Equipo de soporte",
-      "assignedByName": "{{name}} está atendiendo tu caso."
+      "assignedByName": "{{name}} está atendiendo tu caso.",
+      "ticketEmptyState": "Hola {{name}}, ya se ha registrado la incidencia #{{ticketId}}. En menos de 4 horas la atenderemos."
     },
     "escalate": {
       "button": "Hablar con un técnico",

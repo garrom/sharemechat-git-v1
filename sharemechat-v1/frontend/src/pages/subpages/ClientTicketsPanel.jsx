@@ -9,6 +9,7 @@ import i18n from '../../i18n';
 import { listMyTickets, getMyTicket } from '../../api/ticketsApi';
 import NewTicketModal from '../support/NewTicketModal';
 import SupportChat from '../support/SupportChat';
+import { useSession } from '../../components/SessionProvider';
 
 // Iter.5 (2026-08-02) — unificación de layout con DashboardMaster
 // (maxWidth 1200 + margin 0 auto). Antes quedaba alineado a la izquierda
@@ -103,6 +104,8 @@ const splitGrid = {
 // - Derecha: SupportChat scoped a la conversacion vinculada al ticket
 //   (pinnedConversationId), con readOnly cuando el ticket esta cerrado.
 function TicketDetail({ ticket, onBack }) {
+  const { user } = useSession();
+  const userName = user?.nickname || user?.name || '';
   const categoryLabel = i18n.t(`support.tickets.categories.${ticket.category}`, { defaultValue: ticket.category });
   const statusLabel = i18n.t(`support.tickets.statuses.${ticket.status}`, { defaultValue: ticket.status });
   const isResolved = RESOLVED_LIKE_STATUSES.has(ticket.status);
@@ -199,6 +202,7 @@ function TicketDetail({ ticket, onBack }) {
               <SupportChat
                 pinnedConversationId={ticket.linkedConversationId}
                 readOnly={isResolved}
+                ticketContext={{ ticketId: ticket.id, userName }}
               />
             </div>
           ) : (
