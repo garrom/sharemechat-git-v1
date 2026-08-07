@@ -20,6 +20,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark } from '@fortawesome/free-solid-svg-icons';
 import { canAccessBackoffice } from '../utils/backofficeAccess';
 import { buildAdminAppUrl, isAdminSurface, navigateToUrl, resolveHomeUrl } from '../utils/runtimeSurface';
+import { isGoogleOAuthEnabled } from '../config/runtimeEnv';
 
 const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) => {
   const [view, setView] = useState(initialView);
@@ -249,28 +250,34 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) =
             {i18n.t('auth.login.actions.forgotPassword')}
           </StyledLinkButton>
 
-          {/* ADR-058: separador + boton Google Sign-In para login. */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              margin: '12px 0 8px',
-              color: '#6b7280',
-              fontSize: 12,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-            }}
-          >
-            <span style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
-            <span>{i18n.t('auth.google.orSeparator')}</span>
-            <span style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
-          </div>
-          <GoogleSignInButton
-            intent="login"
-            onIdToken={handleGoogleAuth}
-            onError={(msg) => setError(msg)}
-          />
+          {/* ADR-058: separador + boton Google Sign-In para login. Envolvente
+              con flag isGoogleOAuthEnabled (Estrategia 3, 2026-08-07): en PROD
+              se oculta hasta que se publique consent Google Cloud. */}
+          {isGoogleOAuthEnabled() && (
+            <>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  margin: '12px 0 8px',
+                  color: '#6b7280',
+                  fontSize: 12,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                }}
+              >
+                <span style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
+                <span>{i18n.t('auth.google.orSeparator')}</span>
+                <span style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
+              </div>
+              <GoogleSignInButton
+                intent="login"
+                onIdToken={handleGoogleAuth}
+                onError={(msg) => setError(msg)}
+              />
+            </>
+          )}
         </>
       )}
 

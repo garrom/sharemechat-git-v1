@@ -7,6 +7,7 @@ import { Form as RegForm, Title, Input, Button, Error as ErrorText, Field, Field
 import { useAppModals } from './useAppModals';
 import { pushSignUp, getAcquisitionPayload } from '../utils/attribution';
 import GoogleSignInButton from './GoogleSignInButton';
+import { isGoogleOAuthEnabled } from '../config/runtimeEnv';
 
 const InlineForm = styled(RegForm)`
   background: transparent;
@@ -123,8 +124,10 @@ const RegisterClientModalContent = ({ onClose, onGoogleAuth }) => {
 
       {/* ADR-058: Google Sign-In como atajo dentro del form de registro cliente.
           Se coloca despues del boton principal para no competir con el flujo
-          nativo (email+password). Solo se muestra si el padre provee handler. */}
-      {onGoogleAuth && (
+          nativo (email+password). Solo se muestra si el padre provee handler.
+          Además: flag isGoogleOAuthEnabled (Estrategia 3, 2026-08-07) — en PROD
+          se oculta hasta que se publique consent Google Cloud. */}
+      {onGoogleAuth && isGoogleOAuthEnabled() && (
         <>
           <div
             style={{

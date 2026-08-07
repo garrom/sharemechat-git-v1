@@ -59,3 +59,20 @@ const resolved = resolveOrigins();
 export const PRODUCT_ORIGIN = resolved.product;
 export const ADMIN_ORIGIN = resolved.admin;
 export const ASSETS_BASE = resolved.assets;
+
+// ADR-058 flag Estrategia 3 (2026-08-07): detecta si estamos sirviendo desde
+// el dominio PROD. Se usa para deshabilitar UI de Google Sign-In en PROD
+// mientras el consent screen en Google Cloud siga en modo Testing (ver
+// pending-hardening §5.2). Con esto HEAD siempre es desplegable a PROD sin
+// arrastrar UI de Google visible al publico. Cuando se publique el consent
+// a Production, se elimina este flag (o se invierte el default).
+//
+// Override manual: REACT_APP_GOOGLE_OAUTH_FORCE_ENABLED=true (build-time)
+// activa el UI de Google incluso en PROD. Uso previsto: build de prueba
+// post-brand-verification antes de decidir el cutover definitivo.
+export const IS_PROD_ENV = resolved === PROD_ORIGINS;
+
+const FORCE_GOOGLE_OAUTH = String(process.env.REACT_APP_GOOGLE_OAUTH_FORCE_ENABLED || '')
+    .trim().toLowerCase() === 'true';
+
+export const isGoogleOAuthEnabled = () => FORCE_GOOGLE_OAUTH || !IS_PROD_ENV;

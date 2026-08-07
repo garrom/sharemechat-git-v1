@@ -7,6 +7,7 @@ import { useAppModals } from '../../components/useAppModals';
 import i18n from '../../i18n';
 import LocaleSwitcher from '../../components/LocaleSwitcher';
 import LinkedAccountsCard from '../../components/LinkedAccountsCard';
+import { isGoogleOAuthEnabled } from '../../config/runtimeEnv';
 
 // Navbar unificado
 import {
@@ -478,8 +479,10 @@ const PerfilClient = () => {
               </MediaCard>
 
               {/* ADR-058: sección "Cuentas vinculadas" con estado Google,
-                  link/unlink y set-password inicial para users Google-only. */}
-              <LinkedAccountsCard />
+                  link/unlink y set-password inicial para users Google-only.
+                  Flag isGoogleOAuthEnabled (Estrategia 3, 2026-08-07): en PROD
+                  se oculta hasta que se publique consent Google Cloud. */}
+              {isGoogleOAuthEnabled() && <LinkedAccountsCard />}
 
               <SecurityCard>
                 <CardHeader>

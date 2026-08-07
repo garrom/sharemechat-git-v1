@@ -465,21 +465,20 @@ Alcance implementado (Fase 1, sólo rol CLIENT, patrón fan/creator OnlyFans val
 
 ---
 
-> **⚠️ BLOQUEO — NO NIVELAR PROD SIN ANTES COMPLETAR FASE 0.3**
+> **⚠️ ESTADO — Feature flag activo, PROD desplegable sin bloqueo**
 >
-> Antes de desplegar el frente Google Sign-In a **PROD** hay que **publicar el OAuth consent screen a modo Production en Google Cloud Console**. Sin este paso, cualquier Gmail que no esté en la lista de test users (2 configurados en modo Testing) verá al pulsar el botón Google el error **"This app is being tested. If you're a developer, add yourself as a tester."**
+> **Update 2026-08-07 (Estrategia 3)**: el bloqueo original "no desplegar Fase 2 a PROD hasta publicar consent Google Cloud" ha sido reemplazado por un **feature flag en frontend** (`isGoogleOAuthEnabled()` en `frontend/src/config/runtimeEnv.js`). El flag detecta el hostname en runtime: `true` en TEST/AUDIT/localhost, `false` en PROD (dominio raíz `sharemechat.com` y subdominios PROD). Efecto:
 >
-> **Por qué esto no impide desplegar Fase 2 a AUDIT** ni bloqueó Fase 1 en TEST: en TEST/AUDIT el operador (test user) es quien valida. Cualquier user real ajeno al operador no debe usarlo hasta PROD.
+> - **HEAD siempre es desplegable a PROD sin restricción**. El botón GIS, el separador "o", la card "Cuentas vinculadas" del perfil, y todo componente UI de Google están ocultos automáticamente en PROD por el flag. Backend Google endpoints presentes (`/api/auth/google`, `/api/users/me/oauth/*`) pero inaccesibles porque nada del frontend PROD los llama.
+> - **Sin dependencia de `PRODUCT_ACCESS_MODE=PRELAUNCH`** para el gate. Puedes bajar PRELAUNCH cuando quieras, Google sigue oculto en PROD por el flag.
+> - **Override manual** disponible para pruebas puntuales: variable de entorno build-time `REACT_APP_GOOGLE_OAUTH_FORCE_ENABLED=true` fuerza el UI en cualquier hostname (uso previsto: build de verificación post-brand-verification antes del cutover definitivo).
 >
-> **Por qué esto es blocker para PROD**: PROD sirve a usuarios reales. Aunque hoy PROD está en `PRODUCT_ACCESS_MODE=PRELAUNCH` (landing coming-soon, sin perfil accesible al público general), en el momento en que se salga de PRELAUNCH cualquier registro por Google fallará con el error de Google descrito arriba si el consent aún está en Testing. La secuencia obligatoria es:
-> 1. Publicar consent screen a Production en Google Cloud Console → **Fase 0.3**.
-> 2. Pasar brand verification (empírica para adult; Google no publica lista formal — riesgo residual real, posible rechazo o requisitos añadidos como disclaimers específicos).
-> 3. Sólo después: deploy Fase 2 backend + frontend a PROD (JAR con V47+V48, env var `GOOGLE_OAUTH_CLIENT_ID`, bundle frontend con botón GIS).
-> 4. Bajar `PRODUCT_ACCESS_MODE` de PRELAUNCH cuando marketing esté listo.
+> **Secuencia para activar Google en PROD cuando corresponda**:
+> 1. **Fase 0.3**: publicar consent screen a Production en Google Cloud Console + pasar brand verification.
+> 2. Cambiar el default del flag en `runtimeEnv.js` (invertir el check `IS_PROD_ENV` o eliminar el flag entero si Google queda activo permanentemente).
+> 3. Build + deploy frontend PROD.
 >
-> **NO invertir el orden**. Desplegar Fase 2 a PROD antes de publicar el consent = bomba de tiempo cuando se salga de PRELAUNCH.
->
-> **Riesgo asociado a Fase 0.3**: Google puede rechazar brand verification para plataforma adult, o exigir disclaimers/screenshots/videos del flow. Si rechaza definitivamente, ADR-058 se retira en PROD (no en TEST/AUDIT si sirven de sandbox). Coste esperado: 1-2 sesiones del operador + 3-8 semanas de revisión de Google en el peor caso.
+> **Riesgo asociado a Fase 0.3**: Google puede rechazar brand verification para plataforma adult, o exigir disclaimers/screenshots/videos del flow. Si rechaza definitivamente, ADR-058 se mantiene en TEST/AUDIT como sandbox y PROD sigue con el flag OFF sin cambios. Coste esperado: 1-2 sesiones del operador + 3-8 semanas de revisión de Google en el peor caso.
 
 ---
 
