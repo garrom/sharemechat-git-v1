@@ -3679,7 +3679,12 @@
         "categories": {
           "STREAM_INTERRUPTED": "Stream interrupted",
           "PAYMENT_NOT_CREDITED": "Payment not credited",
+          "PAYOUT_ISSUE": "Payout issue",
+          "REFUND_REQUEST": "Refund request",
           "MODERATION_FALSE_POSITIVE": "Wrong moderation",
+          "ABUSE_REPORT": "Report another user",
+          "KYC_VERIFICATION": "Identity verification",
+          "ACCOUNT_SECURITY": "Account security",
           "ACCOUNT_ISSUE": "Account issue",
           "OTHER": "Other"
         },
@@ -3787,7 +3792,12 @@
       "categories": {
         "STREAM_INTERRUPTED": "Stream interrupted",
         "PAYMENT_NOT_CREDITED": "Payment not credited",
+        "PAYOUT_ISSUE": "Payout issue",
+        "REFUND_REQUEST": "Refund request",
         "MODERATION_FALSE_POSITIVE": "Wrong moderation",
+        "ABUSE_REPORT": "Report another user",
+        "KYC_VERIFICATION": "Identity verification",
+        "ACCOUNT_SECURITY": "Account security",
         "ACCOUNT_ISSUE": "Account issue",
         "OTHER": "Other"
       },

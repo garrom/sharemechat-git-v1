@@ -3679,7 +3679,12 @@
         "categories": {
           "STREAM_INTERRUPTED": "Corte de streaming",
           "PAYMENT_NOT_CREDITED": "Pago no acreditado",
+          "PAYOUT_ISSUE": "Problema con payout",
+          "REFUND_REQUEST": "Solicitud de reembolso",
           "MODERATION_FALSE_POSITIVE": "Moderación incorrecta",
+          "ABUSE_REPORT": "Denunciar a otro usuario",
+          "KYC_VERIFICATION": "Verificación de identidad",
+          "ACCOUNT_SECURITY": "Seguridad de la cuenta",
           "ACCOUNT_ISSUE": "Problema con cuenta",
           "OTHER": "Otro"
         },
@@ -3787,7 +3792,12 @@
       "categories": {
         "STREAM_INTERRUPTED": "Corte de streaming",
         "PAYMENT_NOT_CREDITED": "Pago no acreditado",
+        "PAYOUT_ISSUE": "Problema con payout",
+        "REFUND_REQUEST": "Solicitud de reembolso",
         "MODERATION_FALSE_POSITIVE": "Moderación incorrecta",
+        "ABUSE_REPORT": "Denunciar a otro usuario",
+        "KYC_VERIFICATION": "Verificación de identidad",
+        "ACCOUNT_SECURITY": "Seguridad de la cuenta",
         "ACCOUNT_ISSUE": "Problema con cuenta",
         "OTHER": "Otro"
       },

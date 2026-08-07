@@ -7,10 +7,17 @@ import React, { useEffect, useRef, useState } from 'react';
 import i18n from '../../i18n';
 import { createTicket } from '../../api/ticketsApi';
 
+// Categorias sincronizadas con TicketService.VALID_CATEGORIES + CHECK V49
+// (ADR-054 D8 Fase E, 2026-08-07 — estudio benchmark cam sites).
 const CATEGORIES = [
   'STREAM_INTERRUPTED',
   'PAYMENT_NOT_CREDITED',
+  'PAYOUT_ISSUE',
+  'REFUND_REQUEST',
   'MODERATION_FALSE_POSITIVE',
+  'ABUSE_REPORT',
+  'KYC_VERIFICATION',
+  'ACCOUNT_SECURITY',
   'ACCOUNT_ISSUE',
   'OTHER',
 ];

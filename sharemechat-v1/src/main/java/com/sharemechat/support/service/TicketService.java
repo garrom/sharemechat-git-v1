@@ -29,12 +29,20 @@ public class TicketService {
 
     private static final Logger log = LoggerFactory.getLogger(TicketService.class);
 
-    // Categorias validas (D2 b1). Enum-checked tambien en BD via CHECK constraint V41.
+    // Categorias validas. Enum-checked tambien en BD via CHECK constraint
+    // (V41 original + V49 extension 2026-08-07 con 5 nuevas: PAYOUT_ISSUE,
+    // KYC_VERIFICATION, ACCOUNT_SECURITY, REFUND_REQUEST, ABUSE_REPORT.
+    // Estudio benchmark cam sites — ver bitacora 2026-08-07 Fase E).
     public static final Set<String> VALID_CATEGORIES = Set.of(
             "STREAM_INTERRUPTED",
             "PAYMENT_NOT_CREDITED",
             "MODERATION_FALSE_POSITIVE",
             "ACCOUNT_ISSUE",
+            "PAYOUT_ISSUE",
+            "KYC_VERIFICATION",
+            "ACCOUNT_SECURITY",
+            "REFUND_REQUEST",
+            "ABUSE_REPORT",
             "OTHER"
     );
 
