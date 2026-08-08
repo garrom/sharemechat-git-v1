@@ -7,6 +7,7 @@ import { useAppModals } from '../../components/useAppModals';
 import i18n from '../../i18n';
 import LocaleSwitcher from '../../components/LocaleSwitcher';
 import LinkedAccountsCard from '../../components/LinkedAccountsCard';
+import PreferredChatLangCard from '../../components/PreferredChatLangCard';
 import { isGoogleOAuthEnabled } from '../../config/runtimeEnv';
 
 // Navbar unificado
@@ -483,6 +484,11 @@ const PerfilClient = () => {
                   Flag isGoogleOAuthEnabled (Estrategia 3, 2026-08-07): en PROD
                   se oculta hasta que se publique consent Google Cloud. */}
               {isGoogleOAuthEnabled() && <LinkedAccountsCard />}
+
+              {/* pending-hardening §5.3 (2026-08-08): selector idioma
+                  preferido para chat P2P. Se auto-oculta si la feature de
+                  traduccion no esta habilitada en el entorno. */}
+              <PreferredChatLangCard />
 
               <SecurityCard>
                 <CardHeader>

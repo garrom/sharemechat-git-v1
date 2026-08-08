@@ -4,6 +4,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faPhoneSlash, faVideo, faPaperPlane, faGift } from '@fortawesome/free-solid-svg-icons';
 import FavoritesModelList from '../favorites/FavoritesModelList';
 import SupportMessageBubble from '../../components/support/SupportMessageBubble';
+import { useTranslationSettings } from '../../hooks/useTranslationSettings';
+import { useMessageTranslations } from '../../hooks/useMessageTranslations';
 import {
   StyledFavoritesShell,
   StyledFavoritesColumns,
@@ -243,6 +245,22 @@ export default function VideoChatFavoritosModelo(props) {
   // buildBubble acepta opts.transparent para forzar burbujas transparentes
   // sobre el video de streaming en Favoritos-Call. Se propaga desde los
   // renderers de call (renderDesktopCallMessages y equivalente mobile).
+  // pending-hardening §5.3: traduccion automatica chat P2P cross-language.
+  // Ver equivalente en VideoChatFavoritosCliente.jsx.
+  const {
+    enabled: translationEnabled,
+    viewerLang,
+    showOriginal,
+    toggleShowOriginal,
+  } = useTranslationSettings(user);
+  const { getTranslation } = useMessageTranslations({
+    messages: centerMessages,
+    viewerId: user?.id,
+    viewerLang,
+    enabled: translationEnabled,
+    showOriginal,
+  });
+
   const buildBubble = (m, isMe, senderMe, senderPeer, opts = {}) => {
     const { transparent = false } = opts;
     const giftData = resolveGiftData(m);
@@ -265,9 +283,43 @@ export default function VideoChatFavoritosModelo(props) {
         peerNickname={centerChatPeerName || ''}
         userNickname={user?.nickname || ''}
         transparent={transparent}
+        translation={isMe ? null : getTranslation(m.id)}
       />
     );
   };
+
+  const shouldShowTranslationToggle = translationEnabled && viewerLang && (centerMessages || []).some(
+    (m) => Number(m?.senderId) !== Number(user?.id) && !m?.gift
+  );
+  const TranslationToggleButton = () => shouldShowTranslationToggle ? (
+    <button
+      type="button"
+      onClick={toggleShowOriginal}
+      title={showOriginal
+        ? i18n.t('chat.translation.showTranslations', 'Mostrar traducciones')
+        : i18n.t('chat.translation.showOriginal', 'Ver original')}
+      style={{
+        background: showOriginal ? '#fff' : '#dbeafe',
+        color: '#1e3a8a',
+        border: '1px solid #bfdbfe',
+        borderRadius: 999,
+        padding: '4px 10px',
+        fontSize: 12,
+        cursor: 'pointer',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 4,
+        userSelect: 'none',
+      }}
+    >
+      <span>↻</span>
+      <span>
+        {showOriginal
+          ? i18n.t('chat.translation.showTranslations', 'Mostrar traducciones')
+          : i18n.t('chat.translation.showOriginal', 'Ver original')}
+      </span>
+    </button>
+  ) : null;
 
   const renderChatMessage = (m, opts) => {
     const isMe = Number(m.senderId) === Number(user?.id);
@@ -506,7 +558,12 @@ export default function VideoChatFavoritosModelo(props) {
                     )}
 
                     {!isPendingPanel && !isSentPanel && contactMode !== 'call' && (
-                      <StyledChatWhatsApp>
+                      <StyledChatWhatsApp style={{position:'relative'}}>
+                        {shouldShowTranslationToggle && (
+                          <div style={{position:'absolute',top:6,right:12,zIndex:5}}>
+                            <TranslationToggleButton />
+                          </div>
+                        )}
                         <StyledChatScroller ref={modelCenterListRef} data-bg="whatsapp" data-kind="favorites-chat">
                           <StyledChatMessagesInner>
                             {centerMessages.length === 0 && (
@@ -755,7 +812,12 @@ export default function VideoChatFavoritosModelo(props) {
                 )}
 
                 {!isPendingPanel && !isSentPanel && contactMode !== 'call' && (
-                  <StyledChatWhatsApp>
+                  <StyledChatWhatsApp style={{position:'relative'}}>
+                    {shouldShowTranslationToggle && (
+                      <div style={{position:'absolute',top:6,right:12,zIndex:5}}>
+                        <TranslationToggleButton />
+                      </div>
+                    )}
                     <StyledChatScroller ref={modelCenterListRef} data-bg="whatsapp" data-kind="favorites-chat">
                       <StyledChatMessagesInner>
                         {centerMessages.length === 0 && (
