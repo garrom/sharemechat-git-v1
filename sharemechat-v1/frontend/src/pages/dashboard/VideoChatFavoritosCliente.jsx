@@ -129,15 +129,6 @@ export default function VideoChatFavoritosCliente(props){
             </StyledGiftChip>
           ))}
         </StyledGiftTrack>
-        <StyledGiftMore
-          type="button"
-          title={t('dashboardClient.videoChatFavoritosCliente.gifts.more', 'Ver catálogo')}
-          aria-label={t('dashboardClient.videoChatFavoritosCliente.gifts.more', 'Ver catálogo')}
-          disabled={!allowChat}
-          onClick={() => setShowCenterGifts((s) => !s)}
-        >
-          +
-        </StyledGiftMore>
       </StyledGiftBar>
     );
   };
