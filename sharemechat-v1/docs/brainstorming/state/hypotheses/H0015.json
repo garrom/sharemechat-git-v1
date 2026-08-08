@@ -1,8 +1,43 @@
-{"id":"H0015","cyc":16,"cyl":1,"ch":"ai-referral","th":"Visibilidad en asistentes de IA (ser recomendado/citado por ChatGPT, Perplexity, Gemini, Copilot cuando alguien pregunta por videochat verificado / alternativa a Omegle) como canal organico de captacion de clientes de alta intencion y coste 0 (GEO: generative engine optimization)",
-"as":["los LLM ya generan trafico real a sharemechat (chatgpt 5 sesiones, 1 signup atribuido, S0021)","ese trafico es de alta intencion (embudo apretado: 2 form_start / 5 sesiones)","se puede INFLUIR en que los LLM te citen publicando contenido citable + presencia en fuentes que ingieren (conecta con H0002 USP y H0011 age-verif)"],
-"pv":[{"p":"src","s":"S0020"},{"p":"src","s":"S0021"}],
-"adversario":"CAVEAT DURO (S0021): el referral chatgpt actual es probablemente BRANDED/incidental, NO recomendacion organica -> sharemechat NO aparece en WebSearch para 'verified omegle alternative' y el claim verificado/sin-bots esta saturado por competidores. Ademas Google organic trae MAS trafico (19 vs 5). N=1 signup. Por tanto la tesis 'ser recomendado organicamente' AUN NO esta probada; lo probado es 'existe trafico via IA'. El camino para hacerlo organico = GEO (contenido citable), que es donde se cruza con H0002/H0011.",
-"ft":"E0004: sondear sistematicamente ChatGPT/Perplexity/Gemini/Copilot con las queries del cliente ('best verified video chat','omegle alternative no bots','safe random video chat') y registrar SI/COMO aparece sharemechat (baseline hoy = NO en generico). Luego accion GEO (via H0002/H0011) y re-medir. Exito: pasar de 0 a >=1 asistente que cite sharemechat en query generica en 60-90d, y user_acquisition con >=3 signups IA-referral",
-"cost":{"eur":0,"type":"none"},
-"sc":{"reach":2,"conv":4,"eff":1,"ban":1,"brand":4,"conf":0.5},
-"st":"recommended","kr":"","par":"H0002","exp":["E0004"]}
+{
+"id": "H0015",
+"cyc": 16,
+"cyl": 1,
+"ch": "ai-referral",
+"th": "Visibilidad en asistentes de IA (ser recomendado/citado por ChatGPT, Perplexity, Gemini, Copilot cuando alguien pregunta por videochat verificado / alternativa a Omegle) como canal organico de captacion de clientes de alta intencion y coste 0 (GEO: generative engine optimization)",
+"as": [
+"los LLM ya generan trafico real a sharemechat (chatgpt 5 sesiones, 1 signup atribuido, S0021)",
+"ese trafico es de alta intencion (embudo apretado: 2 form_start / 5 sesiones)",
+"se puede INFLUIR en que los LLM te citen publicando contenido citable + presencia en fuentes que ingieren (conecta con H0002 USP y H0011 age-verif)"
+],
+"pv": [
+{
+"p": "src",
+"s": "S0020"
+},
+{
+"p": "src",
+"s": "S0021"
+}
+],
+"adversario": "CAVEAT DURO (S0021): el referral chatgpt actual es probablemente BRANDED/incidental, NO recomendacion organica -> sharemechat NO aparece en WebSearch para 'verified omegle alternative' y el claim verificado/sin-bots esta saturado por competidores. Ademas Google organic trae MAS trafico (19 vs 5). N=1 signup. Por tanto la tesis 'ser recomendado organicamente' AUN NO esta probada; lo probado es 'existe trafico via IA'. El camino para hacerlo organico = GEO (contenido citable), que es donde se cruza con H0002/H0011.",
+"ft": "E0004: sondear sistematicamente ChatGPT/Perplexity/Gemini/Copilot con las queries del cliente ('best verified video chat','omegle alternative no bots','safe random video chat') y registrar SI/COMO aparece sharemechat (baseline hoy = NO en generico). Luego accion GEO (via H0002/H0011) y re-medir. Exito: pasar de 0 a >=1 asistente que cite sharemechat en query generica en 60-90d, y user_acquisition con >=3 signups IA-referral",
+"cost": {
+"eur": 0,
+"type": "none"
+},
+"sc": {
+"reach": 2,
+"conv": 4,
+"eff": 1,
+"ban": 1,
+"brand": 4,
+"conf": 0.5
+},
+"st": "recommended",
+"kr": "",
+"par": "H0002",
+"exp": [
+"E0004"
+],
+"unblock_bing": "S0031: ChatGPT web-search usa BING -> indexar sharemechat en Bing Webmaster Tools es PREREQUISITO no negociable para que ChatGPT pueda citarnos (explica por que la sonda dio 'no te menciona'). Accion barata #1 del canal IA. Visitantes IA convierten 4-5x."
+}

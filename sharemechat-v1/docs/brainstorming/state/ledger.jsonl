@@ -151,3 +151,8 @@
 {"c":31,"t":"src","id":"S0030","u":"analisis profundo clientes PROD: demanda real desperdiciada por producto vacio; NO son amigos"}
 {"c":31,"t":"produce","id":"A0005","note":"deliverable real: copy listo para cerrar 3 modelos fundadoras + anuncio reclutamiento estilo-agencia (vector A) + pitch estudios (vector B). Trabajo autonomo, no pasar la pelota."}
 {"c":31,"t":"ask","note":"preguntas de verdad-base al operador (no inferir): cuales de las 9 altas reconoce vs desconocidos; por que el interes organico es hispano; si ha hablado con alguno."}
+{"c":31,"t":"input2","src":"operator 2026-08-06: todos desconocidos salvo @sharemechat; hipotesis nodo-AWS; idea nurture email; PIDE plan organico US/America"}
+{"c":31,"t":"src","id":"S0031","u":"GA4: US organic aterriza en legales (valor no rankea); spanish=navegacion interna; AWS-hipotesis refutada; GEO: ChatGPT=Bing, IA convierte 4-5x"}
+{"c":31,"t":"produce","id":"A0006","note":"plan US-organico priorizado coste 0: (1) Bing Webmaster Tools [desbloquea ChatGPT], (2) citas terceros/GEO alternativeto+Reddit-genuino, (3) contenido valor US-ingles GEO, (4) email nurture a registrados. Deliverable real."}
+{"c":31,"t":"finding","note":"desmontada hipotesis nodo-AWS (eu-central-1+CloudFront -> latencia no es descubrimiento). Descubrimiento organico real es US-leaning pero aterriza en paginas legales; contenido de valor no rankea -> ese es el hueco US-organico."}
+{"c":31,"t":"req","id":"R0016","k":"data","note":"plan US-organico; accion #1 Bing indexing hoy"}
