@@ -1,6 +1,8 @@
 # Plan por fases — Iconos comerciales, efectos y layout de chat (2026-08-08)
 
-**Estado:** PLANIFICACIÓN — sin código aún. Documento de idea/alcance para ejecutar poco a poco, una fase por entregable, cada una aprobada antes de la siguiente.
+**Estado:** EN EJECUCIÓN. Fases 0, 1 y 3 + reestructura de catálogo **IMPLEMENTADAS y desplegadas en TEST** (chat puro de favoritos, cliente y modelo). Pendientes: Fase 2 (reacciones + selector emojis), Fase 4 (streaming), rediseño de página completa (navbar/contactos), nivelación a `main`.
+
+> **As-built (lo realmente implementado + desvíos):** `gift-redesign-assets/as-built-2026-08-09.md`. Este plan es el diseño; el as-built es la ejecución. Desvío principal: las caras gratis son emoji unicode nativo (no SVG dibujados); los efectos se derivan del `tier` (no de `animation_key`).
 
 **Origen:** frente iniciado tras cerrar el bug de scroll del dashboard favoritos (ver `docs/04-operations/scroll-dashboard-favoritos-investigation-2026-08-08.md`). El operador quiere hacer los iconos del chat de favoritos más comerciales y añadir efectos al enviarlos.
 
