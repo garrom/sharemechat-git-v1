@@ -247,23 +247,26 @@ export default function VideoChatFavoritosCliente(props){
   // 2026-08-08: el chat overlay durante llamada 1a1 debe comportarse como
   // el chat random: SOLO muestra los mensajes escritos DURANTE la llamada,
   // no todo el historial P2P (que se ve al salir de la llamada en el chat
-  // WhatsApp completo). Memorizamos el timestamp de inicio y filtramos.
-  const [callStartedAt, setCallStartedAt] = useState(null);
+  // WhatsApp completo).
+  //
+  // Snapshot de IDs conocidos al entrar en 'in-call' (no timestamp: el
+  // backend serializa LocalDateTime sin zone info y comparar con Date.now()
+  // provoca discrepancias horarias que dejaban el filtro rechazando todos
+  // los mensajes). Los mensajes nuevos tienen id > cualquiera del snapshot.
+  const [callStartSnapshotIds, setCallStartSnapshotIds] = useState(null);
   useEffect(() => {
-    if (callStatus === 'in-call' && callStartedAt == null) {
-      setCallStartedAt(Date.now());
+    if (callStatus === 'in-call' && callStartSnapshotIds == null) {
+      const ids = new Set((centerMessages || []).map((m) => m?.id).filter((x) => x != null));
+      setCallStartSnapshotIds(ids);
     } else if (callStatus === 'idle' || callStatus === undefined || callStatus === null) {
-      if (callStartedAt != null) setCallStartedAt(null);
+      if (callStartSnapshotIds != null) setCallStartSnapshotIds(null);
     }
-  }, [callStatus, callStartedAt]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [callStatus]);
   const callMessages = useMemo(() => {
-    if (callStartedAt == null) return [];
-    return (centerMessages || []).filter((m) => {
-      if (!m?.createdAt) return false;
-      const t = new Date(m.createdAt).getTime();
-      return Number.isFinite(t) && t >= callStartedAt;
-    });
-  }, [centerMessages, callStartedAt]);
+    if (callStartSnapshotIds == null) return [];
+    return (centerMessages || []).filter((m) => m?.id != null && !callStartSnapshotIds.has(m.id));
+  }, [centerMessages, callStartSnapshotIds]);
 
   const renderCallMessages = () => callMessages.map((m) => renderChatMessage(m, { transparent: true }));
 

@@ -345,22 +345,22 @@ export default function VideoChatFavoritosModelo(props) {
 
   // 2026-08-08: chat overlay durante llamada 1a1 solo muestra mensajes de la
   // llamada actual (no el historial P2P completo). Simetrico al Cliente.
-  const [callStartedAt, setCallStartedAt] = useState(null);
+  // Snapshot de IDs conocidos al entrar en 'in-call' (evita bug de zona
+  // horaria si se usara timestamp comparado con Date.now).
+  const [callStartSnapshotIds, setCallStartSnapshotIds] = useState(null);
   useEffect(() => {
-    if (callStatus === 'in-call' && callStartedAt == null) {
-      setCallStartedAt(Date.now());
+    if (callStatus === 'in-call' && callStartSnapshotIds == null) {
+      const ids = new Set((centerMessages || []).map((m) => m?.id).filter((x) => x != null));
+      setCallStartSnapshotIds(ids);
     } else if (callStatus === 'idle' || callStatus === undefined || callStatus === null) {
-      if (callStartedAt != null) setCallStartedAt(null);
+      if (callStartSnapshotIds != null) setCallStartSnapshotIds(null);
     }
-  }, [callStatus, callStartedAt]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [callStatus]);
   const callMessages = useMemo(() => {
-    if (callStartedAt == null) return [];
-    return (centerMessages || []).filter((m) => {
-      if (!m?.createdAt) return false;
-      const t = new Date(m.createdAt).getTime();
-      return Number.isFinite(t) && t >= callStartedAt;
-    });
-  }, [centerMessages, callStartedAt]);
+    if (callStartSnapshotIds == null) return [];
+    return (centerMessages || []).filter((m) => m?.id != null && !callStartSnapshotIds.has(m.id));
+  }, [centerMessages, callStartSnapshotIds]);
 
   const renderDesktopCallMessages = () => callMessages.map((m) => renderChatMessageInverted(m, { transparent: true }));
 
