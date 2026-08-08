@@ -1,14 +1,8 @@
 import styled from 'styled-components';
 
-export const StyledContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-height: 100vh;
-  background-color: #f0f2f5;
-  color: #1f2937;
-  padding: 20px;
-`;
+// 2026-08-08: StyledContainer eliminado por huérfano (cero consumidores en
+// el proyecto). Ver docs/04-operations/scroll-dashboard-favoritos-
+// investigation-2026-08-08.md. Los admin shells vivos usan AdminShellStyles.js.
 
 export const StyledTable = styled.table`
   width: 100%;

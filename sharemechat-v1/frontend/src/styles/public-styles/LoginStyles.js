@@ -3,16 +3,9 @@ import styled from 'styled-components';
 import { bp, colors, radius, space, shadow } from '../core/tokens';
 import { buttonBase, focusRing } from '../core/mixins';
 
-/* CONTENEDOR FULL SCREEN (fondo negro, como la web) */
-export const StyledContainer = styled.div`
-  min-height: 100vh;
-  padding: ${space.lg};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #000;
-  @media (max-width: ${bp.md}) { padding: ${space.md}; }
-`;
+// 2026-08-08: StyledContainer eliminado por huérfano (cero consumidores;
+// el login vive dentro del modal LoginModalContent, no en página aparte).
+// Ver docs/04-operations/scroll-dashboard-favoritos-investigation-2026-08-08.md.
 
 /* CARD LOGIN */
 export const StyledForm = styled.form`

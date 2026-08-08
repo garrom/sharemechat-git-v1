@@ -11,7 +11,7 @@ import { isGoogleOAuthEnabled } from '../../config/runtimeEnv';
 
 // Navbar unificado
 import {
-  StyledContainer,
+  PageShell,
   StyledNavbar,
   StyledBrand
 } from '../../styles/NavbarStyles';
@@ -262,7 +262,7 @@ const PerfilClient = () => {
   })();
 
   return (
-    <StyledContainer>
+    <PageShell>
       <StyledNavbar>
         <StyledBrand
           href="/"
@@ -512,7 +512,7 @@ const PerfilClient = () => {
           </ProfileGrid>
         )}
       </ProfileMain>
-    </StyledContainer>
+    </PageShell>
   );
 };
 

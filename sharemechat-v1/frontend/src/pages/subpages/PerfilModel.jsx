@@ -8,7 +8,7 @@ import i18n from '../../i18n';
 import LocaleSwitcher from '../../components/LocaleSwitcher';
 
 import {
-  StyledContainer,
+  PageShell,
   StyledNavbar,
   StyledBrand,
 } from '../../styles/NavbarStyles';
@@ -277,7 +277,7 @@ const PerfilModel = () => {
   const contractBlocked = contractInfo?.acceptedCurrent === false;
 
   return (
-    <StyledContainer>
+    <PageShell>
       <StyledNavbar>
         <StyledBrand
           href="/"
@@ -496,7 +496,7 @@ const PerfilModel = () => {
           </ProfileGrid>
         )}
       </ProfileMain>
-    </StyledContainer>
+    </PageShell>
   );
 };
 

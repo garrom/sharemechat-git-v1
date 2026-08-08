@@ -164,8 +164,8 @@ export const StyledMainContent = styled.div`
        capped por la cadena flex, crecia con contenido y arrastraba body.
      - content-like (blog, historial, tickets, stats): overflow:auto. El
        contenido puede crecer y hace scroll interno de StyledMainContent
-       (StyledContainer padre ya es height:100vh overflow:hidden via
-       data-layout="fixed", asi que este overflow:auto vive DENTRO del
+       (DashboardShell padre ya es height:100vh overflow:hidden en tabs
+       app-like via data-tab, asi que este overflow:auto vive DENTRO del
        viewport, no del body). */
   overflow: ${props =>
     (props['data-tab'] === 'videochat'

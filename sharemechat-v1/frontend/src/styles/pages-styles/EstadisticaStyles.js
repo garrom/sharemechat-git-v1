@@ -97,7 +97,7 @@ export const Wrap = styled.div`
   /* Iter.3 (2026-08-02): sin border-radius ni borde exterior — el panel
      ocupa todo el ancho pegado al navbar (patrón visual DashboardMaster).
      El arco redondeado previo generaba fricción visual en la esquina
-     superior izquierda contra el fondo negro del StyledContainer. */
+     superior izquierda contra el fondo negro del DashboardShell. */
   border-radius: 0;
   border: none;
   box-shadow: none;

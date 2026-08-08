@@ -54,23 +54,20 @@ export const StyledBrand = styled.a`
   }
 `;
 
-// === StyledContainer ===
-// Layout wrapper de pagina. Por defecto (sin data-layout): min-height:100vh
-// para paginas de contenido que scrollean con el body (perfil, legal,
-// coming-soon, etc.). Con data-layout="fixed": height:100vh + overflow:hidden
-// para paginas app-like con streaming/chat P2P donde el scroll debe vivir
-// DENTRO de sus scrollers internos, no en el body (regresion 2026-08-08 en
-// tab favoritos de dashboard: con historial P2P largo la cadena flex no
-// restringia altura y arrastraba body a hacer scroll; composer y footer
-// quedaban fuera del viewport).
+// === PageShell ===
+// Wrapper de página de contenido con scroll de body tradicional. Crece
+// con el contenido; el viewport hace scroll cuando el contenido excede
+// 100vh. Se usa en páginas informativas: Perfil (Client/Master/Model),
+// legal, coming-soon, KYC steps. Para páginas app-like con chat/streaming
+// interno usa DashboardShell (VideochatStyles.js), que garantiza
+// height:100vh + overflow:hidden y delega scroll a los scrollers hijos.
 //
-// Uso:
-//   <StyledContainer>                       -> content page, scroll de body OK.
-//   <StyledContainer data-layout="fixed">   -> app-like, no scroll de body.
-//
-// Regla: los hijos de un layout fixed deben gestionar su propio scroll
-// interno (overflow:auto) donde corresponda; si no, se cortan al viewport.
-export const StyledContainer = styled.div`
+// Renombrado desde StyledContainer 2026-08-08 tras investigación
+// (docs/04-operations/scroll-dashboard-favoritos-investigation-2026-08-08.md):
+// coexistían dos StyledContainer con semántica distinta (este + el de
+// VideochatStyles) y JavaScript resolvía imports por orden sin warning,
+// causando confusión de diagnóstico.
+export const PageShell = styled.div`
   min-height: 100vh;
   display: flex;
   flex-direction: column;

@@ -11,7 +11,7 @@ import { apiFetch } from '../../config/http';
 import masterApi from '../../api/masterApi';
 import LocaleSwitcher from '../../components/LocaleSwitcher';
 import {
-  StyledContainer,
+  PageShell,
   StyledNavbar,
   StyledBrand,
 } from '../../styles/NavbarStyles';
@@ -165,7 +165,7 @@ export default function PerfilMaster() {
     : <span style={badge('pending')}>{t('perfilMaster.status.pending')}</span>;
 
   return (
-    <StyledContainer>
+    <PageShell>
       <StyledNavbar>
         <StyledBrand
           href="/master"
@@ -321,6 +321,6 @@ export default function PerfilMaster() {
           </ProfileGrid>
         )}
       </ProfileMain>
-    </StyledContainer>
+    </PageShell>
   );
 }
