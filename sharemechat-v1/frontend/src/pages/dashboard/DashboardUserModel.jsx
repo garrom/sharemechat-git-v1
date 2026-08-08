@@ -3,7 +3,7 @@ import i18n from '../../i18n';
 import { useHistory } from 'react-router-dom';
 import NavbarModel from '../../components/navbar/NavbarModel';
 import {
-  StyledContainer,
+  DashboardShell,
   StyledMainContent,
   GlobalBlack,
 } from '../../styles/pages-styles/VideochatStyles';
@@ -371,7 +371,7 @@ const DashboardUserModel = () => {
 
   if (sessionLoading) {
     return (
-      <StyledContainer>
+      <DashboardShell>
         <GlobalBlack />
         <StyledMainContent>
           <DashboardUserModelShell>
@@ -382,12 +382,12 @@ const DashboardUserModel = () => {
             </DashboardUserModelPage>
           </DashboardUserModelShell>
         </StyledMainContent>
-      </StyledContainer>
+      </DashboardShell>
     );
   }
 
   return (
-    <StyledContainer>
+    <DashboardShell>
       <GlobalBlack />
 
       <NavbarModel
@@ -605,7 +605,7 @@ const DashboardUserModel = () => {
           </DashboardUserModelPage>
         </DashboardUserModelShell>
       </StyledMainContent>
-    </StyledContainer>
+    </DashboardShell>
   );
 };
 

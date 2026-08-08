@@ -5,7 +5,7 @@ import i18n from '../../i18n';
 import { apiFetch } from '../../config/http';
 
 import {
-  StyledContainer,
+  DashboardShell,
   StyledMainContent,
   GlobalBlack,
 } from '../../styles/pages-styles/VideochatStyles';
@@ -61,7 +61,7 @@ const ModelKycDiditPage = () => {
   };
 
   return (
-    <StyledContainer>
+    <DashboardShell>
       <GlobalBlack />
 
       <StyledNavbar>
@@ -131,7 +131,7 @@ const ModelKycDiditPage = () => {
           </OnboardingCard>
         </CenteredMain>
       </StyledMainContent>
-    </StyledContainer>
+    </DashboardShell>
   );
 };
 

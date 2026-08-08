@@ -10,7 +10,7 @@ import {
 } from '../../utils/clientKycGate';
 
 import {
-  StyledContainer,
+  DashboardShell,
   StyledMainContent,
   GlobalBlack,
 } from '../../styles/pages-styles/VideochatStyles';
@@ -94,7 +94,7 @@ const ClientKycDiditPage = () => {
   };
 
   return (
-    <StyledContainer>
+    <DashboardShell>
       <GlobalBlack />
 
       <StyledNavbar>
@@ -245,7 +245,7 @@ const ClientKycDiditPage = () => {
           </OnboardingCard>
         </CenteredMain>
       </StyledMainContent>
-    </StyledContainer>
+    </DashboardShell>
   );
 };
 

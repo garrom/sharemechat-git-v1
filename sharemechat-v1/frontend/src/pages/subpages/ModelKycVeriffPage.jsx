@@ -2,7 +2,7 @@ import React from 'react';
 import { useHistory } from 'react-router-dom';
 
 import {
-  StyledContainer,
+  DashboardShell,
   StyledMainContent,
   GlobalBlack,
 } from '../../styles/pages-styles/VideochatStyles';
@@ -25,7 +25,7 @@ const ModelKycVeriffPage = () => {
   const history = useHistory();
 
   return (
-    <StyledContainer>
+    <DashboardShell>
       <GlobalBlack />
 
       <StyledNavbar>
@@ -56,7 +56,7 @@ const ModelKycVeriffPage = () => {
           </OnboardingCard>
         </CenteredMain>
       </StyledMainContent>
-    </StyledContainer>
+    </DashboardShell>
   );
 };
 

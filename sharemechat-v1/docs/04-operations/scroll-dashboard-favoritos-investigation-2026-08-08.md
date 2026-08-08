@@ -213,3 +213,95 @@ Verificar que el bundle desplegado tiene el código del intento 3:
 ```bash
 node -e "const c = require('fs').readFileSync('sharemechat-v1/frontend/build-product/static/js/372.'+require('fs').readdirSync('sharemechat-v1/frontend/build-product/static/js').find(x=>x.startsWith('372.'))?.split('372.')[1] || '','utf8'); console.log(c.match(/data-layout.{0,200}/g).slice(0,3));"
 ```
+
+---
+
+## 11. CAUSA RAÍZ DEFINITIVA (sesión de diagnóstico limpia, 2026-08-08)
+
+**Resuelto el porqué de los 8 intentos fallidos: se editó el archivo equivocado.**
+
+### 11.1 El hecho central
+
+Existen **DOS** `StyledContainer` distintos, y todas las iteraciones tocaron el que NO se renderiza:
+
+| Definición | Archivo | ¿Lo usa el dashboard? |
+|---|---|---|
+| `StyledContainer` (el del `data-layout`) | `frontend/src/styles/NavbarStyles.js:73` | **NO** — nunca se importa aquí |
+| `StyledContainer` (el del `data-tab`) | `frontend/src/styles/pages-styles/VideochatStyles.js:97` | **SÍ** — es el que se pinta |
+
+En `DashboardClient.jsx` (y `DashboardModel.jsx`) el import real es:
+
+```javascript
+import {
+  StyledContainer, ... StyledMainContent, ...
+} from '../../styles/pages-styles/VideochatStyles';   // <-- ESTE módulo
+```
+
+El `StyledContainer` renderizado es el de `VideochatStyles.js:97`, cuyo CSS es EXACTAMENTE la fila 8 del diagnóstico DevTools:
+
+```javascript
+height: ${props => props['data-tab'] === 'videochat' ? '100vh' : 'auto'};  // favoritos → 'auto' (crece con contenido)
+min-height: 100vh;                                                          // SIEMPRE → nunca baja de 100vh
+// (sin overflow declarado → default 'visible' → el body scrollea)
+```
+
+El verdadero villano es **`min-height: 100vh` incondicional + `overflow: visible`** en un flex column: la cadena flex nunca queda capada y el body arrastra scroll con historial P2P largo.
+
+### 11.2 Por qué los intentos parecían correctos pero no aplicaban
+
+Todo lo tocado en `NavbarStyles.js` fue inocuo porque ese componente no se renderiza en el dashboard:
+
+- **El bundle compilaba la regla `data-layout`** → cierto, pero pertenece al `StyledContainer` de `NavbarStyles`, que aquí no se pinta.
+- **El atributo `data-layout="fixed"` aparecía en el DOM** → cierto: styled-components reenvía cualquier `data-*` al `<div>` aunque el CSS del template no lo consuma. Ver un atributo en el DOM NO prueba que exista una regla que lo lea.
+- **La regla condicional nunca aplicaba** → porque el elemento pintado es el `StyledContainer` de `VideochatStyles`, que solo conoce `data-tab`, nunca `data-layout`.
+
+### 11.3 Resolución de las hipótesis de la sección 6
+
+- **H1 (colisión de definiciones): CORRECTA**, pero se descartó por un test mal planteado. Se comprobó `document.querySelectorAll('.sc-itBLYH').length === 1` y se concluyó "no hay ambigüedad". La ambigüedad NO son dos instancias en el DOM: son **dos definiciones en el código fuente**, y se editó la que no se renderiza. `sc-itBLYH` es la clase del `StyledContainer` de `VideochatStyles` (el bueno); el de `NavbarStyles` generaba otra clase que nunca llegó al DOM.
+- **H2 (CSS global `!important`): descartada** — no hace falta; el efecto se explica por completo con H1.
+- **H3 (props no llegan al styled-component): descartada** — los props sí llegan; el problema es que llegan al componente correcto pero el CSS que los leería está en otro componente.
+- **H4/H5: irrelevantes** una vez identificado H1.
+
+### 11.4 Contraste con `StyledMainContent` (por qué ese SÍ funcionaba)
+
+`StyledMainContent` (fila 7 del diagnóstico) vive en el MISMO módulo que se renderiza (`VideochatStyles.js:135`) y su condicional lee `data-tab`, que es el atributo que el dashboard realmente pasa. Por eso enganchaba. La "diferencia clave desconocida" de la sección 5 era simplemente: uno estaba en el módulo correcto y el otro no.
+
+### 11.5 Fix correcto (mínimo, sin componente nuevo ni condicionales por props)
+
+Editar el archivo CORRECTO — `StyledContainer` en `VideochatStyles.js:97` — para hacerlo app-like (mata el scroll de página en toda la vista, que es el primer objetivo del operador):
+
+```javascript
+export const StyledContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  background: var(--c-black);
+  min-width: 48px;
+  height: 100vh;        /* fijo (o 100dvh), no 'auto' */
+  min-height: 0;        /* CLAVE: eliminar el min-height:100vh que fuerza crecer */
+  overflow: hidden;     /* el body deja de scrollear; el scroll vive en los scrollers hijos */
+
+  @supports (height: 100dvh) {
+    height: 100dvh;
+  }
+`;
+```
+
+Los scrollers internos ya existen y absorben el contenido largo:
+- `StyledChatScroller` (`VideochatStyles.js:1338`) → `overflow-y: auto`.
+- Wrappers de blog / historial / tickets en `DashboardClient.jsx` (~3168-3180) → `overflowY:'auto'`.
+
+Nota: si se prefiere conservar el scroll de body en tabs de contenido (blog/historial/tickets/stats) y solo capar los app-like (videochat/favoritos/calling), condicionar por `data-tab` **en este mismo componente** (mismo patrón que el `StyledMainContent` de abajo, que sí engancha). Pero para el objetivo declarado ("que no haya NINGÚN scroll en esa página") la versión plana de arriba basta.
+
+### 11.6 ⚠️ Aviso de concurrencia (estado del working tree al momento del diagnóstico)
+
+Durante este diagnóstico, una **sesión concurrente** (rama `claude/dashboard-favoritos-scroll-issue-490e84`) estaba editando estos mismos archivos en vivo. Llegó a la misma conclusión (H1) e introdujo un componente nuevo `StyledContainerFixed` en `NavbarStyles.js:87`, cableándolo en los dashboards. Pero dejó un **bug intermedio**:
+
+- `DashboardClient.jsx:21` / `DashboardModel.jsx:19` importan `StyledContainerFixed` **desde `VideochatStyles`**.
+- `StyledContainerFixed` solo está definido/exportado en **`NavbarStyles.js`**, no en `VideochatStyles`.
+- Resultado: `StyledContainerFixed` resuelve a `undefined` → al renderizar `<StyledContainerFixed>` el dashboard **crashea / pantalla en blanco** (mismo tipo de fallo que motivó el check de drift).
+
+**Acción acordada con el operador:** esta sesión de diagnóstico PARA y espera a que la sesión concurrente termine, para no pisarse en los mismos ficheros. Al retomar, verificar cuál de los dos enfoques quedó aplicado:
+1. Fix plano en `VideochatStyles.js:97` (recomendado por esta sesión), o
+2. Componente `StyledContainerFixed` separado — que es válido SI y solo SI el import se corrige para traerlo de `NavbarStyles` y se limpia el import erróneo de `VideochatStyles`.
+
+Sea cual sea, la regla es una sola: **el componente que se toca debe ser el que el dashboard realmente importa/renderiza.**

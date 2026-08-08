@@ -16,7 +16,7 @@ import LivenessChallengeModal from '../../components/LivenessChallengeModal';
 import { getLivenessStatus } from '../../api/livenessApi';
 import { createNowPaymentsCheckout } from '../../api/billingApi';
 import {
-  StyledContainer,
+  DashboardShell,
   StyledMainContent,
   GlobalBlack,
 } from '../../styles/pages-styles/VideochatStyles';
@@ -850,7 +850,7 @@ const DashboardUserClient = () => {
 
   const displayName = userName || t('dashboardUserClient.user.defaultName');
   return (
-    <StyledContainer>
+    <DashboardShell>
       <GlobalBlack />
 
       {/* ========= INICIO NAVBAR  ======== */}
@@ -964,7 +964,7 @@ const DashboardUserClient = () => {
         }}
         onCancel={() => setLivenessModalOpen(false)}
       />
-    </StyledContainer>
+    </DashboardShell>
   );
 };
 

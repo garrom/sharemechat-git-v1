@@ -5,7 +5,7 @@ import i18n from '../../i18n';
 import { apiFetch } from '../../config/http';
 
 import {
-  StyledContainer,
+  DashboardShell,
   StyledMainContent,
   GlobalBlack,
 } from '../../styles/pages-styles/VideochatStyles';
@@ -106,7 +106,7 @@ const ModelKycDiditProcessingPage = () => {
   const isPolling = !isRejected && !isTimeout;
 
   return (
-    <StyledContainer>
+    <DashboardShell>
       <GlobalBlack />
 
       <StyledNavbar>
@@ -177,7 +177,7 @@ const ModelKycDiditProcessingPage = () => {
           </OnboardingCard>
         </CenteredMain>
       </StyledMainContent>
-    </StyledContainer>
+    </DashboardShell>
   );
 };
 

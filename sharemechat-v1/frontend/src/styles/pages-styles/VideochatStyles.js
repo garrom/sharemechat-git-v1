@@ -96,7 +96,14 @@ export const GlobalBlack = createGlobalStyle`
 
 const IS_APP_TAB = (t) => t === 'videochat' || t === 'favoritos' || t === 'calling';
 
-export const StyledContainer = styled.div`
+// DashboardShell: wrapper de página tipo dashboard (Client/Model/UserClient/
+// UserModel) + subpages KYC/Contract que usan el mismo layout de columnas
+// videochat-style. Renombrado desde StyledContainer 2026-08-08 tras
+// investigación de scroll: había DOS StyledContainer distintos en el
+// proyecto (este + NavbarStyles.StyledContainer) con la misma semántica
+// ambiguamente. Ver docs/04-operations/scroll-dashboard-favoritos-
+// investigation-2026-08-08.md.
+export const DashboardShell = styled.div`
   display: flex;
   flex-direction: column;
   /* Iter.4 (2026-08-02) + hotfix iter.4b + 2026-08-08 fix scroll favoritos:

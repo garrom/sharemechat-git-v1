@@ -9,7 +9,7 @@ import { useHistory } from 'react-router-dom';
 import i18n from '../../i18n';
 import masterApi from '../../api/masterApi';
 import {
-  StyledContainer,
+  DashboardShell,
   StyledMainContent,
   GlobalBlack,
 } from '../../styles/pages-styles/VideochatStyles';
@@ -88,7 +88,7 @@ export default function MasterKycDiditProcessingPage() {
   const isPolling = !isRejected && !isTimeout;
 
   return (
-    <StyledContainer>
+    <DashboardShell>
       <GlobalBlack />
 
       <StyledNavbar>
@@ -154,6 +154,6 @@ export default function MasterKycDiditProcessingPage() {
           </OnboardingCard>
         </CenteredMain>
       </StyledMainContent>
-    </StyledContainer>
+    </DashboardShell>
   );
 }
