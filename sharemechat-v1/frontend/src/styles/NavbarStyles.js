@@ -1,4 +1,4 @@
-import styled, { css } from 'styled-components';
+import styled from 'styled-components';
 import { colors, radius, space, shadow } from './core/tokens';
 
 const NAV_COLLAPSE_BP = '1360px';
@@ -75,14 +75,9 @@ export const StyledContainer = styled.div`
   flex-direction: column;
   background: #111418;
   color: #e0e0e0;
-
-  ${props => props['data-layout'] === 'fixed' ? css`
-    height: 100vh;
-    min-height: 0;
-    overflow: hidden;
-  ` : css`
-    min-height: 100vh;
-  `}
+  height: ${props => props['data-layout'] === 'fixed' ? '100vh' : 'auto'};
+  min-height: ${props => props['data-layout'] === 'fixed' ? '0' : '100vh'};
+  overflow: ${props => props['data-layout'] === 'fixed' ? 'hidden' : 'visible'};
 `;
 
 // === TEXTO ===
