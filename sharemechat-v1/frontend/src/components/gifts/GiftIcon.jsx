@@ -80,7 +80,7 @@ export default function GiftIcon({ code, slug, iconUrl, alt = '', size = 48, cla
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: Math.round(size * 0.92),
+          fontSize: Math.round(size * 0.8), // emoji nativo mas pequeno que su hueco: iguala peso visual con los SVG (48 -> ~38)
           lineHeight: 1,
           userSelect: 'none',
           ...style,
