@@ -997,6 +997,166 @@ export const StyledChatMessagesInner = styled.div`
 `;
 
 /* --------------------------------
+ * 7-bis. BARRA DE REGALOS SIEMPRE VISIBLE + MODAL (rediseño chat favoritos,
+ *        Fase 1). Sustituye al popup togglable como via principal: los
+ *        regalos viven fijos en el composer, con segmento Gratis/Regalos,
+ *        scroll lateral y "+" para el catalogo completo. Los de pago abren
+ *        modal de confirmacion antes de cobrar.
+ * -------------------------------- */
+export const StyledGiftBar = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 8px 16px 2px;
+  background: #111418;
+  border-top: 1px solid rgba(255,255,255,0.08);
+`;
+
+export const StyledGiftSeg = styled.div`
+  display: inline-flex;
+  flex-shrink: 0;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 999px;
+  padding: 2px;
+
+  button {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: rgba(231,235,240,0.6);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  button[data-active="true"] { background: #fff; color: #111; }
+  button[data-active="true"][data-kind="paid"] {
+    background: linear-gradient(180deg, #ffd778, #f5b942);
+    color: #2a1c04;
+  }
+`;
+
+export const StyledGiftTrack = styled.div`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px;
+  scrollbar-width: thin;
+  &::-webkit-scrollbar { height: 6px; }
+  &::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 999px; }
+`;
+
+export const StyledGiftChip = styled.button`
+  position: relative;
+  appearance: none;
+  flex: 0 0 auto;
+  width: 50px;
+  height: 50px;
+  border-radius: 13px;
+  border: 1px solid rgba(255,255,255,0.09);
+  background: radial-gradient(circle at 50% 32%, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: transform .13s ease, border-color .13s ease, background .13s ease;
+
+  &:hover:not(:disabled) { transform: translateY(-3px); border-color: rgba(255,255,255,0.28); background: rgba(255,255,255,0.08); }
+  &:active:not(:disabled) { transform: translateY(-1px) scale(.94); }
+  &:disabled { opacity: .5; cursor: not-allowed; }
+
+  img, svg { width: 32px; height: 32px; display: block; }
+
+  .gift-chip__price {
+    position: absolute;
+    bottom: -3px;
+    right: -3px;
+    font-size: 9px;
+    font-weight: 700;
+    color: #2a1c04;
+    background: linear-gradient(180deg, #ffd778, #f5b942);
+    padding: 1px 5px;
+    border-radius: 999px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+    white-space: nowrap;
+  }
+`;
+
+export const StyledGiftMore = styled.button`
+  appearance: none;
+  flex: 0 0 auto;
+  width: 50px;
+  height: 50px;
+  border-radius: 13px;
+  border: 1px dashed rgba(255,255,255,0.25);
+  background: transparent;
+  color: rgba(231,235,240,0.6);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  &:hover { border-color: rgba(255,255,255,0.5); color: #fff; }
+`;
+
+export const StyledGiftConfirmOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(4,6,10,0.66);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+`;
+
+export const StyledGiftConfirmCard = styled.div`
+  width: min(360px, 92vw);
+  background: linear-gradient(180deg, #161a20, #111418);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 18px;
+  padding: 24px 22px;
+  text-align: center;
+  box-shadow: 0 30px 70px rgba(0,0,0,0.6);
+  color: #e7ebf0;
+
+  img, svg { width: 92px; height: 92px; margin: 0 auto 8px; display: block; filter: drop-shadow(0 12px 18px rgba(0,0,0,0.4)); }
+  h3 { margin: 4px 0 2px; font-size: 19px; font-weight: 700; }
+  .gift-confirm__price { font-size: 15px; font-weight: 700; color: #f5b942; }
+  .gift-confirm__to { font-size: 13px; color: rgba(231,235,240,0.6); margin: 8px 0 2px; }
+  .gift-confirm__bal { font-size: 12px; color: rgba(231,235,240,0.4); margin-bottom: 18px; }
+  .gift-confirm__bal[data-insufficient="true"] { color: #ff8f8f; }
+`;
+
+export const StyledGiftConfirmActions = styled.div`
+  display: flex;
+  gap: 10px;
+
+  button {
+    flex: 1;
+    height: 44px;
+    border-radius: 12px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.09);
+  }
+  button[data-role="cancel"] { background: transparent; color: rgba(231,235,240,0.6); }
+  button[data-role="cancel"]:hover { background: rgba(255,255,255,0.06); color: #fff; }
+  button[data-role="confirm"] { background: linear-gradient(180deg, #ffd778, #f5b942); color: #2a1c04; border: none; }
+  button[data-role="confirm"]:disabled { opacity: .5; cursor: not-allowed; }
+`;
+
+/* --------------------------------
  * 8. LISTADOS / FILAS SELECCIONABLES (SIN CAMBIOS)
  * -------------------------------- */
 

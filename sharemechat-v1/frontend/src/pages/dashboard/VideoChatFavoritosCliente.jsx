@@ -16,8 +16,12 @@ import { StyledCenter,StyledFavoritesShell,StyledFavoritesColumns,StyledCenterPa
     StyledCallCardDesktop,StyledCallFooterDesktop,StyledCallVideoArea,StyledCallStage,StyledCallTopBar,
     StyledCallTopMeta,StyledCallTopMetaText,StyledCallTopActions,StyledCallLocalVideo,StyledCallBottomBar,
     StyledCallBottomInner,StyledCallPrimaryActions,StyledCallComposer,StyledGiftsPanel,StyledGiftGrid,
-    StyledGiftCatalog,StyledGiftSection,StyledGiftSectionTitle,StyledChatMessagesInner,StyledChatDockMessageComposer,StyledChatDockActions
+    StyledGiftCatalog,StyledGiftSection,StyledGiftSectionTitle,StyledChatMessagesInner,StyledChatDockMessageComposer,StyledChatDockActions,
+    StyledGiftBar,StyledGiftSeg,StyledGiftTrack,StyledGiftChip,StyledGiftMore,
+    StyledGiftConfirmOverlay,StyledGiftConfirmCard,StyledGiftConfirmActions
 } from '../../styles/pages-styles/VideochatStyles';
+import GiftIcon from '../../components/gifts/GiftIcon';
+import GiftIconDefs from '../../components/gifts/GiftIconDefs';
 import { ButtonLlamar,ButtonColgar,ButtonAceptar,ButtonRechazar,ButtonEnviar,ButtonRegalo,ButtonActivarCam,
     ButtonActivarCamMobile,ButtonVolver,ActionButton,BtnRoundVideo,BtnHangup,BtnCallDanger,BtnCallGhost,BtnSend
 } from '../../styles/ButtonStyles';
@@ -45,6 +49,11 @@ export default function VideoChatFavoritosCliente(props){
       baseBalanceRef.current = null;
     }
   }, [callStatus, currentSaldo]);
+
+  // Fase 1 rediseño: barra de regalos siempre visible (segmento gratis/pago)
+  // + modal de confirmacion para los de pago.
+  const [giftCat, setGiftCat] = useState('free'); // 'free' | 'paid'
+  const [confirmGift, setConfirmGift] = useState(null);
 
   const normalizeGiftTier = (gift) =>
     String(gift?.tier || 'QUICK').toUpperCase() === 'PREMIUM' ? 'PREMIUM' : 'QUICK';
@@ -84,6 +93,92 @@ export default function VideoChatFavoritosCliente(props){
       </StyledGiftCatalog>
     </StyledGiftsPanel>
   );
+
+  // Barra de regalos siempre visible (Fase 1). Gratis -> envio directo;
+  // pago -> abre modal de confirmacion. El "+" abre el catalogo completo.
+  const handleGiftChipClick = (g) => {
+    if (!allowChat) return;
+    if (normalizeGiftTier(g) === 'PREMIUM') setConfirmGift(g);
+    else sendGiftMsg(g.id);
+  };
+
+  const renderGiftBar = () => {
+    const items = giftCat === 'paid' ? premiumGifts : quickGifts;
+    return (
+      <StyledGiftBar data-kind="favorites-gift-bar">
+        <StyledGiftSeg>
+          <button type="button" data-active={giftCat === 'free'} onClick={() => setGiftCat('free')}>
+            {t('dashboardClient.videoChatFavoritosCliente.gifts.free', 'Gratis')}
+          </button>
+          <button type="button" data-active={giftCat === 'paid'} data-kind="paid" onClick={() => setGiftCat('paid')}>
+            {t('dashboardClient.videoChatFavoritosCliente.gifts.paid', 'Regalos')}
+          </button>
+        </StyledGiftSeg>
+        <StyledGiftTrack>
+          {items.map((g) => (
+            <StyledGiftChip
+              key={g.id}
+              type="button"
+              disabled={!allowChat}
+              title={g.name}
+              aria-label={g.name}
+              onClick={() => handleGiftChipClick(g)}
+            >
+              <GiftIcon slug={g.code} iconUrl={g.icon} alt={g.name || ''} size={32} />
+              {giftCat === 'paid' && <span className="gift-chip__price">{fmtEUR(g.cost)}</span>}
+            </StyledGiftChip>
+          ))}
+        </StyledGiftTrack>
+        <StyledGiftMore
+          type="button"
+          title={t('dashboardClient.videoChatFavoritosCliente.gifts.more', 'Ver catálogo')}
+          aria-label={t('dashboardClient.videoChatFavoritosCliente.gifts.more', 'Ver catálogo')}
+          disabled={!allowChat}
+          onClick={() => setShowCenterGifts((s) => !s)}
+        >
+          +
+        </StyledGiftMore>
+      </StyledGiftBar>
+    );
+  };
+
+  const renderGiftConfirmModal = () => {
+    if (!confirmGift) return null;
+    const cost = Number(confirmGift.cost || 0);
+    const saldo = Number(currentSaldo || 0);
+    const insufficient = cost > saldo;
+    const close = () => setConfirmGift(null);
+    const confirm = () => {
+      if (insufficient) return;
+      sendGiftMsg(confirmGift.id);
+      close();
+    };
+    return (
+      <StyledGiftConfirmOverlay onClick={(e) => { if (e.target === e.currentTarget) close(); }}>
+        <StyledGiftConfirmCard>
+          <GiftIcon slug={confirmGift.code} iconUrl={confirmGift.icon} alt={confirmGift.name || ''} size={92} />
+          <h3>{confirmGift.name}</h3>
+          <div className="gift-confirm__price">{fmtEUR(confirmGift.cost)}</div>
+          <div className="gift-confirm__to">
+            {t('dashboardClient.videoChatFavoritosCliente.gifts.to', 'Para')} <strong>{centerChatPeerName || ''}</strong>
+          </div>
+          <div className="gift-confirm__bal" data-insufficient={insufficient}>
+            {insufficient
+              ? t('dashboardClient.videoChatFavoritosCliente.gifts.insufficient', 'Saldo insuficiente')
+              : `${t('dashboardClient.videoChatFavoritosCliente.gifts.balance', 'Saldo')} ${fmtEUR(saldo)} · ${t('dashboardClient.videoChatFavoritosCliente.gifts.remaining', 'te quedarán')} ${fmtEUR(saldo - cost)}`}
+          </div>
+          <StyledGiftConfirmActions>
+            <button type="button" data-role="cancel" onClick={close}>
+              {t('common.cancel', 'Cancelar')}
+            </button>
+            <button type="button" data-role="confirm" disabled={insufficient} onClick={confirm}>
+              {t('dashboardClient.videoChatFavoritosCliente.gifts.send', 'Enviar regalo')}
+            </button>
+          </StyledGiftConfirmActions>
+        </StyledGiftConfirmCard>
+      </StyledGiftConfirmOverlay>
+    );
+  };
 
   const normalizeGiftMessage = (message) => {
     if (!message) return null;
@@ -277,6 +372,8 @@ export default function VideoChatFavoritosCliente(props){
   );
 
   return(<>
+    <GiftIconDefs />
+    {renderGiftConfirmModal()}
     {!isMobile &&(
       <StyledFavoritesShell>
         <StyledFavoritesColumns>
@@ -490,6 +587,8 @@ export default function VideoChatFavoritosCliente(props){
                         </StyledChatMessagesInner>
                       </StyledChatScroller>
 
+                      {allowChat && renderGiftBar()}
+
                       <StyledChatDockMessageComposer data-kind="favorites-chat">
                         <StyledChatInput
                           value={centerInput}
@@ -500,14 +599,6 @@ export default function VideoChatFavoritosCliente(props){
                           onFocus={()=>{setTimeout(()=>chatEndRef.current?.scrollIntoView({block:'end'}),50);}}
                         />
                         <StyledChatDockActions>
-                          <ButtonRegalo
-                            onClick={()=>setShowCenterGifts(s=>!s)}
-                            title={t('dashboardClient.videoChatFavoritosCliente.actions.sendGift')}
-                            disabled={!allowChat}
-                            aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.sendGift')}
-                          >
-                            <FontAwesomeIcon icon={faGift}/>
-                          </ButtonRegalo>
                           <ButtonLlamar
                             onClick={enterCallMode}
                             disabled={!hasCallTarget||!allowChat}
@@ -713,6 +804,8 @@ export default function VideoChatFavoritosCliente(props){
                     </StyledChatMessagesInner>
                   </StyledChatScroller>
 
+                  {allowChat && renderGiftBar()}
+
                   <StyledChatDockMessageComposer data-kind="favorites-chat">
                     <StyledChatInput
                       value={centerInput}
@@ -722,16 +815,6 @@ export default function VideoChatFavoritosCliente(props){
                       disabled={!allowChat}
                       onFocus={()=>{setTimeout(()=>chatEndRef.current?.scrollIntoView({block:'end'}),50);}}
                     />
-                    <StyledChatDockActions>
-                      <ButtonRegalo
-                        onClick={()=>setShowCenterGifts(s=>!s)}
-                        title="Enviar regalo"
-                        disabled={!allowChat}
-                        aria-label="Enviar regalo"
-                      >
-                        <FontAwesomeIcon icon={faGift}/>
-                      </ButtonRegalo>
-                    </StyledChatDockActions>
                     {showCenterGifts&&allowChat&&renderGiftPicker()}
                   </StyledChatDockMessageComposer>
                 </StyledChatWhatsApp>
