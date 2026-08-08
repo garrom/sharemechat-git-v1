@@ -688,9 +688,17 @@ const DashboardModel = () => {
 
       // Chat / Gift como tu código original
       isEcho,
+      // pending-hardening §5.3 (2026-08-08): retenemos msgId + senderId del
+      // WS backend (MatchingHandlerSupport:chat handler) para poder usar
+      // /messages/translate-batch con el id real de BD desde random chat.
       onChatMessage: (data) => {
         if (!isEcho(data.message)) {
-          setMessages((prev) => [...prev, { from: 'peer', text: data.message }]);
+          setMessages((prev) => [...prev, {
+            from: 'peer',
+            text: data.message,
+            id: data.msgId ?? null,
+            senderId: data.senderId ?? null,
+          }]);
         }
       },
 

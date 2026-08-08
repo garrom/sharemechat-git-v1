@@ -68,6 +68,9 @@ import {
   BtnCallAlert,
   BtnCallGhost,
 } from '../../styles/ButtonStyles';
+import { useSession } from '../../components/SessionProvider';
+import { useTranslationSettings } from '../../hooks/useTranslationSettings';
+import { useMessageTranslations } from '../../hooks/useMessageTranslations';
 
 export default function VideoChatRandomModelo(props) {
   const t = (key, options) => i18n.t(key, options);
@@ -286,23 +289,102 @@ export default function VideoChatRandomModelo(props) {
     );
   };
 
+  // pending-hardening §5.3 (2026-08-08): traduccion automatica chat random.
+  // Ver equivalente en VideoChatRandomCliente.
+  const { user: sessionUser } = useSession();
+  const {
+    enabled: translationEnabled,
+    viewerLang,
+    showOriginal,
+    toggleShowOriginal,
+  } = useTranslationSettings(sessionUser);
+  const messagesForTranslation = messages.map((m) => ({
+    id: m.id,
+    body: m.text || '',
+    senderId: m.from === 'me' ? sessionUser?.id : (m.senderId ?? -1),
+    gift: m.gift,
+  }));
+  const { getTranslation } = useMessageTranslations({
+    messages: messagesForTranslation,
+    viewerId: sessionUser?.id,
+    viewerLang,
+    enabled: translationEnabled,
+    showOriginal,
+  });
+
   const renderMessages = () => (
     messages.map((msg, index) => {
       const isMe = msg.from === 'me';
       const variant = isMe ? 'me' : 'peer';
       const giftData = getGiftRenderData(msg.gift);
+      const translation = !isMe && msg.id ? getTranslation(msg.id) : null;
+      const hasTranslation = typeof translation === 'string' && translation.trim() !== '' && translation !== msg.text;
 
       return (
         <StyledChatMessageRow key={msg.id || index}>
           {giftData ? (
             renderGiftMessage(giftData)
           ) : (
-            <StyledChatBubble $variant={variant}>{msg.text}</StyledChatBubble>
+            <StyledChatBubble $variant={variant}>
+              {msg.text}
+              {hasTranslation && (
+                <div style={{
+                  marginTop: 6,
+                  paddingTop: 6,
+                  borderTop: '1px dashed rgba(15, 23, 42, 0.15)',
+                  fontSize: '0.82rem',
+                  opacity: 0.75,
+                  display: 'flex',
+                  gap: 6,
+                  alignItems: 'flex-start',
+                }}>
+                  <span style={{ color: '#3b82f6', fontSize: '0.9rem', lineHeight: 1, flexShrink: 0, marginTop: 1 }}>↻</span>
+                  <span>{translation}</span>
+                </div>
+              )}
+            </StyledChatBubble>
           )}
         </StyledChatMessageRow>
       );
     })
   );
+
+  const shouldShowTranslationToggle = translationEnabled && viewerLang && messages.some(
+    (m) => m.from === 'peer' && m.id && !m.gift
+  );
+  const TranslationToggleButton = () => shouldShowTranslationToggle ? (
+    <button
+      type="button"
+      onClick={toggleShowOriginal}
+      title={showOriginal
+        ? i18n.t('chat.translation.showTranslations', 'Mostrar traducciones')
+        : i18n.t('chat.translation.showOriginal', 'Ver original')}
+      style={{
+        position: 'absolute',
+        top: 6,
+        right: 12,
+        zIndex: 5,
+        background: showOriginal ? '#fff' : '#dbeafe',
+        color: '#1e3a8a',
+        border: '1px solid #bfdbfe',
+        borderRadius: 999,
+        padding: '4px 10px',
+        fontSize: 12,
+        cursor: 'pointer',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 4,
+        userSelect: 'none',
+      }}
+    >
+      <span>↻</span>
+      <span>
+        {showOriginal
+          ? i18n.t('chat.translation.showTranslations', 'Mostrar traducciones')
+          : i18n.t('chat.translation.showOriginal', 'Ver original')}
+      </span>
+    </button>
+  ) : null;
 
   const renderClientBalance = () => (
     clientSaldoLoading ? (
@@ -634,7 +716,8 @@ export default function VideoChatRandomModelo(props) {
 
                         {cameraActive && renderCallActions()}
 
-                        <StyledChatContainer data-wide="true">
+                        <StyledChatContainer data-wide="true" style={{position:'relative'}}>
+                          <TranslationToggleButton />
                           <StyledChatList ref={vcListRef}>
                             {renderMessages()}
                           </StyledChatList>
@@ -728,7 +811,8 @@ export default function VideoChatRandomModelo(props) {
 
                       {cameraActive && renderCallActions()}
 
-                      <StyledChatContainer data-wide="true">
+                      <StyledChatContainer data-wide="true" style={{position:'relative'}}>
+                        <TranslationToggleButton />
                         <StyledChatList ref={vcListRef}>
                           {renderMessages()}
                         </StyledChatList>

@@ -509,7 +509,8 @@ export default function VideoChatFavoritosModelo(props) {
                                     </StyledCallBottomInner>
                                   </StyledCallBottomBar>
 
-                                  <StyledChatContainer data-wide="true">
+                                  <StyledChatContainer data-wide="true" style={{position:'relative'}}>
+                                    <TranslationToggleButton />
                                     <StyledChatList ref={callListRef} style={{width:'100%',maxHeight:'40%',overflowY:'auto'}}>
                                       {renderDesktopCallMessages()}
                                     </StyledChatList>

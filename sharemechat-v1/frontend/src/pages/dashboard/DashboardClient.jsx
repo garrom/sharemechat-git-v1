@@ -534,7 +534,15 @@ const DashboardClient = () => {
 
       onChatMessage: (data) => {
         if (!isEcho(data.message)) {
-          setMessages((prev) => [...prev, { from: 'peer', text: data.message }]);
+          // pending-hardening §5.3 (2026-08-08): retenemos msgId + senderId
+          // que envia el backend (MatchingHandlerSupport:chat handler) para
+          // poder usar /messages/translate-batch con el id real de BD.
+          setMessages((prev) => [...prev, {
+            from: 'peer',
+            text: data.message,
+            id: data.msgId ?? null,
+            senderId: data.senderId ?? null,
+          }]);
         }
       },
 
