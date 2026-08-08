@@ -534,7 +534,7 @@ export default function VideoChatFavoritosModelo(props) {
 
                                   <StyledChatContainer data-wide="true">
                                     {shouldShowCallTranslationToggle && (
-                                      <div style={{position:'absolute',top:12,left:12,zIndex:100,pointerEvents:'auto'}}>
+                                      <div style={{position:'absolute',top:12,right:280,zIndex:100,pointerEvents:'auto'}}>
                                         <TranslationToggleButton />
                                       </div>
                                     )}
