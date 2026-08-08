@@ -119,3 +119,27 @@ Antes de tocar un styled-component o crear uno nuevo:
 3. Preferir nombres semánticamente específicos (`DashboardShell`, `PageShell`) sobre genéricos (`Container`, `Wrapper`).
 
 Añadida a `CLAUDE.md` y a memoria de sesión para no reproducir el error de diagnóstico del bug del scroll.
+
+## 7. Fase F ejecutada solo en modo "lite" (2026-08-08)
+
+Tras cerrar Fase E (limpieza huérfanos), se evaluó Fase F-full (reorganizar
+exports entre archivos: renombrar `NavbarStyles.js` a
+`NavbarAndPageStyles.js` o similar, mover `PageShell` a un módulo dedicado
+`LayoutShells.js`; renombrar `VideochatStyles.js` a `DashboardStyles.js` o
+dividir en `LayoutShells + VideoPrimitives + ChatPrimitives + GiftsPanel +
+StatsPanel`). Requeriría actualizar imports en ~40 archivos con riesgo real
+(typos en paths, circular deps posibles, chunk hash reshuffling), y el
+beneficio es puramente cosmético (los archivos con nombre engañoso molestan
+al leer pero no rompen nada).
+
+**Decisión (operador):** cerrar refactor tras Fase E. Ejecutar solo
+**Fase F-lite**: añadir cabecera aclaratoria en `NavbarStyles.js` y
+`VideochatStyles.js` explicando qué contienen realmente y avisando de
+la deuda cosmética. Cero movimiento de código, cero riesgo, mejora la
+experiencia del próximo lector.
+
+**Fase F-full queda como deuda tolerable**. Si el proyecto crece y estos
+módulos se hacen difíciles de mantener por su tamaño (>1500 líneas hoy en
+`VideochatStyles.js`), reabrirla en sesión dedicada con validación
+exhaustiva (build + smoke deploy TEST + revisión visual de las ~40 vistas
+afectadas).

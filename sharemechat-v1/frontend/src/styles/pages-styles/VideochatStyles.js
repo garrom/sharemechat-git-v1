@@ -1,4 +1,34 @@
 // src/styles/pages-styles/VideochatStyles.js
+//
+// ATENCIÓN — módulo con nombre histórico que exporta MÁS de videochat:
+//
+//   1. **Layout general del Dashboard**: DashboardShell (el wrapper de
+//      página app-like con height:100vh condicional por data-tab),
+//      StyledMainContent, StyledCenter, StyledLeftColumn, StyledRightColumn,
+//      StyledCenterPanel, StyledCenterBody, StyledFavoritesShell,
+//      StyledFavoritesColumns. Consumido por 12 vistas (4 Dashboards +
+//      8 KYC/Contract subpages).
+//   2. Primitivas de videochat propiamente (StyledVideoArea, StyledRemoteVideo,
+//      StyledLocalVideo, StyledCallStage, StyledCallTopBar, etc.).
+//   3. Primitivas de chat P2P (StyledChatWhatsApp, StyledChatScroller,
+//      StyledChatMessagesInner, StyledChatDock, StyledChatMessageRow,
+//      StyledChatBubble, StyledChatInput, StyledChatContainer, etc.).
+//   4. Panel de gifts (StyledGiftsPanel, StyledGiftGrid, StyledGiftMessage).
+//   5. Métricas y estadística (StyledStats*, StyledTier*).
+//
+// El nombre "VideochatStyles" viene de la primera iteración del proyecto
+// cuando este archivo solo cubría streaming random. A medida que crecieron
+// favoritos, chat P2P, KYC, etc., se añadieron aquí las primitivas de
+// layout compartido. Ver docs/04-operations/scroll-dashboard-favoritos-
+// investigation-2026-08-08.md (bug diagnosticado el 2026-08-08 pero
+// causado por la confusión de dos StyledContainer en distintos módulos).
+//
+// Renombrar a "DashboardStyles.js" o dividir en varios módulos temáticos
+// (LayoutShells + VideoPrimitives + ChatPrimitives + GiftsPanel + StatsPanel)
+// es deuda cosmética (Fase F-full del refactor 2026-08-08, no ejecutada
+// por relación coste/beneficio: implica actualizar imports en ~40 archivos).
+// Antes de editar exports aquí: verificar unicidad del nombre con grep
+// (ver memory/feedback_styled_components_verify_uniqueness).
 import styled, { createGlobalStyle } from 'styled-components'
 import { colors } from '../core/tokens'
 

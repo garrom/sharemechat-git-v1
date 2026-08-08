@@ -1,3 +1,24 @@
+// src/styles/NavbarStyles.js
+//
+// ATENCIÓN — módulo con nombre histórico que exporta MÁS de lo que sugiere:
+//
+//   1. Componentes del navbar propiamente (StyledNavbar, StyledBrand,
+//      NavText, QueueText, SaldoText, StyledNavActionsRow, StyledNavAvatar,
+//      StyledNavIconButton, LocaleSwitch, LocaleButton, HamburgerButton,
+//      MobileMenu, MobileBottomNav, BottomNavButton, StyledNavTab).
+//   2. **PageShell** (línea ~57, wrapper de página de CONTENIDO con
+//      min-height:100vh + scroll de body tradicional). Consumido por
+//      PerfilClient/PerfilMaster/PerfilModel. Es primo de DashboardShell
+//      (VideochatStyles.js), que es la variante app-like con altura fija
+//      y sin scroll de body. Ver docs/04-operations/scroll-dashboard-
+//      favoritos-investigation-2026-08-08.md y auditoría en el mismo
+//      directorio.
+//
+// Renombrar el archivo a algo tipo "NavbarAndPageStyles.js" o mover
+// PageShell a un módulo LayoutShells.js dedicado es deuda cosmética
+// (Fase F-full del refactor 2026-08-08, no ejecutada por relación
+// coste/beneficio). Antes de editar exports aquí: verificar unicidad del
+// nombre con grep (ver memory/feedback_styled_components_verify_uniqueness).
 import styled from 'styled-components';
 import { colors, radius, space, shadow } from './core/tokens';
 
