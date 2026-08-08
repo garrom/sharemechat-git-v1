@@ -631,6 +631,45 @@ cuando esté disponible. También revisar si conviene sustituir `markdown-pdf`
 por generación con plantilla profesional (pandoc + template LaTeX, o
 Puppeteer HTML→PDF con estilo de marca).
 
+**Referencia UX Studio LiveJasmin — mapa de servicios a replicar (2026-08-08)**:
+observado del backoffice `StudioAccount` de LiveJasmin (acceso público al
+onboarding Studio). Sirve como baseline funcional del dashboard Master de
+SharemeChat cuando el sistema esté consolidado. NO es alcance de S1-S8
+actual; iteración posterior tras validar Master en producción con volumen
+real. No se archiva screenshot en repo (copyright competidor).
+
+Módulos observados en el nav lateral del backoffice LiveJasmin Studio:
+
+1. **Models** — CRUD y gestión de modelos vinculadas al Master.
+   - Buscador por nombre.
+   - Filtros por estado con contadores: All Models, Online, Unfinished
+     (KYC incompleto), Rejected, Active, Closed, Suspended.
+   - Orden por categoría (Amateur Girl, Dancer, Fetish Woman, Free Show
+     Girl, etc.).
+   - Botón "Add new Model" que dispara flujo de onboarding.
+   - Por cada modelo: avatar, nombre, categoría, estado, acciones rápidas
+     (info, stats individual, settings, preview).
+2. **Statistics** — analítica agregada por Master y por modelo.
+3. **Messages** — bandeja de comunicaciones con la plataforma o modelos.
+4. **Personal Data** — datos del propio Master (fiscal, contacto).
+5. **Payout** — gestión de pagos con submenú (probable: métodos,
+   historial, próximo pago, umbrales, invoices).
+6. **Loyalfans** — integración cruzada con otro producto del grupo LiveJasmin.
+7. **Referrals** — programa referidos con submenú (invitar modelos y/o
+   Masters, tracking comisiones).
+8. **Help & Info** — documentación, FAQ, contacto soporte con submenú.
+
+Traducción al roadmap SharemeChat (post-launch, no bloquea S1-S8):
+
+| Módulo LiveJasmin | Estado en SharemeChat | Prioridad |
+|---|---|---|
+| Models — tabla con filtros y contadores por estado | Falta; S3-S4 solo cubre invitación y onboarding, no la vista tabla con filtros/badges | **Alta** (usabilidad con 5-15 modelos por Master) |
+| Statistics agregado por Master | Falta; solo overview per modelo | **Alta** (visibilidad económica al Master) |
+| Payout con historial + próximo pago + umbrales | Parcial en S6 payout multi-rail; falta UX de historial y próximo pago | Media |
+| Referrals programa Master→Master o Master→modelo | Falta | Media (crecimiento viral) |
+| Messages centralizado | Cubierto conceptualmente por tickets ADR-054 con canal Master-plataforma | Baja |
+| Help & Info integrado | Falta; el operador acompaña a cada Master en persona por ahora | Baja |
+
 ### Naturaleza y prioridad de la Parte 5
 
 Las cuatro líneas comparten haber sido levantadas conversacionalmente durante las sesiones del 2026-07-27 (5.1-5.3, pivote hacia PSP tarjeta) y 2026-07-29 (5.4, pivote hacia captación estudios). Ninguna tiene fecha impuesta. Orden sugerido según impacto en fricción vs riesgo técnico:
