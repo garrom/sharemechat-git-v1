@@ -3326,7 +3326,7 @@ const DashboardModel = () => {
 
 
   return (
-    <StyledContainer data-tab={activeTab}>
+    <StyledContainer data-layout="fixed" data-tab={activeTab}>
       <GlobalBlack />
       <AuthenticatedConsentModal
         open={consentRequired}
@@ -3452,7 +3452,7 @@ const DashboardModel = () => {
           />
         ) : activeTab === 'blog' ? (
           /* === BLOG PRIVADO A PANTALLA COMPLETA (SIN COLUMNAS) === */
-          <div style={{flex:1,minWidth:0,minHeight:0}}>
+          <div style={{flex:1,minWidth:0,minHeight:0,overflowY:'auto'}}>
             <BlogContent mode="private" />
           </div>
         ) : (

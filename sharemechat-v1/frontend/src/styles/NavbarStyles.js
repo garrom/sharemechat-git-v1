@@ -55,12 +55,33 @@ export const StyledBrand = styled.a`
 `;
 
 // === StyledContainer ===
+// Layout wrapper de pagina. Por defecto (sin data-layout): min-height:100vh
+// para paginas de contenido que scrollean con el body (perfil, legal,
+// coming-soon, etc.). Con data-layout="fixed": height:100vh + overflow:hidden
+// para paginas app-like con streaming/chat P2P donde el scroll debe vivir
+// DENTRO de sus scrollers internos, no en el body (regresion 2026-08-08 en
+// tab favoritos de dashboard: con historial P2P largo la cadena flex no
+// restringia altura y arrastraba body a hacer scroll; composer y footer
+// quedaban fuera del viewport).
+//
+// Uso:
+//   <StyledContainer>                       -> content page, scroll de body OK.
+//   <StyledContainer data-layout="fixed">   -> app-like, no scroll de body.
+//
+// Regla: los hijos de un layout fixed deben gestionar su propio scroll
+// interno (overflow:auto) donde corresponda; si no, se cortan al viewport.
 export const StyledContainer = styled.div`
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   background: #111418;
   color: #e0e0e0;
+
+  &[data-layout="fixed"] {
+    height: 100vh;
+    min-height: 0;
+    overflow: hidden;
+  }
 `;
 
 // === TEXTO ===
