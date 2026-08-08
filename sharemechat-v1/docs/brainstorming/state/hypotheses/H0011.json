@@ -1,7 +1,41 @@
-{"id":"H0011","cyc":1,"cyl":1,"ch":"seo-usp-timely","th":"Tailwind regulatorio: leyes de age-verification (UK OSA, estados US) generan busquedas de clientes por 'age verified / safe / legal video chat'; SharemeChat cumple nativamente -> contenido que captura esa intencion emergente y poco competida",
-"as":["la regulacion crea intencion de busqueda nueva y creciente","el cliente asocia 'verificado' con seguridad, no solo con 'sin bots'","el cluster esta menos saturado que 'Omegle alternative' generico"],
-"pv":[{"p":"src","s":"S0003"},{"p":"inf"}],
-"ft":"Publicar 1 pillar via pipeline CMS existente ('age-verified video chat: what UK OSA means for you') + cluster; medir GSC impresiones 90d. Exito top-30 + 50 impresiones/mes en cluster 'age verified'",
-"cost":{"eur":0,"type":"none"},
-"sc":{"reach":3,"conv":3,"eff":2,"ban":1,"brand":5,"conf":0.5},
-"st":"recommended","kr":"","par":"","exp":["E0002"]}
+{
+"id": "H0011",
+"cyc": 1,
+"cyl": 1,
+"ch": "seo-usp-timely",
+"th": "Tailwind regulatorio: leyes de age-verification (UK OSA, estados US) generan busquedas de clientes por 'age verified / safe / legal video chat'; SharemeChat cumple nativamente -> contenido que captura esa intencion emergente y poco competida",
+"as": [
+"la regulacion crea intencion de busqueda nueva y creciente",
+"el cliente asocia 'verificado' con seguridad, no solo con 'sin bots'",
+"el cluster esta menos saturado que 'Omegle alternative' generico"
+],
+"pv": [
+{
+"p": "src",
+"s": "S0003"
+},
+{
+"p": "inf"
+}
+],
+"ft": "Publicar 1 pillar via pipeline CMS existente ('age-verified video chat: what UK OSA means for you') + cluster; medir GSC impresiones 90d. Exito top-30 + 50 impresiones/mes en cluster 'age verified'",
+"cost": {
+"eur": 0,
+"type": "none"
+},
+"sc": {
+"reach": 3,
+"conv": 3,
+"eff": 2,
+"ban": 1,
+"brand": 5,
+"conf": 0.5
+},
+"st": "recommended",
+"kr": "",
+"par": "",
+"exp": [
+"E0002"
+],
+"reapuntar": "DESALINEADA con decision bloque Americas (S0025/S0024): H0011 se construyo sobre UK Online Safety Act (regulacion EUROPEA). Reapuntar a leyes de age-verification de ESTADOS US (mercado de arranque). No reescrito aqui; pendiente cuando se active E0002."
+}

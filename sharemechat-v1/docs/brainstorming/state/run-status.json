@@ -1,15 +1,21 @@
 {
-"last_cycle": 11,
-"halt": "blocked+plateau",
-"cycles_this_run": "9-11",
-"date": "2026-07-31",
+"last_cycle": 22,
+"halt": "batch (senal real ingerida N=1)",
+"cycles_this_run": "20-22",
+"date": "2026-08-05",
 "top5": [
 "H0002",
-"H0003",
+"H0015",
 "H0001",
 "H0011",
 "H0014"
 ],
+"titular_2026-08-05": "Canal que trae gente REAL hoy (externo, organico, esfuerzo 0): Google organic (19 users/28d, el mayor) + ChatGPT (5 users). El UNICO con signup atribuido = ChatGPT (1, user44). IA/LLM = ~16% del trafico externo y 100% de los signups atribuidos, pero N=1. CAVEAT: probablemente branded/incidental, no recomendacion organica (sharemechat ausente en WebSearch generico). Google organic trae mas pero aun 0 conversion atribuida.",
+"senal_nueva": "S0021: atribucion viva. H0015 (ai-referral/GEO) elevada a recommended (esfuerzo 0 + unica conversion real), con E0004 (probe visibilidad IA) + R0009. GEO cluster: H0015 <- H0002 + H0011.",
+"modelos_2026-08-06": "S0027+S0028. MODELOS elevado a parte clave del motor (decision operador). CORRECCION FIRME reparto: modelo individual 50-60% (T1 50/T2 54/T3 57/T4 60, BBDD PROD), NO 75-79% (ADR-052 superseded por ADR-056; sistema-tiers-modelos.md desactualizada -> spawn_task correccion repo). '70% para siempre' a fundadoras = OPTIMO (=piso plataforma 30%, +20pp sobre estandar 50%). ADR-056: pivote a captar ESTUDIOS (fallo modelo individual = acceso, no economia) -> los 3 contactos directos del operador resuelven acceso; vector Founding Studios. PROGRESO: 3 modelos dispuestas (1 CO permitida ya + 2 Madagascar BLOQUEADAS, MG no en allowlist -> R0014 config+compliance+payout). CLIENTES (N=9 debil): 8/9 ES, 0 modelos; Spain-first = red del operador + captacion US cero, NO demanda (US sin probar); no re-enfocar España. Pendiente operador: R0014 (Madagascar), R0011 (X/Y gatillo), R0012 (incentivo), R0013 (canal modelas).",
+"convergencia_arranque_2026-08-06": "S0026+A0004 (R0012/R0013). Bucle converge en UN SOLO movimiento sensato: cohorte de MODELAS FUNDADORAS comprometida para la franja Americas, con incentivo (perks-first €0; garantia cash solo si no firman 5), activada SOLO cuando el pago este vivo. Franja AHORA = prematura (quema la escasa demanda contra producto no-convertible PRELAUNCH/sin-pago). Eliminadas: demand-first, 24/7-fino, rehearsal-ya, bots, reclutar-sin-incentivo. Test falsable: >=5 modelas colombianas firman (registro+KYC+commitment franja) en 30d. Pendiente operador: R0012 (incentivo), R0013 (canal reclutamiento modelas, liga R0010), R0011 (X/Y gatillo A->B). NOTA: la ejecucion (oferta/modelas) esta FUERA del mandato SEED (clientes); la IA solo planifica.",
+"decision_bloques_2026-08-06": "S0024+S0025 (R0011). ARRANQUE POR BLOQUES: A=AMERICAS prioridad, franja objetivo 00:00-04:00 UTC (~19-23 COT Colombia / 20-24 US-Este; +1h invierno US) porque la noche natural de la modelo colombiana coincide con prime-time US, cero sacrificio horario. B=EUROPA aparcado (NO descartado) hasta que A arranque. Gatillo A->B: X modelos estables en franja + Y clientes reales recurrentes (X,Y = TBD operador). Mercado cliente arranque = US/CA + LATAM alto-ARPU (MX,AR,CL), no Europa. RESEARCH: franja=patron cold-start probado en dating (The League/Bumble/Ditto/Filter Off) y cam-modelo (Chaturbate ticket shows); fracaso Meta Sparked; incumbentes random-chat van 24/7 (LuckyCrush/CooMeet) -> franja es puente, no fin. DESALINEADAS: H0011 (UK OSA europeo -> reapuntar leyes US, marcada); gap ES para LATAM en experimentos English-generic (aditivo, no reescribir aun).",
+"analisis_modelos_2026-08-06": "S0022+S0023 (R0010): por que no entra ninguna modelo (foco Colombia). FIRME (config): registro modelo ABIERTO (flag true); Colombia PERMITIDA para modelos (allowlist 46), BLOQUEADA para clientes (allowlist 28); PRELAUNCH bloquea sesiones no registro; SEO ES/EN+hreflang; landing con seccion earn/75%. DATO (N debil): Colombia 0 visitas 28d, LATAM casi ausente. CONCLUSION: NO es bloqueo de config -> es reach 0 (nadie de CO/LATAM llega) + no hay funnel de captacion de MODELOS (todo el esfuerzo es cliente-centrico) + cold-start PRELAUNCH sin clientes/ingresos vivos. Captacion de modelos FUERA del mandato SEED (solo clientes) -> R0010 decision operador.",
 "recommended_ready_now": [
 "H0003 (E0001 directorios)",
 "H0005 (E0003 Quora)"
