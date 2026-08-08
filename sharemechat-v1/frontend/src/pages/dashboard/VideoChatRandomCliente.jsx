@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import i18n from '../../i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import BlurredPreview from '../../components/BlurredPreview';
@@ -295,12 +295,16 @@ export default function VideoChatRandomCliente(props) {
     showOriginal,
     toggleShowOriginal,
   } = useTranslationSettings(sessionUser);
-  const messagesForTranslation = messages.map((m) => ({
+  // useMemo obligatorio: sin el, esta expresion crea NUEVA referencia en
+  // cada render y useMessageTranslations lo tiene en su deps del useEffect
+  // → loop de re-render + fetch. Con useMemo se recalcula solo cuando
+  // messages (state estable de useState en el padre) cambia realmente.
+  const messagesForTranslation = useMemo(() => messages.map((m) => ({
     id: m.id,
     body: m.text || '',
     senderId: m.from === 'me' ? sessionUser?.id : (m.senderId ?? -1),
     gift: m.gift,
-  }));
+  })), [messages, sessionUser?.id]);
   const { getTranslation } = useMessageTranslations({
     messages: messagesForTranslation,
     viewerId: sessionUser?.id,
