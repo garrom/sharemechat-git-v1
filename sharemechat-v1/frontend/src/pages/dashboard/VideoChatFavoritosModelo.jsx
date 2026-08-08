@@ -55,6 +55,9 @@ import {
   StyledGiftSection,
   StyledGiftSectionTitle,
   StyledGiftFxLayer,
+  StyledGiftBar,
+  StyledGiftTrack,
+  StyledGiftChip,
 } from '../../styles/pages-styles/VideochatStyles';
 import GiftIcon, { resolveGiftSlug } from '../../components/gifts/GiftIcon';
 import GiftIconDefs from '../../components/gifts/GiftIconDefs';
@@ -192,28 +195,24 @@ export default function VideoChatFavoritosModelo(props) {
   // Fase 3: efectos al aparecer un mensaje-regalo NUEVO (lado modelo; lo ve
   // el modelo cuando el cliente le envia un regalo).
   const fxRef = useRef(null);
-  const effectedRef = useRef(new Set());
-  const fxInitRef = useRef(false);
+  const prevIdsRef = useRef(new Set());
 
   useEffect(() => {
-    effectedRef.current = new Set();
-    fxInitRef.current = false;
+    prevIdsRef.current = new Set();
   }, [selectedContactId]);
 
   useEffect(() => {
     const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const msgs = centerMessages || [];
-    const giftMsgs = msgs.map((m) => ({ m, gd: resolveGiftData(m) })).filter((x) => x.gd);
-    if (!fxInitRef.current) {
-      giftMsgs.forEach((x) => { if (x.m.id != null) effectedRef.current.add(x.m.id); });
-      fxInitRef.current = true;
-      return;
-    }
-    giftMsgs.forEach((x) => {
-      if (x.m.id != null && !effectedRef.current.has(x.m.id)) {
-        effectedRef.current.add(x.m.id);
-        if (!reduce) playGiftFx(x.gd);
-      }
+    const prev = prevIdsRef.current;
+    const wasEmpty = prev.size === 0;
+    const newMsgs = msgs.filter((m) => m.id != null && !prev.has(m.id));
+    prevIdsRef.current = new Set(msgs.map((m) => m.id).filter((x) => x != null));
+    // carga inicial/historial o recarga masiva -> sin efecto (bug confeti masivo).
+    if (wasEmpty || newMsgs.length === 0 || newMsgs.length > 3 || reduce) return;
+    newMsgs.forEach((m) => {
+      const gd = resolveGiftData(m);
+      if (gd) playGiftFx(gd);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [centerMessages]);
@@ -358,6 +357,27 @@ export default function VideoChatFavoritosModelo(props) {
         ) : null}
       </StyledGiftCatalog>
     </StyledGiftsPanel>
+  );
+
+  // Barra de emojis GRATIS siempre visible (modelo solo tiene free). Sin
+  // segmento ni "+"; misma zona que el cliente. Envio directo.
+  const renderModelGiftBar = () => (
+    <StyledGiftBar data-kind="favorites-gift-bar">
+      <StyledGiftTrack>
+        {modelQuickGifts.map((g) => (
+          <StyledGiftChip
+            key={g.id}
+            type="button"
+            disabled={!allowChat}
+            title={g.name}
+            aria-label={g.name}
+            onClick={() => { if (allowChat && sendGiftMsg) sendGiftMsg(g.id); }}
+          >
+            <GiftIcon code={g.code} iconUrl={g.icon} alt={g.name || ''} size={32} />
+          </StyledGiftChip>
+        ))}
+      </StyledGiftTrack>
+    </StyledGiftBar>
   );
 
   // Fase 1 estilos: chat P2P reutiliza SupportMessageBubble con variantes
@@ -734,6 +754,8 @@ export default function VideoChatFavoritosModelo(props) {
                           </StyledChatMessagesInner>
                         </StyledChatScroller>
 
+                        {allowChat && renderModelGiftBar()}
+
                         <StyledChatDockMessageComposer data-kind="favorites-chat">
                           <StyledChatInput
                             value={centerInput}
@@ -748,15 +770,6 @@ export default function VideoChatFavoritosModelo(props) {
                             disabled={!allowChat}
                           />
                           <StyledChatDockActions>
-                            <ButtonRegalo
-                              type="button"
-                              onClick={() => setShowCenterGifts && setShowCenterGifts((s) => !s)}
-                              disabled={!hasActiveDetail || !allowChat}
-                              title={t('dashboardModel.favorites.actions.sendGift')}
-                              aria-label={t('dashboardModel.favorites.actions.sendGift')}
-                            >
-                              <FontAwesomeIcon icon={faGift} />
-                            </ButtonRegalo>
                             <ButtonLlamar
                               onClick={enterCallMode}
                               disabled={!hasCallTarget || !allowChat}
@@ -766,7 +779,6 @@ export default function VideoChatFavoritosModelo(props) {
                               <FontAwesomeIcon icon={faVideo} />
                             </ButtonLlamar>
                           </StyledChatDockActions>
-                          {showCenterGifts && allowChat && hasActiveDetail && renderGiftPicker()}
                         </StyledChatDockMessageComposer>
                       </StyledChatWhatsApp>
                     )}
@@ -988,6 +1000,8 @@ export default function VideoChatFavoritosModelo(props) {
                         {centerMessages.map(renderChatMessage)}
                       </StyledChatMessagesInner>
                     </StyledChatScroller>
+
+                    {allowChat && renderModelGiftBar()}
 
                     <StyledChatDockMessageComposer data-kind="favorites-chat">
                       <StyledChatInput

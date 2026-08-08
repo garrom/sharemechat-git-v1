@@ -67,29 +67,24 @@ export default function VideoChatFavoritosCliente(props){
   // Fase 3: efectos al aparecer un mensaje-regalo NUEVO (lo ven emisor y
   // receptor, cada uno al aparecer el mensaje en su chat).
   const fxRef = useRef(null);
-  const effectedRef = useRef(new Set());
-  const fxInitRef = useRef(false);
+  const prevIdsRef = useRef(new Set());
 
   useEffect(() => {
-    effectedRef.current = new Set();
-    fxInitRef.current = false;
+    prevIdsRef.current = new Set();
   }, [centerChatPeerId]);
 
   useEffect(() => {
     const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const msgs = centerMessages || [];
-    const giftMsgs = msgs.map((m) => ({ m, gd: normalizeGiftMessage(m) })).filter((x) => x.gd);
-    if (!fxInitRef.current) {
-      // carga inicial del historial: marcar como vistos, sin efecto.
-      giftMsgs.forEach((x) => { if (x.m.id != null) effectedRef.current.add(x.m.id); });
-      fxInitRef.current = true;
-      return;
-    }
-    giftMsgs.forEach((x) => {
-      if (x.m.id != null && !effectedRef.current.has(x.m.id)) {
-        effectedRef.current.add(x.m.id);
-        if (!reduce) playGiftFx(x.gd);
-      }
+    const prev = prevIdsRef.current;
+    const wasEmpty = prev.size === 0;
+    const newMsgs = msgs.filter((m) => m.id != null && !prev.has(m.id));
+    prevIdsRef.current = new Set(msgs.map((m) => m.id).filter((x) => x != null));
+    // carga inicial/historial (veniamos de vacio) o recarga masiva -> sin efecto.
+    if (wasEmpty || newMsgs.length === 0 || newMsgs.length > 3 || reduce) return;
+    newMsgs.forEach((m) => {
+      const gd = normalizeGiftMessage(m);
+      if (gd) playGiftFx(gd);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [centerMessages]);
