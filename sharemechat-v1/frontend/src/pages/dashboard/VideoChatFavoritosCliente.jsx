@@ -124,7 +124,7 @@ export default function VideoChatFavoritosCliente(props){
               aria-label={g.name}
               onClick={() => handleGiftChipClick(g)}
             >
-              <GiftIcon slug={g.code} iconUrl={g.icon} alt={g.name || ''} size={32} />
+              <GiftIcon code={g.code} iconUrl={g.icon} alt={g.name || ''} size={32} />
               {giftCat === 'paid' && <span className="gift-chip__price">{fmtEUR(g.cost)}</span>}
             </StyledGiftChip>
           ))}
@@ -156,7 +156,7 @@ export default function VideoChatFavoritosCliente(props){
     return (
       <StyledGiftConfirmOverlay onClick={(e) => { if (e.target === e.currentTarget) close(); }}>
         <StyledGiftConfirmCard>
-          <GiftIcon slug={confirmGift.code} iconUrl={confirmGift.icon} alt={confirmGift.name || ''} size={92} />
+          <GiftIcon code={confirmGift.code} iconUrl={confirmGift.icon} alt={confirmGift.name || ''} size={92} />
           <h3>{confirmGift.name}</h3>
           <div className="gift-confirm__price">{fmtEUR(confirmGift.cost)}</div>
           <div className="gift-confirm__to">
