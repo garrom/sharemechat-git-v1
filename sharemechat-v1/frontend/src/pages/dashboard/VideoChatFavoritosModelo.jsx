@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import i18n from '../../i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faPhoneSlash, faVideo, faPaperPlane, faGift } from '@fortawesome/free-solid-svg-icons';
@@ -343,7 +343,30 @@ export default function VideoChatFavoritosModelo(props) {
     );
   };
 
-  const renderDesktopCallMessages = () => centerMessages.map((m) => renderChatMessageInverted(m, { transparent: true }));
+  // 2026-08-08: chat overlay durante llamada 1a1 solo muestra mensajes de la
+  // llamada actual (no el historial P2P completo). Simetrico al Cliente.
+  const [callStartedAt, setCallStartedAt] = useState(null);
+  useEffect(() => {
+    if (callStatus === 'in-call' && callStartedAt == null) {
+      setCallStartedAt(Date.now());
+    } else if (callStatus === 'idle' || callStatus === undefined || callStatus === null) {
+      if (callStartedAt != null) setCallStartedAt(null);
+    }
+  }, [callStatus, callStartedAt]);
+  const callMessages = useMemo(() => {
+    if (callStartedAt == null) return [];
+    return (centerMessages || []).filter((m) => {
+      if (!m?.createdAt) return false;
+      const t = new Date(m.createdAt).getTime();
+      return Number.isFinite(t) && t >= callStartedAt;
+    });
+  }, [centerMessages, callStartedAt]);
+
+  const renderDesktopCallMessages = () => callMessages.map((m) => renderChatMessageInverted(m, { transparent: true }));
+
+  const shouldShowCallTranslationToggle = translationEnabled && viewerLang && callMessages.some(
+    (m) => Number(m?.senderId) !== Number(user?.id) && !m?.gift
+  );
 
   const renderCallClientBalance = () => (
     callClientSaldoLoading ? (
@@ -510,7 +533,11 @@ export default function VideoChatFavoritosModelo(props) {
                                   </StyledCallBottomBar>
 
                                   <StyledChatContainer data-wide="true">
-                                    <TranslationToggleButton />
+                                    {shouldShowCallTranslationToggle && (
+                                      <div style={{position:'absolute',top:12,left:12,zIndex:100,pointerEvents:'auto'}}>
+                                        <TranslationToggleButton />
+                                      </div>
+                                    )}
                                     <StyledChatList ref={callListRef} style={{width:'100%',maxHeight:'40%',overflowY:'auto'}}>
                                       {renderDesktopCallMessages()}
                                     </StyledChatList>

@@ -365,9 +365,9 @@ export default function VideoChatRandomModelo(props) {
         : i18n.t('chat.translation.showOriginal', 'Ver original')}
       style={{
         position: 'absolute',
-        top: 6,
-        right: 12,
-        zIndex: 5,
+        top: 12,
+        left: 12,
+        zIndex: 100,
         background: showOriginal ? '#fff' : '#dbeafe',
         color: '#1e3a8a',
         border: '1px solid #bfdbfe',
