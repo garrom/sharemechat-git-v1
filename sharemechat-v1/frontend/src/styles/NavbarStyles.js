@@ -1,4 +1,4 @@
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
 import { colors, radius, space, shadow } from './core/tokens';
 
 const NAV_COLLAPSE_BP = '1360px';
@@ -71,17 +71,18 @@ export const StyledBrand = styled.a`
 // Regla: los hijos de un layout fixed deben gestionar su propio scroll
 // interno (overflow:auto) donde corresponda; si no, se cortan al viewport.
 export const StyledContainer = styled.div`
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
   background: #111418;
   color: #e0e0e0;
 
-  &[data-layout="fixed"] {
+  ${props => props['data-layout'] === 'fixed' ? css`
     height: 100vh;
     min-height: 0;
     overflow: hidden;
-  }
+  ` : css`
+    min-height: 100vh;
+  `}
 `;
 
 // === TEXTO ===
