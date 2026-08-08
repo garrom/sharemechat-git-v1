@@ -142,11 +142,24 @@ export const StyledMainContent = styled.div`
   padding: ${props => props['data-tab'] === 'stats' ? '0' : '16px'};
   box-sizing: border-box;
 
-  /* Regla clave:
-     - videochat: sin scroll interno (como antes)
-     - resto (onboarding, documentos, etc.): permite scroll vertical */
+  /* Regla clave (2026-08-08 refactor):
+     - app-like (videochat, favoritos, calling): overflow:hidden. El chat/
+       stream interno tiene su propio scroller (StyledChatScroller
+       overflow-y:auto), la pagina no scrollea con el body. Esto arregla
+       la regresion latente del chat P2P Favoritos con historial largo:
+       antes 'favoritos' caia en el 'auto' y como su altura no estaba
+       capped por la cadena flex, crecia con contenido y arrastraba body.
+     - content-like (blog, historial, tickets, stats): overflow:auto. El
+       contenido puede crecer y hace scroll interno de StyledMainContent
+       (StyledContainer padre ya es height:100vh overflow:hidden via
+       data-layout="fixed", asi que este overflow:auto vive DENTRO del
+       viewport, no del body). */
   overflow: ${props =>
-    props['data-tab'] === 'videochat' ? 'hidden' : 'auto'};
+    (props['data-tab'] === 'videochat'
+      || props['data-tab'] === 'favoritos'
+      || props['data-tab'] === 'calling')
+      ? 'hidden'
+      : 'auto'};
 
   @media (max-width: 768px) {
     padding: 0;
