@@ -1,0 +1,170 @@
+<title>Fase 4 · Streaming: vídeo ancho + chat lateral</title>
+<style>
+  :root{
+    --ink:#0b0d10;--chrome:#111418;--chrome-2:#161a20;--line:rgba(255,255,255,.09);
+    --txt:#e7ebf0;--mut:rgba(231,235,240,.6);--mut-2:rgba(231,235,240,.4);
+    --mint:#35d29b;--gold:#f5b942;--coral:#ff5c8a;--sky:#5cc8ff;--violet:#a78bfa;
+    --bubble-me:#d9fdd3;--bubble-peer:#fff;
+    --sans:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}body{margin:0}
+  .wrap{font-family:var(--sans);color:var(--txt);min-height:100vh;padding:30px clamp(12px,3vw,40px) 64px;
+    background:radial-gradient(1200px 560px at 12% -10%,#17202b 0,transparent 55%),radial-gradient(1000px 460px at 100% 0,#1a1220 0,transparent 50%),var(--ink)}
+  .head{max-width:1500px;margin:0 auto 18px}
+  .eyebrow{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--mut-2);margin:0 0 8px}
+  h1{font-size:clamp(20px,2.8vw,28px);margin:0 0 8px;font-weight:700;letter-spacing:-.02em}
+  h1 .hl{background:linear-gradient(90deg,var(--coral),var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lede{max-width:70ch;color:var(--mut);font-size:14.5px;line-height:1.6;margin:0}
+
+  .stage{max-width:1500px;margin:0 auto;display:flex;gap:14px;align-items:stretch;height:min(72vh,720px)}
+  /* VÍDEO — ocupa todo el ancho disponible (antes: franja centrada max 960px) */
+  .video{flex:1;min-width:0;position:relative;border-radius:18px;overflow:hidden;
+    background:radial-gradient(120% 120% at 30% 20%,#3a2a3f 0%,#15171d 60%,#0c0e12 100%);
+    border:1px solid var(--line);box-shadow:0 24px 60px rgba(0,0,0,.5)}
+  .vcenter{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:rgba(255,255,255,.5)}
+  .vcenter .big{width:120px;height:120px;border-radius:50%;background:linear-gradient(135deg,var(--coral),var(--violet));display:grid;place-items:center;font-size:44px;font-weight:700;color:#fff;box-shadow:0 20px 50px rgba(0,0,0,.4)}
+  .vcenter small{font-size:13px;letter-spacing:.05em}
+  .topbar{position:absolute;top:12px;left:12px;right:12px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;z-index:3}
+  .meta{display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.42);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:5px 12px 5px 6px;backdrop-filter:blur(8px)}
+  .meta .av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--coral),var(--violet));display:grid;place-items:center;font-size:12px;font-weight:700}
+  .meta b{font-size:13px}.meta .live{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#ff6b6b}
+  .meta .live::before{content:"";width:7px;height:7px;border-radius:50%;background:#ff3b3b;box-shadow:0 0 0 3px rgba(255,59,59,.25)}
+  .hud{display:flex;gap:8px;font-size:12px;color:var(--mut);align-items:center}
+  .hud b{color:#fff}.hud .rate{color:var(--mint)}
+  .pip{position:absolute;top:12px;right:12px;width:22%;max-width:240px;aspect-ratio:4/3;border-radius:12px;overflow:hidden;
+    background:linear-gradient(135deg,#2a2f3a,#12151b);border:1px solid rgba(255,255,255,.14);box-shadow:0 12px 30px rgba(0,0,0,.4);z-index:4;display:grid;place-items:center;color:rgba(255,255,255,.4);font-size:12px}
+  .vactions{position:absolute;left:0;right:0;bottom:16px;display:flex;justify-content:center;gap:10px;z-index:3}
+  .vbtn{width:52px;height:52px;border-radius:50%;border:none;display:grid;place-items:center;font-size:19px;color:#fff;cursor:pointer;box-shadow:0 10px 24px rgba(0,0,0,.4)}
+  .vbtn.hang{background:linear-gradient(135deg,#ff4d4d,#d81f1f)}.vbtn.next{background:rgba(255,255,255,.16);backdrop-filter:blur(6px)}.vbtn.fav{background:rgba(255,255,255,.16);backdrop-filter:blur(6px)}
+  .fxv{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:5}
+
+  /* CHAT — bloque lateral aparte (antes: overlay sobre el vídeo) */
+  .side{width:360px;flex:0 0 360px;display:flex;flex-direction:column;border-radius:18px;overflow:hidden;
+    background:linear-gradient(180deg,var(--chrome-2),var(--chrome));border:1px solid var(--line);box-shadow:0 24px 60px rgba(0,0,0,.5)}
+  .side-h{display:flex;align-items:center;gap:9px;padding:12px 14px;border-bottom:1px solid var(--line)}
+  .side-h .av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--coral),var(--violet));display:grid;place-items:center;font-size:12px;font-weight:700}
+  .side-h small{display:block;color:var(--mint);font-size:11px}
+  .msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:9px;background:rgba(255,255,255,.015)}
+  .row{display:flex}.row.me{justify-content:flex-end}
+  .bubble{max-width:82%;padding:7px 11px;border-radius:13px;font-size:13.5px;line-height:1.45;color:#111827}
+  .row.me .bubble{background:var(--bubble-me)}.row.peer .bubble{background:#f0f2f5}
+  .gift-row{display:flex;justify-content:flex-end}
+  .gift-row svg{width:52px;height:52px;filter:drop-shadow(0 8px 12px rgba(0,0,0,.3));animation:pop .5s cubic-bezier(.22,1.5,.4,1) both}
+  @keyframes pop{0%{transform:scale(.2);opacity:0}60%{transform:scale(1.18);opacity:1}100%{transform:scale(1)}}
+
+  .composer{border-top:1px solid var(--line);background:#111418}
+  .giftbar{display:flex;align-items:center;gap:7px;padding:8px 10px 5px}
+  .seg{display:inline-flex;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:999px;padding:2px;flex-shrink:0}
+  .seg button{border:0;background:transparent;color:var(--mut);font-family:inherit;font-size:11px;font-weight:600;padding:4px 9px;border-radius:999px;cursor:pointer}
+  .seg button.on{background:#fff;color:#111}.seg button.on.paid{background:linear-gradient(180deg,#ffd778,var(--gold));color:#2a1c04}
+  .track{flex:1;min-width:0;display:flex;gap:5px;overflow-x:auto;padding:2px 2px 5px;scrollbar-width:thin}
+  .track::-webkit-scrollbar{height:5px}.track::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:999px}
+  .g{position:relative;flex:0 0 auto;width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:radial-gradient(circle at 50% 32%,rgba(255,255,255,.08),rgba(255,255,255,.02));display:grid;place-items:center;cursor:pointer;transition:transform .12s}
+  .g:hover{transform:translateY(-2px)}.g svg{width:28px;height:28px}
+  .g .tag{position:absolute;bottom:-3px;right:-3px;font-size:8.5px;font-weight:700;color:#2a1c04;background:linear-gradient(180deg,#ffd778,var(--gold));padding:1px 4px;border-radius:999px}
+  .inputrow{display:flex;align-items:center;gap:7px;padding:5px 10px 10px}
+  .inputrow .emoji{width:38px;height:38px;border-radius:11px;border:1px solid var(--line);background:rgba(255,255,255,.08);color:#fff;font-size:16px;cursor:pointer;flex-shrink:0}
+  .inputrow input{flex:1;height:38px;border-radius:11px;border:1px solid transparent;background:rgba(255,255,255,.1);color:#f8fafc;padding:0 12px;font-size:13.5px;outline:none}
+  .inputrow .send{width:38px;height:38px;border-radius:11px;border:none;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;font-size:14px;cursor:pointer;flex-shrink:0}
+
+  @media(max-width:900px){.stage{flex-direction:column;height:auto}.side{width:100%;flex:1 1 auto;height:340px}.video{height:300px}}
+
+  .foot{max-width:1500px;margin:18px auto 0;display:flex;gap:16px;flex-wrap:wrap}
+  .fcard{flex:1;min-width:250px;background:linear-gradient(180deg,var(--chrome-2),var(--chrome));border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+  .fcard h3{margin:0 0 8px;font-size:13px;font-weight:700}
+  .fcard p{margin:0;font-size:12.5px;color:var(--mut);line-height:1.6}
+  .fcard code{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--gold);font-size:11px}
+  .warn{border-color:rgba(245,185,66,.3)}.warn h3{color:var(--gold)}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-heart" viewBox="0 0 64 64"><path d="M32 53C30 47 14 38 10 26 7 17 14 11 22 13 27 14 30 18 32 23 34 18 37 14 42 13 50 11 57 17 54 26 50 38 34 47 32 53Z" fill="#ff4d6d"/></symbol>
+  <symbol id="i-star" viewBox="0 0 64 64"><path d="M32 8 37.9 23.9 54.8 24.6 41.5 35.1 46.1 51.4 32 42 17.9 51.4 22.5 35.1 9.2 24.6 26.1 23.9Z" fill="#ffd15c"/></symbol>
+  <symbol id="i-fire" viewBox="0 0 64 64"><path d="M33 6c8 12 15 16 13 29-1 11-8 19-14 21-6-2-13-9-13-20 0-7 5-9 7-14 2 6 4 6 4 1 0-9 0-12 3-17Z" fill="#ff7a1a"/><path d="M33 28c4 5 6 9 5 15-1 5-4 9-6 10-3-1-6-5-6-11 0-4 3-6 4-9 1 3 3 3 3-1 0-2 0-3 0-4Z" fill="#ffd15c"/></symbol>
+  <symbol id="i-rose" viewBox="0 0 64 64"><path d="M31 40h2v18h-2z" fill="#2c9a5e"/><path d="M32 52c-7-2-13 1-14 8 7 2 13-1 14-8Z" fill="#37bf74"/><path d="M32 54c7-3 14 0 15 7-7 2-14-1-15-7Z" fill="#2fa565"/><circle cx="32" cy="24" r="16" fill="#e8456f"/><path d="M32 10c8 0 15 6 16 14 0-2-3-4-6-3 2-3-1-7-4-6 1-3-3-6-6-4-3-2-7 1-6 4-3-1-6 3-4 6-3-1-6 1-6 3 1-8 8-14 16-14Z" fill="#ff7096"/><circle cx="32" cy="25" r="3.4" fill="#c22c53"/></symbol>
+  <symbol id="i-cocktail" viewBox="0 0 64 64"><path d="M14 15h36L32 37Z" fill="#dfe7ee"/><path d="M19 20h26L32 33Z" fill="#ff8a5c"/><path d="M31 36h2v16h-2z" fill="#cfd8e0"/><ellipse cx="32" cy="53" rx="11" ry="3.4" fill="#cfd8e0"/><path d="M43 15l6-7" stroke="#37bf74" stroke-width="2.4" stroke-linecap="round"/><circle cx="41" cy="20" r="3.4" fill="#ff4d6d"/></symbol>
+  <symbol id="i-diamond" viewBox="0 0 64 64"><path d="M20 16h24l10 12-22 26L10 28Z" fill="#5cc8ff"/><path d="M10 28h44L32 54Z" fill="#37a9e8"/><path d="M20 16 24 28 10 28ZM44 16 40 28 54 28ZM24 28h16l-8 26Z" fill="#8fdcff"/><path d="M24 28 32 20 40 28Z" fill="#cdeeff"/></symbol>
+  <symbol id="i-crown" viewBox="0 0 64 64"><path d="M10 44 12 20 24 33 32 16 40 33 52 20 54 44Z" fill="#ffd15c"/><rect x="10" y="44" width="44" height="9" rx="2.5" fill="#f0b429"/><circle cx="32" cy="26" r="3" fill="#ff4d6d"/></symbol>
+  <symbol id="i-gift" viewBox="0 0 64 64"><rect x="12" y="26" width="40" height="28" rx="3" fill="#ff5c8a"/><rect x="10" y="18" width="44" height="11" rx="3" fill="#ff789e"/><rect x="28" y="18" width="8" height="36" fill="#ffd15c"/><path d="M32 18c-2-8-14-8-12 0 3 3 8 2 12 0Zm0 0c2-8 14-8 12 0-3 3-8 2-12 0Z" fill="#f0b429"/></symbol>
+</defs></svg>
+
+<div class="wrap">
+  <header class="head">
+    <p class="eyebrow">Fase 4 · videochat / streaming</p>
+    <h1>Vídeo <span class="hl">ancho</span> + chat como <span class="hl">bloque lateral</span></h1>
+    <p class="lede">El vídeo pasa a ocupar todo el ancho disponible (hoy está limitado a una franja centrada de 960–1040px). El chat sale de encima del vídeo y se convierte en una columna propia a la derecha, con su barra de regalos, emojis y efectos. Formato tipo LiveJasmin.</p>
+  </header>
+
+  <div class="stage">
+    <div class="video">
+      <div class="vcenter"><div class="big">L</div><small>vídeo de la modelo (placeholder)</small></div>
+      <div class="topbar">
+        <div class="meta"><span class="av">L</span><b>Laura</b><span class="live">EN VIVO</span></div>
+        <div class="hud"><span>⏱ <b>04:17</b></span><span class="rate">+2,10 €</span></div>
+      </div>
+      <div class="pip">tu cámara</div>
+      <div class="vactions">
+        <button class="vbtn next" title="Siguiente">⏭</button>
+        <button class="vbtn hang" title="Colgar">✕</button>
+        <button class="vbtn fav" title="Favorito">＋</button>
+      </div>
+      <div class="fxv" id="fxv"></div>
+    </div>
+
+    <div class="side">
+      <div class="side-h"><span class="av">L</span><div><strong style="font-size:13px">Laura</strong><small>● en vivo</small></div></div>
+      <div class="msgs" id="msgs">
+        <div class="row peer"><div class="bubble">¡Hola amor! gracias por entrar 💕</div></div>
+        <div class="row me"><div class="bubble">Estás guapísima hoy</div></div>
+        <div class="row peer"><div class="bubble">jiji ¿me mandas un regalito?</div></div>
+      </div>
+      <div class="composer">
+        <div class="giftbar">
+          <div class="seg"><button id="segFree" class="on" onclick="setCat('free')">Gratis</button><button id="segPaid" onclick="setCat('paid')">Regalos</button></div>
+          <div class="track" id="track"></div>
+        </div>
+        <div class="inputrow"><button class="emoji">😊</button><input placeholder="Escribe un mensaje…"/><button class="send">➤</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="fcard"><h3>Qué cambia</h3><p>El vídeo deja de estar limitado a <code>max-width 960–1040px</code> y usa el ancho disponible. El chat sale del overlay (<code>StyledChatContainer inset:0</code>) y pasa a columna lateral propia.</p></div>
+    <div class="fcard"><h3>Todo lo del chat puro, aquí</h3><p>La columna lateral reutiliza la barra de regalos (Fase 1), emojis/reacciones (Fase 2) y efectos (Fase 3). Un solo lenguaje entre chat puro y streaming.</p></div>
+    <div class="fcard warn"><h3>⚠ Restricción documentada</h3><p>Un intento previo de ensanchar el vídeo rompía en <b>pantallas grandes</b>. Solución: cap por alto de viewport (<code>height:calc(100vh - X)</code>) + <code>max-width</code> del conjunto y probar en 1440p/4K antes de dar por buena la fase.</p></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var free=[["i-heart"],["i-star"],["i-fire"]];
+  var paid=[["i-rose","0,99"],["i-cocktail","1,99"],["i-diamond","9,99"],["i-crown","19,99"],["i-gift","4,99"]];
+  var track=document.getElementById("track"),msgs=document.getElementById("msgs"),fxv=document.getElementById("fxv");
+  var reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+  window.setCat=function(cat){
+    document.getElementById("segFree").className=cat==="free"?"on":"";
+    document.getElementById("segPaid").className=cat==="paid"?"on paid":"";
+    track.innerHTML="";
+    (cat==="free"?free:paid).forEach(function(x){
+      var b=document.createElement("div");b.className="g";
+      b.innerHTML='<svg><use href="#'+x[0]+'"/></svg>'+(x[1]?'<span class="tag">'+x[1]+'</span>':'');
+      var paidGift=!!x[1];b.onclick=function(){send(x[0],paidGift);};track.appendChild(b);
+    });
+  };
+  function send(id,paid){
+    var row=document.createElement("div");row.className="gift-row";
+    row.innerHTML='<svg><use href="#'+id+'"/></svg>';
+    msgs.appendChild(row);msgs.scrollTop=msgs.scrollHeight;
+    if(!reduce&&paid) party();
+  }
+  function spawn(style,dur){var el=document.createElement("div");el.style.position="absolute";for(var k in style){if(k.charAt(0)==='-')el.style.setProperty(k,style[k]);else el.style[k]=style[k];}fxv.appendChild(el);setTimeout(function(){el.remove();},dur);}
+  function rnd(a,b){return a+(b-a)*Math.random();}
+  var COLS=["#ff5c8a","#f5b942","#5cc8ff","#a78bfa","#35d29b","#ff7a1a"];
+  function party(){
+    for(var c=0;c<40;c++)(function(c){setTimeout(function(){var w=rnd(6,11);spawn({left:rnd(0,fxv.clientWidth)+"px",top:"-20px",width:w+"px",height:(w*1.7)+"px",borderRadius:"2px",background:COLS[c%COLS.length],"--dx":rnd(-40,40)+"px","--rot":rnd(180,620)+"deg",animation:"fall4 "+rnd(1.6,2.8)+"s linear forwards"},2900);},c*24);})(c);
+    for(var s=0;s<12;s++)(function(s){setTimeout(function(){var h=rnd(48,96);spawn({left:rnd(0,fxv.clientWidth)+"px",top:(-h-10)+"px",width:rnd(5,8)+"px",height:h+"px",borderRadius:"6px",background:COLS[s%COLS.length],opacity:.9,"--dx":rnd(-70,70)+"px","--rot":rnd(120,420)+"deg",animation:"fall4 "+rnd(1.9,3)+"s cubic-bezier(.4,.1,.6,1) forwards"},3200);},s*45);})(s);
+  }
+  var st=document.createElement("style");st.textContent="@keyframes fall4{0%{transform:translateY(-30px) rotate(0);opacity:0}12%{opacity:1}100%{transform:translateY("+ '520px' +") translateX(var(--dx)) rotate(var(--rot));opacity:0}}";document.head.appendChild(st);
+  setCat("paid");
+})();
+</script>

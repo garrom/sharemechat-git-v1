@@ -1,0 +1,161 @@
+<title>Fase 2 · Reacciones y emojis</title>
+<style>
+  :root{
+    --ink:#0b0d10;--chrome:#111418;--chrome-2:#161a20;--line:rgba(255,255,255,.09);
+    --txt:#e7ebf0;--mut:rgba(231,235,240,.6);--mut-2:rgba(231,235,240,.4);
+    --mint:#35d29b;--gold:#f5b942;--coral:#ff5c8a;--violet:#a78bfa;
+    --chat:#e7ded2;--bubble-me:#d9fdd3;--bubble-peer:#fff;
+    --sans:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}body{margin:0}
+  .wrap{font-family:var(--sans);color:var(--txt);min-height:100vh;padding:32px clamp(14px,4vw,48px) 72px;
+    background:radial-gradient(1100px 560px at 12% -10%,#17202b 0,transparent 55%),radial-gradient(900px 460px at 100% 0,#1a1220 0,transparent 50%),var(--ink)}
+  .head{max-width:760px;margin:0 auto 22px}
+  .eyebrow{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--mut-2);margin:0 0 8px}
+  h1{font-size:clamp(21px,3vw,30px);margin:0 0 10px;font-weight:700;letter-spacing:-.02em}
+  h1 .hl{background:linear-gradient(90deg,var(--coral),var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lede{max-width:62ch;color:var(--mut);font-size:15px;line-height:1.6;margin:0}
+
+  .app{max-width:760px;margin:0 auto;border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.5);background:var(--chrome)}
+  .topbar{display:flex;align-items:center;gap:10px;padding:11px 16px;background:#111418;border-bottom:1px solid var(--line)}
+  .avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--coral),var(--violet));display:grid;place-items:center;font-size:14px;font-weight:700}
+  .topbar small{display:block;color:var(--mint);font-size:11px}
+
+  .chat{height:360px;display:flex;flex-direction:column;background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.04)),var(--chat)}
+  .scroll{flex:1;overflow-y:auto;padding:16px 16px 10px;display:flex;flex-direction:column;gap:14px}
+  .row{display:flex}.row.me{justify-content:flex-end}
+  .bwrap{position:relative;max-width:78%}
+  .bubble{padding:8px 12px;border-radius:14px;font-size:14px;line-height:1.5;color:#111827;box-shadow:0 6px 16px rgba(0,0,0,.1)}
+  .row.me .bubble{background:var(--bubble-me)}.row.peer .bubble{background:var(--bubble-peer)}
+
+  /* botón añadir reacción (aparece al hover del mensaje) */
+  .react-btn{position:absolute;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:50%;border:1px solid var(--line);
+    background:#111418;color:#fff;font-size:14px;cursor:pointer;display:grid;place-items:center;opacity:0;transition:opacity .12s;box-shadow:0 6px 14px rgba(0,0,0,.3)}
+  .row.peer .react-btn{right:-36px}.row.me .react-btn{left:-36px}
+  .bwrap:hover .react-btn{opacity:1}
+
+  /* popover de emojis rápidos */
+  .react-pop{position:absolute;bottom:calc(100% + 8px);display:none;gap:2px;padding:5px 7px;border-radius:999px;
+    background:#1b2028;border:1px solid var(--line);box-shadow:0 14px 34px rgba(0,0,0,.5);z-index:10}
+  .row.peer .react-pop{left:0}.row.me .react-pop{right:0}
+  .react-pop.show{display:flex}
+  .react-pop button{border:0;background:transparent;font-size:20px;line-height:1;padding:4px;border-radius:8px;cursor:pointer;transition:transform .1s,background .1s}
+  .react-pop button:hover{transform:scale(1.25) translateY(-2px);background:rgba(255,255,255,.06)}
+
+  /* chips de reacción bajo la burbuja */
+  .reactions{display:flex;gap:4px;margin-top:-6px;padding-left:6px}
+  .row.me .reactions{justify-content:flex-end;padding-right:6px}
+  .chip{display:inline-flex;align-items:center;gap:3px;font-size:12px;background:#fff;border:1px solid rgba(0,0,0,.08);
+    border-radius:999px;padding:2px 7px;box-shadow:0 3px 8px rgba(0,0,0,.12);color:#333;cursor:pointer;animation:chipIn .25s cubic-bezier(.22,1.4,.4,1) both}
+  .chip b{font-weight:600;color:#555}
+  @keyframes chipIn{0%{transform:scale(.3);opacity:0}70%{transform:scale(1.15)}100%{transform:scale(1)}}
+
+  /* composer */
+  .composer{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#111418;border-top:1px solid var(--line);position:relative}
+  .composer input{flex:1;height:40px;border-radius:12px;border:1px solid transparent;background:rgba(255,255,255,.1);color:#f8fafc;padding:0 14px;font-size:15px;outline:none}
+  .composer input::placeholder{color:rgba(226,232,240,.6)}
+  .cbtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.08);color:#fff;display:grid;place-items:center;font-size:18px;cursor:pointer;flex-shrink:0}
+  .cbtn.on{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.3)}
+  .cbtn.send{background:linear-gradient(135deg,#3b82f6,#2563eb);border:none;font-size:15px}
+
+  /* panel de emojis del input */
+  .emojipanel{position:absolute;bottom:calc(100% + 8px);left:12px;width:min(320px,86%);display:none;
+    background:#1b2028;border:1px solid var(--line);border-radius:14px;padding:10px;box-shadow:0 18px 44px rgba(0,0,0,.55);z-index:12}
+  .emojipanel.show{display:block}
+  .emojipanel .gr{display:grid;grid-template-columns:repeat(8,1fr);gap:2px;max-height:180px;overflow-y:auto}
+  .emojipanel .gr button{border:0;background:transparent;font-size:20px;padding:5px;border-radius:8px;cursor:pointer}
+  .emojipanel .gr button:hover{background:rgba(255,255,255,.08)}
+  .emojipanel .tt{font-size:11px;color:var(--mut-2);letter-spacing:.1em;text-transform:uppercase;margin:0 0 8px 2px}
+
+  .foot{max-width:760px;margin:18px auto 0;display:flex;gap:18px;flex-wrap:wrap}
+  .fcard{flex:1;min-width:220px;background:linear-gradient(180deg,var(--chrome-2),var(--chrome));border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+  .fcard h3{margin:0 0 8px;font-size:13px;font-weight:700}
+  .fcard p{margin:0;font-size:12.5px;color:var(--mut);line-height:1.65}
+  .fcard code{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--gold);font-size:11px}
+  .hint{max-width:760px;margin:10px auto 0;font-size:12.5px;color:var(--mut-2)}
+</style>
+
+<div class="wrap">
+  <header class="head">
+    <p class="eyebrow">Fase 2 · chat de favoritos</p>
+    <h1>Reacciones y <span class="hl">emojis</span></h1>
+    <p class="lede">Dos cosas nuevas: reaccionar a un mensaje (estilo WhatsApp) y un selector de emojis para el texto. Son emojis unicode nativos — distintos de los regalos SVG, que siguen en la barra de la Fase 1.</p>
+  </header>
+
+  <div class="app">
+    <div class="topbar">
+      <div class="avatar">L</div>
+      <div><strong style="font-size:13px">Laura</strong><small>● en línea</small></div>
+    </div>
+    <div class="chat">
+      <div class="scroll" id="scroll">
+        <div class="row peer"><div class="bwrap">
+          <div class="bubble">¡Hola guapo! ¿cómo estás?</div>
+          <button class="react-btn" onclick="openReact(this)">🙂</button>
+          <div class="react-pop"></div><div class="reactions"></div>
+        </div></div>
+        <div class="row me"><div class="bwrap">
+          <div class="bubble">Mucho mejor hablando contigo 😍</div>
+          <button class="react-btn" onclick="openReact(this)">🙂</button>
+          <div class="react-pop"></div><div class="reactions"></div>
+        </div></div>
+        <div class="row peer"><div class="bwrap">
+          <div class="bubble">jajaja qué zalamero 💕 pasa el ratón por mi mensaje y reacciona</div>
+          <button class="react-btn" onclick="openReact(this)">🙂</button>
+          <div class="react-pop"></div><div class="reactions"></div>
+        </div></div>
+      </div>
+      <div class="composer">
+        <div class="emojipanel" id="emojiPanel"><p class="tt">Emojis</p><div class="gr" id="emojiGrid"></div></div>
+        <div class="cbtn" id="emojiBtn" title="Emojis" onclick="togglePanel()">😊</div>
+        <input id="input" placeholder="Escribe un mensaje…" />
+        <div class="cbtn send" title="Enviar">➤</div>
+      </div>
+    </div>
+  </div>
+
+  <p class="hint">Pasa el ratón por cualquier mensaje y pulsa 🙂 para reaccionar. Pulsa 😊 en el composer para insertar emojis en el texto.</p>
+
+  <div class="foot">
+    <div class="fcard"><h3>Reacciones</h3><p>Hover del mensaje → 🙂 → picker rápido (👍❤️😂😮😢🙏). El chip aparece pegado a la burbuja. Requiere persistir la reacción (tabla + WS) — a detallar al implementar.</p></div>
+    <div class="fcard"><h3>Selector de texto</h3><p>Botón 😊 en el composer abre un panel de emojis que se insertan en el <code>input</code>. Sin backend, solo frontend.</p></div>
+    <div class="fcard"><h3>No confundir con regalos</h3><p>Esto son emojis unicode para reaccionar/escribir. Los regalos SVG (gratis y de pago) siguen en la barra de la Fase 1.</p></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var quick=['👍','❤️','😂','😮','😢','🙏'];
+  var panel=['😀','😁','😂','🤣','😊','😍','😘','😎','🥰','😜','🤗','🤩','😌','😏','😴','🤤','😇','🥳','😭','😅','🔥','💦','💋','❤️','💕','💯','👍','👏','🙌','✨','🌹','🎁'];
+  var openPop=null;
+
+  window.openReact=function(btn){
+    var wrap=btn.parentElement, pop=wrap.querySelector('.react-pop');
+    if(openPop&&openPop!==pop) openPop.classList.remove('show');
+    if(!pop.dataset.built){
+      quick.forEach(function(e){var b=document.createElement('button');b.textContent=e;
+        b.onclick=function(ev){ev.stopPropagation();addReaction(wrap,e);pop.classList.remove('show');openPop=null;};pop.appendChild(b);});
+      pop.dataset.built="1";
+    }
+    pop.classList.toggle('show'); openPop=pop.classList.contains('show')?pop:null;
+  };
+  function addReaction(wrap,emoji){
+    var box=wrap.querySelector('.reactions');
+    var ex=Array.from(box.children).find(function(c){return c.dataset.e===emoji;});
+    if(ex){var n=(parseInt(ex.dataset.n||'1')+1);ex.dataset.n=n;ex.innerHTML=emoji+' <b>'+n+'</b>';return;}
+    var chip=document.createElement('span');chip.className='chip';chip.dataset.e=emoji;chip.dataset.n='1';
+    chip.innerHTML=emoji+' <b>1</b>';box.appendChild(chip);
+  }
+
+  var pnl=document.getElementById('emojiPanel'),grid=document.getElementById('emojiGrid'),
+      btn=document.getElementById('emojiBtn'),input=document.getElementById('input');
+  panel.forEach(function(e){var b=document.createElement('button');b.textContent=e;
+    b.onclick=function(){input.value+=e;input.focus();};grid.appendChild(b);});
+  window.togglePanel=function(){pnl.classList.toggle('show');btn.classList.toggle('on',pnl.classList.contains('show'));};
+
+  document.addEventListener('click',function(e){
+    if(openPop&&!e.target.closest('.react-pop')&&!e.target.closest('.react-btn')){openPop.classList.remove('show');openPop=null;}
+    if(pnl.classList.contains('show')&&!e.target.closest('.emojipanel')&&e.target!==btn){pnl.classList.remove('show');btn.classList.remove('on');}
+  });
+})();
+</script>

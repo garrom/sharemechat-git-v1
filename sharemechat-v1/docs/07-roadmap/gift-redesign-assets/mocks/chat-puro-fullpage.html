@@ -1,0 +1,231 @@
+<title>Chat puro · rediseño completo</title>
+<style>
+  :root{
+    --ink:#0b0d10;--chrome:#111418;--chrome-2:#161a20;--panel:#14181f;--line:rgba(255,255,255,.09);
+    --txt:#e7ebf0;--mut:rgba(231,235,240,.6);--mut-2:rgba(231,235,240,.4);
+    --mint:#35d29b;--gold:#f5b942;--coral:#ff5c8a;--sky:#5cc8ff;--violet:#a78bfa;
+    --chat:#e7ded2;--bubble-me:#d9fdd3;--bubble-peer:#fff;
+    --sans:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}body{margin:0}
+  .wrap{font-family:var(--sans);color:var(--txt);min-height:100vh;padding:24px clamp(10px,2.5vw,32px) 56px;
+    background:radial-gradient(1200px 560px at 12% -10%,#17202b 0,transparent 55%),radial-gradient(1000px 460px at 100% 0,#1a1220 0,transparent 50%),var(--ink)}
+  .head{max-width:1320px;margin:0 auto 14px}
+  .eyebrow{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--mut-2);margin:0 0 6px}
+  h1{font-size:clamp(19px,2.6vw,26px);margin:0 0 6px;font-weight:700;letter-spacing:-.02em}
+  h1 .hl{background:linear-gradient(90deg,var(--coral),var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lede{max-width:70ch;color:var(--mut);font-size:14px;line-height:1.55;margin:0}
+
+  .app{max-width:1320px;margin:0 auto;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--chrome);box-shadow:0 30px 70px rgba(0,0,0,.55);display:flex;flex-direction:column;height:min(80vh,780px)}
+  /* NAV */
+  .nav{display:flex;align-items:center;gap:18px;padding:12px 18px;border-bottom:1px solid var(--line);flex-shrink:0}
+  .brand{font-size:19px;font-weight:800;letter-spacing:-.01em}.brand span{color:var(--coral)}
+  .tabs{display:flex;gap:20px;margin-left:6px}
+  .tabs a{font-size:14px;font-weight:600;color:var(--mut);text-decoration:none;padding-bottom:2px}
+  .tabs a.on{color:#fff;border-bottom:2px solid #fff}
+  .navright{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .saldo{background:#020617;border:1px solid rgba(148,163,184,.4);border-radius:999px;padding:7px 14px;font-size:13px;font-weight:700}
+  .navico{width:34px;height:34px;border-radius:50%;background:#fff;color:#111;display:grid;place-items:center;font-size:13px}
+  .navav{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--coral),var(--violet))}
+
+  .body{flex:1;display:flex;min-height:0}
+  /* CONTACTS */
+  .contacts{width:300px;flex:0 0 300px;border-right:1px solid var(--line);display:flex;flex-direction:column;background:var(--chrome-2)}
+  .csearch{padding:12px 12px 8px}
+  .csearch input{width:100%;height:38px;border-radius:11px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--txt);padding:0 12px;font-size:13px;outline:none}
+  .clist{flex:1;overflow-y:auto;padding:4px 8px 12px}
+  .contact{position:relative;display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;cursor:pointer;transition:background .12s}
+  .contact:hover{background:rgba(255,255,255,.05)}
+  .contact.on{background:rgba(255,92,138,.12);border:1px solid rgba(255,92,138,.25)}
+  .cav{width:38px;height:38px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;font-size:14px;font-weight:700;color:#fff}
+  .cinfo{flex:1;min-width:0}.cname{font-size:14px;font-weight:600;display:flex;align-items:center;gap:7px}
+  .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}.dot.on{background:var(--mint)}.dot.off{background:#5b626c}
+  .cprev{font-size:12px;color:var(--mut-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .badge247{font-size:10px;font-weight:700;color:var(--mint);background:rgba(53,210,155,.14);border:1px solid rgba(53,210,155,.3);border-radius:999px;padding:2px 7px}
+  .chev{width:26px;height:26px;border-radius:8px;border:none;background:transparent;color:var(--mut);cursor:pointer;font-size:12px;flex-shrink:0}
+  .contact:hover .chev{color:#fff}
+  .menu{position:absolute;top:44px;right:8px;z-index:20;width:190px;background:#fff;border-radius:12px;box-shadow:0 18px 44px rgba(0,0,0,.4);overflow:hidden;display:none}
+  .menu.show{display:block}
+  .menu button{display:flex;align-items:center;gap:10px;width:100%;border:0;background:transparent;padding:11px 14px;font-family:inherit;font-size:13.5px;font-weight:600;color:#1f2937;cursor:pointer;text-align:left}
+  .menu button:hover{background:#f3f4f6}
+  .menu button.danger{color:#dc2626}.menu .sep{height:1px;background:#eee}
+
+  /* CHAT */
+  .chat{flex:1;min-width:0;display:flex;flex-direction:column;position:relative}
+  .empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--mut-2);font-size:15px;padding:24px;text-align:center}
+  .chat-h{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+  .chat-h .cav{width:32px;height:32px;font-size:12px}
+  .chat-h small{display:block;color:var(--mint);font-size:11px}
+  .vertrad{margin-left:auto;font-size:12px;color:#1e3a8a;background:#dbeafe;border:1px solid #bfdbfe;border-radius:999px;padding:5px 11px;cursor:pointer;font-weight:600}
+  .msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;
+    background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.04)),var(--chat)}
+  .row{display:flex}.row.me{justify-content:flex-end}
+  .bubble{max-width:70%;padding:8px 12px;border-radius:14px;font-size:14px;line-height:1.5;color:#111827;box-shadow:0 5px 14px rgba(0,0,0,.08)}
+  .row.me .bubble{background:var(--bubble-me)}.row.peer .bubble{background:var(--bubble-peer)}
+  .tstamp{font-size:10px;color:rgba(0,0,0,.4);margin-top:3px}
+  .gift-row{display:flex;justify-content:flex-end}
+  .gift-row svg{width:56px;height:56px;filter:drop-shadow(0 8px 12px rgba(0,0,0,.25))}
+  .gift-row.free svg{animation:pop .5s cubic-bezier(.22,1.5,.4,1) both}
+  .gift-row.celebrate svg{animation:bigNorm .85s cubic-bezier(.22,1.5,.4,1) both}
+  @keyframes pop{0%{transform:scale(.2);opacity:0}60%{transform:scale(1.18);opacity:1}100%{transform:scale(1)}}
+  @keyframes bigNorm{0%{transform:scale(.2);opacity:0}42%{transform:scale(2.5);opacity:1}100%{transform:scale(1)}}
+  .fx{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:8}
+
+  .composer{border-top:1px solid var(--line);background:#111418}
+  .giftbar{display:flex;align-items:center;gap:8px;padding:8px 12px 5px}
+  .seg{display:inline-flex;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:999px;padding:2px;flex-shrink:0}
+  .seg button{border:0;background:transparent;color:var(--mut);font-family:inherit;font-size:12px;font-weight:600;padding:5px 11px;border-radius:999px;cursor:pointer}
+  .seg button.on{background:#fff;color:#111}.seg button.on.paid{background:linear-gradient(180deg,#ffd778,var(--gold));color:#2a1c04}
+  .track{flex:1;min-width:0;display:flex;gap:6px;overflow-x:auto;padding:2px 2px 5px;scrollbar-width:thin}
+  .track::-webkit-scrollbar{height:5px}.track::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:999px}
+  .g{position:relative;flex:0 0 auto;width:46px;height:46px;border-radius:12px;border:1px solid var(--line);background:radial-gradient(circle at 50% 32%,rgba(255,255,255,.08),rgba(255,255,255,.02));display:grid;place-items:center;cursor:pointer;transition:transform .12s}
+  .g:hover{transform:translateY(-2px)}.g svg{width:29px;height:29px}
+  .g .tag{position:absolute;bottom:-3px;right:-3px;font-size:8.5px;font-weight:700;color:#2a1c04;background:linear-gradient(180deg,#ffd778,var(--gold));padding:1px 4px;border-radius:999px}
+  .more{flex:0 0 auto;width:46px;height:46px;border-radius:12px;border:1px dashed rgba(255,255,255,.25);background:transparent;color:var(--mut);font-size:19px;cursor:pointer}
+  .inputrow{display:flex;align-items:center;gap:8px;padding:5px 12px 11px}
+  .inputrow .ib{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.08);color:#fff;font-size:16px;cursor:pointer;flex-shrink:0}
+  .inputrow input{flex:1;height:40px;border-radius:12px;border:1px solid transparent;background:rgba(255,255,255,.1);color:#f8fafc;padding:0 14px;font-size:14px;outline:none}
+  .inputrow .send{background:linear-gradient(135deg,#3b82f6,#2563eb);border:none}
+  .inputrow .call{background:linear-gradient(135deg,var(--mint),#16a34a);border:none}
+
+  .foot{max-width:1320px;margin:16px auto 0;display:flex;gap:16px;flex-wrap:wrap}
+  .fcard{flex:1;min-width:230px;background:linear-gradient(180deg,var(--chrome-2),var(--chrome));border:1px solid var(--line);border-radius:14px;padding:13px 15px}
+  .fcard h3{margin:0 0 7px;font-size:13px;font-weight:700}.fcard p{margin:0;font-size:12px;color:var(--mut);line-height:1.6}
+  .fcard code{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--gold);font-size:11px}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-heart" viewBox="0 0 64 64"><path d="M32 53C30 47 14 38 10 26 7 17 14 11 22 13 27 14 30 18 32 23 34 18 37 14 42 13 50 11 57 17 54 26 50 38 34 47 32 53Z" fill="#ff4d6d"/></symbol>
+  <symbol id="i-star" viewBox="0 0 64 64"><path d="M32 8 37.9 23.9 54.8 24.6 41.5 35.1 46.1 51.4 32 42 17.9 51.4 22.5 35.1 9.2 24.6 26.1 23.9Z" fill="#ffd15c"/></symbol>
+  <symbol id="i-fire" viewBox="0 0 64 64"><path d="M33 6c8 12 15 16 13 29-1 11-8 19-14 21-6-2-13-9-13-20 0-7 5-9 7-14 2 6 4 6 4 1 0-9 0-12 3-17Z" fill="#ff7a1a"/><path d="M33 28c4 5 6 9 5 15-1 5-4 9-6 10-3-1-6-5-6-11 0-4 3-6 4-9 1 3 3 3 3-1 0-2 0-3 0-4Z" fill="#ffd15c"/></symbol>
+  <symbol id="i-kiss" viewBox="0 0 64 64"><path d="M12 27c6-9 15-6 20 0 5-6 14-9 20 0-5 1-9 2-14 3-2 0-4 0-6 0s-4 0-6 0c-5-1-9-2-14-3Z" fill="#ff3d6e"/><path d="M12 27c6 4 14 6 20 6s14-2 20-6c-3 8-11 15-20 15S15 35 12 27Z" fill="#e02a58"/><path d="M22 33c4 1 7 1 10 1s6 0 10-1c-3 3-6 4-10 4s-7-1-10-4Z" fill="#ff6b8f"/></symbol>
+  <symbol id="i-rose" viewBox="0 0 64 64"><path d="M31 40h2v18h-2z" fill="#2c9a5e"/><path d="M32 52c-7-2-13 1-14 8 7 2 13-1 14-8Z" fill="#37bf74"/><path d="M32 54c7-3 14 0 15 7-7 2-14-1-15-7Z" fill="#2fa565"/><circle cx="32" cy="24" r="16" fill="#e8456f"/><path d="M32 10c8 0 15 6 16 14 0-2-3-4-6-3 2-3-1-7-4-6 1-3-3-6-6-4-3-2-7 1-6 4-3-1-6 3-4 6-3-1-6 1-6 3 1-8 8-14 16-14Z" fill="#ff7096"/><circle cx="32" cy="25" r="3.4" fill="#c22c53"/></symbol>
+  <symbol id="i-cocktail" viewBox="0 0 64 64"><path d="M14 15h36L32 37Z" fill="#dfe7ee"/><path d="M19 20h26L32 33Z" fill="#ff8a5c"/><path d="M31 36h2v16h-2z" fill="#cfd8e0"/><ellipse cx="32" cy="53" rx="11" ry="3.4" fill="#cfd8e0"/><path d="M43 15l6-7" stroke="#37bf74" stroke-width="2.4" stroke-linecap="round"/><circle cx="41" cy="20" r="3.4" fill="#ff4d6d"/></symbol>
+  <symbol id="i-diamond" viewBox="0 0 64 64"><path d="M20 16h24l10 12-22 26L10 28Z" fill="#5cc8ff"/><path d="M10 28h44L32 54Z" fill="#37a9e8"/><path d="M20 16 24 28 10 28ZM44 16 40 28 54 28ZM24 28h16l-8 26Z" fill="#8fdcff"/><path d="M24 28 32 20 40 28Z" fill="#cdeeff"/></symbol>
+  <symbol id="i-crown" viewBox="0 0 64 64"><path d="M10 44 12 20 24 33 32 16 40 33 52 20 54 44Z" fill="#ffd15c"/><rect x="10" y="44" width="44" height="9" rx="2.5" fill="#f0b429"/><circle cx="32" cy="26" r="3" fill="#ff4d6d"/></symbol>
+  <symbol id="i-gift" viewBox="0 0 64 64"><rect x="12" y="26" width="40" height="28" rx="3" fill="#ff5c8a"/><rect x="10" y="18" width="44" height="11" rx="3" fill="#ff789e"/><rect x="28" y="18" width="8" height="36" fill="#ffd15c"/><path d="M32 18c-2-8-14-8-12 0 3 3 8 2 12 0Zm0 0c2-8 14-8 12 0-3 3-8 2-12 0Z" fill="#f0b429"/></symbol>
+</defs></svg>
+
+<div class="wrap">
+  <header class="head">
+    <p class="eyebrow">Rediseño · chat puro (favoritos, sin streaming)</p>
+    <h1>Página completa en <span class="hl">tu nueva línea</span></h1>
+    <p class="lede">Los componentes de siempre — lista de contactos y pantalla de chat — con la estética de las fases y todo integrado: barra de regalos, emojis, efectos y menú contextual del contacto. Selecciona un contacto a la izquierda; envía regalos de pago para ver el efecto.</p>
+  </header>
+
+  <div class="app">
+    <div class="nav">
+      <div class="brand">Shareme<span>Chat</span></div>
+      <div class="tabs"><a href="#">Videochat</a><a href="#" class="on">Favoritos</a><a href="#">Blog</a></div>
+      <div class="navright">
+        <div class="saldo">Saldo: 9,98 €</div>
+        <div class="navico" title="ES/EN">ES</div>
+        <div class="navico">◈</div>
+        <div class="navav"></div>
+      </div>
+    </div>
+    <div class="body">
+      <aside class="contacts">
+        <div class="csearch"><input placeholder="Buscar favorito…"/></div>
+        <div class="clist" id="clist"></div>
+      </aside>
+      <section class="chat" id="chat">
+        <div class="empty" id="empty">Selecciona un favorito para abrir la conversación aquí.</div>
+        <div id="chatInner" style="display:none;flex:1;min-height:0;flex-direction:column">
+          <div class="chat-h">
+            <div class="cav" id="chAv" style="background:linear-gradient(135deg,var(--coral),var(--violet))">L</div>
+            <div><strong id="chName" style="font-size:14px">Laracraf</strong><small>● en línea</small></div>
+            <button class="vertrad">↻ Ver original</button>
+          </div>
+          <div class="msgs" id="msgs"></div>
+          <div class="fx" id="fx"></div>
+          <div class="composer">
+            <div class="giftbar">
+              <div class="seg"><button id="segFree" class="on" onclick="setCat('free')">Gratis</button><button id="segPaid" onclick="setCat('paid')">Regalos</button></div>
+              <div class="track" id="track"></div>
+              <button class="more" title="Ver catálogo">+</button>
+            </div>
+            <div class="inputrow">
+              <button class="ib" title="Emojis">😊</button>
+              <input placeholder="Escribe un mensaje…"/>
+              <button class="ib send" title="Enviar">➤</button>
+              <button class="ib call" title="Videollamada">🎥</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="fcard"><h3>Componentes</h3><p>Lista de contactos (con menú: ver perfil, eliminar, reportar, bloquear) + pantalla de chat. Se elimina la columna derecha vacía; el chat gana ese ancho.</p></div>
+    <div class="fcard"><h3>Todo integrado</h3><p>Barra de regalos (Fase 1), emojis (Fase 2) y efectos (Fase 3) viven en el composer. Un solo lenguaje visual en toda la página.</p></div>
+    <div class="fcard"><h3>Siguiente</h3><p>Pensar implementación: mapear a <code>DashboardClient.jsx</code> / <code>VideoChatFavoritosCliente.jsx</code> + <code>FavoritesClientList</code> y estilos, por fases.</p></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var contacts=[
+    {n:"Agente IA",c:"#0ea5e9",on:true,ai:true,prev:"Asistente 24/7"},
+    {n:"Guarris",c:"#ff5c8a",on:false,prev:"como tu estas monada"},
+    {n:"Laracraf",c:"#a78bfa",on:true,prev:"enviame algun regalito mi amor"},
+    {n:"modelstudio1",c:"#35d29b",on:false,prev:"hola de nuevo"},
+    {n:"modelstudio2",c:"#f5b942",on:false,prev:"buienas tardes"}
+  ];
+  var free=[["i-heart"],["i-star"],["i-fire"],["i-kiss"]];
+  var paid=[["i-rose","0,99"],["i-cocktail","1,99"],["i-diamond","9,99"],["i-crown","19,99"],["i-gift","4,99"]];
+  var clist=document.getElementById("clist"),msgs=document.getElementById("msgs"),track=document.getElementById("track"),
+      fx=document.getElementById("fx"),empty=document.getElementById("empty"),chatInner=document.getElementById("chatInner"),
+      chName=document.getElementById("chName"),chAv=document.getElementById("chAv");
+  var reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+  var openMenu=null;
+
+  contacts.forEach(function(ct,i){
+    var el=document.createElement("div");el.className="contact";
+    el.innerHTML='<div class="cav" style="background:'+ct.c+'">'+ct.n.charAt(0).toUpperCase()+'</div>'
+      +'<div class="cinfo"><div class="cname">'+ct.n+(ct.ai?'<span class="badge247">24/7</span>':'<span class="dot '+(ct.on?"on":"off")+'"></span>')+'</div><div class="cprev">'+ct.prev+'</div></div>'
+      +'<button class="chev" title="Opciones">▾</button>'
+      +'<div class="menu"><button><span>👤</span> Ver perfil completo</button><div class="sep"></div><button class="danger"><span>🗑</span> Eliminar</button><button class="danger"><span>⚑</span> Reportar</button><button class="danger"><span>⊘</span> Bloquear</button></div>';
+    var menu=el.querySelector(".menu");
+    el.querySelector(".chev").onclick=function(e){e.stopPropagation();if(openMenu&&openMenu!==menu)openMenu.classList.remove("show");menu.classList.toggle("show");openMenu=menu.classList.contains("show")?menu:null;};
+    el.onclick=function(){openChat(ct,el);};
+    clist.appendChild(el);
+  });
+
+  function openChat(ct,el){
+    document.querySelectorAll(".contact").forEach(function(c){c.classList.remove("on");});el.classList.add("on");
+    empty.style.display="none";chatInner.style.display="flex";
+    chName.textContent=ct.n;chAv.textContent=ct.n.charAt(0).toUpperCase();chAv.style.background=ct.c;
+    msgs.innerHTML='<div class="row peer"><div class="bubble">¡Hola! me alegra verte por aquí 💕<div class="tstamp">15:29</div></div></div>'
+      +'<div class="row me"><div class="bubble">Igualmente, estás preciosa<div class="tstamp">15:30</div></div></div>'
+      +'<div class="row peer"><div class="bubble">'+ct.prev+'<div class="tstamp">15:31</div></div></div>';
+    msgs.scrollTop=msgs.scrollHeight;
+  }
+  window.setCat=function(cat){
+    document.getElementById("segFree").className=cat==="free"?"on":"";
+    document.getElementById("segPaid").className=cat==="paid"?"on paid":"";
+    track.innerHTML="";
+    (cat==="free"?free:paid).forEach(function(x){
+      var b=document.createElement("div");b.className="g";
+      b.innerHTML='<svg><use href="#'+x[0]+'"/></svg>'+(x[1]?'<span class="tag">'+x[1]+'</span>':'');
+      var pd=!!x[1];b.onclick=function(){send(x[0],pd);};track.appendChild(b);
+    });
+  };
+  function send(id,paid){
+    var row=document.createElement("div");row.className="gift-row "+(paid?"celebrate":"free");
+    row.innerHTML='<svg><use href="#'+id+'"/></svg>';msgs.appendChild(row);msgs.scrollTop=msgs.scrollHeight;
+    if(!reduce&&paid)party();
+  }
+  function spawn(style,dur){var el=document.createElement("div");el.style.position="absolute";for(var k in style){if(k.charAt(0)==='-')el.style.setProperty(k,style[k]);else el.style[k]=style[k];}fx.appendChild(el);setTimeout(function(){el.remove();},dur);}
+  function rnd(a,b){return a+(b-a)*Math.random();}
+  var COLS=["#ff5c8a","#f5b942","#5cc8ff","#a78bfa","#35d29b","#ff7a1a"];
+  function party(){
+    for(var c=0;c<44;c++)(function(c){setTimeout(function(){var w=rnd(6,11);spawn({left:rnd(0,fx.clientWidth)+"px",top:"-20px",width:w+"px",height:(w*1.7)+"px",borderRadius:"2px",background:COLS[c%COLS.length],"--dx":rnd(-40,40)+"px","--rot":rnd(180,620)+"deg",animation:"cfall "+rnd(1.5,2.6)+"s linear forwards"},2800);},c*22);})(c);
+    for(var s=0;s<16;s++)(function(s){setTimeout(function(){var h=rnd(46,94);spawn({left:rnd(0,fx.clientWidth)+"px",top:(-h-10)+"px",width:rnd(5,8)+"px",height:h+"px",borderRadius:"6px",background:COLS[s%COLS.length],opacity:.9,"--dx":rnd(-70,70)+"px","--rot":rnd(120,420)+"deg",animation:"cfall "+rnd(1.9,3)+"s cubic-bezier(.4,.1,.6,1) forwards"},3200);},s*40);})(s);
+  }
+  var st=document.createElement("style");st.textContent="@keyframes cfall{0%{transform:translateY(-30px) rotate(0);opacity:0}12%{opacity:1}100%{transform:translateY(460px) translateX(var(--dx)) rotate(var(--rot));opacity:0}}";document.head.appendChild(st);
+  document.addEventListener("click",function(e){if(openMenu&&!e.target.closest(".menu")&&!e.target.closest(".chev")){openMenu.classList.remove("show");openMenu=null;}});
+  setCat("free");
+})();
+</script>

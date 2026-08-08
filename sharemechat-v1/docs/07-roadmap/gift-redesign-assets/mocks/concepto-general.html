@@ -1,0 +1,299 @@
+<title>Chat Favoritos · iconos comerciales (mock)</title>
+<style>
+  :root{
+    --ink:#0b0d10; --chrome:#111418; --chrome-2:#161a20; --line:rgba(255,255,255,.08);
+    --txt:#e7ebf0; --mut:rgba(231,235,240,.60); --mut-2:rgba(231,235,240,.40);
+    --chat:#e7ded2; --bubble-me:#d9fdd3; --bubble-peer:#ffffff;
+    --gold:#f5b942; --gold-deep:#b9831b; --coral:#ff5c8a; --coral-deep:#c92c60;
+    --mint:#35d29b; --violet:#a78bfa; --sky:#5cc8ff;
+    --radius:14px;
+    --sans:"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0}
+  .wrap{
+    font-family:var(--sans); color:var(--txt); background:
+      radial-gradient(1200px 600px at 15% -10%, #17202b 0%, transparent 55%),
+      radial-gradient(1000px 500px at 100% 0%, #1a1220 0%, transparent 50%),
+      var(--ink);
+    min-height:100vh; padding:32px clamp(14px,4vw,48px) 72px;
+  }
+  .head{max-width:1080px;margin:0 auto 26px}
+  .eyebrow{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--mut-2);margin:0 0 8px}
+  h1{font-size:clamp(22px,3.4vw,34px);line-height:1.1;margin:0 0 10px;font-weight:700;letter-spacing:-.02em;text-wrap:balance}
+  h1 .hl{background:linear-gradient(90deg,var(--coral),var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lede{max-width:64ch;color:var(--mut);font-size:15px;line-height:1.6;margin:0}
+  .grid{max-width:1080px;margin:0 auto;display:grid;grid-template-columns:1fr;gap:22px}
+  @media(min-width:900px){.grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+  .panel{background:linear-gradient(180deg,var(--chrome-2),var(--chrome));border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.45)}
+  .panel-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:16px 18px 12px;border-bottom:1px solid var(--line)}
+  .panel-h h2{margin:0;font-size:15px;font-weight:700;letter-spacing:.01em}
+  .panel-h .tag{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut-2)}
+  .panel-b{padding:16px 18px 20px}
+
+  /* ---- Section labels ---- */
+  .seclab{display:flex;align-items:center;gap:10px;margin:6px 0 12px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--mut)}
+  .seclab::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+  .seclab .pill{font-size:10px;letter-spacing:.08em;padding:3px 8px;border-radius:999px}
+  .pill.free{background:rgba(53,210,155,.14);color:var(--mint);border:1px solid rgba(53,210,155,.30)}
+  .pill.paid{background:rgba(245,185,66,.14);color:var(--gold);border:1px solid rgba(245,185,66,.32)}
+
+  /* ---- Free emoji strip ---- */
+  .free-strip{display:flex;flex-wrap:wrap;gap:8px}
+  .emoji-chip{position:relative;width:52px;height:52px;border-radius:14px;border:1px solid var(--line);
+    background:radial-gradient(circle at 50% 34%,rgba(255,255,255,.10),rgba(255,255,255,.02));
+    display:grid;place-items:center;font-size:26px;cursor:pointer;transition:transform .14s,border-color .14s,background .14s;user-select:none}
+  .emoji-chip:hover{transform:translateY(-3px);border-color:rgba(53,210,155,.5);background:rgba(53,210,155,.10)}
+  .emoji-chip:active{transform:translateY(-1px) scale(.96)}
+
+  /* ---- Paid gift cards ---- */
+  .gift-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:12px}
+  .gift-card{position:relative;border-radius:16px;padding:12px 12px 13px;cursor:pointer;overflow:hidden;
+    background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));
+    border:1px solid var(--line);transition:transform .16s,border-color .16s,box-shadow .16s}
+  .gift-card:hover{transform:translateY(-3px);border-color:rgba(245,185,66,.45);box-shadow:0 14px 30px rgba(0,0,0,.35)}
+  .gift-card:active{transform:translateY(-1px) scale(.985)}
+  .gift-card.rare{border-color:rgba(92,200,255,.28)}
+  .gift-card.epic{border-color:rgba(167,139,250,.30)}
+  .gift-card.legendary{border-color:rgba(245,185,66,.42);box-shadow:0 0 0 1px rgba(245,185,66,.14) inset,0 14px 30px rgba(0,0,0,.3)}
+  .gift-card.legendary::before{content:"";position:absolute;inset:0;background:linear-gradient(120deg,transparent 30%,rgba(245,185,66,.16),transparent 70%);transform:translateX(-120%);animation:sheen 3.6s ease-in-out infinite}
+  @keyframes sheen{0%,72%{transform:translateX(-120%)}88%,100%{transform:translateX(120%)}}
+  .gift-media{position:relative;aspect-ratio:1/1;border-radius:12px;display:grid;place-items:center;font-size:44px;
+    background:radial-gradient(circle at 50% 30%,rgba(255,255,255,.14),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.06);margin-bottom:9px}
+  .badge{position:absolute;top:8px;right:8px;z-index:2;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:999px}
+  .badge.feat{background:linear-gradient(90deg,var(--coral),var(--gold));color:#3a1616}
+  .badge.pop{background:rgba(92,200,255,.18);color:var(--sky);border:1px solid rgba(92,200,255,.4)}
+  .gift-name{font-size:13px;font-weight:600;line-height:1.15;margin:0 0 6px}
+  .gift-meta{display:flex;align-items:center;justify-content:space-between;gap:6px}
+  .rarity{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:700}
+  .rarity.rare{color:var(--sky)} .rarity.epic{color:var(--violet)} .rarity.legendary{color:var(--gold)}
+  .price{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:#1c1206;
+    background:linear-gradient(180deg,#ffd778,var(--gold));padding:4px 9px;border-radius:999px;box-shadow:0 3px 10px rgba(245,185,66,.3)}
+  .price .coin{width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff3cf,#d9971f);display:inline-block}
+
+  /* ---- Chat demo ---- */
+  .phone{position:relative}
+  .chat{position:relative;height:360px;border-radius:0;overflow:hidden;
+    background:
+      linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.04)),
+      var(--chat);
+    display:flex;flex-direction:column}
+  .chat-top{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#111418;color:#fff;border-bottom:1px solid var(--line)}
+  .avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--coral),var(--violet));display:grid;place-items:center;font-size:13px;font-weight:700}
+  .chat-top small{display:block;color:rgba(255,255,255,.55);font-size:11px}
+  .scroll{flex:1;overflow-y:auto;padding:14px 14px 6px;display:flex;flex-direction:column;gap:9px}
+  .row{display:flex}.row.me{justify-content:flex-end}
+  .bubble{max-width:76%;padding:8px 12px;border-radius:14px;font-size:14px;line-height:1.5;color:#111827;box-shadow:0 6px 16px rgba(0,0,0,.10)}
+  .row.me .bubble{background:var(--bubble-me)}
+  .row.peer .bubble{background:var(--bubble-peer)}
+  .gift-row{display:flex;justify-content:flex-end;position:relative}
+  .gift-sent{font-size:52px;line-height:1;filter:drop-shadow(0 10px 16px rgba(0,0,0,.22));transform-origin:bottom center}
+  .gift-sent.premium{font-size:76px}
+  .composer{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#111418;border-top:1px solid var(--line)}
+  .composer input{flex:1;height:38px;border-radius:12px;border:1px solid transparent;background:rgba(255,255,255,.10);color:#f8fafc;padding:0 12px;font-size:14px;outline:none}
+  .composer input::placeholder{color:rgba(226,232,240,.6)}
+  .cbtn{width:38px;height:38px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.08);color:#fff;display:grid;place-items:center;font-size:16px;cursor:pointer}
+
+  /* trigger buttons */
+  .triggers{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  .trig{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:12px;cursor:pointer;font-size:13px;font-weight:600;color:var(--txt);
+    background:rgba(255,255,255,.05);border:1px solid var(--line);transition:transform .12s,border-color .12s,background .12s}
+  .trig:hover{transform:translateY(-2px);background:rgba(255,255,255,.09)}
+  .trig .g{font-size:18px}
+  .trig .k{font-size:10px;color:var(--mut-2);font-weight:500;font-family:ui-monospace,Menlo,Consolas,monospace}
+
+  /* particle layer */
+  .fx{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:5}
+  .p{position:absolute;will-change:transform,opacity}
+  @keyframes floatUp{0%{transform:translateY(0) scale(.6);opacity:0}15%{opacity:1}100%{transform:translateY(-260px) translateX(var(--dx)) scale(1.05) rotate(var(--rot));opacity:0}}
+  @keyframes burstOut{0%{transform:translate(0,0) scale(.2);opacity:1}100%{transform:translate(var(--tx),var(--ty)) scale(1);opacity:0}}
+  @keyframes popIn{0%{transform:scale(.1);opacity:0}55%{transform:scale(1.25);opacity:1}75%{transform:scale(.92)}100%{transform:scale(1);opacity:1}}
+  @keyframes glowPulse{0%{transform:scale(.2);opacity:.9}100%{transform:scale(2.6);opacity:0}}
+  @keyframes fall{0%{transform:translateY(-40px) rotate(0);opacity:0}12%{opacity:1}100%{transform:translateY(360px) translateX(var(--dx)) rotate(var(--rot));opacity:0}}
+  .glow{position:absolute;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(255,220,140,.7),transparent 65%);animation:glowPulse .9s ease-out forwards}
+  .anim-pop{animation:popIn .5s cubic-bezier(.22,1.4,.4,1) both}
+
+  .legend{margin-top:16px;border-top:1px solid var(--line);padding-top:12px;font-size:12px;color:var(--mut);line-height:1.7}
+  .legend code{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--gold);font-size:11px}
+  .note{max-width:1080px;margin:22px auto 0;font-size:12.5px;color:var(--mut-2);line-height:1.7}
+  .note b{color:var(--mut)}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="head">
+    <p class="eyebrow">Chat de favoritos · sin streaming</p>
+    <h1>Iconos <span class="hl">más comerciales</span> + efectos al enviar</h1>
+    <p class="lede">Propuesta visual sobre el catálogo actual (<code>FREE_EMOJI</code> gratis / <code>PAID_GIFT</code> de pago). Los iconos aquí son marcadores; en producción son las URLs remotas del campo <code>icon</code>. Pulsa los regalos de la derecha para ver los efectos de envío en vivo.</p>
+  </header>
+
+  <div class="grid">
+    <!-- ============ PANEL A: catálogo ============ -->
+    <section class="panel">
+      <div class="panel-h"><h2>Catálogo rediseñado</h2><span class="tag">picker</span></div>
+      <div class="panel-b">
+        <div class="seclab"><span class="pill free">Gratis</span> Emojis · reacción rápida</div>
+        <div class="free-strip" id="freeStrip"></div>
+
+        <div class="seclab" style="margin-top:20px"><span class="pill paid">De pago</span> Regalos · monetizables</div>
+        <div class="gift-grid" id="giftGrid"></div>
+
+        <div class="legend">
+          <b style="color:var(--mut)">Ideas comerciales aplicadas:</b><br>
+          · Separación clara <span style="color:var(--mint)">gratis</span> (tira compacta) vs <span style="color:var(--gold)">pago</span> (tarjetas con precio).<br>
+          · Precio como “moneda” prominente, no texto plano. Badges <span style="color:var(--coral)">Featured</span> / <span style="color:var(--sky)">Popular</span>.<br>
+          · Rareza por color (Rare · Epic · Legendary) para crear deseo y upsell.<br>
+          · El destacado (legendary) lleva brillo sutil en bucle para captar la mirada.
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ PANEL B: demo efectos ============ -->
+    <section class="panel">
+      <div class="panel-h"><h2>Efectos al enviar · demo en vivo</h2><span class="tag">animationKey</span></div>
+      <div class="panel-b">
+        <div class="phone">
+          <div class="chat">
+            <div class="chat-top">
+              <div class="avatar">L</div>
+              <div><strong style="font-size:13px">Laura</strong><small>en línea</small></div>
+            </div>
+            <div class="scroll" id="scroll">
+              <div class="row peer"><div class="bubble">¡Hola! 😊</div></div>
+              <div class="row me"><div class="bubble">Te he visto en el random, me encantó</div></div>
+              <div class="row peer"><div class="bubble">jajaja gracias 💕 ¿me mandas algo?</div></div>
+            </div>
+            <div class="fx" id="fx"></div>
+            <div class="composer">
+              <div class="cbtn" title="emoji">☺</div>
+              <input placeholder="Escribe un mensaje…" />
+              <div class="cbtn" title="regalo" style="background:linear-gradient(135deg,var(--coral),var(--gold));border:none">🎁</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="triggers" id="triggers"></div>
+
+        <div class="legend">
+          Cada regalo dispara el efecto de su <code>animationKey</code> (columna ya existente en la tabla <code>gifts</code>, hoy sin usar en el front). El efecto dura ~1–3&nbsp;s sobre la burbuja y luego se asienta al icono estático.
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <p class="note">
+    <b>Alcance técnico.</b> El catálogo (Panel A) es 100% CSS sobre los styled-components actuales — no toca backend. Los efectos (Panel B) se enganchan al <code style="color:var(--gold)">animationKey</code> que ya viaja en el DTO; solo falta leerlo en <b>renderGiftVisual</b> y montar una capa de partículas cuando el mensaje de regalo aparece por primera vez. Sin librerías: CSS keyframes + un spawner ligero. Respeta <code style="color:var(--gold)">prefers-reduced-motion</code>.
+  </p>
+</div>
+
+<script>
+(function(){
+  var freeEmojis = ["❤️","😍","😘","🔥","👏","😂","🌹","✨"];
+  var gifts = [
+    {g:"🌹", name:"Rosa",     price:"0,99", rarity:null,        badge:null,      key:"float-hearts"},
+    {g:"💋", name:"Beso",     price:"1,99", rarity:"rare",      badge:"pop",     key:"sparkle-burst"},
+    {g:"🧸", name:"Peluche",  price:"2,99", rarity:"rare",      badge:null,      key:"sparkle-burst"},
+    {g:"💎", name:"Diamante", price:"9,99", rarity:"epic",      badge:null,      key:"confetti-rain"},
+    {g:"👑", name:"Corona",   price:"19,99",rarity:"legendary", badge:"feat",    key:"coin-shower"},
+    {g:"🚀", name:"Cohete",   price:"14,99",rarity:"epic",      badge:null,      key:"confetti-rain"}
+  ];
+
+  // free strip
+  var fs = document.getElementById("freeStrip");
+  freeEmojis.forEach(function(e){
+    var d=document.createElement("div"); d.className="emoji-chip"; d.textContent=e;
+    d.onclick=function(){ send(e,false,"float-hearts"); };
+    fs.appendChild(d);
+  });
+
+  // gift cards
+  var gg = document.getElementById("giftGrid");
+  gifts.forEach(function(x){
+    var c=document.createElement("div"); c.className="gift-card"+(x.rarity?(" "+x.rarity):"");
+    var badge = x.badge==="feat" ? '<span class="badge feat">Featured</span>'
+              : x.badge==="pop"  ? '<span class="badge pop">Popular</span>' : '';
+    var rar = x.rarity ? '<span class="rarity '+x.rarity+'">'+x.rarity+'</span>' : '<span></span>';
+    c.innerHTML = badge
+      + '<div class="gift-media">'+x.g+'</div>'
+      + '<div class="gift-name">'+x.name+'</div>'
+      + '<div class="gift-meta">'+rar+'<span class="price"><span class="coin"></span>'+x.price+'</span></div>';
+    c.onclick=function(){ send(x.g, x.rarity==="legendary"||x.rarity==="epic", x.key); };
+    gg.appendChild(c);
+  });
+
+  // trigger row (quick access to each key)
+  var tr=document.getElementById("triggers");
+  [["🌹","float-hearts",false],["💋","sparkle-burst",false],["💎","confetti-rain",true],["👑","coin-shower",true]].forEach(function(t){
+    var b=document.createElement("div"); b.className="trig";
+    b.innerHTML='<span class="g">'+t[0]+'</span><span>enviar</span><span class="k">'+t[1]+'</span>';
+    b.onclick=function(){ send(t[0],t[2],t[1]); };
+    tr.appendChild(b);
+  });
+
+  var scroll=document.getElementById("scroll");
+  var fx=document.getElementById("fx");
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+
+  function send(glyph, premium, key){
+    var row=document.createElement("div"); row.className="gift-row";
+    var g=document.createElement("div"); g.className="gift-sent anim-pop"+(premium?" premium":"");
+    g.textContent=glyph; row.appendChild(g); scroll.appendChild(row);
+    scroll.scrollTop=scroll.scrollHeight;
+    if(!reduce) play(key, premium);
+  }
+
+  function spawn(html, cls, style, dur){
+    var el=document.createElement("div"); el.className="p "+cls; el.innerHTML=html;
+    for(var k in style){ el.style[k]=style[k]; }
+    fx.appendChild(el);
+    setTimeout(function(){ el.remove(); }, dur);
+  }
+  function rnd(a,b){ return a+(b-a)*Math.random(); }
+
+  function play(key, premium){
+    var cx=fx.clientWidth*0.72, cy=fx.clientHeight-40;
+    // glow burst under the gift for paid tiers
+    if(key!=="float-hearts"){
+      var gl=document.createElement("div"); gl.className="glow";
+      gl.style.left=(cx-60)+"px"; gl.style.top=(cy-70)+"px"; fx.appendChild(gl);
+      setTimeout(function(){gl.remove();},900);
+    }
+    if(key==="float-hearts"){
+      for(var i=0;i<7;i++){
+        (function(i){ setTimeout(function(){
+          spawn("❤️","", {left:(cx+rnd(-30,30))+"px",top:cy+"px",fontSize:rnd(16,26)+"px",
+            "--dx":rnd(-40,40)+"px","--rot":rnd(-30,30)+"deg",animation:"floatUp "+rnd(1.1,1.7)+"s ease-out forwards"},1800);
+        }, i*90); })(i);
+      }
+    } else if(key==="sparkle-burst"){
+      for(var s=0;s<16;s++){
+        var ang=Math.PI*2*s/16, dist=rnd(50,120);
+        spawn("✨","",{left:cx+"px",top:(cy-40)+"px",fontSize:rnd(12,20)+"px",
+          "--tx":Math.cos(ang)*dist+"px","--ty":Math.sin(ang)*dist+"px",animation:"burstOut "+rnd(.6,1)+"s ease-out forwards"},1000);
+      }
+    } else if(key==="confetti-rain"){
+      var cols=["#ff5c8a","#f5b942","#5cc8ff","#a78bfa","#35d29b"];
+      for(var c2=0;c2<40;c2++){
+        (function(c2){ setTimeout(function(){
+          var w=rnd(6,11);
+          spawn("","",{left:rnd(0,fx.clientWidth)+"px",top:"-20px",width:w+"px",height:(w*1.6)+"px",
+            borderRadius:"2px",background:cols[c2%cols.length],
+            "--dx":rnd(-30,30)+"px","--rot":rnd(180,540)+"deg",animation:"fall "+rnd(1.4,2.4)+"s linear forwards"},2600);
+        }, c2*30); })(c2);
+      }
+    } else if(key==="coin-shower"){
+      for(var co=0;co<34;co++){
+        (function(co){ setTimeout(function(){
+          spawn("🪙","",{left:rnd(0,fx.clientWidth)+"px",top:"-24px",fontSize:rnd(16,26)+"px",
+            "--dx":rnd(-24,24)+"px","--rot":rnd(200,600)+"deg",animation:"fall "+rnd(1.4,2.3)+"s linear forwards"},2600);
+        }, co*45); })(co);
+      }
+      // extra golden shimmer sweep
+      var sw=document.createElement("div"); sw.className="p";
+      sw.style.cssText="left:0;top:0;width:100%;height:100%;background:linear-gradient(120deg,transparent 40%,rgba(245,185,66,.22),transparent 60%);animation:burstOut .01s;opacity:1";
+      sw.animate([{transform:"translateX(-100%)"},{transform:"translateX(100%)"}],{duration:900,easing:"ease-in-out"});
+      fx.appendChild(sw); setTimeout(function(){sw.remove();},950);
+    }
+  }
+})();
+</script>
