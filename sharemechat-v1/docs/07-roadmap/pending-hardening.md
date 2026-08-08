@@ -490,24 +490,91 @@ Fase 2 AUDIT (no bloqueada, ejecutable cuando el operador quiera):
 - Los 2 test users Gmail del operador pueden hacer flow completo en `audit.sharemechat.com`.
 - Estimación: ~20 min end-to-end.
 
-### 5.3 Traductor automático en chat P2P favoritos
+### 5.3 Traductor automático en chat P2P — HECHO (2026-08-08)
 
-Estado: **pendiente**, cero implementación técnica.
+Estado: **implementado y desplegado en TEST**. Cerrado el 2026-08-08.
 
-Objetivo:
-traducir automáticamente los mensajes del chat P2P (`CLIENT ↔ MODEL` en `messages`) cuando cliente y modelo tienen idiomas preferidos distintos. Expande el mercado direccionable: cliente español chatea con modelo latina no-hispanohablante o europea EN sin fricción.
+Traduce automáticamente los mensajes recibidos en las 3 superficies de chat
+del producto (chat P2P WhatsApp favoritos, chat overlay durante llamada 1a1
+favoritos, chat overlay durante videochat random) al idioma preferido del
+viewer, cuando el sender escribe en un idioma distinto. Cache backend en
+tabla `message_translations` por `(messageId, targetLang)` evita re-llamar
+al provider ante el mismo mensaje visto de nuevo.
 
-Decisiones de dominio a tomar antes de tocar código:
-- **Proveedor**: DeepL (~$25/M chars, calidad muy alta en EU) o Google Translate (~$20/M chars, calidad alta) preferidos sobre Claude (más lento en latencia P2P). Azure Translator alternativa comparable a Google.
-- **Idioma preferido del user**: (a) del i18n de UI, (b) detección automática por primer mensaje, (c) selector explícito en preferencias user. Recomendado (c) explícito + fallback (a).
-- **Qué se traduce**: mensajes RECIBIDOS en idioma distinto al del user; opcionalmente traducción bidireccional visible ("original + traducción abajo").
-- **Cache**: guardar traducción en `messages.translated_text` + `messages.translation_target_lang` (o tabla side `message_translations`) — mismo mensaje aparece en historial infinitas veces al scrollear, no re-traducir.
-- **Gifts/emojis**: no traducir.
-- **Toggle on/off por conversación**: por defecto ON si idiomas difieren, con posibilidad de desactivar.
+**Decisiones tomadas y aplicadas:**
+- **Proveedor**: Google Cloud Translation v2 (500K chars/mes gratis
+  forever, luego $20/M). Adapter vendor-agnostic
+  (`TranslationProvider` interface) permite migrar a DeepL sin cambio
+  de dominio.
+- **Idioma preferido del user**: selector explícito
+  `users.preferred_chat_lang` (VARCHAR(5) NULL) con fallback a `ui_locale`.
+  15 idiomas soportados (es, en, pt, fr, it, de, nl, pl, ru, ja, zh, ko,
+  ar, tr, ro) en constante `SupportedChatLanguages`.
+- **Qué se traduce**: mensajes RECIBIDOS en idioma distinto (mensajes
+  propios NO se traducen; MVP alineado con pattern WhatsApp). Traducir
+  también mensajes propios al idioma del peer (pattern CooMeet exacto,
+  requiere `peerLang` en conversación) queda como T7 opcional.
+- **Cache**: tabla side `message_translations` (message_id + target_lang
+  UNIQUE, FK CASCADE a messages). Migration V51.
+- **Gifts / mensajes con marker `[[GIFT:*]]`**: no se traducen.
+- **Toggle on/off**: global por sesión, persistido en localStorage
+  (`sharemechat.chat.showOriginal`). Botón flotante "Ver original /
+  Mostrar traducciones" visible cuando hay al menos un mensaje del peer
+  en la conversación en curso.
 
-Coste operativo: despreciable en fase soft launch (bajo volumen), €50-200/mes en volumen sostenido según churn de conversaciones cross-language.
+**Coste operativo real**: 0€ en TEST y previsiblemente meses en soft launch
+(cache + volumen bajo). Overage estimado $5-25/mes en early growth.
 
-Estimación técnica (con decisiones cerradas): 1-2 sesiones. Backend adapter del proveedor + cache en messages + i18n mínimo + UI toggle.
+**Modo degradado**: si `translation.google.enabled=false` o `apiKey`
+blank, endpoints devuelven 503 y la UI oculta toda la superficie de
+traducción (toggle, sub-línea, card selector perfil). Permite arrancar
+TEST/AUDIT/PROD sin credenciales configuradas.
+
+**Entregables backend** (commit `6f52ceb`):
+- Migration V51 (`message_translations` + `users.preferred_chat_lang`).
+- Entity `MessageTranslation` + `MessageTranslationRepository`.
+- `TranslationProvider` interface + `GoogleCloudTranslationClient` adapter.
+- `MessageTranslationService` cache-first + batch.
+- `MessagesController`: `POST /api/messages/{id}/translate`, `POST
+  /api/messages/translate-batch`, `GET /api/messages/translation-config`.
+- `UserController`: `PUT /api/users/me/preferred-chat-lang` validado.
+- `SupportedChatLanguages` constant.
+- Config `translation.google.*` con env vars `TRANSLATION_GOOGLE_*`.
+
+**Entregables frontend** (commits `6cce95b`, `a5a1e7e`, `e87015f`,
+`391f7eb`, `5e14bbc`, `505b810`, `da693d9`, `6261058`):
+- `api/translationApi.js`, `hooks/useTranslationSettings`,
+  `hooks/useMessageTranslations`, `components/PreferredChatLangCard`.
+- `SupportMessageBubble` con prop `translation` (sub-línea suave bajo el
+  content con icono ↻).
+- `VideoChatFavoritosCliente/Modelo`: chat P2P WhatsApp + overlay call
+  (con snapshot de ids para filtrar solo mensajes de la llamada actual).
+- `VideoChatRandomCliente/Modelo`: hooks + toggle + retención de msgId
+  al recibir mensaje por WS.
+- `DashboardClient/Model.onChatMessage`: retiene `msgId` + `senderId`
+  del WS backend para reutilizar el endpoint batch existente con cache
+  BD compartido.
+- `PerfilClient/Model`: card "Idioma del chat" con selector 15 idiomas
+  (auto-oculta si feature disabled).
+- i18n keys `chat.translation.showOriginal` + `showTranslations`
+  (es + en).
+
+**Deuda opcional (T7)**: traducir mensajes propios al idioma del peer
+(pattern CooMeet exacto simétrico). Requiere `peerLang` disponible en el
+frontend (extender `MessageDTO.senderLang` o endpoint conversations con
+peerLang). ~1 sesión. Solo si se detecta valor en producción tras uso real.
+
+**Bugs colaterales resueltos durante el frente**:
+- Scroll de página en dashboard favoritos con historial largo (Fase A
+  refactor styled-components; anterior bug latente desde 7e6b543).
+- `openChatWith` al re-clickear mismo contacto → chat vacío infinito
+  (commit b9948a4).
+- Overlay call chat no persistía histórico durante llamada — resuelto
+  con snapshot de ids conocidos, no timestamps (evita bug de zona
+  horaria backend LocalDateTime sin zone).
+- `style={{position:'relative'}}` inline sobre `StyledChatContainer`
+  colapsaba el overlay a 0px alto (sobrescribía el `position:absolute
+  inset:0` nativo del styled).
 
 ### 5.4 Sistema Master/Studio (ADR-056)
 
@@ -675,6 +742,6 @@ Traducción al roadmap SharemeChat (post-launch, no bloquea S1-S8):
 Las cuatro líneas comparten haber sido levantadas conversacionalmente durante las sesiones del 2026-07-27 (5.1-5.3, pivote hacia PSP tarjeta) y 2026-07-29 (5.4, pivote hacia captación estudios). Ninguna tiene fecha impuesta. Orden sugerido según impacto en fricción vs riesgo técnico:
 
 1. **5.1 Sistema de tickets** — HECHO (T1-T6 completadas 2026-07-27).
-2. **5.4 Sistema Master/Studio** — impacto estratégico alto (posibilita captación), ADR aceptado, 8 fases planificadas. Bloquea siguiente ciclo comercial.
-3. **5.2 Google login** — impacto alto en fricción registro cliente, bloqueado hasta verificar TOS Google para adult.
-4. **5.3 Traductor** — impacto medio en expansión mercado, sensato pero no urgente.
+2. **5.3 Traductor** — HECHO (T1-T6 + streaming completados 2026-08-08).
+3. **5.4 Sistema Master/Studio** — impacto estratégico alto (posibilita captación), ADR aceptado, 8 fases planificadas. Bloquea siguiente ciclo comercial.
+4. **5.2 Google login** — impacto alto en fricción registro cliente, bloqueado hasta verificar TOS Google para adult.
