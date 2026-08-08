@@ -758,7 +758,7 @@ export default function VideoChatRandomCliente(props) {
 
                         {cameraActive && renderCallActions()}
 
-                        <StyledChatContainer data-wide="true" style={{position:'relative'}}>
+                        <StyledChatContainer data-wide="true">
                           <TranslationToggleButton />
                           <StyledChatList ref={vcListRef}>
                             {renderMessages()}
@@ -873,7 +873,7 @@ export default function VideoChatRandomCliente(props) {
 
                       {cameraActive && renderCallActions()}
 
-                      <StyledChatContainer data-wide="true" style={{position:'relative'}}>
+                      <StyledChatContainer data-wide="true">
                         <TranslationToggleButton />
                         <StyledChatList ref={vcListRef}>
                           {renderMessages()}
