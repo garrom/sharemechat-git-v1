@@ -71,13 +71,27 @@ export const StyledBrand = styled.a`
 // Regla: los hijos de un layout fixed deben gestionar su propio scroll
 // interno (overflow:auto) donde corresponda; si no, se cortan al viewport.
 export const StyledContainer = styled.div`
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   background: #111418;
   color: #e0e0e0;
-  height: ${props => props['data-layout'] === 'fixed' ? '100vh' : 'auto'};
-  min-height: ${props => props['data-layout'] === 'fixed' ? '0' : '100vh'};
-  overflow: ${props => props['data-layout'] === 'fixed' ? 'hidden' : 'visible'};
+`;
+
+// StyledContainerFixed: variante SIN scroll de body, para Dashboards con
+// chat/streaming. El scroll vive DENTRO de los scrollers hijos
+// (StyledChatScroller). Se creo como componente separado tras verificar
+// que la version condicional via props (data-layout) no aplicaba en runtime
+// con styled-components 5.x en produccion build (ver
+// docs/04-operations/scroll-dashboard-favoritos-investigation-2026-08-08.md).
+export const StyledContainerFixed = styled.div`
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #111418;
+  color: #e0e0e0;
 `;
 
 // === TEXTO ===

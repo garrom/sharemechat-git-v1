@@ -18,7 +18,7 @@ import ClientTicketsPanel from '../subpages/ClientTicketsPanel';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHeart, faVideo, faFilm, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import {
-  StyledContainer,StyledIconWrapper,StyledMainContent,
+  StyledContainer,StyledContainerFixed,StyledIconWrapper,StyledMainContent,
   StyledLeftColumn,StyledCenter,StyledRightColumn,
   StyledLocalVideo,StyledRemoteVideo,
   StyledChatContainer,StyledNavGroup,
@@ -3095,7 +3095,7 @@ const DashboardClient = () => {
 
 
   return(
-    <StyledContainer data-layout="fixed" data-tab={activeTab}>
+    <StyledContainerFixed data-tab={activeTab}>
       <GlobalBlack/>
       <AuthenticatedConsentModal
         open={consentRequired}
@@ -3267,7 +3267,7 @@ const DashboardClient = () => {
         onCancel={() => setLivenessModalOpen(false)}
       />
 
-    </StyledContainer>
+    </StyledContainerFixed>
   );
 };
 
