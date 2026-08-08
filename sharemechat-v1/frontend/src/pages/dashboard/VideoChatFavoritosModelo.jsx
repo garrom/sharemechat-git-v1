@@ -558,9 +558,9 @@ export default function VideoChatFavoritosModelo(props) {
                     )}
 
                     {!isPendingPanel && !isSentPanel && contactMode !== 'call' && (
-                      <StyledChatWhatsApp>
+                      <StyledChatWhatsApp style={{position:'relative'}}>
                         {shouldShowTranslationToggle && (
-                          <div style={{display:'flex',justifyContent:'flex-end',padding:'6px 12px 0 12px'}}>
+                          <div style={{position:'absolute',top:6,right:12,zIndex:5}}>
                             <TranslationToggleButton />
                           </div>
                         )}
@@ -812,9 +812,9 @@ export default function VideoChatFavoritosModelo(props) {
                 )}
 
                 {!isPendingPanel && !isSentPanel && contactMode !== 'call' && (
-                  <StyledChatWhatsApp>
+                  <StyledChatWhatsApp style={{position:'relative'}}>
                     {shouldShowTranslationToggle && (
-                      <div style={{display:'flex',justifyContent:'flex-end',padding:'6px 12px 0 12px'}}>
+                      <div style={{position:'absolute',top:6,right:12,zIndex:5}}>
                         <TranslationToggleButton />
                       </div>
                     )}
