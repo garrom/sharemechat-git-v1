@@ -1294,27 +1294,8 @@ export const StyledCallSecondaryActions = styled.div`
   pointer-events: auto;
 `;
 
-export const StyledPrimaryCta = styled.button`
-  appearance: none;
-  border: 1px solid var(--c-black);
-  background: var(--c-white);
-  color: var(--c-black);
-  font-weight: 700;
-  font-size: 16px;
-  padding: 14px 22px;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: background .18s ease, color .18s ease, box-shadow .18s ease, transform .06s ease;
-
-  &:hover {
-    background: var(--c-black);
-    color: var(--c-white);
-    box-shadow: 0 8px 24px rgba(0,0,0,.25);
-  }
-  &:active {
-    transform: translateY(1px);
-  }
-`;
+// 2026-08-08: StyledPrimaryCta eliminado por huérfano (Fase E). Dead code
+// tanto aquí como en HomeStyles.
 
 /* --------------------------------
  * 10. FAVORITOS: GOBERNADORES DE ALTURA (SIN CAMBIOS)

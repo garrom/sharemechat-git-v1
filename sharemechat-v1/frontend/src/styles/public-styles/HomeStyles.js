@@ -71,29 +71,8 @@ const slowZoom = keyframes`
   }
 `;
 
-/* CONTENEDOR CENTRAL TIPO VIDEOCHAT (copiado de StyledCenterVideochat) */
-export const StyledCenterVideochat = styled.div`
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
-  padding: 0;
-  margin: 0;
-  width: 100%;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-
-  @supports (height: 100dvh) {
-    height: 100dvh;
-  }
-
-  @media (max-width: 768px) {
-    padding: 0;
-    margin: 0;
-    border-radius: 0;
-  }
-`;
+// 2026-08-08: StyledCenterVideochat eliminado por huérfano (Fase E). El
+// vivo es VideochatStyles.StyledCenterVideochat (5 consumers dashboards).
 
 export const HomePageStack = styled.main`
   width: 100%;
@@ -894,123 +873,10 @@ export const HomeProfileMeta = styled.div`
   gap: 8px;
 `;
 
-/* GRID 2 COLUMNAS 50/50 (copiado de StyledSplit2) */
-export const StyledSplit2 = styled.div`
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  width: 100%;
-  min-height: 0;
-  flex: 1;
-  padding: 16px;
-  box-sizing: border-box;
-
-  @media (max-width: 768px){
-    grid-template-columns: 1fr;
-    gap: 0;
-    padding: 0;
-  }
-
-  /* SOLO MÓVIL: ocultar el pane izquierdo completo (no solo el contenido) */
-  @media (max-width: 768px){
-    & > section[data-side="left"]{
-      display: none;
-    }
-  }
-`;
-
-/* PANE GENÉRICO (copiado de StyledPane, adaptado a home) */
-export const StyledPane = styled.section`
-  position: relative;
-  background: ${colors.backsolid};
-  border-radius: 16px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  height: auto;
-  max-height: 800px;
-  justify-content: center;
-  align-items: center;
-  padding: 24px;
-  box-shadow: 0 18px 45px rgba(0,0,0,0.55);
-  box-sizing: border-box;
-
-  @media (max-width: 768px) {
-    padding: 0;
-    max-height: none;
-    height: 100%;
-    border-radius: 0;
-    box-shadow: none;
-    background: transparent;
-    justify-content: stretch;
-    align-items: stretch;
-  }
-
-  /* SOLO MÓVIL: el media del pane derecho debe ser full y sin radios */
-  @media (max-width: 768px) {
-    &[data-side="right"]{
-      overflow: hidden;
-    }
-
-    &[data-side="right"] .home-hero-media{
-      border-radius: 0 !important;
-      width: 100% !important;
-      height: 100% !important;
-    }
-  }
-`;
-
-/* GRID DE THUMBS (copiado de StyledThumbsGrid) */
-export const StyledThumbsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(3, minmax(80px, 1fr));
-  gap: 10px;
-  width: 100%;
-  max-width: 480px;
-  box-sizing: border-box;
-
-  img,
-  .thumb {
-    display: block;
-    width: 100%;
-    aspect-ratio: 3 / 4;
-    object-fit: cover;
-    border-radius: 10px;
-    overflow: hidden;
-    border: 2px solid var(--c-thumb-border);
-    background: var(--c-black);
-  }
-
-  @media (max-width: 768px) {
-    grid-template-columns: repeat(3, minmax(72px, 1fr));
-    gap: 8px;
-  }
-`;
-
-/* CTA PRINCIPAL (copiado de StyledPrimaryCta) */
-export const StyledPrimaryCta = styled.button`
-  appearance: none;
-  border: 1px solid var(--c-black);
-  background: var(--c-white);
-  color: var(--c-black);
-  font-weight: 700;
-  font-size: 16px;
-  padding: 14px 22px;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: background .18s ease, color .18s ease, box-shadow .18s ease, transform .06s ease;
-
-  &:hover {
-    background: var(--c-black);
-    color: var(--c-white);
-    box-shadow: 0 8px 24px rgba(0,0,0,.25);
-  }
-
-  &:active {
-    transform: translateY(1px);
-  }
-`;
+// 2026-08-08: StyledSplit2, StyledPane, StyledThumbsGrid, StyledPrimaryCta
+// eliminados por huérfanos (Fase E). Los vivos StyledSplit2/StyledPane/
+// StyledThumbsGrid están en VideochatStyles (dashboards). StyledPrimaryCta
+// era dead code en ambas defs.
 
 /* CTA SECUNDARIO SIMPLE */
 export const StyledSecondaryCta = styled.button`

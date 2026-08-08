@@ -92,32 +92,8 @@ export const Badges = styled.div`
   margin-left: auto;     /* empuja badges hacia la derecha */
 `;
 
-// Badge sencillo con variantes
-export const Badge = styled.span`
-  display: inline-block;
-  padding: 2px 6px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  color: #fff;
-
-  ${({ $variant }) =>
-    $variant === 'secondary' && `
-      background: #6c757d;
-    `}
-  ${({ $variant }) =>
-    $variant === 'warning' && `
-      background: #ffc107; color: #212529;
-    `}
-  ${({ $variant }) =>
-    $variant === 'danger' && `
-      background: #dc3545;
-    `}
-  ${({ $variant }) =>
-    $variant === 'success' && `
-      background: #28a745;
-    `}
-`;
+// 2026-08-08: Badge eliminado por huérfano (Fase E limpieza). Los badges
+// vivos usan AdminStyles.Badge (cluster admin) y otras variantes locales.
 
 // DOT Contenedor para superponer el punto de presencia sobre el avatar
 export const DotWrap = styled.div`

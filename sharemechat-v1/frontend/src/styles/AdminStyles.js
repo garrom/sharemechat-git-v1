@@ -104,14 +104,8 @@ export const StyledButton = styled.button`
   }
 `;
 
-export const StyledLinkButton = styled.button`
-  background: none;
-  border: none;
-  color: #334155;
-  cursor: pointer;
-  font-size: 13px;
-  text-decoration: underline;
-`;
+// 2026-08-08: StyledLinkButton eliminado por huérfano (Fase E limpieza).
+// El vivo es LoginStyles.StyledLinkButton.
 
 export const StyledError = styled.p`
   color: #8f1d1d;

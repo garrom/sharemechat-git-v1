@@ -32,22 +32,9 @@ const profileButtonStyles = `
   transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.05s ease;
 `;
 
-export const PageWrap = styled.div`
-  max-width: 720px;
-  margin: ${space.xl} auto;
-  padding: 0 ${space.lg} calc(${space.xl} * 2);
-
-  @media (max-width: ${bp.md}) {
-    margin: ${space.lg} auto;
-    padding: 0 ${space.md} ${space.xl};
-  }
-`;
-
-export const Title = styled.h2`
-  margin: 0 0 ${space.lg};
-  font-weight: 700;
-  color: ${textMain};
-`;
+// 2026-08-08: PageWrap y Title eliminados por huérfanos (Fase E). El
+// PageWrap vivo está en BlogStyles; los Title vivos en ModalStyles,
+// EstadisticaStyles, ForgotResetPass, PublicShell, RegisterClientModel.
 
 export const Message = styled.p`
   margin: ${space.sm} 0;
@@ -70,10 +57,8 @@ export const Message = styled.p`
     `}
 `;
 
-export const Form = styled.form`
-  display: grid;
-  gap: ${space.md};
-`;
+// 2026-08-08: Form eliminado por huérfano (Fase E). Los Form vivos están
+// en RegisterClientModel y ForgotResetPass.
 
 export const FormRow = styled.div`
   display: grid;
@@ -139,20 +124,8 @@ export const Textarea = styled.textarea`
   }
 `;
 
-export const ButtonPrimary = styled.button`
-  ${buttonBase}
-  background: ${accent};
-  color: ${colors.white};
-
-  &:hover {
-    background: ${accentHover};
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-`;
+// 2026-08-08: ButtonPrimary eliminado por huérfano (Fase E). Los vivos
+// están en ForgotResetPass y PublicShell.
 
 export const ButtonDangerOutline = styled.button`
   ${buttonBase}
@@ -235,11 +208,8 @@ export const SubSectionCard = styled.section`
   border: 1px solid ${border};
 `;
 
-export const SectionTitle = styled.h3`
-  margin: 0 0 ${space.md};
-  font-weight: 700;
-  color: ${textMain};
-`;
+// 2026-08-08: SectionTitle eliminado por huérfano (Fase E). Los vivos
+// están en AdminStyles, EstadisticaStyles, ModelProfileExpanded.
 
 export const Photo = styled.img`
   max-width: 220px;

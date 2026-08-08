@@ -3,16 +3,8 @@ import styled from 'styled-components';
 import { bp, colors, space } from '../core/tokens';
 import { buttonBase, focusRing } from '../core/mixins';
 
-/* CONTENEDOR FULL SCREEN (igual que StyledContainer de Login) */
-export const Container = styled.div`
-  min-height: 100vh;
-  padding: ${space.lg};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #000;
-  @media (max-width: ${bp.md}) { padding: ${space.md}; }
-`;
+// 2026-08-08: Container eliminado por huérfano (Fase E limpieza). El
+// registro vive dentro del modal (RegisterClientModalContent).
 
 /* CARD REGISTRO (clonado del StyledForm de Login) */
 export const Form = styled.form`
@@ -170,9 +162,5 @@ export const CheckText = styled.span`
   a { color: #38bdf8; text-decoration: underline; }
 `;
 
-/* El StyledBrand del registro ya no lo usamos dentro del card,
-   porque ahora el logo está solo en el navbar, como en Login.
-   Si lo necesitas más adelante, se puede reactivar. */
-export const StyledBrand = styled.a`
-  display: none;
-`;
+// 2026-08-08: StyledBrand eliminado por huérfano (Fase E limpieza). Logo
+// vive solo en el navbar (NavbarStyles.StyledBrand).

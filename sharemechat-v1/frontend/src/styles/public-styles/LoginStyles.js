@@ -200,33 +200,8 @@ export const StyledLinkButton = styled.button`
   &:focus-visible { ${focusRing} }
 `;
 
-/* LOGO centrado arriba, respetando el gap del form */
-export const StyledBrand = styled.a`
-  display: block;
-  margin: 0 auto;
-  width: 220px;
-  height: 56px;
-  background: url('/img/SharemeChat_2.svg') no-repeat center / contain;
-  text-indent: -9999px;
-  overflow: hidden;
-  line-height: 0;
-  color: transparent;
-
-  &:hover { opacity: .96; }
-  &:focus-visible {
-    outline: 2px solid rgba(34,197,94,.6);
-    outline-offset: 2px;
-  }
-
-  @media (max-width: ${bp.md}) {
-    width: 190px;
-    height: 48px;
-  }
-  @media (max-width: 420px) {
-    width: 170px;
-    height: 42px;
-  }
-`;
+// 2026-08-08: StyledBrand eliminado por huérfano (Fase E limpieza). El
+// logo vive solo en NavbarStyles.StyledBrand.
 
 // X para cerrar
 export const CloseBtn = styled.button`
