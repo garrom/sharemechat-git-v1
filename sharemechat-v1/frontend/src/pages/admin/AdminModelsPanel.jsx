@@ -45,6 +45,11 @@ const AdminModelsPanel = ({
   const t = (key, options) => i18n.t(key, options);
   const [users, setUsers] = useState([]);
   const [statusFilter, setStatusFilter] = useState('ACTIVE');
+  // Deuda #D-27 (2026-08-08): filtro Regimen "Libre" (models.master_user_id
+  // IS NULL) vs "Bajo estudio" (IS NOT NULL). Se aplica en cascada tras el
+  // filtro de estado. Backend expone masterUserId + masterNickname en el
+  // DTO por AdminService.getModels.
+  const [regimeFilter, setRegimeFilter] = useState('ALL');
   const [pageSize, setPageSize] = useState(10);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -268,28 +273,39 @@ const AdminModelsPanel = ({
   }, [users, canViewSensitiveDocs]);
 
   const filteredUsers = useMemo(() => {
-    if (statusFilter === 'ALL') return users;
-    if (statusFilter === 'ACTIVE') {
-      return users.filter((user) => {
+    // Paso 1: filtro por estado.
+    let baseList;
+    if (statusFilter === 'ALL') {
+      baseList = users;
+    } else if (statusFilter === 'ACTIVE') {
+      baseList = users.filter((user) => {
         const verification = String(user?.verificationStatus || 'PENDING').toUpperCase();
         const isUnsubscribed =
           String(user?.unsubscribe).toLowerCase() === 'true' || String(user?.unsubscribe) === '1';
         return verification === 'APPROVED' && !isUnsubscribed;
       });
-    }
-    // ADR-056 2026-07-31: "Pendiente promocion" aisla las modelos con
-    // Didit APPROVED pero role=USER que esperan la decision editorial
-    // admin (no la validacion tecnica KYC). Antes se mezclaban con las
-    // ya promovidas dentro de "Aprobado".
-    if (statusFilter === 'PENDING_PROMOTION') {
-      return users.filter((user) => {
+    } else if (statusFilter === 'PENDING_PROMOTION') {
+      // ADR-056 2026-07-31: "Pendiente promocion" aisla las modelos con
+      // Didit APPROVED pero role=USER que esperan la decision editorial
+      // admin (no la validacion tecnica KYC). Antes se mezclaban con las
+      // ya promovidas dentro de "Aprobado".
+      baseList = users.filter((user) => {
         const verification = String(user?.verificationStatus || 'PENDING').toUpperCase();
         const role = String(user?.role || '').toUpperCase();
         return verification === 'APPROVED' && role === 'USER';
       });
+    } else {
+      baseList = users.filter((user) => (user.verificationStatus || 'PENDING') === statusFilter);
     }
-    return users.filter((user) => (user.verificationStatus || 'PENDING') === statusFilter);
-  }, [users, statusFilter]);
+    // Paso 2 (deuda #D-27): filtro por regimen libre vs bajo estudio.
+    if (regimeFilter === 'FREE') {
+      return baseList.filter((u) => !u.masterUserId);
+    }
+    if (regimeFilter === 'UNDER_STUDIO') {
+      return baseList.filter((u) => !!u.masterUserId);
+    }
+    return baseList;
+  }, [users, statusFilter, regimeFilter]);
 
   const displayedUsers = useMemo(
     () => filteredUsers.slice(0, Number(pageSize)),
@@ -512,6 +528,15 @@ const AdminModelsPanel = ({
         </FieldBlock>
 
         <FieldBlock>
+          <label>{t('admin.models.filters.regimeLabel', 'Régimen')}</label>
+          <StyledSelect value={regimeFilter} onChange={(e) => setRegimeFilter(e.target.value)}>
+            <option value="ALL">{t('admin.common.labels.all')}</option>
+            <option value="FREE">{t('admin.models.filters.regimeFree', 'Libres')}</option>
+            <option value="UNDER_STUDIO">{t('admin.models.filters.regimeUnderStudio', 'Bajo estudio')}</option>
+          </StyledSelect>
+        </FieldBlock>
+
+        <FieldBlock>
           <label>{t('admin.common.labels.results')}</label>
           <StyledSelect value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>
             <option value={10}>10</option>
@@ -542,6 +567,7 @@ const AdminModelsPanel = ({
               <th>{t('admin.common.columns.type')}</th>
               <th>{t('admin.common.columns.verification')}</th>
               <th>{t('admin.common.columns.account')}</th>
+              <th>{t('admin.models.columns.regime', 'Régimen')}</th>
               <th>{t('admin.common.columns.actions')}</th>
             </tr>
           </thead>
@@ -558,6 +584,7 @@ const AdminModelsPanel = ({
                     <td>{user.userType}</td>
                     <td>{verification}</td>
                     <td>{String(user?.unsubscribe).toLowerCase() === 'true' || String(user?.unsubscribe) === '1' ? t('admin.models.pills.unsubscribed') : t('admin.models.pills.subscribed')}</td>
+                    <td>-</td>
                     <td>
                       <span style={{ color: '#dc3545' }}>{t('admin.models.pills.invalidId')}</span>
                     </td>
@@ -580,6 +607,41 @@ const AdminModelsPanel = ({
                     )}
                   </td>
                   <td>{String(user?.unsubscribe).toLowerCase() === 'true' || String(user?.unsubscribe) === '1' ? t('admin.models.pills.unsubscribed') : t('admin.models.pills.subscribed')}</td>
+                  <td>
+                    {user.masterUserId ? (
+                      <span
+                        title={t('admin.models.regime.underStudioTooltip', 'Modelo vinculada a un Master (estudio)')}
+                        style={{
+                          display: 'inline-block',
+                          padding: '2px 8px',
+                          borderRadius: 999,
+                          background: '#fef3c7',
+                          color: '#92400e',
+                          border: '1px solid #fbbf24',
+                          fontSize: 12,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {t('admin.models.regime.underStudioLabel', 'Bajo estudio')}: {user.masterNickname || `#${user.masterUserId}`}
+                      </span>
+                    ) : (
+                      <span
+                        title={t('admin.models.regime.freeTooltip', 'Modelo libre (sin Master asociado)')}
+                        style={{
+                          display: 'inline-block',
+                          padding: '2px 8px',
+                          borderRadius: 999,
+                          background: '#dcfce7',
+                          color: '#166534',
+                          border: '1px solid #86efac',
+                          fontSize: 12,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {t('admin.models.regime.freeLabel', 'Libre')}
+                      </span>
+                    )}
+                  </td>
                   <td>
                     {verification === 'PENDING' && canUpdateChecklist && renderChecklistCell(user)}
 

@@ -54,6 +54,15 @@ public class UserDTO {
     // dashboard publico (verificado en docs.didit.me 2026-07-31).
     private String providerSessionId;
 
+    // Deuda #D-27 (2026-08-08): distinguir en el panel admin de modelos la
+    // regimen "libre" vs "bajo estudio". Se poblan SOLO en el flujo
+    // AdminService.getModels; en el resto de mapeos (mapToDTO) quedan null.
+    // masterUserId viene de models.master_user_id (Model.masterUserId).
+    // masterNickname viene del user con id=masterUserId (User.nickname) —
+    // presente si masterUserId no es null.
+    private Long masterUserId;
+    private String masterNickname;
+
     // Product Operational Mode (ADR-009) — exposicion al frontend del estado
     // del gate de admision para que la SPA decida si renderiza la pantalla
     // pre-launch o el producto real. Se poblan en UserController#getCurrentUser.
@@ -167,6 +176,12 @@ public class UserDTO {
 
     public String getProviderSessionId() { return providerSessionId; }
     public void setProviderSessionId(String providerSessionId) { this.providerSessionId = providerSessionId; }
+
+    public Long getMasterUserId() { return masterUserId; }
+    public void setMasterUserId(Long masterUserId) { this.masterUserId = masterUserId; }
+
+    public String getMasterNickname() { return masterNickname; }
+    public void setMasterNickname(String masterNickname) { this.masterNickname = masterNickname; }
 
     public String getProductAccessMode() { return productAccessMode; }
     public void setProductAccessMode(String productAccessMode) { this.productAccessMode = productAccessMode; }

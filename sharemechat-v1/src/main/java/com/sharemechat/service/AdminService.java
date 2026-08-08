@@ -150,6 +150,24 @@ public class AdminService {
                 .stream()
                 .collect(java.util.stream.Collectors.toMap(ModelReviewChecklist::getUserId, x -> x));
 
+        // Deuda #D-27 (2026-08-08): carga en batch de masterUserId por cada
+        // modelo listada + nicknames de esos masters, para exponer al panel
+        // admin la distincion "libre" vs "bajo estudio {master}". Cero cambios
+        // BD (models.master_user_id ya existe).
+        Map<Long, Long> masterUserIdByModelUserId = modelRepository.findAllById(userIds).stream()
+                .filter(m -> m.getMasterUserId() != null)
+                .collect(java.util.stream.Collectors.toMap(Model::getUserId, Model::getMasterUserId));
+        List<Long> masterUserIds = masterUserIdByModelUserId.values().stream()
+                .distinct()
+                .toList();
+        Map<Long, String> masterNicknameById = masterUserIds.isEmpty()
+                ? Map.of()
+                : userRepository.findAllById(masterUserIds).stream()
+                        .collect(java.util.stream.Collectors.toMap(User::getId, u -> {
+                            String n = u.getNickname();
+                            return (n != null && !n.isBlank()) ? n : u.getEmail();
+                        }));
+
         return list.stream().map(user -> {
             UserDTO dto = userService.mapToDTO(user);
             ModelReviewChecklist checklist = checklistByUserId.get(user.getId());
@@ -162,6 +180,12 @@ public class AdminService {
             kycSessionRepository.findTopByUserIdAndSessionTypeOrderByIdDesc(
                             user.getId(), Constants.SessionTypes.MODEL)
                     .ifPresent(s -> dto.setProviderSessionId(s.getProviderSessionId()));
+            // Regimen libre vs bajo estudio (deuda #D-27).
+            Long masterUid = masterUserIdByModelUserId.get(user.getId());
+            if (masterUid != null) {
+                dto.setMasterUserId(masterUid);
+                dto.setMasterNickname(masterNicknameById.get(masterUid));
+            }
             return dto;
         }).toList();
     }
