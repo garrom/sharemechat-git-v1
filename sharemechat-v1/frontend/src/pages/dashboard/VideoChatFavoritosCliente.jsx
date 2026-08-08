@@ -234,15 +234,24 @@ export default function VideoChatFavoritosCliente(props){
   const renderGiftVisual = (giftData) => {
     if (!giftData) return null;
 
-    const src = getGiftVisualSrc(giftData);
+    // code del snapshot del mensaje, o resuelto por id desde el catalogo.
+    let code = giftData.code || null;
+    if (!code) {
+      const lookupId = Number(giftData.giftId ?? giftData.id);
+      const found = gifts.find(gg => Number(gg.id) === lookupId);
+      code = found?.code || null;
+    }
+    const src = getGiftVisualSrc(giftData); // fallback al icono remoto
     const tier = String(giftData.tier || '').toUpperCase();
     const isPremium = tier === 'PREMIUM';
 
-    return src ? (
+    if (!code && !src) return null;
+
+    return (
       <StyledGiftMessage $premium={isPremium}>
-        <StyledGiftIcon src={src} alt={giftData.name || ''} $premium={isPremium}/>
+        <GiftIcon code={code} iconUrl={src} alt={giftData.name || ''} size={isPremium ? 88 : 48} />
       </StyledGiftMessage>
-    ) : null;
+    );
   };
 
   // Fase 1 estilos: chat P2P reutiliza SupportMessageBubble con variantes
