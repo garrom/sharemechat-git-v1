@@ -61,6 +61,26 @@ export const StyledContainer = styled.div`
   flex-direction: column;
   background: #111418;
   color: #e0e0e0;
+
+  // 2026-08-08 fix regresion scroll de pagina en tabs con chat P2P
+  // (videochat, favoritos, calling): el chat interno tiene scroller propio
+  // (StyledChatScroller flex:1 overflow-y:auto) pero la cadena flex arriba
+  // no restringe altura porque el ancestor tiene min-height:100vh (crece
+  // con contenido). Con historiales P2P largos, el chat expandia body y
+  // aparecia scroll de pagina; el composer quedaba fuera del viewport.
+  //
+  // Fix: en esos tabs concretos, height:100vh estricto + overflow:hidden.
+  // El scroll queda dentro del scroller del chat, no en la pagina.
+  // Condicionado por data-tab (feedback styled-shared-condicional): no
+  // ensuciar el default con reglas de una sola vista; blog/historial/tickets
+  // mantienen min-height:100vh y pueden crecer con scroll de pagina.
+  &[data-tab="videochat"],
+  &[data-tab="favoritos"],
+  &[data-tab="calling"] {
+    height: 100vh;
+    min-height: 0;
+    overflow: hidden;
+  }
 `;
 
 // === TEXTO ===
