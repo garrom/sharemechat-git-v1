@@ -1156,6 +1156,19 @@ export const StyledGiftConfirmActions = styled.div`
   button[data-role="confirm"]:disabled { opacity: .5; cursor: not-allowed; }
 `;
 
+// Capa de efectos al enviar/recibir regalo (Fase 3). Overlay sobre el chat;
+// las particulas se inyectan por JS (spawner ligero). Sin pointer-events.
+export const StyledGiftFxLayer = styled.div`
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 5;
+
+  .gfx-p { position: absolute; will-change: transform, opacity; }
+  .gfx-p svg { width: 100%; height: 100%; filter: drop-shadow(0 8px 12px rgba(0,0,0,0.3)); }
+`;
+
 /* --------------------------------
  * 8. LISTADOS / FILAS SELECCIONABLES (SIN CAMBIOS)
  * -------------------------------- */

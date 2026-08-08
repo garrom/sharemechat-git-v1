@@ -44,10 +44,11 @@ export function hasLocalGiftIcon(slug) {
   return !!slug && GIFT_ICON_SLUGS.has(String(slug).toLowerCase());
 }
 
-function resolveSlug(code) {
-  if (!code) return null;
-  if (CODE_TO_SLUG[code]) return CODE_TO_SLUG[code];
-  if (GIFT_ICON_SLUGS.has(code)) return code; // por si el code ya es un slug propio
+export function resolveGiftSlug(code) {
+  const c = code != null ? String(code).toLowerCase() : null;
+  if (!c) return null;
+  if (CODE_TO_SLUG[c]) return CODE_TO_SLUG[c];
+  if (GIFT_ICON_SLUGS.has(c)) return c; // por si el code ya es un slug propio
   return null;
 }
 
@@ -57,7 +58,7 @@ export default function GiftIcon({ code, slug, iconUrl, alt = '', size = 48, cla
   const c = raw != null ? String(raw).toLowerCase() : null;
 
   // 1) Regalo de pago con vector propio.
-  const resolvedSlug = resolveSlug(c);
+  const resolvedSlug = resolveGiftSlug(c);
   if (resolvedSlug) {
     return (
       <svg className={className} style={{ display: 'block', width: size, height: size, ...style }} role="img" aria-label={alt || resolvedSlug}>

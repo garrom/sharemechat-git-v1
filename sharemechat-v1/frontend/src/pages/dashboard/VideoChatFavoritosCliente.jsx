@@ -17,14 +17,23 @@ import { StyledCenter,StyledFavoritesShell,StyledFavoritesColumns,StyledCenterPa
     StyledCallTopMeta,StyledCallTopMetaText,StyledCallTopActions,StyledCallLocalVideo,StyledCallBottomBar,
     StyledCallBottomInner,StyledCallPrimaryActions,StyledCallComposer,StyledGiftsPanel,StyledGiftGrid,
     StyledGiftCatalog,StyledGiftSection,StyledGiftSectionTitle,StyledChatMessagesInner,StyledChatDockMessageComposer,StyledChatDockActions,
-    StyledGiftBar,StyledGiftSeg,StyledGiftTrack,StyledGiftChip,StyledGiftMore,
+    StyledGiftBar,StyledGiftSeg,StyledGiftTrack,StyledGiftChip,StyledGiftFxLayer,
     StyledGiftConfirmOverlay,StyledGiftConfirmCard,StyledGiftConfirmActions
 } from '../../styles/pages-styles/VideochatStyles';
-import GiftIcon from '../../components/gifts/GiftIcon';
+import GiftIcon, { resolveGiftSlug } from '../../components/gifts/GiftIcon';
 import GiftIconDefs from '../../components/gifts/GiftIconDefs';
 import { ButtonLlamar,ButtonColgar,ButtonAceptar,ButtonRechazar,ButtonEnviar,ButtonRegalo,ButtonActivarCam,
     ButtonActivarCamMobile,ButtonVolver,ActionButton,BtnRoundVideo,BtnHangup,BtnCallDanger,BtnCallGhost,BtnSend
 } from '../../styles/ButtonStyles';
+
+// Keyframes de los efectos al enviar/recibir regalo (Fase 3). Se inyectan
+// una vez via <style>; las particulas referencian estos nombres globales.
+const GIFT_FX_KEYFRAMES = `
+@keyframes gfxFloat{0%{transform:translateY(0) scale(.6);opacity:0}15%{opacity:1}100%{transform:translateY(-220px) translateX(var(--dx)) scale(1.05) rotate(var(--rot));opacity:0}}
+@keyframes gfxFall{0%{transform:translateY(-30px) rotate(0);opacity:0}12%{opacity:1}100%{transform:translateY(var(--fall,420px)) translateX(var(--dx)) rotate(var(--rot));opacity:0}}
+@keyframes gfxGlow{0%{transform:scale(.2);opacity:.85}100%{transform:scale(2.6);opacity:0}}
+@keyframes gfxBigNorm{0%{transform:scale(.3);opacity:0}30%{transform:scale(2.6);opacity:1}70%{transform:scale(1);opacity:1}100%{transform:scale(1);opacity:0}}
+`;
 
 export default function VideoChatFavoritosCliente(props){
   const t = (key, options) => i18n.t(key, options);
@@ -54,6 +63,118 @@ export default function VideoChatFavoritosCliente(props){
   // + modal de confirmacion para los de pago.
   const [giftCat, setGiftCat] = useState('free'); // 'free' | 'paid'
   const [confirmGift, setConfirmGift] = useState(null);
+
+  // Fase 3: efectos al aparecer un mensaje-regalo NUEVO (lo ven emisor y
+  // receptor, cada uno al aparecer el mensaje en su chat).
+  const fxRef = useRef(null);
+  const effectedRef = useRef(new Set());
+  const fxInitRef = useRef(false);
+
+  useEffect(() => {
+    effectedRef.current = new Set();
+    fxInitRef.current = false;
+  }, [centerChatPeerId]);
+
+  useEffect(() => {
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const msgs = centerMessages || [];
+    const giftMsgs = msgs.map((m) => ({ m, gd: normalizeGiftMessage(m) })).filter((x) => x.gd);
+    if (!fxInitRef.current) {
+      // carga inicial del historial: marcar como vistos, sin efecto.
+      giftMsgs.forEach((x) => { if (x.m.id != null) effectedRef.current.add(x.m.id); });
+      fxInitRef.current = true;
+      return;
+    }
+    giftMsgs.forEach((x) => {
+      if (x.m.id != null && !effectedRef.current.has(x.m.id)) {
+        effectedRef.current.add(x.m.id);
+        if (!reduce) playGiftFx(x.gd);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [centerMessages]);
+
+  const playGiftFx = (gd) => {
+    const layer = fxRef.current;
+    if (!layer || !gd) return;
+
+    let tier = gd.tier;
+    let code = gd.code;
+    if (!tier || !code) {
+      const found = gifts.find((g) => Number(g.id) === Number(gd.giftId ?? gd.id));
+      tier = tier || found?.tier;
+      code = code || found?.code;
+    }
+    const isPremium = String(tier || '').toUpperCase() === 'PREMIUM';
+
+    const W = layer.clientWidth || 0;
+    const H = layer.clientHeight || 0;
+    const cx = W * 0.72;
+    const cy = H - 24;
+    const rnd = (a, b) => a + (b - a) * Math.random();
+    const COLS = ['#ff5c8a', '#f5b942', '#5cc8ff', '#a78bfa', '#35d29b', '#ff7a1a'];
+
+    const spawn = (html, style, dur) => {
+      const el = document.createElement('div');
+      el.className = 'gfx-p';
+      if (html) el.innerHTML = html;
+      Object.keys(style).forEach((k) => {
+        if (k.charAt(0) === '-') el.style.setProperty(k, style[k]);
+        else el.style[k] = style[k];
+      });
+      layer.appendChild(el);
+      setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, dur);
+    };
+
+    if (!isPremium) {
+      for (let i = 0; i < 8; i++) {
+        setTimeout(() => spawn('❤️', {
+          left: (cx + rnd(-34, 20)) + 'px', top: cy + 'px', fontSize: rnd(16, 28) + 'px',
+          '--dx': rnd(-40, 40) + 'px', '--rot': rnd(-30, 30) + 'deg',
+          animation: `gfxFloat ${rnd(1.1, 1.7)}s ease-out forwards`,
+        }, 1800), i * 80);
+      }
+      return;
+    }
+
+    // Premium: glow + regalo grande->normal + confeti + serpentinas.
+    spawn('', {
+      left: (cx - 65) + 'px', top: (cy - 90) + 'px', width: '130px', height: '130px',
+      borderRadius: '50%', background: 'radial-gradient(circle,rgba(255,220,140,.7),transparent 65%)',
+      animation: 'gfxGlow .9s ease-out forwards',
+    }, 900);
+
+    const slug = resolveGiftSlug(code);
+    if (slug) {
+      spawn(`<svg><use href="#gi-${slug}"/></svg>`, {
+        left: (cx - 45) + 'px', top: (cy - 120) + 'px', width: '90px', height: '90px',
+        transformOrigin: 'bottom center', animation: 'gfxBigNorm 1.1s cubic-bezier(.22,1.4,.4,1) forwards',
+      }, 1200);
+    }
+
+    for (let c = 0; c < 40; c++) {
+      setTimeout(() => {
+        const w = rnd(6, 11);
+        spawn('', {
+          left: rnd(0, W) + 'px', top: '-20px', width: w + 'px', height: (w * 1.7) + 'px',
+          borderRadius: '2px', background: COLS[c % COLS.length],
+          '--dx': rnd(-40, 40) + 'px', '--rot': rnd(180, 620) + 'deg', '--fall': (H + 40) + 'px',
+          animation: `gfxFall ${rnd(1.4, 2.4)}s linear forwards`,
+        }, 2600);
+      }, c * 22);
+    }
+    for (let s = 0; s < 14; s++) {
+      setTimeout(() => {
+        const h = rnd(46, 90);
+        spawn('', {
+          left: rnd(0, W) + 'px', top: (-h - 10) + 'px', width: rnd(5, 8) + 'px', height: h + 'px',
+          borderRadius: '6px', background: COLS[s % COLS.length], opacity: '0.9',
+          '--dx': rnd(-70, 70) + 'px', '--rot': rnd(120, 420) + 'deg', '--fall': (H + 40) + 'px',
+          animation: `gfxFall ${rnd(1.8, 2.8)}s cubic-bezier(.4,.1,.6,1) forwards`,
+        }, 2900);
+      }, s * 40);
+    }
+  };
 
   const normalizeGiftTier = (gift) =>
     String(gift?.tier || 'QUICK').toUpperCase() === 'PREMIUM' ? 'PREMIUM' : 'QUICK';
@@ -373,6 +494,7 @@ export default function VideoChatFavoritosCliente(props){
 
   return(<>
     <GiftIconDefs />
+    <style dangerouslySetInnerHTML={{ __html: GIFT_FX_KEYFRAMES }} />
     {renderGiftConfirmModal()}
     {!isMobile &&(
       <StyledFavoritesShell>
@@ -570,6 +692,7 @@ export default function VideoChatFavoritosCliente(props){
                   {/* Desktop chat normal */}
                   {!isPendingPanel&&!isSentPanel&&contactMode!=='call'&&(
                     <StyledChatWhatsApp style={{position:'relative'}}>
+                      <StyledGiftFxLayer ref={fxRef} />
                       {shouldShowTranslationToggle && (
                         <div style={{position:'absolute',top:6,right:12,zIndex:5}}>
                           <TranslationToggleButton />
@@ -791,7 +914,8 @@ export default function VideoChatFavoritosCliente(props){
               )}
 
               {!isPendingPanel&&!isSentPanel&&contactMode!=='call'&&(
-                <StyledChatWhatsApp>
+                <StyledChatWhatsApp style={{position:'relative'}}>
+                  <StyledGiftFxLayer ref={fxRef} />
                   <StyledChatScroller ref={centerListRef} data-bg="whatsapp" data-kind="favorites-chat">
                     <StyledChatMessagesInner>
                       {centerLoading&&<div style={{color:'#adb5bd'}}>{t('dashboardClient.videoChatFavoritosCliente.loading.history')}</div>}
