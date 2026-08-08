@@ -94,23 +94,29 @@ export const GlobalBlack = createGlobalStyle`
  * 1. LAYOUT BASE
  * -------------------------------- */
 
+const IS_APP_TAB = (t) => t === 'videochat' || t === 'favoritos' || t === 'calling';
+
 export const StyledContainer = styled.div`
   display: flex;
   flex-direction: column;
-  /* Iter.4 (2026-08-02) + hotfix iter.4b: altura condicionada por data-tab.
-     - videochat: height 100vh fijo → las columnas de video usan flex:1 y
-       necesitan que el padre tenga altura definida para calcular su tamaño.
-       Sin esto los <video> colapsan a ~120px de altura.
-     - resto de tabs (stats, favoritos, blog, soporte): min-height 100vh
-       + auto → el body scrollea globalmente y el Footer aparece al final
-       sin solapar el contenido. Navbar sticky top:0 se queda arriba. */
-  height: ${props => props['data-tab'] === 'videochat' ? '100vh' : 'auto'};
+  /* Iter.4 (2026-08-02) + hotfix iter.4b + 2026-08-08 fix scroll favoritos:
+     altura condicionada por data-tab.
+     - App-like tabs (videochat, favoritos, calling): height 100vh fijo +
+       overflow:hidden. Las columnas de video/chat usan flex:1 y necesitan
+       que el padre tenga altura definida para calcular su tamaño; el chat
+       P2P Favoritos tiene su propio StyledChatScroller overflow-y:auto
+       que absorbe el scroll interno.
+     - Resto (stats, blog, historial, tickets): min-height 100vh + auto →
+       el body scrollea globalmente y el Footer aparece al final sin
+       solapar el contenido. Navbar sticky top:0 se queda arriba. */
+  height: ${props => IS_APP_TAB(props['data-tab']) ? '100vh' : 'auto'};
   min-height: 100vh;
+  overflow: ${props => IS_APP_TAB(props['data-tab']) ? 'hidden' : 'visible'};
   background: var(--c-black);
   min-width: 48px;
 
   @supports (height: 100dvh) {
-    height: ${props => props['data-tab'] === 'videochat' ? '100dvh' : 'auto'};
+    height: ${props => IS_APP_TAB(props['data-tab']) ? '100dvh' : 'auto'};
     min-height: 100dvh;
   }
 `;

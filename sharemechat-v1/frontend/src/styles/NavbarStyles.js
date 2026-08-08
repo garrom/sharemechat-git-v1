@@ -78,22 +78,6 @@ export const StyledContainer = styled.div`
   color: #e0e0e0;
 `;
 
-// StyledContainerFixed: variante SIN scroll de body, para Dashboards con
-// chat/streaming. El scroll vive DENTRO de los scrollers hijos
-// (StyledChatScroller). Se creo como componente separado tras verificar
-// que la version condicional via props (data-layout) no aplicaba en runtime
-// con styled-components 5.x en produccion build (ver
-// docs/04-operations/scroll-dashboard-favoritos-investigation-2026-08-08.md).
-export const StyledContainerFixed = styled.div`
-  height: 100vh;
-  min-height: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  background: #111418;
-  color: #e0e0e0;
-`;
-
 // === TEXTO ===
 export const NavText = styled.span`
   display: inline-flex;

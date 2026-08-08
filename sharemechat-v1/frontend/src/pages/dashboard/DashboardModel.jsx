@@ -16,7 +16,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartLine } from '@fortawesome/free-solid-svg-icons';
 import { faHeart, faVideo, faFilm, faArrowLeft, faShieldHalved } from '@fortawesome/free-solid-svg-icons';
 import {
-  StyledContainer,StyledContainerFixed,StyledIconWrapper,StyledMainContent,
+  StyledContainer,StyledIconWrapper,StyledMainContent,
   StyledLeftColumn,StyledCenter,StyledRightColumn,
   StyledLocalVideo,StyledRemoteVideo,
   StyledChatContainer,StyledNavGroup,
@@ -3326,7 +3326,7 @@ const DashboardModel = () => {
 
 
   return (
-    <StyledContainerFixed data-tab={activeTab}>
+    <StyledContainer data-tab={activeTab}>
       <GlobalBlack />
       <AuthenticatedConsentModal
         open={consentRequired}
@@ -3641,7 +3641,7 @@ const DashboardModel = () => {
           </div>
         </div>
       )}
-    </StyledContainerFixed>
+    </StyledContainer>
   );
 
 };
