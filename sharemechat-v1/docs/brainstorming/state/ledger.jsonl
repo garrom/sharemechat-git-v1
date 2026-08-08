@@ -146,3 +146,8 @@
 {"c":30,"t":"resolve","id":"R0014","r":"anadir Madagascar; Didit 220+ cubre MG (confirmar con 1 KYC test); payout cripto; config = operador"}
 {"c":30,"t":"fix","id":"A0004","r":"anadida seccion vectores captacion modelos (A directo/agencia PRIORIDAD, B estudios medio plazo) + paso Madagascar/Didit"}
 {"c":30,"t":"halt","note":"analisis modelos: Madagascar viable (Didit+cripto, test KYC), 2 vectores captacion (liderar reclutamiento directo con 70% founder; estudios medio plazo via for-studios ya construido). Pendiente operador: config MG, ejecutar reclutamiento, X/Y gatillo, config 70% founder."}
+{"c":31,"t":"input","src":"operator 2026-08-06: reproche justo - afirme 'todos amigos' sin verificar ni preguntar; pide mas trabajo autonomo con la BBDD"}
+{"c":31,"t":"correct","id":"S0028","note":"CORREGIDO por S0030: mi inferencia 'todo red del operador/amigos' era ERRONEA. Real: 9 altas, 8 IPs distintas, 8/9 verificados, 6 gmail reales distintos (solo 2 internas @sharemechat.com + 1 desechable tokmail). Demanda real pequena pero organica. Engagement: las reales NO vuelven (choca producto vacio PRELAUNCH). Reconozco el error."}
+{"c":31,"t":"src","id":"S0030","u":"analisis profundo clientes PROD: demanda real desperdiciada por producto vacio; NO son amigos"}
+{"c":31,"t":"produce","id":"A0005","note":"deliverable real: copy listo para cerrar 3 modelos fundadoras + anuncio reclutamiento estilo-agencia (vector A) + pitch estudios (vector B). Trabajo autonomo, no pasar la pelota."}
+{"c":31,"t":"ask","note":"preguntas de verdad-base al operador (no inferir): cuales de las 9 altas reconoce vs desconocidos; por que el interes organico es hispano; si ha hablado con alguno."}
