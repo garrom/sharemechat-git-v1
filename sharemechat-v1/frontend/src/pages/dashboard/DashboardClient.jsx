@@ -2411,6 +2411,11 @@ const DashboardClient = () => {
       console.warn('[openChatWith][Client] peerId inválido:', peerId);
       return;
     }
+    // Guard 2026-08-08: si el user re-clica el mismo contacto ya seleccionado
+    // en favoritos, no-op. Sin este guard, setCenterMessages([]) optimista se
+    // ejecutaba pero el useEffect(targetPeerId, activeTab) NO se disparaba
+    // (deps sin cambio) → chat quedaba vacío con loading indefinido.
+    if (Number(targetPeerId) === peer && activeTab === 'favoritos') return;
     // SIMÉTRICO a Model: esta función NO carga histórico.
     // El histórico lo carga el useEffect(targetPeerId, activeTab).
     setActiveTab('favoritos');

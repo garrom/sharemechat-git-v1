@@ -2702,6 +2702,13 @@ const DashboardModel = () => {
       return;
     }
 
+    // Guard 2026-08-08: si el user re-clica el mismo contacto ya seleccionado
+    // en favoritos, no-op. Sin este guard, setCenterMessages([]) optimista se
+    // ejecutaba pero el useEffect(targetPeerId, activeTab) NO se disparaba
+    // (deps sin cambio) → chat quedaba vacío indefinidamente. Simetrico al
+    // guard del DashboardClient.openChatWith.
+    if (Number(targetPeerId) === peer && activeTab === 'favoritos') return;
+
     setActiveTab('favoritos');
     setCenterChatPeerName(displayName || 'Usuario');
     setCenterMessages([]);
