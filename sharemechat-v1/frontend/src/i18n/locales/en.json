@@ -181,10 +181,6 @@
       "placeholders": {
         "message": "Type a message…",
         "inactive": "Chat inactive"
-      },
-      "translation": {
-        "showOriginal": "Show original",
-        "showTranslations": "Show translations"
       }
     }
   },

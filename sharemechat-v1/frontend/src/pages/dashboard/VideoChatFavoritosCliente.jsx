@@ -6,8 +6,6 @@ import { faArrowLeft, faPhoneSlash, faVideo, faPaperPlane, faGift, faExpand } fr
 import FavoritesClientList from '../favorites/FavoritesClientList';
 import SupportMessageBubble from '../../components/support/SupportMessageBubble';
 import SessionHUD from '../../components/SessionHUD';
-import { useTranslationSettings } from '../../hooks/useTranslationSettings';
-import { useMessageTranslations } from '../../hooks/useMessageTranslations';
 import { StyledCenter,StyledFavoritesShell,StyledFavoritesColumns,StyledCenterPanel,StyledCenterBody,
     StyledChatScroller,StyledChatDock,StyledChatInput,StyledVideoArea,StyledRemoteVideo,StyledVideoTitle,
     StyledTitleAvatar,StyledLocalVideo,StyledTopActions,StyledChatWhatsApp,StyledChatContainer,
@@ -162,24 +160,6 @@ export default function VideoChatFavoritosCliente(props){
   // transparentes (overlay del video). Se usa desde renderCallMessages
   // — el chat normal de favoritos (fuera de llamada) mantiene burbujas
   // opacas.
-  // pending-hardening §5.3: traduccion automatica chat P2P cross-language.
-  // useTranslationSettings sirve la config global (feature enabled + toggle
-  // showOriginal persistido en localStorage). useMessageTranslations hace
-  // batch fetch de traducciones al viewerLang para mensajes recibidos.
-  const {
-    enabled: translationEnabled,
-    viewerLang,
-    showOriginal,
-    toggleShowOriginal,
-  } = useTranslationSettings(user);
-  const { getTranslation } = useMessageTranslations({
-    messages: centerMessages,
-    viewerId: user?.id,
-    viewerLang,
-    enabled: translationEnabled,
-    showOriginal,
-  });
-
   const renderChatMessage = (m, opts = {}) => {
     const { transparent = false } = opts;
     const giftData = normalizeGiftMessage(m);
@@ -203,46 +183,9 @@ export default function VideoChatFavoritosCliente(props){
         peerNickname={centerChatPeerName || ''}
         userNickname={user?.nickname || ''}
         transparent={transparent}
-        translation={isMe ? null : getTranslation(m.id)}
       />
     );
   };
-
-  // Toggle "Ver original / Ver traduccion" que se renderiza en la cabecera
-  // del chat cuando la feature esta habilitada y hay al menos un mensaje del
-  // peer. Persistente en localStorage via useTranslationSettings.
-  const shouldShowTranslationToggle = translationEnabled && viewerLang && (centerMessages || []).some(
-    (m) => Number(m?.senderId) !== Number(user?.id) && !m?.gift
-  );
-  const TranslationToggleButton = () => shouldShowTranslationToggle ? (
-    <button
-      type="button"
-      onClick={toggleShowOriginal}
-      title={showOriginal
-        ? i18n.t('chat.translation.showTranslations', 'Mostrar traducciones')
-        : i18n.t('chat.translation.showOriginal', 'Ver original')}
-      style={{
-        background: showOriginal ? '#fff' : '#dbeafe',
-        color: '#1e3a8a',
-        border: '1px solid #bfdbfe',
-        borderRadius: 999,
-        padding: '4px 10px',
-        fontSize: 12,
-        cursor: 'pointer',
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 4,
-        userSelect: 'none',
-      }}
-    >
-      <span>↻</span>
-      <span>
-        {showOriginal
-          ? i18n.t('chat.translation.showTranslations', 'Mostrar traducciones')
-          : i18n.t('chat.translation.showOriginal', 'Ver original')}
-      </span>
-    </button>
-  ) : null;
 
   const renderCallMessages = () => centerMessages.map((m) => renderChatMessage(m, { transparent: true }));
 
@@ -437,12 +380,7 @@ export default function VideoChatFavoritosCliente(props){
 
                   {/* Desktop chat normal */}
                   {!isPendingPanel&&!isSentPanel&&contactMode!=='call'&&(
-                    <StyledChatWhatsApp style={{position:'relative'}}>
-                      {shouldShowTranslationToggle && (
-                        <div style={{position:'absolute',top:6,right:12,zIndex:5}}>
-                          <TranslationToggleButton />
-                        </div>
-                      )}
+                    <StyledChatWhatsApp>
                       <StyledChatScroller ref={centerListRef} data-bg="whatsapp" data-kind="favorites-chat">
                         <StyledChatMessagesInner>
                           {centerLoading&&<div style={{color:'#adb5bd'}}>{t('dashboardClient.videoChatFavoritosCliente.loading.history')}</div>}

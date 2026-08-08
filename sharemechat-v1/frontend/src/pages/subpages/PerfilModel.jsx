@@ -59,7 +59,6 @@ import {
 } from '../../styles/subpages/PerfilClientModelStyle';
 
 import MyAssetsManager from './MyAssetsManager';
-import PreferredChatLangCard from '../../components/PreferredChatLangCard';
 
 const PerfilModel = () => {
   const t = (key, options) => i18n.t(key, options);
@@ -469,11 +468,6 @@ const PerfilModel = () => {
 
             {/* COLUMNA DERECHA: SEGURIDAD Y CUENTA */}
             <ProfileColSide>
-              {/* pending-hardening §5.3 (2026-08-08): selector idioma
-                  preferido para chat P2P. Se auto-oculta si la feature de
-                  traduccion no esta habilitada en el entorno. */}
-              <PreferredChatLangCard />
-
               <SecurityCard>
                 <CardHeader>
                   <CardTitle>{t('profileCommon.sections.security.title')}</CardTitle>

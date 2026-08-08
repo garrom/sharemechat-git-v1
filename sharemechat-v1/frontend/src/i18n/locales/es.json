@@ -181,10 +181,6 @@
       "placeholders": {
         "message": "Escribe un mensaje…",
         "inactive": "Chat inactivo"
-      },
-      "translation": {
-        "showOriginal": "Ver original",
-        "showTranslations": "Mostrar traducciones"
       }
     }
   },

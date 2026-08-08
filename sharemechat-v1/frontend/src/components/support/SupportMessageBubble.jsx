@@ -126,29 +126,6 @@ const PendingTag = styled.span`
   font-size: 0.72rem;
 `;
 
-// pending-hardening §5.3: sub-linea de traduccion bajo el content original.
-// Opcion C tipo CooMeet: original + traduccion visibles simultaneamente,
-// fuente ligeramente menor y opacidad reducida para jerarquizar.
-const TranslationLine = styled.div`
-  margin-top: 6px;
-  padding-top: 6px;
-  border-top: 1px dashed rgba(15, 23, 42, 0.15);
-  font-size: 0.82rem;
-  opacity: 0.75;
-  display: flex;
-  gap: 6px;
-  align-items: flex-start;
-
-  &::before {
-    content: '↻';
-    color: #3b82f6;
-    font-size: 0.9rem;
-    line-height: 1;
-    flex-shrink: 0;
-    margin-top: 1px;
-  }
-`;
-
 const LLM_RESET_STYLE = { margin: 0, padding: 0 };
 const LLM_MD_COMPONENTS = {
   h1: ({ node, ...props }) => <span {...props} style={LLM_RESET_STYLE} />,
@@ -219,13 +196,11 @@ const SupportMessageBubble = ({
   peerNickname = '',
   userNickname = '',
   transparent = false,
-  translation = null,
 }) => {
   if (!message) return null;
   const sender = message.sender;
   const content = message.content || '';
   const ts = formatTime(message.createdAt);
-  const hasTranslation = typeof translation === 'string' && translation.trim() !== '' && translation !== content;
 
   if (sender === 'SYSTEM') {
     return <SystemBanner>{content}</SystemBanner>;
@@ -304,7 +279,6 @@ const SupportMessageBubble = ({
           <ColumnWrap $side="right">
             <Bubble $bg="#dcfce7" $fg="#14532d" $border="#86efac" $transparent={transparent}>
               {content}
-              {hasTranslation && <TranslationLine>{translation}</TranslationLine>}
             </Bubble>
             <MetaLine $side="right">
               {ts}
@@ -325,7 +299,6 @@ const SupportMessageBubble = ({
           <ColumnWrap $side="left">
             <Bubble $bg="rgba(255,255,255,0.98)" $fg="#111827" $border="rgba(15,23,42,0.08)" $transparent={transparent}>
               {content}
-              {hasTranslation && <TranslationLine>{translation}</TranslationLine>}
             </Bubble>
             <MetaLine $side="left">{ts}</MetaLine>
           </ColumnWrap>
