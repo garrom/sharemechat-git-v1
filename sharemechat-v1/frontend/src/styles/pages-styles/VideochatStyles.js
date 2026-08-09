@@ -1064,19 +1064,46 @@ export const StyledGiftBar = styled.div`
     flex-direction: row;
     align-items: center;
     gap: 6px;
-    padding: 5px 10px;
+    padding: 6px 14px;
     background: rgba(10,12,16,0.6);
     backdrop-filter: blur(8px);
     border: 1px solid rgba(255,255,255,0.12);
     border-top: 1px solid rgba(255,255,255,0.12);
-    border-radius: 999px;
+    border-radius: 18px;
 
-    /* el track ocupa el ancho y scrollea horizontal si no caben (plan B). */
-    > div { flex: 1; min-width: 0; padding: 0; }
+    /* Una sola fila, SIN scroll: hay ancho de sobra, así que los chips van
+       grandes y centrados (2026-08-09 feedback operador). */
+    > div {
+      flex: 1;
+      min-width: 0;
+      padding: 0;
+      overflow: visible;
+      justify-content: center;
+      gap: 8px;
+    }
+    > div::-webkit-scrollbar { display: none; }
 
-    /* chips algo más pequeños que la barra de la columna (38px -> 32px). */
-    button { width: 32px; height: 32px; }
-    button img, button svg { width: 19px; height: 19px; }
+    /* Chips grandes: regalo bien visible; el precio (solo pago) va en una línea
+       DEBAJO del icono, sin taparlo. */
+    button {
+      width: 50px;
+      height: 56px;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+    }
+    button img, button svg { width: 30px; height: 30px; }
+    button .gift-chip__price {
+      position: static;
+      bottom: auto;
+      right: auto;
+      box-shadow: none;
+      font-size: 8.5px;
+      padding: 0 5px;
+    }
   }
 `;
 
