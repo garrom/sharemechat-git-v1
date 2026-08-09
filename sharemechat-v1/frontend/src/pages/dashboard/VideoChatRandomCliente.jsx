@@ -51,6 +51,9 @@ import {
   StyledCallCardDesktop,
   StyledCallVideoArea,
   StyledCallFooterDesktop,
+  StyledCallChatColumn,
+  StyledCallChatColHeader,
+  StyledCallChatColScroll,
   StyledCallStage,
   StyledCallTopBar,
   StyledCallTopMeta,
@@ -683,7 +686,7 @@ export default function VideoChatRandomCliente(props) {
               )}
 
               {remoteStream && !isMobile && (
-                <StyledCallCardDesktop data-full="true">
+                <StyledCallCardDesktop data-full="true" data-chat-side="true">
                   <StyledCallVideoArea>
                     <StyledRemoteVideo
                       ref={remoteVideoWrapRef}
@@ -779,16 +782,24 @@ export default function VideoChatRandomCliente(props) {
                         )}
 
                         {cameraActive && renderCallActions()}
-
-                        <StyledChatContainer data-wide="true">
-                          <TranslationToggleButton />
-                          <StyledChatList ref={vcListRef}>
-                            {renderMessages()}
-                          </StyledChatList>
-                        </StyledChatContainer>
                       </StyledCallStage>
                     </StyledRemoteVideo>
                   </StyledCallVideoArea>
+
+                  <StyledCallChatColumn>
+                    <StyledCallChatColHeader>
+                      <StyledTitleAvatar src={modelAvatar || '/img/avatarChica.png'} alt="" style={{ width: 28, height: 28 }} />
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#e7ebf0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {modelNickname || t('dashboardUserClient.report.displayName')}
+                        </div>
+                      </div>
+                      <TranslationToggleButton />
+                    </StyledCallChatColHeader>
+
+                    <StyledCallChatColScroll ref={vcListRef}>
+                      {renderMessages()}
+                    </StyledCallChatColScroll>
 
                   <StyledCallFooterDesktop>
                     <StyledCallComposer>
@@ -824,6 +835,7 @@ export default function VideoChatRandomCliente(props) {
                       {showGifts && renderGiftPicker()}
                     </StyledCallComposer>
                   </StyledCallFooterDesktop>
+                  </StyledCallChatColumn>
                 </StyledCallCardDesktop>
               )}
 

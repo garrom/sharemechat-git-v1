@@ -1759,6 +1759,63 @@ export const StyledCallCardDesktop = styled.div`
       max-width: none;
     }
   }
+
+  /* Fase 1 streaming: chat a un lado (desktop). La card pasa a FILA
+     [vídeo | columna chat] y llena todo el alto (el vídeo crece con flex, sin
+     la franja negra inferior del height fijo). Móvil sigue con overlay. */
+  &[data-chat-side="true"] {
+    @media (min-width: 769px) {
+      height: 100%;
+      flex-direction: row;
+      align-items: stretch;
+      overflow: hidden;
+    }
+  }
+  &[data-chat-side="true"] > ${StyledCallVideoArea} {
+    @media (min-width: 769px) {
+      height: auto;
+      max-height: none;
+      min-width: 0;
+    }
+  }
+`;
+
+/* Fase 1 streaming: columna de chat a un lado del vídeo (solo desktop). En
+   móvil no se renderiza (el móvil mantiene el chat overlay). */
+export const StyledCallChatColumn = styled.aside`
+  display: none;
+  @media (min-width: 769px) {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 340px;
+    width: 340px;
+    min-width: 0;
+    min-height: 0;
+    background: linear-gradient(180deg, #161a20 0%, #111418 100%);
+    border-left: 1px solid rgba(255,255,255,0.08);
+    overflow: hidden;
+  }
+`;
+
+export const StyledCallChatColHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
+  color: #e7ebf0;
+  min-width: 0;
+`;
+
+export const StyledCallChatColScroll = styled.div`
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 12px 4px;
+  scrollbar-width: thin;
+  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 999px; }
 `;
 
 
