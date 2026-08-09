@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import BlurredPreview from '../../components/BlurredPreview';
 import {
   faUserPlus,
+  faHeart,
   faVideo,
   faPhoneSlash,
   faForward,
@@ -57,6 +58,10 @@ import {
   StyledCallBottomInner,
   StyledCallPrimaryActions,
   StyledCallSecondaryActions,
+  StyledCallOverlayBar,
+  StyledCallOverlayControls,
+  StyledCallOverlayGifts,
+  StyledCallOverlayRb,
   StyledCallComposer,
   StyledTeaserCenter,
   StyledTeaserInner,
@@ -506,7 +511,10 @@ export default function VideoChatRandomCliente(props) {
   const shouldShowTranslationToggle = translationEnabled && viewerLang && messages.some(
     (m) => m.from === 'peer' && m.id && !m.gift
   );
-  const TranslationToggleButton = () => shouldShowTranslationToggle ? (
+  // floating=true -> pill absoluta sobre el vídeo (móvil, chat overlay).
+  // floating=false (default) -> botón normal para la cabecera de la columna de
+  // chat (desktop), igual que el chat puro de favoritos.
+  const TranslationToggleButton = ({ floating = false }) => shouldShowTranslationToggle ? (
     <button
       type="button"
       onClick={toggleShowOriginal}
@@ -514,11 +522,13 @@ export default function VideoChatRandomCliente(props) {
         ? i18n.t('chat.translation.showTranslations', 'Mostrar traducciones')
         : i18n.t('chat.translation.showOriginal', 'Ver original')}
       style={{
-        position: 'absolute',
-        bottom: 12,
-        left: 12,
-        zIndex: 30,
-        pointerEvents: 'auto',
+        ...(floating ? {
+          position: 'absolute',
+          bottom: 12,
+          left: 12,
+          zIndex: 30,
+          pointerEvents: 'auto',
+        } : {}),
         background: showOriginal ? '#fff' : '#dbeafe',
         color: '#1e3a8a',
         border: '1px solid #bfdbfe',
@@ -626,19 +636,103 @@ export default function VideoChatRandomCliente(props) {
     </StyledGiftChip>
   );
 
-  const renderGiftBar = () => (
-    <StyledGiftBar data-kind="random-gift-bar">
-      {premiumGifts.length > 0 && (
-        <StyledGiftTrack data-row="paid">
-          {premiumGifts.map((g) => renderGiftChip(g))}
-        </StyledGiftTrack>
-      )}
-      {quickGifts.length > 0 && (
-        <StyledGiftTrack data-row="free">
-          {quickGifts.map((g) => renderGiftChip(g))}
-        </StyledGiftTrack>
-      )}
-    </StyledGiftBar>
+  // surface 'video-overlay' (desktop, barra inferior sobre el vídeo): UNA sola
+  // fila con TODOS los regalos (gratis primero, luego pago). Por defecto (móvil,
+  // barra en su sitio): DOS filas (pago arriba, gratis abajo), cada una con su
+  // scroll horizontal.
+  const renderGiftBar = (surface) => {
+    if (surface === 'video-overlay') {
+      const allGifts = [...quickGifts, ...premiumGifts];
+      if (allGifts.length === 0) return null;
+      return (
+        <StyledGiftBar data-kind="random-gift-bar" data-surface="video-overlay">
+          <StyledGiftTrack data-row="all">
+            {allGifts.map((g) => renderGiftChip(g))}
+          </StyledGiftTrack>
+        </StyledGiftBar>
+      );
+    }
+    return (
+      <StyledGiftBar data-kind="random-gift-bar">
+        {premiumGifts.length > 0 && (
+          <StyledGiftTrack data-row="paid">
+            {premiumGifts.map((g) => renderGiftChip(g))}
+          </StyledGiftTrack>
+        )}
+        {quickGifts.length > 0 && (
+          <StyledGiftTrack data-row="free">
+            {quickGifts.map((g) => renderGiftChip(g))}
+          </StyledGiftTrack>
+        )}
+      </StyledGiftBar>
+    );
+  };
+
+  // Barra inferior única sobre el vídeo (desktop): [controles izq] + [regalos
+  // centro] + [reportar/bloquear der] en una sola fila. Los botones de llamada
+  // van más pequeños que el tamaño global (44px) vía style inline, para NO
+  // tocar BtnCall* que también usan las llamadas de favoritos.
+  const OVERLAY_CTRL_STYLE = { width: 34, height: 34, minWidth: 34, minHeight: 34, fontSize: 13 };
+  const OVERLAY_RB_STYLE = { width: 32, height: 32, minWidth: 32, minHeight: 32, fontSize: 12 };
+  const renderCallOverlayBar = () => (
+    <StyledCallOverlayBar>
+      <StyledCallOverlayControls>
+        <BtnCallDanger
+          onClick={stopAll}
+          style={OVERLAY_CTRL_STYLE}
+          title={t('dashboardClient.videoChatRandomCliente.actions.hangup')}
+          aria-label={t('dashboardClient.videoChatRandomCliente.actions.hangup')}
+        >
+          <FontAwesomeIcon icon={faPhoneSlash} />
+        </BtnCallDanger>
+
+        <BtnCallLight
+          onClick={handleNext}
+          disabled={!!nextDisabled}
+          aria-disabled={!!nextDisabled}
+          style={OVERLAY_CTRL_STYLE}
+          title={t('home.hero.nextAria')}
+          aria-label={t('home.hero.nextAria')}
+        >
+          <FontAwesomeIcon icon={faForward} />
+        </BtnCallLight>
+
+        <BtnCallLight
+          onClick={() => handleAddFavorite && handleAddFavorite()}
+          style={OVERLAY_CTRL_STYLE}
+          aria-label={t('common.actions.addToFavorites')}
+          title={t('common.actions.addToFavorites')}
+        >
+          <FontAwesomeIcon icon={faHeart} />
+        </BtnCallLight>
+      </StyledCallOverlayControls>
+
+      <StyledCallOverlayGifts>
+        {renderGiftBar('video-overlay')}
+      </StyledCallOverlayGifts>
+
+      <StyledCallOverlayRb>
+        <BtnCallAlert
+          type="button"
+          onClick={() => handleReportPeer && handleReportPeer()}
+          style={OVERLAY_RB_STYLE}
+          aria-label={t('dashboardUserClient.report.title')}
+          title={t('modals.report.title')}
+        >
+          <FontAwesomeIcon icon={faFlag} />
+        </BtnCallAlert>
+
+        <BtnCallAlert
+          type="button"
+          onClick={() => handleBlockPeer && handleBlockPeer()}
+          style={OVERLAY_RB_STYLE}
+          aria-label={t('modals.block.title')}
+          title={t('modals.block.title')}
+        >
+          <FontAwesomeIcon icon={faBan} />
+        </BtnCallAlert>
+      </StyledCallOverlayRb>
+    </StyledCallOverlayBar>
   );
 
   const renderGiftConfirmModal = () => {
@@ -972,12 +1066,11 @@ export default function VideoChatRandomCliente(props) {
                           </StyledCallLocalVideo>
                         )}
 
-                        {cameraActive && renderCallActions()}
-
-                        {/* "Ver original" flotante sobre el video (abajo-izq),
-                            lejos del HUD (arriba-izq), PiP (arriba-der) y
-                            controles (abajo-centro). */}
-                        <TranslationToggleButton />
+                        {/* Barra inferior única sobre el vídeo: controles
+                            (izq) + regalos (centro) + reportar/bloquear (der).
+                            "Ver original" ya NO va aquí: vuelve a la cabecera
+                            de la columna de chat como botón normal. */}
+                        {cameraActive && renderCallOverlayBar()}
                       </StyledCallStage>
                     </StyledRemoteVideo>
                   </StyledCallVideoArea>
@@ -991,13 +1084,14 @@ export default function VideoChatRandomCliente(props) {
                           {modelNickname || t('dashboardUserClient.report.displayName')}
                         </div>
                       </div>
+                      {/* "Ver original" como botón normal en la cabecera del
+                          chat (igual que el chat puro de favoritos). */}
+                      <TranslationToggleButton />
                     </StyledCallChatColHeader>
 
                     <StyledCallChatColScroll ref={vcListRef}>
                       {renderMessages()}
                     </StyledCallChatColScroll>
-
-                  {renderGiftBar()}
 
                   <StyledCallFooterDesktop>
                     <StyledCallComposer>
@@ -1098,7 +1192,7 @@ export default function VideoChatRandomCliente(props) {
                       {cameraActive && renderCallActions()}
 
                       <StyledChatContainer data-wide="true">
-                        <TranslationToggleButton />
+                        <TranslationToggleButton floating />
                         <StyledChatList ref={vcListRef}>
                           {renderMessages()}
                         </StyledChatList>

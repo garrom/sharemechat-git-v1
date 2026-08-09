@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Regalos + controles sobre el vídeo — mock v2</title>
+<style>
+  :root{--bg:#0f1216;--ink:#e7ebf0;--mut:#9aa4b2;--line:rgba(255,255,255,.12);--coral:#ff5c8a;--violet:#a78bfa;--green:#35d29b;--video:#2b2f36;--blur:repeating-linear-gradient(45deg,#20242b,#20242b 14px,#262b34 14px,#262b34 28px);}
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 -apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);padding:22px}
+  h1{font-size:19px;margin:0 0 4px}
+  .sub{color:var(--mut);margin:0 0 12px;font-size:13px}
+  .screen{width:100%;max-width:1060px;aspect-ratio:16/9;margin:0 auto;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#0a0d11;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.4)}
+  .nav{height:6%;flex:0 0 auto;background:#0b0e13;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;padding:0 14px;font-size:11px;font-weight:700}
+  .nav b{color:var(--coral)}
+  .body{flex:1;display:flex;min-height:0}
+
+  .vzone{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;min-width:0;background:#0a0d11}
+  .blur{position:absolute;inset:0;background:var(--blur);filter:blur(5px);opacity:.5}
+  .vid{position:relative;z-index:1;width:100%;aspect-ratio:16/9;max-height:100%;background:var(--video);display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:12px}
+  .hud{position:absolute;top:8px;left:8px;z-index:5;background:rgba(0,0,0,.6);border-radius:999px;padding:3px 9px;font-size:9px;color:#cfd8e3}
+  .pip{position:absolute;top:8px;right:8px;z-index:5;width:90px;height:56px;background:#1b1f26;border:1px solid var(--line);border-radius:8px;display:grid;place-items:center;color:var(--mut);font-size:8px}
+
+  /* #4 aviso supervisada: strip arriba-centro (en cliente Y modelo) */
+  .superv{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:6;background:rgba(0,0,0,.55);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:8.5px;color:#cfd8e3}
+
+  /* barra inferior sobre el video: [controles izq] + [regalos 1 fila] + [report/block der] */
+  .bottombar{position:absolute;left:10px;right:10px;bottom:10px;z-index:7;display:flex;align-items:center;gap:10px}
+  /* #2 controles a la izquierda (+corazon) */
+  .controls{display:flex;gap:7px;flex:0 0 auto}
+  .cbtn{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.92);display:grid;place-items:center;font-size:13px}
+  .cbtn.hang{background:#ef4444;color:#fff}
+  .cbtn.heart{color:#ff3b6b}
+  /* #1 regalos en UNA fila, ocupando el centro */
+  .gifts{flex:1;min-width:0;display:flex;align-items:center;gap:6px;overflow:hidden;background:rgba(10,12,16,.6);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:999px;padding:5px 10px}
+  .chip{flex:0 0 auto;width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:#1b1f26;display:grid;place-items:center;font-size:15px;position:relative}
+  .chip.paid{border-color:rgba(245,185,66,.5);background:linear-gradient(180deg,#2a2410,#1b1f26)}
+  .chip .price{position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);font-size:6px;background:#f5b942;color:#2a1c04;border-radius:6px;padding:0 3px;font-weight:700}
+  .sep{flex:0 0 auto;width:1px;height:22px;background:var(--line);margin:0 2px}
+  /* #3 report/block a la derecha */
+  .rb{display:flex;gap:7px;flex:0 0 auto}
+  .rb span{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.92);display:grid;place-items:center;font-size:12px;color:#c33}
+
+  .fx{position:absolute;left:40%;bottom:70px;z-index:6;font-size:18px;opacity:.9}
+
+  .chat{width:20%;min-width:0;background:linear-gradient(180deg,#161a20,#111418);border-left:1px solid var(--line);display:flex;flex-direction:column}
+  .chdr{display:flex;align-items:center;gap:6px;padding:6px 9px;border-bottom:1px solid var(--line)}
+  .av{width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,var(--coral),var(--violet));flex:0 0 auto}
+  .chdr .nm{font-size:10px;font-weight:600}
+  .msgs{flex:1;padding:8px;display:flex;flex-direction:column;gap:5px;overflow:hidden}
+  .b{max-width:80%;padding:4px 7px;border-radius:9px;font-size:8.5px}
+  .b.them{align-self:flex-start;background:#232a33}
+  .b.me{align-self:flex-end;background:#2a6b57;color:#eafff6}
+  .b.giftme{align-self:flex-end;background:transparent;font-size:20px;padding:0}
+  .verorig{align-self:center;font-size:8px;color:#9db4ff;padding:2px 0}
+  .comp{display:flex;align-items:center;gap:5px;padding:6px 8px;border-top:1px solid var(--line)}
+  .comp .em{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.08);display:grid;place-items:center;font-size:11px;flex:0 0 auto}
+  .comp .in{flex:1;background:rgba(255,255,255,.08);border-radius:999px;padding:4px 8px;color:var(--mut);font-size:8.5px}
+  .comp .snd{width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,var(--coral),var(--violet));flex:0 0 auto}
+
+  .legend{font-size:12px;color:var(--mut);margin-top:10px}
+  .legend b{color:var(--ink)}
+  .q{background:#1c222b;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:8px;font-size:12.5px}
+  .q b{color:var(--coral)}
+</style>
+</head>
+<body>
+  <h1>Mock v2 — regalos en 1 fila + controles a la izquierda</h1>
+  <p class="sub">Barra inferior sobre el vídeo: controles a la izquierda · regalos en una sola fila (centro) · reportar/bloquear a la derecha. Efectos sobre el vídeo. Chat limpio.</p>
+
+  <div class="screen">
+    <div class="nav"><span>Shareme<b>Chat</b></span> &nbsp; <span style="color:var(--mut)">Videochat · Favoritos · Blog</span></div>
+    <div class="body">
+      <div class="vzone">
+        <div class="blur"></div>
+        <div class="vid">vídeo remoto (16:9)</div>
+        <div class="hud">● 01:14 · 1,00 €/min · 14,41 €</div>
+        <div class="pip">tu cámara</div>
+        <div class="superv">🛡 sesión supervisada · #4 (aquí, en cliente y modelo)</div>
+        <div class="fx">🎉✨🎊</div>
+
+        <div class="bottombar">
+          <!-- #2 controles izquierda + corazon -->
+          <div class="controls">
+            <div class="cbtn hang">✕</div>
+            <div class="cbtn">⏭</div>
+            <div class="cbtn heart">♥</div>
+          </div>
+          <!-- #1 regalos en UNA fila -->
+          <div class="gifts">
+            <div class="chip">💋</div><div class="chip">❤️</div><div class="chip">⭐</div><div class="chip">🔥</div><div class="chip">✨</div><div class="chip">🌷</div>
+            <div class="sep"></div>
+            <div class="chip paid">🌹<span class="price">1€</span></div>
+            <div class="chip paid">🍸<span class="price">3€</span></div>
+            <div class="chip paid">🧸<span class="price">5€</span></div>
+            <div class="chip paid">🎁<span class="price">8€</span></div>
+            <div class="chip paid">💍<span class="price">12€</span></div>
+            <div class="chip paid">👑<span class="price">15€</span></div>
+            <div class="chip paid">💎<span class="price">25€</span></div>
+          </div>
+          <!-- #3 report/block derecha -->
+          <div class="rb"><span>⚑</span><span>⊘</span></div>
+        </div>
+      </div>
+
+      <div class="chat">
+        <div class="chdr"><div class="av"></div><div class="nm">Modelo</div></div>
+        <div class="msgs">
+          <div class="b them">hola guapo</div>
+          <div class="b me">hola! qué tal</div>
+          <div class="b giftme">🌹</div>
+          <div class="verorig">↻ Ver original</div>
+          <div class="b them">gracias 😍</div>
+        </div>
+        <div class="comp"><div class="em">😊</div><div class="in">Escribe un mensaje…</div><div class="snd"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="legend"><b>Barra inferior (una sola fila):</b> ◀ controles (colgar rojo · siguiente · ♥ favorito) · regalos gratis + de pago en una fila · reportar/bloquear ▶. Los efectos (serpentina/confeti) saltan sobre el vídeo.</p>
+
+  <div class="q"><b>Dudas para confirmar:</b>
+    1) Reportar/bloquear: ¿a la derecha del todo de la barra inferior (como el mock) o arriba-derecha bajo el PiP?<br>
+    2) Aviso "sesión supervisada": ¿lo pongo arriba-centro y visible EN CLIENTE y modelo (como el mock)? ¿O solo dónde estaba?<br>
+    3) "Ver original": lo dejo dentro del chat (mock) o como pill sobre el vídeo.
+  </div>
+</body>
+</html>

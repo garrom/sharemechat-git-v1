@@ -1054,6 +1054,30 @@ export const StyledGiftBar = styled.div`
   padding: 6px 12px 2px;
   background: #111418;
   border-top: 1px solid rgba(255,255,255,0.08);
+
+  /* Variante barra sobre el vídeo (rediseño llamada random cliente 2026-08-09):
+     una sola fila de chips (gratis + pago), pill semitransparente con blur,
+     ocupa el centro (flex:1) de la barra inferior única sobre el vídeo. NO
+     afecta al chat puro de favoritos, que usa la variante por defecto (2 filas
+     opacas en su columna). Chips ~32px. */
+  &[data-surface="video-overlay"] {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    background: rgba(10,12,16,0.6);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-top: 1px solid rgba(255,255,255,0.12);
+    border-radius: 999px;
+
+    /* el track ocupa el ancho y scrollea horizontal si no caben (plan B). */
+    > div { flex: 1; min-width: 0; padding: 0; }
+
+    /* chips algo más pequeños que la barra de la columna (38px -> 32px). */
+    button { width: 32px; height: 32px; }
+    button img, button svg { width: 19px; height: 19px; }
+  }
 `;
 
 export const StyledGiftSeg = styled.div`
@@ -1547,6 +1571,47 @@ export const StyledCallSecondaryActions = styled.div`
   justify-content: flex-end;
   gap: 8px;
   pointer-events: auto;
+`;
+
+/* Barra inferior única sobre el vídeo (rediseño llamada random cliente
+   2026-08-09): una sola fila anclada abajo, a lo ancho, con tres zonas —
+   IZQUIERDA controles (colgar/siguiente/favorito), CENTRO barra de regalos
+   (flex:1), DERECHA reportar/bloquear. z-index 7: por encima del vídeo, por
+   debajo del topbar (z9) y del PiP (z8), sin tapar HUD ni cámara local. El
+   wrapper no captura clicks (pointer-events:none); cada zona sí (auto). */
+export const StyledCallOverlayBar = styled.div`
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+
+  & > * { pointer-events: auto; }
+`;
+
+export const StyledCallOverlayControls = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+`;
+
+export const StyledCallOverlayGifts = styled.div`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+`;
+
+export const StyledCallOverlayRb = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
 `;
 
 // 2026-08-08: StyledPrimaryCta eliminado por huérfano (Fase E). Dead code
