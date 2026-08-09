@@ -313,7 +313,10 @@ export default function VideoChatRandomUser(props) {
 
   return (
     <StyledCenterVideochat>
-      <TrialFreeBanner />
+      {/* En llamada desktop el CTA ya vive en la columna de chat (gancho);
+          ocultamos la barra azul ahí para no duplicar. Se mantiene en precall
+          y en móvil (donde es el único CTA). */}
+      {!(remoteStream && !isMobile) && <TrialFreeBanner />}
       <StyledSplit2 data-mode={!isMobile && remoteStream ? 'full-remote' : 'split'}>
         <StyledPane data-side="left">
           {!isMobile && (

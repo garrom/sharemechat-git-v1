@@ -1692,6 +1692,11 @@
     },
     "videoChatRandomUser": {
       "promoTeaserTitle": "{{name}} · teaser",
+      "teaser": {
+        "chatLocked": "Hazte cliente para chatear y enviar regalos",
+        "cta": "Hazte cliente",
+        "inputLocked": "Hazte cliente para escribir…"
+      },
       "actions": {
         "activateCamera": "Activar cámara",
         "addToFavoritesPremium": "Añadir a favoritos (requiere premium)",
