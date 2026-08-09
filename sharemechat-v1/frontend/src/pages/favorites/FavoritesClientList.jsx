@@ -66,15 +66,15 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
           <img
             src="/img/icono-agente-ia.png"
             alt=""
-            width={28}
-            height={28}
+            width={38}
+            height={38}
             style={{ display: 'block', objectFit: 'contain', borderRadius: '50%' }}
           />
         ) : (
           <Avatar
             src={imgSrc}
             alt=""
-            $size={28}
+            $size={38}
             onError={(e) => { e.currentTarget.src = '/img/avatarChica.png'; }}
           />
         )}

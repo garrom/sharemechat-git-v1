@@ -3546,7 +3546,7 @@ const DashboardModel = () => {
               )}
             </StyledCenter>
 
-            {!showFavoritesFullCall && <StyledRightColumn data-surface="favorites-premium" />}
+            {/* Columna derecha vacia eliminada (rediseño favoritos puro): el chat gana ese ancho. */}
           </>
         )}
       </StyledMainContent>

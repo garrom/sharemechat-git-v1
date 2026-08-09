@@ -232,10 +232,12 @@ export const StyledLeftColumn = styled(ColumnBlock)`
   overflow-y: auto;
   border: none;
 
+  /* Rediseño favoritos puro: columna de contactos oscura (coherente con el
+     navbar), en vez del gris claro anterior. */
   &[data-surface="favorites-premium"] {
-    background: linear-gradient(180deg, #f9fafb 0%, #f3f5f7 100%);
-    border: 1px solid #e6e7ea;
-    box-shadow: 0 10px 30px rgba(17, 24, 39, 0.06);
+    background: linear-gradient(180deg, #161a20 0%, #111418 100%);
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
   }
 
   @media (min-width: 769px) and (max-width: 1024px) {
