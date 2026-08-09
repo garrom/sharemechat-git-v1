@@ -1476,6 +1476,16 @@ export const StyledCallLocalVideo = styled.div`
   @media (min-width: 769px) {
     border-radius: 16px;
   }
+
+  /* Streaming (random): PiP un poco más pequeño. Como el vídeo es ahora contain
+     con blur lateral, un PiP grande queda solapado raro sobre el borde
+     vídeo/blur. Condicionado para no tocar las llamadas de favoritos. */
+  &[data-compact="true"] {
+    @media (min-width: 769px) {
+      width: 18%;
+      max-width: 190px;
+    }
+  }
 `;
 
 export const StyledCallBottomBar = styled.div`

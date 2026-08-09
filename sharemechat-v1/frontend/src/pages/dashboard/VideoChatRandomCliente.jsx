@@ -765,7 +765,7 @@ export default function VideoChatRandomCliente(props) {
                         )}
 
                         {cameraActive && (
-                          <StyledCallLocalVideo>
+                          <StyledCallLocalVideo data-compact="true">
                             <video
                               ref={localVideoRef}
                               muted
@@ -889,7 +889,7 @@ export default function VideoChatRandomCliente(props) {
                       />
 
                       {cameraActive && (
-                        <StyledCallLocalVideo>
+                        <StyledCallLocalVideo data-compact="true">
                           <video
                             ref={localVideoRef}
                             muted
