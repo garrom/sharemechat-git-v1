@@ -13,7 +13,8 @@ import {
   faFlag,
   faGift,
   faLock,
-  faPaperPlane
+  faPaperPlane,
+  faExpand
 } from '@fortawesome/free-solid-svg-icons';
 
 import {
@@ -448,8 +449,8 @@ export default function VideoChatRandomUser(props) {
                         <StyledCallTopBar>
                           {renderCallTopMeta()}
                           <StyledCallTopActions>
-                            <BtnCallGhost type="button" onClick={() => toggleFullscreen(remoteVideoWrapRef.current)} title={t('dashboardUserClient.videoChatRandomUser.actions.fullscreen')} aria-label={t('dashboardUserClient.videoChatRandomUser.actions.fullscreen')}>
-                              {t('dashboardUserClient.videoChatRandomUser.actions.fullscreen')}
+                            <BtnCallGhost type="button" onClick={() => toggleFullscreen(remoteVideoWrapRef.current)} title={t('dashboardUserClient.videoChatRandomUser.actions.fullscreen')} aria-label={t('dashboardUserClient.videoChatRandomUser.actions.fullscreen')} style={{ width: 36, height: 36, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}>
+                              <FontAwesomeIcon icon={faExpand} />
                             </BtnCallGhost>
                           </StyledCallTopActions>
                         </StyledCallTopBar>

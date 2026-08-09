@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import i18n from '../../i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faPhoneSlash, faVideo, faPaperPlane, faGift } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faPhoneSlash, faVideo, faPaperPlane, faGift, faExpand } from '@fortawesome/free-solid-svg-icons';
 import FavoritesModelList from '../favorites/FavoritesModelList';
 import SupportMessageBubble from '../../components/support/SupportMessageBubble';
 import { useTranslationSettings } from '../../hooks/useTranslationSettings';
@@ -700,8 +700,9 @@ export default function VideoChatFavoritosModelo(props) {
                                         onClick={() => toggleFullscreen(callRemoteWrapRef.current)}
                                         title={t('common.fullscreen')}
                                         aria-label={t('common.fullscreen')}
+                                        style={{ width: 36, height: 36, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}
                                       >
-                                        {t('common.fullscreen')}
+                                        <FontAwesomeIcon icon={faExpand} />
                                       </BtnCallGhost>
                                     </StyledCallTopActions>
                                   </StyledCallTopBar>
