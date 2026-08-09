@@ -633,34 +633,28 @@ tarifas y anticipar el escalado de sus modelos. Estado: no
 implementada. Prioridad baja tras cerrar Opción D + puntos de UX
 Master 2026-08-01.
 
-**Deuda operativa 2026-08-01 — Dashboard Modelo bajo Master necesita vista de transparencia "Lo que has generado" (Opción D)**:
-tras el cambio 2026-08-01 que unifica el reparto de gifts al motor de
-tramos (JAR `dbf22209`, ver TransactionService.processGiftInternal),
-la modelo bajo Master no ve `STREAM_EARNING` ni `GIFT_EARNING` en su
-tab Facturación — todo el earning se atribuye al Master. Consecuencia:
-la modelo pierde visibilidad de lo que genera y no puede verificar
-que el Master le paga off-platform el `internal_share_pct` pactado.
-Vector de conflicto en el sector adult.
-
-**Opción D aprobada por operador 2026-08-01** (pendiente de implementar):
-- Backend: query del historial modelo debe incluir transacciones donde
-  `attributed_model_user_id = suUserId` (aunque el `user_id` sea el
-  Master). Exponer también `internal_share_pct` vigente de la modelo
-  al propio endpoint del modelo (`GET /api/models/me/*` o similar).
-- Frontend Modelo: en la tab Facturación, si `master_user_id != null`:
-  - Banner claro: "Estos ingresos son propiedad de tu Master {name}.
-    Cobras según acuerdo interno pactado ({X}%). Contacta con tu
-    Master para tus pagos."
-  - Columna extra "Tu neto pactado" = `importe × internal_share_pct/100`.
+**Opción D — Dashboard Modelo bajo Master (transparencia "Lo que has generado") — HECHO 2026-08-01** (documentado con retraso 2026-08-08 al detectarse discrepancia doc↔código):
+- **Contexto original**: tras el cambio 2026-08-01 que unifica el reparto
+  de gifts al motor de tramos (JAR `dbf22209`, ver
+  `TransactionService.processGiftInternal`), la modelo bajo Master dejó
+  de ver `STREAM_EARNING` / `GIFT_EARNING` en su tab Facturación — todo
+  el earning se atribuye al Master. Consecuencia sin fix: la modelo
+  pierde visibilidad de lo que genera y no puede verificar que el Master
+  le paga off-platform el `internal_share_pct` pactado. Vector de
+  conflicto en el sector adult.
+- **Implementación entregada 2026-08-01**:
+  - Backend: `ModelController.java:212+` extiende el historial del modelo
+    para incluir transacciones donde `attributed_model_user_id = modelId`
+    (además de las directas `user_id = modelId` — gifts históricos
+    pre-cambio, retiros manuales). Ver comentario literal "ADR-056
+    Opcion D (2026-08-01): historial extendido" en el mismo fichero.
+    `internal_share_pct` vigente expuesto al endpoint del modelo.
+  - Frontend: `ModelBillingPanel.jsx:342+` con columna "Tu neto pactado"
+    calculada como `importe × internal_share_pct/100`, ocultación del
+    bruto cuando `attributedToMaster` (bruto es dinero del Master),
+    banner de transparencia visible cuando `masterInfo.hasMaster`.
 - Sin cambio de flujo económico, solo lectura + banner + columna
   calculada. Máxima transparencia sin renegociar el modelo económico.
-
-Prioridad: mañana 2026-08-02 al retomar S5.a.8 (agrupable con S5.a.8.c
-"columna €/min neto modelo" del panel Master, que también necesita
-exponer `internal_share_pct` desde backend).
-
-Trigger para el operador cuando retome: buscar "Opción D" o
-"opcion-d-modelo-bajo-master" en pending-hardening + memoria.
 
 **Deuda operativa 2026-07-31 — Cláusulas D7 del Contrato Modelo (chargebacks/disputa/reserva) pendientes hasta Sub-frente 3 técnico ADR-052**:
 el borrador `docs/01-business/model-contract-v5-clauses-d7-draft.md`
@@ -745,3 +739,63 @@ Las cuatro líneas comparten haber sido levantadas conversacionalmente durante l
 2. **5.3 Traductor** — HECHO (T1-T6 + streaming completados 2026-08-08).
 3. **5.4 Sistema Master/Studio** — impacto estratégico alto (posibilita captación), ADR aceptado, 8 fases planificadas. Bloquea siguiente ciclo comercial.
 4. **5.2 Google login** — impacto alto en fricción registro cliente, bloqueado hasta verificar TOS Google para adult.
+
+---
+
+## Parte 6 — Frentes derivados del brainstorming 2026-08-08 (A0004 / A0005 / A0006)
+
+Levantados en la sesión de brainstorming del 2026-08-08 (ver `docs/brainstorming/artifacts/A0004.md`, `A0005.md`, `A0006.md` — plan Founding Models + copy captación + plan orgánico US). Todos habilitadores directos del arranque comercial real; ninguno puramente técnico.
+
+### 6.1 Habilitar Madagascar en allowlist de registro modelo — PRIORIDAD ALTA
+
+**Contexto (A0004 §v2)**: 2 hermanas malgaches dispuestas a firmar como fundadoras hoy, **bloqueadas** porque `COUNTRY_ACCESS_MODEL_REGISTRATION_ALLOWED_COUNTRIES` en `/opt/sharemechat/config.env` de TEST/AUDIT/PROD no incluye `MG`. Añadir MG es viable: Didit anuncia cobertura 220+ países (MG casi seguro incluido), payout cripto viable, MG no sancionado. Ver deuda técnica **#D-28** en `docs/04-operations/known-debt.md` para checklist operacional exacto.
+
+Sub-tareas técnicas:
+
+- **6.1.T1 — Config env vars TEST**: SSH TEST → `/opt/sharemechat/config.env` → añadir `MG` a `COUNTRY_ACCESS_MODEL_REGISTRATION_ALLOWED_COUNTRIES` → `systemctl restart sharemechat-test` → verificar `CountryAccessService.modelAllowed` incluye MG en logs de arranque.
+- **6.1.T2 — Test KYC Didit real desde MG**: pedir a una de las hermanas hacer el flujo completo end-to-end (documento malgache + selfie). Confirma que Didit acepta el tipo de documento (CIN malgache, pasaporte). Antes de comprometer PROD.
+- **6.1.T3 — Confirmar rail payout cripto**: Paxum no cubre MG; tarjeta descartada. Cripto (USDT TRC-20) es el rail viable — verificar que el modelo de payout de la modelo permita seleccionar wallet cripto y que el flow de retirada esté probado con destino MG.
+- **6.1.T4 — Replicar env vars AUDIT + PROD** una vez validado T1-T3.
+- **6.1.T5 — Documentar en `docs/03-environments/` la nueva composición** de `model-registration.allowed-countries` por entorno.
+
+### 6.2 SEO US inbound — captar el tráfico orgánico que ya llega mal aterrizado — PRIORIDAD ALTA
+
+**Contexto (A0006)**: Google ya envía tráfico US a `sharemechat.com`, pero aterriza en `/legal`, `/terms`, `/faq` (las únicas páginas indexadas) y rebota. Los usuarios que llegan por IA (ChatGPT) convierten **4-5× más** que Google, pero ChatGPT no cita SharemeChat porque no está indexado en Bing (fuente de búsqueda web de ChatGPT). El pivote comercial hacia US/Américas (ADR-056) hace este frente prioritario.
+
+Sub-tareas priorizadas (A0006):
+
+- **6.2.T1 — Alta en Bing Webmaster Tools (15 min, coste 0) — desbloquea que ChatGPT cite** ⭐. Verificar dominio + enviar sitemap. Importable directamente desde Google Search Console en 1 clic. Requiere ejecución del operador (necesita cuenta Microsoft/live).
+- **6.2.T2 — Envío alternativeto.net el 13-ago-2026** (cuenta ya lista según A0006 y E0001 del ledger).
+- **6.2.T3 — Email nurture waitlist**: borrador listo en A0006 §Prioridad 4. Requiere trigger transaccional en backend (nuevo registro cliente en PRELAUNCH → email de "acceso anticipado") o envío manual mientras el volumen sea bajo. GDPR: nurture defendible para registrados en early-access, no marketing masivo.
+- **6.2.T4 — Cluster contenido US-EN GEO** (medio plazo, tras Bing indexado): páginas de valor con formato Q&A + schema + front-load para intención US:
+  - "no bots / verificado" (USP, H0002 del ledger — dolor #1 del usuario US).
+  - "Omegle / LuckyCrush alternative" (H0001 — intención transaccional).
+  - "Age-verification US" (H0011 reapuntada de UK OSA a leyes estatales US).
+  - Enlazado interno **desde las páginas legales que YA rankean** hacia estas nuevas.
+- **6.2.T5 — Reddit orgánico** (paralelo, no link-drop): participación genuina en subs sobre "Omegle alternatives" + amplificar r/SharemeChat con ángulo "verificado sin bots". Vector US-orgánico real complementario. Encajable en el pipeline social-ops existente (`anthropic-skills:social-orchestrator`).
+
+### 6.3 Deuda documental — reparto real 50-60% (T1-T4) vs 75-79% obsoleto — PRIORIDAD MEDIA
+
+**Contexto (A0004 §v2)**: `docs/01-business/sistema-tiers-modelos.md` y ADR-052 declaran reparto modelo 75-79%; **BBDD PROD real hoy es 50-60% T1-T4** (superseded por ADR-056 el 2026-07-29). La discrepancia genera confusión al planificar tramos fundadoras (el "70% forever" propuesto para Founding Models solo tiene sentido leyendo el reparto real 50-60% como piso) y al redactar copy de captación. Ver deuda **#D-29** en `docs/04-operations/known-debt.md`.
+
+Sub-tareas:
+
+- **6.3.T1 — Reescribir `sistema-tiers-modelos.md`** con reparto real 50-60% + tabla T1-T4 alineada con lo que devuelve `TierService` en runtime. Añadir cabecera "Superseded ADR-052 por ADR-056 el 2026-07-29".
+- **6.3.T2 — Auditar referencias cruzadas** al 75-79% en `pricing.md`, `business-model.md`, `modelo-financiero.md`, `master-contract-v1-draft.md` — actualizar o marcar superseded según proceda.
+- **6.3.T3 — Verificar que `AdminModelsPanel` y `ModelBillingPanel` renderizan los % reales** (no hardcoded pre-ADR-056).
+
+### 6.4 Founding Models — reclutamiento cohorte fundadora (bloque estratégico, requiere decisión operador)
+
+**Contexto (A0004 + A0005)**: propuesta cerrada de reclutar 5-10 modelos colombianas verificadas con estatus fundadora (70% forever + destacado + badge) comprometidas a franja Américas (~19:00-23:00 COT). 3 modelos ya identificadas por contacto personal (1 colombiana + 2 malgaches — MG bloqueado por 6.1). Copy WhatsApp/DM y anuncio reclutamiento listos en `docs/brainstorming/artifacts/A0005.md`.
+
+**Requiere decisión operador (fuera de mandato técnico)**:
+
+- **R0012 — Incentivo**: garantía cash (5 × 4h × 20 noches × €Y/h) vs perks-only (€0: 70% forever + destacado + badge). Recomendación A0004: intentar perks-only primero, añadir garantía solo si no firman 5.
+- **R0013 — Canal reclutamiento**: comunidades cam LATAM, agencias, referidos. Sin canal no hay a quién ofrecer.
+- **R0014 — Aprobar añadir MG a allowlist** (relacionado con 6.1 técnico).
+
+**Dependencias técnicas mínimas** (bloqueantes para arrancar aunque el reclutamiento sea manual):
+
+- **6.4.T1 — Tramo fundadora en BD**: crear registro `TierConfig` (o equivalente en el esquema real de tiers) con `percentage=70` marcado como "founder" e inmune al recálculo por volumen. Requiere revisar `sistema-tiers-modelos.md` (bloqueado por 6.3) y `TierService`.
+- **6.4.T2 — Badge fundadora en perfil modelo**: campo `founder_since` en `Model` o flag `is_founder` + badge visual en la ficha pública. Estimación: sesión corta.
+- **6.4.T3 — Verificar bypass PRELAUNCH via allowlist-by-userId funciona** para ensayo privado con las fundadoras antes del GO LIVE público (mencionado en A0004 §Secuencia paso 2). Ya existe según `product.access.allowlist.user-ids`; solo falta smoke.
