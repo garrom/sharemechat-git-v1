@@ -1760,6 +1760,9 @@ export const StyledCallCardDesktop = styled.div`
   /* Rediseño streaming (random): la card ocupa todo el ancho disponible (sin
      el tope de 1040px centrado que deja franjas). Condicionado para NO afectar
      a las llamadas de favoritos, que comparten este styled. */
+  /* Streaming: ancho completo + llenar todo el alto (el vídeo crece con flex,
+     sin la franja negra inferior del height fijo). Sirve para columna (trial)
+     y fila (cliente/modelo con chat lateral). */
   &[data-full="true"] {
     max-width: none;
     width: 100%;
@@ -1767,25 +1770,25 @@ export const StyledCallCardDesktop = styled.div`
     @media (min-width: 769px) {
       width: 100%;
       max-width: none;
-    }
-  }
-
-  /* Fase 1 streaming: chat a un lado (desktop). La card pasa a FILA
-     [vídeo | columna chat] y llena todo el alto (el vídeo crece con flex, sin
-     la franja negra inferior del height fijo). Móvil sigue con overlay. */
-  &[data-chat-side="true"] {
-    @media (min-width: 769px) {
       height: 100%;
-      flex-direction: row;
-      align-items: stretch;
-      overflow: hidden;
     }
   }
-  &[data-chat-side="true"] > ${StyledCallVideoArea} {
+  &[data-full="true"] > ${StyledCallVideoArea} {
     @media (min-width: 769px) {
+      flex: 1;
       height: auto;
       max-height: none;
       min-width: 0;
+    }
+  }
+
+  /* Fase 1 streaming: chat a un lado (desktop) -> la card pasa a FILA
+     [vídeo | columna chat]. Móvil sigue con overlay. */
+  &[data-chat-side="true"] {
+    @media (min-width: 769px) {
+      flex-direction: row;
+      align-items: stretch;
+      overflow: hidden;
     }
   }
 `;
