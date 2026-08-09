@@ -443,7 +443,7 @@ export default function VideoChatRandomUser(props) {
               {remoteStream && !isMobile && (
                 <StyledCallCardDesktop data-full="true" data-chat-side="true">
                   <StyledCallVideoArea>
-                    <StyledRemoteVideo ref={remoteVideoWrapRef} style={{position:'relative',width:'100%',height:'100%',borderRadius:'18px 18px 0 0',overflow:'hidden',background:'#000'}}>
+                    <StyledRemoteVideo ref={remoteVideoWrapRef} style={{position:'relative',width:'100%',height:'100%',borderRadius:0,overflow:'hidden',background:'#000'}}>
                       <StyledCallStage>
                         <StyledCallTopBar>
                           {renderCallTopMeta()}

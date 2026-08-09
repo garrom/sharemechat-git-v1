@@ -281,6 +281,14 @@ export const StyledCenter = styled(ColumnBlock)`
   @media (min-width:769px) and (max-width:1024px){
     width:50%;
   }
+  /* Llamada de favoritos (rediseño streaming): un poco de aire alrededor de la
+     card (arriba ya lo da el padding-top de StyledMainContent en favoritos). */
+  &[data-mode='call']{
+    @media (min-width:769px){
+      padding: 0 12px 12px;
+      box-sizing: border-box;
+    }
+  }
 `;
 
 
@@ -1789,6 +1797,7 @@ export const StyledCallCardDesktop = styled.div`
       flex-direction: row;
       align-items: stretch;
       overflow: hidden;
+      border-radius: 12px;
     }
   }
 

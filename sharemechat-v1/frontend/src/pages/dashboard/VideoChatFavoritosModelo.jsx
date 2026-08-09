@@ -679,7 +679,7 @@ export default function VideoChatFavoritosModelo(props) {
                         {callStatus === 'in-call' && (
                           <StyledCallCardDesktop data-full="true" data-chat-side="true">
                             <StyledCallVideoArea>
-                              <StyledRemoteVideo ref={callRemoteWrapRef} style={{ position: 'relative', width: '100%', height: '100%', borderRadius: '18px 18px 0 0', overflow: 'hidden', background: '#000' }}>
+                              <StyledRemoteVideo ref={callRemoteWrapRef} style={{ position: 'relative', width: '100%', height: '100%', borderRadius: 0, overflow: 'hidden', background: '#000' }}>
                                 <StyledCallStage>
                                   <StyledCallTopBar>
                                     <StyledCallTopMeta>
