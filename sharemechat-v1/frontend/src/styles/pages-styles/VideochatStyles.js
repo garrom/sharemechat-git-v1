@@ -452,12 +452,33 @@ export const StyledRemoteVideo = styled.div`
 `;
 
 export const StyledRemoteVideoMedia = styled.video`
+  position: relative;
+  width: 100%;
+  height: 100%;
+  object-fit: ${p => (p.$contain ? 'contain' : 'cover')};
+  background: transparent;
+  display: block;
+  opacity: ${p => (p.$ready ? 1 : 0)};
+  transition: opacity 0.18s ease;
+`;
+
+/* Backdrop borroso del vídeo remoto: rellena el letterbox del vídeo apaisado
+   con blur del propio stream (vídeo secundario mudo, mismo MediaStream).
+   z-index:-1 -> queda detrás del vídeo nítido y de todos los overlays (chat,
+   topbar, cámara local), sin tocarlos. Solo streaming random desktop. */
+export const StyledRemoteVideoBlur = styled.video`
+  position: absolute;
+  inset: 0;
+  z-index: -1;
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
+  filter: blur(28px) saturate(1.25);
+  transform: scale(1.12);
   opacity: ${p => (p.$ready ? 1 : 0)};
   transition: opacity 0.18s ease;
+  pointer-events: none;
 `;
 
 export const StyledRemoteVideoPlaceholder = styled.div`
@@ -1724,6 +1745,19 @@ export const StyledCallCardDesktop = styled.div`
     padding: 0;
     border-radius: 0;
     border: none;
+  }
+
+  /* Rediseño streaming (random): la card ocupa todo el ancho disponible (sin
+     el tope de 1040px centrado que deja franjas). Condicionado para NO afectar
+     a las llamadas de favoritos, que comparten este styled. */
+  &[data-full="true"] {
+    max-width: none;
+    width: 100%;
+    margin: 0;
+    @media (min-width: 769px) {
+      width: 100%;
+      max-width: none;
+    }
   }
 `;
 

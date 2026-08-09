@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import i18n from '../../i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import BlurredPreview from '../../components/BlurredPreview';
@@ -37,6 +37,7 @@ import {
   StyledGiftIcon,
   StyledRemoteVideo,
   StyledRemoteVideoMedia,
+  StyledRemoteVideoBlur,
   StyledRemoteVideoPlaceholder,
   StyledTitleAvatar,
   StyledPaneCenter,
@@ -158,6 +159,17 @@ export default function VideoChatRandomCliente(props) {
 
     setIsDesktopRemoteVideoReady(false);
   }, [cameraActive, isMobile, remoteStream]);
+
+  // Fase 0 streaming: backdrop borroso del vídeo remoto. Vídeo secundario mudo
+  // que reproduce el MISMO MediaStream; rellena el letterbox del vídeo apaisado
+  // con un blur del propio stream. Enganche aislado (no toca la plumbing del
+  // vídeo nítido, que engancha el padre vía remoteVideoRef).
+  const blurVideoRef = useRef(null);
+  useEffect(() => {
+    const el = blurVideoRef.current;
+    if (!el) return;
+    if (el.srcObject !== (remoteStream || null)) el.srcObject = remoteStream || null;
+  }, [remoteStream, isMobile]);
 
   const fetchTeasers = async () => {
     setPromoLoading(true);
@@ -671,7 +683,7 @@ export default function VideoChatRandomCliente(props) {
               )}
 
               {remoteStream && !isMobile && (
-                <StyledCallCardDesktop>
+                <StyledCallCardDesktop data-full="true">
                   <StyledCallVideoArea>
                     <StyledRemoteVideo
                       ref={remoteVideoWrapRef}
@@ -706,9 +718,19 @@ export default function VideoChatRandomCliente(props) {
                           </StyledCallTopActions>
                         </StyledCallTopBar>
 
+                        <StyledRemoteVideoBlur
+                          ref={blurVideoRef}
+                          $ready={isDesktopRemoteVideoReady}
+                          autoPlay
+                          playsInline
+                          muted
+                          aria-hidden="true"
+                        />
+
                         <StyledRemoteVideoMedia
                           ref={remoteVideoRef}
                           $ready={isDesktopRemoteVideoReady}
+                          $contain
                           onLoadedMetadata={(e) => {
                             const el = e.currentTarget;
                             console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=remoteVideoLoadedMetadata readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);

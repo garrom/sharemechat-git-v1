@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Streaming redesign — propuesta (escala real)</title>
+<style>
+  :root{
+    --bg:#0f1216; --ink:#e7ebf0; --mut:#9aa4b2; --line:rgba(255,255,255,.12);
+    --coral:#ff5c8a; --violet:#a78bfa; --green:#35d29b; --video:#31363f;
+    --blur:repeating-linear-gradient(45deg,#20242b,#20242b 14px,#262b34 14px,#262b34 28px);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 -apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);padding:22px}
+  h1{font-size:20px;margin:0 0 4px}
+  h2{font-size:15px;margin:24px 0 8px;border-left:3px solid var(--coral);padding-left:8px}
+  .sub{color:var(--mut);margin:0 0 6px;font-size:13px}
+  .legend{font-size:12px;color:var(--mut);margin:6px 0 0}
+  .legend b{color:var(--ink)}
+
+  /* Monitor a proporción real 16:9 */
+  .screen{width:100%;max-width:1040px;aspect-ratio:16/9;margin:6px auto 0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#0a0d11;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.4)}
+  .nav{height:6.2%;flex:0 0 auto;background:#0b0e13;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;padding:0 14px;font-size:11px;font-weight:700}
+  .nav .logo b{color:var(--coral)}
+  .nav .tab{color:var(--mut);font-weight:600;font-size:10px}
+  .nav .tab.on{color:var(--ink);border-bottom:2px solid var(--coral)}
+  .body{flex:1;display:flex;min-height:0}
+
+  /* ---- AFTER: zona de vídeo + chat ---- */
+  .vzone{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;min-width:0}
+  .vzone .blur{position:absolute;inset:0;background:var(--blur);filter:blur(5px);opacity:.5}
+  .vid{position:relative;z-index:2;width:100%;aspect-ratio:16/9;max-height:100%;background:var(--video);display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:12px}
+  .badge{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.55);border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-size:9px;color:#cfd8e3;z-index:3}
+  .lblblur{position:absolute;z-index:3;left:0;right:0;text-align:center;font-size:9px;color:#c9d3df;text-shadow:0 1px 2px #000}
+  .controls{position:absolute;z-index:4;left:50%;bottom:7%;transform:translateX(-50%);display:flex;gap:6px}
+  .pill{background:rgba(10,12,16,.72);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:9px;color:var(--ink)}
+  .pill.coral{background:linear-gradient(135deg,var(--coral),var(--violet));border:none;color:#fff;font-weight:700}
+
+  .chat{width:18.5%;min-width:0;background:linear-gradient(180deg,#161a20,#111418);border-left:1px solid var(--line);display:flex;flex-direction:column}
+  .chdr{display:flex;align-items:center;gap:6px;padding:5% 8%;border-bottom:1px solid var(--line)}
+  .av{width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,var(--coral),var(--violet));display:grid;place-items:center;font-size:10px;font-weight:700;color:#fff;flex:0 0 auto}
+  .chdr .nm{font-size:10px;font-weight:600;line-height:1.1}
+  .chdr .st{font-size:8px;color:var(--green)}
+  .msgs{flex:1;padding:8px;display:flex;flex-direction:column;gap:5px;overflow:hidden}
+  .b{max-width:80%;padding:4px 7px;border-radius:9px;font-size:8.5px}
+  .b.them{align-self:flex-start;background:#232a33}
+  .b.me{align-self:flex-end;background:#2a6b57;color:#eafff6}
+  .gifts{display:flex;gap:4px;padding:5px 8px;border-top:1px solid var(--line);font-size:12px;justify-content:center}
+  .comp{padding:6px 8px;border-top:1px solid var(--line)}
+  .comp .in{background:rgba(255,255,255,.08);border-radius:999px;padding:4px 8px;color:var(--mut);font-size:8.5px}
+
+  /* ---- BEFORE ---- */
+  .franja{flex:1;background:var(--blur);opacity:.5}
+  .vidcap{width:50%;background:var(--video);position:relative;display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:12px}
+  .ovl{position:absolute;right:2%;bottom:6%;width:34%;height:46%;background:rgba(10,12,16,.55);border:1px dashed var(--line);border-radius:8px;display:flex;align-items:flex-end;padding:6px;color:#cfd8e3;font-size:9px}
+
+  .note{background:#1c222b;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0;font-size:12.5px}
+  .note b{color:var(--coral)}
+  ol{margin:6px 0 0;padding-left:20px} li{margin:3px 0}
+  code{background:#0b0e13;border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:12px;color:#dbe4ee}
+</style>
+</head>
+<body>
+  <h1>Streaming (videochat random) — propuesta a escala real 16:9</h1>
+  <p class="sub">Cada recuadro = un monitor de escritorio real (16:9). Cliente y modelo. Solo maqueta; no toca nada.</p>
+
+  <h2>1 · Cómo está hoy (el problema)</h2>
+  <div class="screen">
+    <div class="nav"><span class="logo">Shareme<b>Chat</b></span> &nbsp; <span class="tab on">Videochat</span> <span class="tab">Favoritos</span> <span class="tab">Blog</span></div>
+    <div class="body">
+      <div class="franja"></div>
+      <div class="vidcap">
+        <span class="badge">StyledVideoArea · max-width 960px</span>
+        vídeo remoto (apaisado)
+        <div class="ovl">chat overlay encima del vídeo</div>
+      </div>
+      <div class="franja"></div>
+    </div>
+  </div>
+  <p class="legend">▚ El vídeo apaisado está topado a 960px y centrado → <b>franjas vacías enormes</b> a los lados en pantallas grandes. El chat flota superpuesto sobre el vídeo.</p>
+
+  <h2>2 · Propuesta — en llamada (desktop, escala real)</h2>
+  <div class="screen">
+    <div class="nav"><span class="logo">Shareme<b>Chat</b></span> &nbsp; <span class="tab on">Videochat</span> <span class="tab">Favoritos</span> <span class="tab">Blog</span></div>
+    <div class="body">
+      <div class="vzone">
+        <div class="blur"></div>
+        <span class="lblblur" style="top:2%">blur del vídeo</span>
+        <span class="lblblur" style="bottom:2%">blur del vídeo</span>
+        <div class="vid">
+          <span class="badge">vídeo remoto · 16:9 · llena el ancho</span>
+          vídeo remoto (apaisado, proporción real)
+          <div class="controls"><span class="pill">▮▮ Parar</span><span class="pill coral">Siguiente ▷</span><span class="pill">🎥</span><span class="pill">⛶</span></div>
+        </div>
+      </div>
+      <div class="chat">
+        <div class="chdr"><div class="av">M</div><div><div class="nm">Modelo</div><div class="st">● en línea</div></div></div>
+        <div class="msgs">
+          <div class="b them">hola guapo</div>
+          <div class="b me">hola! qué tal</div>
+          <div class="b them">muy bien 😊</div>
+          <div class="b me">me encantas</div>
+        </div>
+        <div class="gifts">🌹 🍸 🧸 🎁 💎</div>
+        <div class="comp"><div class="in">Escribe un mensaje…</div></div>
+      </div>
+    </div>
+  </div>
+  <p class="legend">El vídeo es <b>apaisado (16:9)</b> y llena el ancho de su zona; como la zona es un poco más alta, el pequeño sobrante <b>arriba/abajo</b> se rellena con <b>blur del propio vídeo</b>. Chat = columna estrecha a la derecha (~18%), no superpuesto.</p>
+
+  <div class="note"><b>Móvil: NO se toca.</b> Vídeo a pantalla completa + chat overlay inferior. Verificado: las burbujas del chat overlay <b>ya son transparentes</b> en móvil (texto blanco con sombra, sin caja) — se añadió el 2026-07-19.</div>
+
+  <h2>3 · Plan por fases</h2>
+  <div class="note">
+    <ol>
+      <li><b>Fase 0 — Vídeo + relleno blur:</b> la zona de vídeo ocupa todo el ancho disponible (menos el chat); el vídeo va <code>object-fit: contain</code> a su proporción apaisada y el sobrante se rellena con una capa <b>blur</b> del mismo stream (<code>object-fit: cover</code> + <code>filter: blur</code>). Vía <i>variante</i> de <code>StyledVideoArea</code> (sin tocar la base).</li>
+      <li><b>Fase 1 — Chat a un lado:</b> el chat pasa de overlay a columna lateral (~18%) en desktop. Móvil sigue con overlay.</li>
+      <li><b>Fase 2 — Rejilla ancha:</b> ensanchar <code>StyledThumbsGrid</code> (hoy topada a 960px) para llenar pantallas grandes.</li>
+      <li><b>Fase 3 — Paridad:</b> mismo layout en <code>VideoChatRandomModelo</code> (pane extra de stats) y revisar <code>VideoChatRandomUser</code> (cliente trial).</li>
+      <li><b>Fase 4 — Pulido:</b> controles, cabecera, regalos, tablet.</li>
+    </ol>
+  </div>
+</body>
+</html>
