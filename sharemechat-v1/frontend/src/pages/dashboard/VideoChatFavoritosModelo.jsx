@@ -62,6 +62,7 @@ import {
 import GiftIcon, { resolveGiftSlug } from '../../components/gifts/GiftIcon';
 import GiftIconDefs from '../../components/gifts/GiftIconDefs';
 import EmojiTextPicker from '../../components/EmojiTextPicker';
+import { isSingleEmoji } from '../../utils/emojiUtils';
 import {
   ButtonLlamar,
   ButtonRegalo,
@@ -417,6 +418,16 @@ export default function VideoChatFavoritosModelo(props) {
       return (
         <StyledChatMessageRow key={m.id} $side={isMe ? senderMe.side : senderPeer.side}>
           {renderGiftVisual(giftData)}
+        </StyledChatMessageRow>
+      );
+    }
+    // Un solo emoji -> grande y sin globo (estilo WhatsApp).
+    if (isSingleEmoji(m.body)) {
+      return (
+        <StyledChatMessageRow key={m.id} $side={isMe ? senderMe.side : senderPeer.side}>
+          <span role="img" aria-label={(m.body || '').trim()} style={{ fontSize: 40, lineHeight: 1 }}>
+            {(m.body || '').trim()}
+          </span>
         </StyledChatMessageRow>
       );
     }
