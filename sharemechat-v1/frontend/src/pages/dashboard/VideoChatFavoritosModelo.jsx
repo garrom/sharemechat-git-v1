@@ -399,7 +399,7 @@ export default function VideoChatFavoritosModelo(props) {
             aria-label={g.name}
             onClick={() => { if (allowChat && sendGiftMsg) sendGiftMsg(g.id); }}
           >
-            <GiftIcon code={g.code} iconUrl={g.icon} alt={g.name || ''} size={32} />
+            <GiftIcon code={g.code} iconUrl={g.icon} alt={g.name || ''} size={24} />
           </StyledGiftChip>
         ))}
       </StyledGiftTrack>
@@ -439,8 +439,16 @@ export default function VideoChatFavoritosModelo(props) {
     const { transparent = false } = opts;
     const giftData = resolveGiftData(m);
     if (giftData) {
+      // Alinea el regalo igual que las burbujas de texto (SupportMessageBubble),
+      // que llevan avatar 32px + gap 10px = 42px en el lado del emisor. El lado
+      // se resuelve tras aplicar la variante (estandar o inverted).
+      const side = isMe ? senderMe.side : senderPeer.side;
       return (
-        <StyledChatMessageRow key={m.id} $side={isMe ? senderMe.side : senderPeer.side}>
+        <StyledChatMessageRow
+          key={m.id}
+          $side={side}
+          style={side === 'me' ? { paddingRight: 42 } : { paddingLeft: 42 }}
+        >
           {renderGiftVisual(giftData)}
         </StyledChatMessageRow>
       );
@@ -790,6 +798,15 @@ export default function VideoChatFavoritosModelo(props) {
                                       </StyledCallPrimaryActions>
                                     </StyledCallBottomInner>
                                   </StyledCallBottomBar>
+
+                                  {/* "Ver original" flotante sobre el video
+                                      (abajo-izq), lejos del HUD (arriba-izq),
+                                      PiP (arriba-der) y hangup (abajo-centro). */}
+                                  {shouldShowCallTranslationToggle && (
+                                    <div style={{ position: 'absolute', left: 12, bottom: 12, zIndex: 30, pointerEvents: 'auto' }}>
+                                      <TranslationToggleButton />
+                                    </div>
+                                  )}
                                 </StyledCallStage>
                               </StyledRemoteVideo>
                             </StyledCallVideoArea>
@@ -805,7 +822,6 @@ export default function VideoChatFavoritosModelo(props) {
                                     {renderCallClientBalance()}
                                   </div>
                                 </div>
-                                {shouldShowCallTranslationToggle && <TranslationToggleButton />}
                               </StyledCallChatColHeader>
 
                               <StyledCallChatColScroll ref={callListRef}>

@@ -1039,14 +1039,19 @@ export const StyledChatMessagesInner = styled.div`
  *        scroll lateral y "+" para el catalogo completo. Los de pago abren
  *        modal de confirmacion antes de cobrar.
  * -------------------------------- */
+// Rediseño 2 filas (2026-08-09): la barra ahora apila hasta 2 StyledGiftTrack
+// (fila superior = pago / premium, fila inferior = gratis de objeto). En la
+// vista solo-gratis (modelo) va una unica fila. flex-direction column + gap
+// pequeño; cada fila scrollea horizontal por su cuenta.
 export const StyledGiftBar = styled.div`
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
-  padding: 8px 16px 2px;
+  padding: 6px 12px 2px;
   background: #111418;
   border-top: 1px solid rgba(255,255,255,0.08);
 `;
@@ -1080,10 +1085,11 @@ export const StyledGiftSeg = styled.div`
 `;
 
 export const StyledGiftTrack = styled.div`
-  flex: 1;
+  flex: 0 0 auto;
+  width: 100%;
   min-width: 0;
   display: flex;
-  gap: 6px;
+  gap: 5px;
   overflow-x: auto;
   padding: 2px;
   scrollbar-width: thin;
@@ -1095,9 +1101,9 @@ export const StyledGiftChip = styled.button`
   position: relative;
   appearance: none;
   flex: 0 0 auto;
-  width: 50px;
-  height: 50px;
-  border-radius: 13px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
   border: 1px solid rgba(255,255,255,0.09);
   background: radial-gradient(circle at 50% 32%, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
   display: grid;
@@ -1109,13 +1115,13 @@ export const StyledGiftChip = styled.button`
   &:active:not(:disabled) { transform: translateY(-1px) scale(.94); }
   &:disabled { opacity: .5; cursor: not-allowed; }
 
-  img, svg { width: 32px; height: 32px; display: block; }
+  img, svg { width: 24px; height: 24px; display: block; }
 
   .gift-chip__price {
     position: absolute;
     bottom: -3px;
     right: -3px;
-    font-size: 9px;
+    font-size: 8px;
     font-weight: 700;
     color: #2a1c04;
     background: linear-gradient(180deg, #ffd778, #f5b942);
@@ -1129,13 +1135,13 @@ export const StyledGiftChip = styled.button`
 export const StyledGiftMore = styled.button`
   appearance: none;
   flex: 0 0 auto;
-  width: 50px;
-  height: 50px;
-  border-radius: 13px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
   border: 1px dashed rgba(255,255,255,0.25);
   background: transparent;
   color: rgba(231,235,240,0.6);
-  font-size: 20px;
+  font-size: 16px;
   line-height: 1;
   cursor: pointer;
   display: grid;

@@ -234,30 +234,38 @@ export default function VideoChatFavoritosCliente(props){
     else sendGiftMsg(g.id);
   };
 
-  // Una sola fila con TODOS los regalos activos: primero los gratis de objeto,
-  // luego los de pago (estos ultimos con look premium via GiftIcon/tier).
-  const renderGiftBar = () => {
-    const items = [...quickGifts, ...premiumGifts];
-    return (
-      <StyledGiftBar data-kind="favorites-gift-bar">
-        <StyledGiftTrack>
-          {items.map((g) => (
-            <StyledGiftChip
-              key={g.id}
-              type="button"
-              disabled={!allowChat}
-              title={g.name}
-              aria-label={g.name}
-              onClick={() => handleGiftChipClick(g)}
-            >
-              <GiftIcon code={g.code} iconUrl={g.icon} alt={g.name || ''} size={32} />
-              {normalizeGiftTier(g) === 'PREMIUM' && <span className="gift-chip__price">{fmtEUR(g.cost)}</span>}
-            </StyledGiftChip>
-          ))}
+  // Dos filas (2026-08-09): fila superior = regalos de PAGO (premium), fila
+  // inferior = regalos GRATIS de objeto (quick). Cada fila es un track con
+  // scroll horizontal propio. Comportamiento por chip: PREMIUM abre modal,
+  // QUICK envia directo (via handleGiftChipClick).
+  const renderGiftChip = (g) => (
+    <StyledGiftChip
+      key={g.id}
+      type="button"
+      disabled={!allowChat}
+      title={g.name}
+      aria-label={g.name}
+      onClick={() => handleGiftChipClick(g)}
+    >
+      <GiftIcon code={g.code} iconUrl={g.icon} alt={g.name || ''} size={24} />
+      {normalizeGiftTier(g) === 'PREMIUM' && <span className="gift-chip__price">{fmtEUR(g.cost)}</span>}
+    </StyledGiftChip>
+  );
+
+  const renderGiftBar = () => (
+    <StyledGiftBar data-kind="favorites-gift-bar">
+      {premiumGifts.length > 0 && (
+        <StyledGiftTrack data-row="paid">
+          {premiumGifts.map((g) => renderGiftChip(g))}
         </StyledGiftTrack>
-      </StyledGiftBar>
-    );
-  };
+      )}
+      {quickGifts.length > 0 && (
+        <StyledGiftTrack data-row="free">
+          {quickGifts.map((g) => renderGiftChip(g))}
+        </StyledGiftTrack>
+      )}
+    </StyledGiftBar>
+  );
 
   const renderGiftConfirmModal = () => {
     if (!confirmGift) return null;
@@ -434,8 +442,15 @@ export default function VideoChatFavoritosCliente(props){
     const giftData = normalizeGiftMessage(m);
     const isMe = Number(m.senderId) === Number(user?.id);
     if (giftData) {
+      // Alinea el regalo igual que las burbujas de texto (SupportMessageBubble),
+      // que llevan un avatar de 32px + gap 10px = 42px en el lado del emisor.
+      // Sin este padding el regalo sobresale ~42px respecto al texto.
       return (
-        <StyledChatMessageRow key={m.id} $side={isMe ? 'me' : 'peer'}>
+        <StyledChatMessageRow
+          key={m.id}
+          $side={isMe ? 'me' : 'peer'}
+          style={isMe ? { paddingRight: 42 } : { paddingLeft: 42 }}
+        >
           {renderGiftVisual(giftData)}
         </StyledChatMessageRow>
       );
@@ -680,6 +695,15 @@ export default function VideoChatFavoritosCliente(props){
                                     </StyledCallPrimaryActions>
                                   </StyledCallBottomInner>
                                 </StyledCallBottomBar>
+
+                                {/* "Ver original" flotante sobre el video
+                                    (abajo-izq), lejos del HUD (arriba-izq),
+                                    PiP (arriba-der) y hangup (abajo-centro). */}
+                                {shouldShowCallTranslationToggle && (
+                                  <div style={{ position: 'absolute', left: 12, bottom: 12, zIndex: 30, pointerEvents: 'auto' }}>
+                                    <TranslationToggleButton />
+                                  </div>
+                                )}
                               </StyledCallStage>
                             </StyledRemoteVideo>
                           </StyledCallVideoArea>
@@ -692,7 +716,6 @@ export default function VideoChatFavoritosCliente(props){
                                   {callPeerName||t('dashboardClient.videoChatFavoritosCliente.labels.remote')}
                                 </div>
                               </div>
-                              {shouldShowCallTranslationToggle && <TranslationToggleButton />}
                             </StyledCallChatColHeader>
 
                             <StyledCallChatColScroll ref={callListRef}>

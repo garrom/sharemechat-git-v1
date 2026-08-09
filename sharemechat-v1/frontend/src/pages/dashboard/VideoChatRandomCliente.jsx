@@ -467,7 +467,7 @@ export default function VideoChatRandomCliente(props) {
       // es regalo y no hay traduccion que mostrar debajo.
       if (!giftVisual && !hasTranslation && isSingleEmoji(msg.text)) {
         return (
-          <StyledChatMessageRow key={msg.id || index}>
+          <StyledChatMessageRow key={msg.id || index} $side={variant}>
             <span role="img" aria-label={(msg.text || '').trim()} style={{ fontSize: 40, lineHeight: 1 }}>
               {(msg.text || '').trim()}
             </span>
@@ -476,7 +476,7 @@ export default function VideoChatRandomCliente(props) {
       }
 
       return (
-        <StyledChatMessageRow key={msg.id || index}>
+        <StyledChatMessageRow key={msg.id || index} $side={variant}>
           {giftVisual ? (
             giftVisual
           ) : (
@@ -515,9 +515,10 @@ export default function VideoChatRandomCliente(props) {
         : i18n.t('chat.translation.showOriginal', 'Ver original')}
       style={{
         position: 'absolute',
-        top: 12,
+        bottom: 12,
         left: 12,
-        zIndex: 100,
+        zIndex: 30,
+        pointerEvents: 'auto',
         background: showOriginal ? '#fff' : '#dbeafe',
         color: '#1e3a8a',
         border: '1px solid #bfdbfe',
@@ -608,29 +609,37 @@ export default function VideoChatRandomCliente(props) {
     else sendGiftMatch(g.id);
   };
 
-  // Una sola fila con TODOS los regalos activos: primero los gratis de objeto,
-  // luego los de pago (con look premium via GiftIcon/tier + precio).
-  const renderGiftBar = () => {
-    const items = [...quickGifts, ...premiumGifts];
-    return (
-      <StyledGiftBar data-kind="random-gift-bar">
-        <StyledGiftTrack>
-          {items.map((g) => (
-            <StyledGiftChip
-              key={g.id}
-              type="button"
-              title={g.name}
-              aria-label={g.name}
-              onClick={() => handleGiftChipClick(g)}
-            >
-              <GiftIcon code={g.code} iconUrl={g.icon} alt={g.name || ''} size={32} />
-              {normalizeGiftTier(g) === 'PREMIUM' && <span className="gift-chip__price">{fmtEUR(g.cost)}</span>}
-            </StyledGiftChip>
-          ))}
+  // Dos filas (2026-08-09): fila superior = regalos de PAGO (premium), fila
+  // inferior = regalos GRATIS de objeto (quick). Cada fila es un track con
+  // scroll horizontal propio. Comportamiento por chip: PREMIUM abre modal,
+  // QUICK envia directo (via handleGiftChipClick).
+  const renderGiftChip = (g) => (
+    <StyledGiftChip
+      key={g.id}
+      type="button"
+      title={g.name}
+      aria-label={g.name}
+      onClick={() => handleGiftChipClick(g)}
+    >
+      <GiftIcon code={g.code} iconUrl={g.icon} alt={g.name || ''} size={24} />
+      {normalizeGiftTier(g) === 'PREMIUM' && <span className="gift-chip__price">{fmtEUR(g.cost)}</span>}
+    </StyledGiftChip>
+  );
+
+  const renderGiftBar = () => (
+    <StyledGiftBar data-kind="random-gift-bar">
+      {premiumGifts.length > 0 && (
+        <StyledGiftTrack data-row="paid">
+          {premiumGifts.map((g) => renderGiftChip(g))}
         </StyledGiftTrack>
-      </StyledGiftBar>
-    );
-  };
+      )}
+      {quickGifts.length > 0 && (
+        <StyledGiftTrack data-row="free">
+          {quickGifts.map((g) => renderGiftChip(g))}
+        </StyledGiftTrack>
+      )}
+    </StyledGiftBar>
+  );
 
   const renderGiftConfirmModal = () => {
     if (!confirmGift) return null;
@@ -964,6 +973,11 @@ export default function VideoChatRandomCliente(props) {
                         )}
 
                         {cameraActive && renderCallActions()}
+
+                        {/* "Ver original" flotante sobre el video (abajo-izq),
+                            lejos del HUD (arriba-izq), PiP (arriba-der) y
+                            controles (abajo-centro). */}
+                        <TranslationToggleButton />
                       </StyledCallStage>
                     </StyledRemoteVideo>
                   </StyledCallVideoArea>
@@ -977,7 +991,6 @@ export default function VideoChatRandomCliente(props) {
                           {modelNickname || t('dashboardUserClient.report.displayName')}
                         </div>
                       </div>
-                      <TranslationToggleButton />
                     </StyledCallChatColHeader>
 
                     <StyledCallChatColScroll ref={vcListRef}>
