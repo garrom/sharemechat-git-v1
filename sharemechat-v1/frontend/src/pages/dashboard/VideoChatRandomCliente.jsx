@@ -1070,13 +1070,13 @@ export default function VideoChatRandomCliente(props) {
                             (izq) + regalos (centro) + reportar/bloquear (der).
                             "Ver original" ya NO va aquí: vuelve a la cabecera
                             de la columna de chat como botón normal. */}
+                        <StyledGiftFxLayer ref={fxRef} />
                         {cameraActive && renderCallOverlayBar()}
                       </StyledCallStage>
                     </StyledRemoteVideo>
                   </StyledCallVideoArea>
 
-                  <StyledCallChatColumn style={{ position: 'relative' }}>
-                    <StyledGiftFxLayer ref={fxRef} />
+                  <StyledCallChatColumn>
                     <StyledCallChatColHeader>
                       <StyledTitleAvatar src={modelAvatar || '/img/avatarChica.png'} alt="" style={{ width: 28, height: 28 }} />
                       <div style={{ minWidth: 0, flex: 1 }}>
