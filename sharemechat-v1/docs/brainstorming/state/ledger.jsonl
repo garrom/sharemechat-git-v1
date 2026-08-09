@@ -156,3 +156,7 @@
 {"c":31,"t":"produce","id":"A0006","note":"plan US-organico priorizado coste 0: (1) Bing Webmaster Tools [desbloquea ChatGPT], (2) citas terceros/GEO alternativeto+Reddit-genuino, (3) contenido valor US-ingles GEO, (4) email nurture a registrados. Deliverable real."}
 {"c":31,"t":"finding","note":"desmontada hipotesis nodo-AWS (eu-central-1+CloudFront -> latencia no es descubrimiento). Descubrimiento organico real es US-leaning pero aterriza en paginas legales; contenido de valor no rankea -> ese es el hueco US-organico."}
 {"c":31,"t":"req","id":"R0016","k":"data","note":"plan US-organico; accion #1 Bing indexing hoy"}
+{"c":32,"t":"input","src":"operator 2026-08-08: esta sesion = hogar de CAPTACION clientes+modelos + SEO/analytics/estrategia; trabajar SOLO en rama propia, no main"}
+{"c":32,"t":"scope","note":"ALCANCE AMPLIADO: SEED ya no es solo clientes; ahora tambien MODELOS (captacion) + SEO/analytics/estrategia. Modelos entra dentro de mandato."}
+{"c":32,"t":"norma","note":"trabajar SOLO en rama claude/seed-customer-acquisition-78fcb3; NO push a main; integrar a main coordinado cuando otras ramas mergeen."}
+{"c":32,"t":"note","note":"SYNC GAP: Parte 6 de pending-hardening.md (L745+) y deudas D-28/D-29 de known-debt.md que cita la otra sesion NO estan aun en origin/main (no pusheadas). Fuente vigente = A0004/A0005/A0006 + ADR-056. Cruzar cuando pusheen."}
