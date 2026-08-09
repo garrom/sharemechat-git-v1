@@ -28,7 +28,6 @@ import {
   StyledChatDock,
   StyledChatInput,
   StyledGiftMessage,
-  StyledGiftIcon,
   StyledRemoteVideo,
   StyledRemoteVideoMedia,
   StyledRemoteVideoBlur,
@@ -66,7 +65,6 @@ import {
   StyledTeaserNavSlot,
   StyledTeaserFavoriteSlot,
   StyledGiftBar,
-  StyledGiftSeg,
   StyledGiftTrack,
   StyledGiftChip,
   StyledGiftFxLayer,
@@ -92,7 +90,7 @@ import { useSession } from '../../components/SessionProvider';
 import { apiFetch } from '../../config/http';
 import { useTranslationSettings } from '../../hooks/useTranslationSettings';
 import { useMessageTranslations } from '../../hooks/useMessageTranslations';
-import GiftIcon, { resolveGiftSlug } from '../../components/gifts/GiftIcon';
+import GiftIcon, { resolveGiftSlug, isFaceGiftCode } from '../../components/gifts/GiftIcon';
 import GiftIconDefs from '../../components/gifts/GiftIconDefs';
 import EmojiTextPicker from '../../components/EmojiTextPicker';
 import { isSingleEmoji } from '../../utils/emojiUtils';
@@ -168,10 +166,9 @@ export default function VideoChatRandomCliente(props) {
   const [isDesktopRemoteVideoReady, setIsDesktopRemoteVideoReady] = useState(false);
 
   // Rediseño regalos (portado de VideoChatFavoritosCliente): barra siempre
-  // visible con segmento Gratis/Regalos + modal de confirmacion para PREMIUM,
-  // y efectos (serpentinas/confeti para pago, corazones para gratis) al enviar
-  // y al recibir.
-  const [giftCat, setGiftCat] = useState('free'); // 'free' | 'paid'
+  // visible con TODOS los regalos activos en una sola fila (gratis de objeto +
+  // de pago) + modal de confirmacion para PREMIUM, y efectos
+  // (serpentinas/confeti para pago, corazones para gratis) al enviar y recibir.
   const [confirmGift, setConfirmGift] = useState(null);
   const fxRef = useRef(null);
   // Adaptacion al flujo random: los mensajes-regalo se pushean SIN id de
@@ -293,9 +290,20 @@ export default function VideoChatRandomCliente(props) {
     };
   };
 
-  const resolveGiftVisual = (gift) => {
+  // Pinta el regalo del mensaje con el componente GiftIcon (por CODE), igual
+  // que VideoChatFavoritosCliente. Resolver por code evita imagenes rotas de
+  // objetos sin URL (p.ej. "Destello"/sparkle, cuyo icon remoto es placeholder
+  // inexistente); el iconUrl remoto queda solo como fallback de retrocompat.
+  const renderGiftVisual = (gift) => {
     const normalized = normalizeMessageGift(gift);
     if (!normalized) return null;
+
+    // code del snapshot del mensaje, o resuelto por id desde el catalogo.
+    let code = normalized.code || null;
+    if (!code) {
+      const lookupId = Number(normalized.giftId ?? normalized.id);
+      code = gifts.find((gg) => Number(gg.id) === lookupId)?.code || null;
+    }
 
     const directIcon = normalized.icon || null;
     const fallbackIcon =
@@ -304,24 +312,13 @@ export default function VideoChatRandomCliente(props) {
         : null;
     const src = directIcon || fallbackIcon || null;
 
-    const tier = normalizeGiftTier(normalized);
-    const isPremium = tier === 'PREMIUM';
+    const isPremium = normalizeGiftTier(normalized) === 'PREMIUM';
 
-    return {
-      ...normalized,
-      icon: src,
-      tier,
-      isPremium,
-    };
-  };
-
-  const renderGiftVisual = (gift) => {
-    const visual = resolveGiftVisual(gift);
-    if (!visual?.icon) return null;
+    if (!code && !src) return null;
 
     return (
-      <StyledGiftMessage $premium={visual.isPremium}>
-        <StyledGiftIcon src={visual.icon} alt={visual.name || ''} $premium={visual.isPremium} />
+      <StyledGiftMessage $premium={isPremium}>
+        <GiftIcon code={code} iconUrl={src} alt={normalized.name || ''} size={isPremium ? 88 : 48} />
       </StyledGiftMessage>
     );
   };
@@ -597,7 +594,11 @@ export default function VideoChatRandomCliente(props) {
     </StyledCallBottomBar>
   );
 
-  const quickGifts = gifts.filter((gift) => normalizeGiftTier(gift) === 'QUICK');
+  // Regalos gratis de OBJETO (se excluyen las caritas: ya viven en el selector
+  // de emojis del composer).
+  const quickGifts = gifts.filter(
+    (gift) => normalizeGiftTier(gift) === 'QUICK' && !isFaceGiftCode(gift.code)
+  );
   const premiumGifts = gifts.filter((gift) => normalizeGiftTier(gift) === 'PREMIUM');
 
   // Barra de regalos siempre visible (portada de favoritos). Gratis -> envio
@@ -607,18 +608,12 @@ export default function VideoChatRandomCliente(props) {
     else sendGiftMatch(g.id);
   };
 
+  // Una sola fila con TODOS los regalos activos: primero los gratis de objeto,
+  // luego los de pago (con look premium via GiftIcon/tier + precio).
   const renderGiftBar = () => {
-    const items = giftCat === 'paid' ? premiumGifts : quickGifts;
+    const items = [...quickGifts, ...premiumGifts];
     return (
       <StyledGiftBar data-kind="random-gift-bar">
-        <StyledGiftSeg>
-          <button type="button" data-active={giftCat === 'free'} onClick={() => setGiftCat('free')}>
-            {t('dashboardClient.videoChatRandomCliente.gifts.free', 'Gratis')}
-          </button>
-          <button type="button" data-active={giftCat === 'paid'} data-kind="paid" onClick={() => setGiftCat('paid')}>
-            {t('dashboardClient.videoChatRandomCliente.gifts.paid', 'Regalos')}
-          </button>
-        </StyledGiftSeg>
         <StyledGiftTrack>
           {items.map((g) => (
             <StyledGiftChip
@@ -629,7 +624,7 @@ export default function VideoChatRandomCliente(props) {
               onClick={() => handleGiftChipClick(g)}
             >
               <GiftIcon code={g.code} iconUrl={g.icon} alt={g.name || ''} size={32} />
-              {giftCat === 'paid' && <span className="gift-chip__price">{fmtEUR(g.cost)}</span>}
+              {normalizeGiftTier(g) === 'PREMIUM' && <span className="gift-chip__price">{fmtEUR(g.cost)}</span>}
             </StyledGiftChip>
           ))}
         </StyledGiftTrack>

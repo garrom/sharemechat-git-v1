@@ -17,10 +17,10 @@ import { StyledCenter,StyledFavoritesShell,StyledFavoritesColumns,StyledCenterPa
     StyledCallTopMeta,StyledCallTopMetaText,StyledCallTopActions,StyledCallLocalVideo,StyledCallBottomBar,
     StyledCallBottomInner,StyledCallPrimaryActions,StyledCallComposer,StyledGiftsPanel,StyledGiftGrid,
     StyledGiftCatalog,StyledGiftSection,StyledGiftSectionTitle,StyledChatMessagesInner,StyledChatDockMessageComposer,StyledChatDockActions,
-    StyledGiftBar,StyledGiftSeg,StyledGiftTrack,StyledGiftChip,StyledGiftFxLayer,
+    StyledGiftBar,StyledGiftTrack,StyledGiftChip,StyledGiftFxLayer,
     StyledGiftConfirmOverlay,StyledGiftConfirmCard,StyledGiftConfirmActions
 } from '../../styles/pages-styles/VideochatStyles';
-import GiftIcon, { resolveGiftSlug } from '../../components/gifts/GiftIcon';
+import GiftIcon, { resolveGiftSlug, isFaceGiftCode } from '../../components/gifts/GiftIcon';
 import GiftIconDefs from '../../components/gifts/GiftIconDefs';
 import EmojiTextPicker from '../../components/EmojiTextPicker';
 import { isSingleEmoji } from '../../utils/emojiUtils';
@@ -61,9 +61,9 @@ export default function VideoChatFavoritosCliente(props){
     }
   }, [callStatus, currentSaldo]);
 
-  // Fase 1 rediseño: barra de regalos siempre visible (segmento gratis/pago)
-  // + modal de confirmacion para los de pago.
-  const [giftCat, setGiftCat] = useState('free'); // 'free' | 'paid'
+  // Fase 1 rediseño: barra de regalos siempre visible con TODOS los regalos
+  // activos en una sola fila (gratis de objeto + de pago); modal de
+  // confirmacion para los de pago.
   const [confirmGift, setConfirmGift] = useState(null);
 
   // Presencia REAL del peer del chat: llega por prop desde DashboardClient,
@@ -186,7 +186,11 @@ export default function VideoChatFavoritosCliente(props){
   const normalizeGiftTier = (gift) =>
     String(gift?.tier || 'QUICK').toUpperCase() === 'PREMIUM' ? 'PREMIUM' : 'QUICK';
 
-  const quickGifts = gifts.filter((gift) => normalizeGiftTier(gift) === 'QUICK');
+  // Regalos gratis de OBJETO (se excluyen las caritas: ya viven en el selector
+  // de emojis del composer).
+  const quickGifts = gifts.filter(
+    (gift) => normalizeGiftTier(gift) === 'QUICK' && !isFaceGiftCode(gift.code)
+  );
   const premiumGifts = gifts.filter((gift) => normalizeGiftTier(gift) === 'PREMIUM');
 
   const renderGiftSection = (title, items) => {
@@ -223,25 +227,19 @@ export default function VideoChatFavoritosCliente(props){
   );
 
   // Barra de regalos siempre visible (Fase 1). Gratis -> envio directo;
-  // pago -> abre modal de confirmacion. El "+" abre el catalogo completo.
+  // pago -> abre modal de confirmacion.
   const handleGiftChipClick = (g) => {
     if (!allowChat) return;
     if (normalizeGiftTier(g) === 'PREMIUM') setConfirmGift(g);
     else sendGiftMsg(g.id);
   };
 
+  // Una sola fila con TODOS los regalos activos: primero los gratis de objeto,
+  // luego los de pago (estos ultimos con look premium via GiftIcon/tier).
   const renderGiftBar = () => {
-    const items = giftCat === 'paid' ? premiumGifts : quickGifts;
+    const items = [...quickGifts, ...premiumGifts];
     return (
       <StyledGiftBar data-kind="favorites-gift-bar">
-        <StyledGiftSeg>
-          <button type="button" data-active={giftCat === 'free'} onClick={() => setGiftCat('free')}>
-            {t('dashboardClient.videoChatFavoritosCliente.gifts.free', 'Gratis')}
-          </button>
-          <button type="button" data-active={giftCat === 'paid'} data-kind="paid" onClick={() => setGiftCat('paid')}>
-            {t('dashboardClient.videoChatFavoritosCliente.gifts.paid', 'Regalos')}
-          </button>
-        </StyledGiftSeg>
         <StyledGiftTrack>
           {items.map((g) => (
             <StyledGiftChip
@@ -253,7 +251,7 @@ export default function VideoChatFavoritosCliente(props){
               onClick={() => handleGiftChipClick(g)}
             >
               <GiftIcon code={g.code} iconUrl={g.icon} alt={g.name || ''} size={32} />
-              {giftCat === 'paid' && <span className="gift-chip__price">{fmtEUR(g.cost)}</span>}
+              {normalizeGiftTier(g) === 'PREMIUM' && <span className="gift-chip__price">{fmtEUR(g.cost)}</span>}
             </StyledGiftChip>
           ))}
         </StyledGiftTrack>

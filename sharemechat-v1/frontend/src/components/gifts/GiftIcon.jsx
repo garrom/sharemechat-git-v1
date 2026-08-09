@@ -19,12 +19,13 @@ export const GIFT_ICON_SLUGS = new Set([
   'rose', 'cocktail', 'teddy', 'diamond', 'ring', 'crown', 'rocket', 'gift',
 ]);
 
-// Regalos de PAGO: code de BD -> slug SVG propio.
+// Regalos de PAGO (y objetos gratis): code de BD -> slug SVG propio.
 const CODE_TO_SLUG = {
   corona: 'crown',
   diamante: 'diamond',
   labios: 'kiss',   // "labios" = lips; el SVG gi-kiss son unos labios
   rosa: 'rose',
+  destello: 'sparkle', // alias defensivo: si el code llega como "destello" (nombre ES) igualmente resuelve al SVG gi-sparkle
 };
 
 // Emojis GRATIS: code de BD -> emoji unicode nativo.
@@ -39,6 +40,18 @@ const CODE_TO_EMOJI = {
   wow: '\u{1F62E}',    // sorpresa
   basic: '\u{1F642}',  // sonrisa simple
 };
+
+// Codigos-carita: regalos gratis que son una CARA (no un objeto). Se excluyen
+// de la barra de regalos porque esas caras ya viven en el selector de emojis
+// del composer (boton 😊); no deben ofrecerse tambien como "regalo".
+// Coincide exactamente con las claves de CODE_TO_EMOJI (todas son caras/gestos).
+// OJO: "labios" (SVG de labios) es un OBJETO, no carita -> NO entra aqui.
+export const FACE_GIFT_CODES = new Set(Object.keys(CODE_TO_EMOJI));
+
+export function isFaceGiftCode(code) {
+  const c = code != null ? String(code).toLowerCase() : null;
+  return !!c && FACE_GIFT_CODES.has(c);
+}
 
 export function hasLocalGiftIcon(slug) {
   return !!slug && GIFT_ICON_SLUGS.has(String(slug).toLowerCase());

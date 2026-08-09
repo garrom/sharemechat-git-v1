@@ -64,7 +64,7 @@ import {
   StyledGiftTrack,
   StyledGiftChip,
 } from '../../styles/pages-styles/VideochatStyles';
-import GiftIcon, { resolveGiftSlug } from '../../components/gifts/GiftIcon';
+import GiftIcon, { resolveGiftSlug, isFaceGiftCode } from '../../components/gifts/GiftIcon';
 import GiftIconDefs from '../../components/gifts/GiftIconDefs';
 import EmojiTextPicker from '../../components/EmojiTextPicker';
 import { isSingleEmoji } from '../../utils/emojiUtils';
@@ -353,8 +353,10 @@ export default function VideoChatFavoritosModelo(props) {
   // renderizamos ninguna seccion Premium por si el backend cambia.
   const normalizeGiftTier = (gift) =>
     String(gift?.tier || 'QUICK').toUpperCase() === 'PREMIUM' ? 'PREMIUM' : 'QUICK';
+  // Solo objetos gratis: se excluyen las caritas (ya viven en el selector de
+  // emojis del composer, boton 😊).
   const modelQuickGifts = Array.isArray(gifts)
-    ? gifts.filter((g) => normalizeGiftTier(g) === 'QUICK')
+    ? gifts.filter((g) => normalizeGiftTier(g) === 'QUICK' && !isFaceGiftCode(g.code))
     : [];
 
   const renderGiftPicker = () => (
