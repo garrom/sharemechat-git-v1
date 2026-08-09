@@ -1797,7 +1797,7 @@ export const StyledCallCardDesktop = styled.div`
       flex-direction: row;
       align-items: stretch;
       overflow: hidden;
-      border-radius: 12px;
+      border-radius: 0;
     }
   }
 
