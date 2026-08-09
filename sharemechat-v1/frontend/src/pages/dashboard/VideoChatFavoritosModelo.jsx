@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import i18n from '../../i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faPhoneSlash, faVideo, faPaperPlane, faGift, faExpand } from '@fortawesome/free-solid-svg-icons';
+import SessionHUD from '../../components/SessionHUD';
 import FavoritesModelList from '../favorites/FavoritesModelList';
 import SupportMessageBubble from '../../components/support/SupportMessageBubble';
 import { useTranslationSettings } from '../../hooks/useTranslationSettings';
@@ -96,6 +97,7 @@ export default function VideoChatFavoritosModelo(props) {
 
   const {
     isMobile,
+    modelEconomics,
     allowChat,
     isPendingPanel,
     isSentPanel,
@@ -204,6 +206,19 @@ export default function VideoChatFavoritosModelo(props) {
   const fxRef = useRef(null);
   // Backdrop borroso del vídeo remoto en llamada (rediseño streaming).
   const callBlurVideoRef = useRef(null);
+
+  // Contador de ganancia del modelo en llamada (paridad con random-modelo):
+  // suma de regalos recibidos del cliente durante la llamada, con el %reparto
+  // de regalos (modelEconomics.giftModelSharePct, fallback 90). Se resetea al
+  // terminar la llamada. La acumulación real vive tras definir callMessages.
+  const [giftsSumEur, setGiftsSumEur] = React.useState(0);
+  const seenGiftKeysRef = React.useRef(new Set());
+  React.useEffect(() => {
+    if (callStatus !== 'in-call') {
+      seenGiftKeysRef.current = new Set();
+      setGiftsSumEur(0);
+    }
+  }, [callStatus]);
   const prevIdsRef = useRef(new Set());
 
   useEffect(() => {
@@ -562,6 +577,34 @@ export default function VideoChatFavoritosModelo(props) {
     return (centerMessages || []).filter((m) => m?.id != null && !callStartSnapshotIds.has(m.id));
   }, [centerMessages, callStartSnapshotIds]);
 
+  // Acumulación de regalos del cliente durante la llamada (para el SessionHUD
+  // del modelo). Solo cuenta los mensajes-regalo del peer (cliente), una vez
+  // cada uno; coste del propio regalo o del catálogo `gifts`.
+  React.useEffect(() => {
+    if (callStatus !== 'in-call') return;
+    if (!Array.isArray(callMessages)) return;
+    const pctRaw = modelEconomics?.giftModelSharePct;
+    const pct = Number.isFinite(Number(pctRaw)) && Number(pctRaw) > 0 ? Number(pctRaw) : 90;
+    let added = 0;
+    callMessages.forEach((m, idx) => {
+      if (Number(m?.senderId) === Number(user?.id)) return; // solo regalos del cliente
+      const gd = resolveGiftData(m);
+      if (!gd) return;
+      let cost = Number(gd.cost);
+      if (!Number.isFinite(cost) || cost <= 0) {
+        const cat = (gifts || []).find((x) => Number(x.id) === Number(gd.giftId));
+        cost = Number(cat?.cost);
+      }
+      if (!Number.isFinite(cost) || cost <= 0) return;
+      const key = `${idx}:${gd.giftId ?? gd.code ?? cost}`;
+      if (seenGiftKeysRef.current.has(key)) return;
+      seenGiftKeysRef.current.add(key);
+      added += (cost * pct) / 100;
+    });
+    if (added > 0) setGiftsSumEur((prev) => prev + added);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [callMessages, callStatus, modelEconomics?.giftModelSharePct]);
+
   const renderDesktopCallMessages = () => callMessages.map((m) => renderChatMessageInverted(m, { transparent: true }));
 
   const shouldShowCallTranslationToggle = translationEnabled && viewerLang && callMessages.some(
@@ -692,6 +735,14 @@ export default function VideoChatFavoritosModelo(props) {
                                           {renderCallClientBalance()}
                                         </div>
                                       </div>
+                                      <SessionHUD
+                                        variant="model"
+                                        active={callStatus === 'in-call'}
+                                        ratePerMin={Number(modelEconomics?.chosenRateEurPerMin)}
+                                        modelSharePct={Number(modelEconomics?.modelSharePct)}
+                                        giftsSum={giftsSumEur}
+                                        inline
+                                      />
                                     </StyledCallTopMeta>
 
                                     <StyledCallTopActions>

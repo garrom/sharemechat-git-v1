@@ -3503,6 +3503,7 @@ const DashboardModel = () => {
               ) : activeTab === 'favoritos' && (
                 <VideoChatFavoritosModelo
                   isMobile={isMobile}
+                  modelEconomics={modelEconomics}
                   allowChat={allowChat}
                   isPendingPanel={isPendingPanel}
                   isSentPanel={isSentPanel}
