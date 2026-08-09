@@ -61,6 +61,7 @@ import {
 } from '../../styles/pages-styles/VideochatStyles';
 import GiftIcon, { resolveGiftSlug } from '../../components/gifts/GiftIcon';
 import GiftIconDefs from '../../components/gifts/GiftIconDefs';
+import EmojiTextPicker from '../../components/EmojiTextPicker';
 import {
   ButtonLlamar,
   ButtonRegalo,
@@ -757,6 +758,7 @@ export default function VideoChatFavoritosModelo(props) {
                         {allowChat && renderModelGiftBar()}
 
                         <StyledChatDockMessageComposer data-kind="favorites-chat">
+                          <EmojiTextPicker onInsert={(e) => setCenterInput((v) => (v || '') + e)} disabled={!allowChat} />
                           <StyledChatInput
                             value={centerInput}
                             onChange={(e) => setCenterInput(e.target.value)}
@@ -1004,6 +1006,7 @@ export default function VideoChatFavoritosModelo(props) {
                     {allowChat && renderModelGiftBar()}
 
                     <StyledChatDockMessageComposer data-kind="favorites-chat">
+                      <EmojiTextPicker onInsert={(e) => setCenterInput((v) => (v || '') + e)} disabled={!allowChat} />
                       <StyledChatInput
                         value={centerInput}
                         onChange={(e) => setCenterInput(e.target.value)}

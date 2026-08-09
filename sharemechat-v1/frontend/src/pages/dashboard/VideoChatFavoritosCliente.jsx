@@ -22,6 +22,7 @@ import { StyledCenter,StyledFavoritesShell,StyledFavoritesColumns,StyledCenterPa
 } from '../../styles/pages-styles/VideochatStyles';
 import GiftIcon, { resolveGiftSlug } from '../../components/gifts/GiftIcon';
 import GiftIconDefs from '../../components/gifts/GiftIconDefs';
+import EmojiTextPicker from '../../components/EmojiTextPicker';
 import { ButtonLlamar,ButtonColgar,ButtonAceptar,ButtonRechazar,ButtonEnviar,ButtonRegalo,ButtonActivarCam,
     ButtonActivarCamMobile,ButtonVolver,ActionButton,BtnRoundVideo,BtnHangup,BtnCallDanger,BtnCallGhost,BtnSend
 } from '../../styles/ButtonStyles';
@@ -708,6 +709,7 @@ export default function VideoChatFavoritosCliente(props){
                       {allowChat && renderGiftBar()}
 
                       <StyledChatDockMessageComposer data-kind="favorites-chat">
+                        <EmojiTextPicker onInsert={(e) => setCenterInput((v) => (v || '') + e)} disabled={!allowChat} />
                         <StyledChatInput
                           value={centerInput}
                           onChange={e=>setCenterInput(e.target.value)}
@@ -926,6 +928,7 @@ export default function VideoChatFavoritosCliente(props){
                   {allowChat && renderGiftBar()}
 
                   <StyledChatDockMessageComposer data-kind="favorites-chat">
+                    <EmojiTextPicker onInsert={(e) => setCenterInput((v) => (v || '') + e)} disabled={!allowChat} />
                     <StyledChatInput
                       value={centerInput}
                       onChange={e=>setCenterInput(e.target.value)}
