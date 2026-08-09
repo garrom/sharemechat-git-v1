@@ -66,6 +66,14 @@ export default function VideoChatFavoritosCliente(props){
   const [giftCat, setGiftCat] = useState('free'); // 'free' | 'paid'
   const [confirmGift, setConfirmGift] = useState(null);
 
+  // Presencia REAL del peer del chat: la tomamos de los items del listado
+  // (misma fuente Redis que el punto de estado), no de un placeholder. El
+  // listado nos reporta sus items via onItemsChange y aqui buscamos el peer.
+  const [favItems, setFavItems] = useState([]);
+  const peerPresence = String(
+    (favItems || []).find((i) => Number(i?.id) === Number(centerChatPeerId))?.presence || 'offline'
+  ).toLowerCase();
+
   // Fase 3: efectos al aparecer un mensaje-regalo NUEVO (lo ven emisor y
   // receptor, cada uno al aparecer el mensaje en su chat).
   const fxRef = useRef(null);
@@ -291,22 +299,31 @@ export default function VideoChatFavoritosCliente(props){
 
   // Cabecera del chat (rediseño favoritos): contacto actual (avatar+nombre)
   // arriba + toggle "Ver original" a la derecha. Sustituye al toggle flotante.
-  const renderFavChatHeader = () => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: '#111418', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, position: 'relative', zIndex: 6 }}>
-      <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#ff5c8a,#a78bfa)', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
-        {(centerChatPeerName || '?').charAt(0).toUpperCase()}
-      </div>
-      <div style={{ minWidth: 0, lineHeight: 1.25 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: '#e7ebf0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {centerChatPeerName || ''}
+  // El estado (en línea/ocupado/desconectado) usa la presencia REAL del peer,
+  // tomada del listado (peerPresence), igual que el punto del contacto.
+  const renderFavChatHeader = () => {
+    const pMeta = peerPresence === 'online'
+      ? { c: '#22c55e', label: t('common.presence.online', 'en línea') }
+      : peerPresence === 'busy'
+      ? { c: '#f59e0b', label: t('common.presence.busy', 'ocupado') }
+      : { c: '#9ca3af', label: t('common.presence.offline', 'desconectado') };
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: '#111418', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, position: 'relative', zIndex: 6 }}>
+        <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#ff5c8a,#a78bfa)', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+          {(centerChatPeerName || '?').charAt(0).toUpperCase()}
         </div>
-        <div style={{ fontSize: 11, color: '#35d29b' }}>● {t('common.online', 'en línea')}</div>
+        <div style={{ minWidth: 0, lineHeight: 1.25 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: '#e7ebf0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {centerChatPeerName || ''}
+          </div>
+          <div style={{ fontSize: 11, color: pMeta.c }}>● {pMeta.label}</div>
+        </div>
+        <div style={{ marginLeft: 'auto' }}>
+          {shouldShowTranslationToggle && <TranslationToggleButton />}
+        </div>
       </div>
-      <div style={{ marginLeft: 'auto' }}>
-        {shouldShowTranslationToggle && <TranslationToggleButton />}
-      </div>
-    </div>
-  );
+    );
+  };
 
   const normalizeGiftMessage = (message) => {
     if (!message) return null;
@@ -776,6 +793,7 @@ export default function VideoChatFavoritosCliente(props){
                 onSelect={handleOpenChatFromFavorites}
                 reloadTrigger={favReload}
                 selectedId={selectedContactId}
+                onItemsChange={setFavItems}
                 onContextMenu={(user,pos)=>{setCtxUser(user);setCtxPos(pos);}}
               />
             </div>

@@ -124,6 +124,11 @@
     }
   },
   "common": {
+    "presence": {
+      "online": "en línea",
+      "busy": "ocupado",
+      "offline": "desconectado"
+    },
     "close": "Cerrar",
     "cancel": "Cancelar",
     "other": "Otro",

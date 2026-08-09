@@ -134,8 +134,14 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
   );
 }
 
-export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selectedId = null, autoSelectBot = false, onAutoSelectHandled = null }) {
+export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selectedId = null, autoSelectBot = false, onAutoSelectHandled = null, onItemsChange = null }) {
   const [items, setItems] = useState([]);
+
+  // Exponer los items al padre (para que el header del chat lea la presencia
+  // real del peer desde la MISMA fuente que el punto de estado del listado).
+  useEffect(() => {
+    if (typeof onItemsChange === 'function') onItemsChange(items);
+  }, [items, onItemsChange]);
   const autoSelectDoneRef = useRef(false);
   const [avatarMap, setAvatarMap] = useState({});
   const [loading, setLoading] = useState(false);
