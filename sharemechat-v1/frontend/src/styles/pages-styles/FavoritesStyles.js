@@ -21,15 +21,15 @@ export const ItemCard = styled.li`
   justify-content: space-between;
   gap: 12px;
   padding: 10px 12px;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid transparent;
   border-radius: 12px;
-  background: rgba(255,255,255,0.04);
+  background: transparent;
   color: #e7ebf0;
   cursor: ${({ $clickable }) => ($clickable ? 'pointer' : 'default')};
-  margin-bottom: 8px;
+  margin-bottom: 2px;
   transition: background-color .12s ease, border-color .12s ease;
 
-  &:hover { background: rgba(255,255,255,0.07); }
+  &:hover { background: rgba(255,255,255,0.06); }
 
   &[data-selected="true"]{
     background: rgba(255,92,138,0.12);

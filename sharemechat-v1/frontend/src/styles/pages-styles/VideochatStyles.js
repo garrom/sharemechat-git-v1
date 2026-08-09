@@ -178,11 +178,11 @@ export const StyledNavGroup = styled.div`
 export const StyledMainContent = styled.div`
   display: flex;
   flex: 1;
-  gap: ${props => props['data-tab'] === 'stats' ? '0' : '16px'};
-  /* tab 'stats' se pinta full-width sin marco negro alrededor: el propio
-     Wrap de Estadistica trae su fondo claro y ocupa 100% (mismo look que
-     DashboardMaster). Los demás tabs mantienen el padding 16px. */
-  padding: ${props => props['data-tab'] === 'stats' ? '0' : '16px'};
+  gap: ${props => (props['data-tab'] === 'stats' || props['data-tab'] === 'favoritos') ? '0' : '16px'};
+  /* tab 'stats' se pinta full-width sin marco negro alrededor. 'favoritos'
+     (rediseño puro): columnas pegadas edge-to-edge sin hueco ni padding,
+     como el mock. Los demás tabs mantienen el padding 16px. */
+  padding: ${props => (props['data-tab'] === 'stats' || props['data-tab'] === 'favoritos') ? '0' : '16px'};
   box-sizing: border-box;
 
   /* Regla clave (2026-08-08 refactor):
@@ -203,6 +203,11 @@ export const StyledMainContent = styled.div`
       || props['data-tab'] === 'calling')
       ? 'hidden'
       : 'auto'};
+
+  /* Favoritos puro: columnas pegadas, sin radios ni sombra (look del mock). */
+  ${props => props['data-tab'] === 'favoritos' && `
+    & > * { border-radius: 0; box-shadow: none; }
+  `}
 
   @media (max-width: 768px) {
     padding: 0;
