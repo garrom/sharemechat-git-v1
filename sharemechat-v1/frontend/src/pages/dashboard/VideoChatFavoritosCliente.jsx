@@ -10,10 +10,10 @@ import { useTranslationSettings } from '../../hooks/useTranslationSettings';
 import { useMessageTranslations } from '../../hooks/useMessageTranslations';
 import { StyledCenter,StyledFavoritesShell,StyledFavoritesColumns,StyledCenterPanel,StyledCenterBody,
     StyledChatScroller,StyledChatDock,StyledChatInput,StyledVideoArea,StyledRemoteVideo,StyledVideoTitle,
-    StyledTitleAvatar,StyledLocalVideo,StyledTopActions,StyledChatWhatsApp,StyledChatContainer,
+    StyledTitleAvatar,StyledLocalVideo,StyledTopActions,StyledChatWhatsApp,StyledChatContainer,StyledRemoteVideoBlur,
     StyledChatList,StyledChatMessageRow,StyledGiftMessage,StyledGiftIcon,StyledPreCallCenter,StyledHelperLine,
     StyledBottomActionsMobile,StyledMobile3ColBar,StyledTopCenter,StyledConnectedText,StyledFloatingHangup,
-    StyledCallCardDesktop,StyledCallFooterDesktop,StyledCallVideoArea,StyledCallStage,StyledCallTopBar,
+    StyledCallCardDesktop,StyledCallChatColumn,StyledCallChatColHeader,StyledCallChatColScroll,StyledCallFooterDesktop,StyledCallVideoArea,StyledCallStage,StyledCallTopBar,
     StyledCallTopMeta,StyledCallTopMetaText,StyledCallTopActions,StyledCallLocalVideo,StyledCallBottomBar,
     StyledCallBottomInner,StyledCallPrimaryActions,StyledCallComposer,StyledGiftsPanel,StyledGiftGrid,
     StyledGiftCatalog,StyledGiftSection,StyledGiftSectionTitle,StyledChatMessagesInner,StyledChatDockMessageComposer,StyledChatDockActions,
@@ -76,6 +76,10 @@ export default function VideoChatFavoritosCliente(props){
   // receptor, cada uno al aparecer el mensaje en su chat).
   const fxRef = useRef(null);
   const prevIdsRef = useRef(new Set());
+  // Backdrop borroso del vídeo remoto en llamada (rediseño streaming). Se
+  // sincroniza el srcObject desde el vídeo principal en su onPlaying (el
+  // stream lo engancha el padre vía callRemoteVideoRef).
+  const callBlurVideoRef = useRef(null);
 
   useEffect(() => {
     prevIdsRef.current = new Set();
@@ -616,7 +620,7 @@ export default function VideoChatFavoritosCliente(props){
                       </StyledTopActions>
 
                       {callStatus==='in-call'&&(
-                        <StyledCallCardDesktop>
+                        <StyledCallCardDesktop data-full="true" data-chat-side="true">
                           <StyledCallVideoArea>
                             <StyledRemoteVideo ref={callRemoteWrapRef} style={{position:'relative',width:'100%',height:'100%',borderRadius:'18px 18px 0 0',overflow:'hidden',background:'#000'}}>
                               <StyledCallStage>
@@ -648,15 +652,18 @@ export default function VideoChatFavoritosCliente(props){
                                   </StyledCallTopActions>
                                 </StyledCallTopBar>
 
+                                <StyledRemoteVideoBlur ref={callBlurVideoRef} $ready autoPlay playsInline muted aria-hidden="true" />
+
                                 <video
                                   ref={callRemoteVideoRef}
-                                  style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}
+                                  style={{width:'100%',height:'100%',objectFit:'contain',display:'block',position:'relative',zIndex:1,background:'transparent'}}
                                   autoPlay
                                   playsInline
+                                  onPlaying={(e)=>{ const s=e.currentTarget.srcObject; if(callBlurVideoRef.current && callBlurVideoRef.current.srcObject!==s) callBlurVideoRef.current.srcObject=s; }}
                                   onDoubleClick={()=>toggleFullscreen(callRemoteWrapRef.current)}
                                 />
 
-                                <StyledCallLocalVideo>
+                                <StyledCallLocalVideo data-compact="true">
                                   <video
                                     ref={callLocalVideoRef}
                                     muted
@@ -675,20 +682,24 @@ export default function VideoChatFavoritosCliente(props){
                                     </StyledCallPrimaryActions>
                                   </StyledCallBottomInner>
                                 </StyledCallBottomBar>
-
-                                <StyledChatContainer data-wide="true">
-                                  {shouldShowCallTranslationToggle && (
-                                    <div style={{position:'absolute',top:12,right:280,zIndex:100,pointerEvents:'auto'}}>
-                                      <TranslationToggleButton />
-                                    </div>
-                                  )}
-                                  <StyledChatList ref={callListRef} style={{width:'100%',maxHeight:'40%',overflowY:'auto'}}>
-                                    {renderCallMessages()}
-                                  </StyledChatList>
-                                </StyledChatContainer>
                               </StyledCallStage>
                             </StyledRemoteVideo>
                           </StyledCallVideoArea>
+
+                          <StyledCallChatColumn>
+                            <StyledCallChatColHeader>
+                              <StyledTitleAvatar src={callPeerAvatar||'/img/avatarChica.png'} alt="" style={{ width: 28, height: 28 }} />
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: '#e7ebf0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {callPeerName||t('dashboardClient.videoChatFavoritosCliente.labels.remote')}
+                                </div>
+                              </div>
+                              {shouldShowCallTranslationToggle && <TranslationToggleButton />}
+                            </StyledCallChatColHeader>
+
+                            <StyledCallChatColScroll ref={callListRef}>
+                              {callMessages.map((m) => renderChatMessage(m, { transparent: false }))}
+                            </StyledCallChatColScroll>
 
                           <StyledCallFooterDesktop>
                             <StyledCallComposer>
@@ -715,6 +726,7 @@ export default function VideoChatFavoritosCliente(props){
                               )}
                             </StyledCallComposer>
                           </StyledCallFooterDesktop>
+                          </StyledCallChatColumn>
                         </StyledCallCardDesktop>
                       )}
 

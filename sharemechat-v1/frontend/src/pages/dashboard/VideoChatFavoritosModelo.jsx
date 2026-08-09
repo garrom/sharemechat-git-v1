@@ -23,6 +23,7 @@ import {
   StyledChatWhatsApp,
   StyledChatContainer,
   StyledChatList,
+  StyledRemoteVideoBlur,
   StyledChatMessageRow,
   StyledGiftMessage,
   StyledGiftIcon,
@@ -34,6 +35,9 @@ import {
   StyledConnectedText,
   StyledFloatingHangup,
   StyledCallCardDesktop,
+  StyledCallChatColumn,
+  StyledCallChatColHeader,
+  StyledCallChatColScroll,
   StyledCallFooterDesktop,
   StyledCallVideoArea,
   StyledCallStage,
@@ -198,6 +202,8 @@ export default function VideoChatFavoritosModelo(props) {
   // Fase 3: efectos al aparecer un mensaje-regalo NUEVO (lado modelo; lo ve
   // el modelo cuando el cliente le envia un regalo).
   const fxRef = useRef(null);
+  // Backdrop borroso del vídeo remoto en llamada (rediseño streaming).
+  const callBlurVideoRef = useRef(null);
   const prevIdsRef = useRef(new Set());
 
   useEffect(() => {
@@ -671,7 +677,7 @@ export default function VideoChatFavoritosModelo(props) {
                         </StyledTopActions>
 
                         {callStatus === 'in-call' && (
-                          <StyledCallCardDesktop>
+                          <StyledCallCardDesktop data-full="true" data-chat-side="true">
                             <StyledCallVideoArea>
                               <StyledRemoteVideo ref={callRemoteWrapRef} style={{ position: 'relative', width: '100%', height: '100%', borderRadius: '18px 18px 0 0', overflow: 'hidden', background: '#000' }}>
                                 <StyledCallStage>
@@ -700,15 +706,18 @@ export default function VideoChatFavoritosModelo(props) {
                                     </StyledCallTopActions>
                                   </StyledCallTopBar>
 
+                                  <StyledRemoteVideoBlur ref={callBlurVideoRef} $ready autoPlay playsInline muted aria-hidden="true" />
+
                                   <video
                                     ref={callRemoteVideoRef}
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                                    style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', position: 'relative', zIndex: 1, background: 'transparent' }}
                                     autoPlay
                                     playsInline
+                                    onPlaying={(e)=>{ const s=e.currentTarget.srcObject; if(callBlurVideoRef.current && callBlurVideoRef.current.srcObject!==s) callBlurVideoRef.current.srcObject=s; }}
                                     onDoubleClick={() => toggleFullscreen(callRemoteWrapRef.current)}
                                   />
 
-                                  <StyledCallLocalVideo>
+                                  <StyledCallLocalVideo data-compact="true">
                                     <video
                                       ref={callLocalVideoRef}
                                       muted
@@ -727,20 +736,27 @@ export default function VideoChatFavoritosModelo(props) {
                                       </StyledCallPrimaryActions>
                                     </StyledCallBottomInner>
                                   </StyledCallBottomBar>
-
-                                  <StyledChatContainer data-wide="true">
-                                    {shouldShowCallTranslationToggle && (
-                                      <div style={{position:'absolute',top:12,right:280,zIndex:100,pointerEvents:'auto'}}>
-                                        <TranslationToggleButton />
-                                      </div>
-                                    )}
-                                    <StyledChatList ref={callListRef} style={{width:'100%',maxHeight:'40%',overflowY:'auto'}}>
-                                      {renderDesktopCallMessages()}
-                                    </StyledChatList>
-                                  </StyledChatContainer>
                                 </StyledCallStage>
                               </StyledRemoteVideo>
                             </StyledCallVideoArea>
+
+                            <StyledCallChatColumn>
+                              <StyledCallChatColHeader>
+                                <StyledTitleAvatar src={callPeerAvatar || '/img/avatarChico.png'} alt="" style={{ width: 28, height: 28 }} />
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div style={{ fontSize: 13, fontWeight: 600, color: '#e7ebf0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {callPeerName || t('dashboardModel.favorites.call.remote')}
+                                  </div>
+                                  <div style={{ fontSize: 10, color: 'rgba(231,235,240,0.6)' }}>
+                                    {renderCallClientBalance()}
+                                  </div>
+                                </div>
+                                {shouldShowCallTranslationToggle && <TranslationToggleButton />}
+                              </StyledCallChatColHeader>
+
+                              <StyledCallChatColScroll ref={callListRef}>
+                                {callMessages.map((m) => renderChatMessageInverted(m, { transparent: false }))}
+                              </StyledCallChatColScroll>
 
                             <StyledCallFooterDesktop>
                               <StyledCallComposer>
@@ -762,6 +778,7 @@ export default function VideoChatFavoritosModelo(props) {
                                 </BtnSend>
                               </StyledCallComposer>
                             </StyledCallFooterDesktop>
+                            </StyledCallChatColumn>
                           </StyledCallCardDesktop>
                         )}
 
