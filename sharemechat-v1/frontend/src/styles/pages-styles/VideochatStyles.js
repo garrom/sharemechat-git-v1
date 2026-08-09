@@ -1791,6 +1791,18 @@ export const StyledCallCardDesktop = styled.div`
       overflow: hidden;
     }
   }
+
+  /* Trial (DashboardUserClient): su shell NO está acotado a 100vh como el de
+     cliente/modelo, así que el flex-fill (height:100%) crecería sin límite.
+     Para el trial usamos altura viewport-based (bounded siempre), igual que el
+     layout original. Debe ir DESPUÉS de la regla data-full para sobreescribirla. */
+  &[data-viewport-fit="true"] > ${StyledCallVideoArea} {
+    @media (min-width: 769px) {
+      flex: 0 0 auto;
+      height: calc(100vh - 220px);
+      max-height: calc(100vh - 220px);
+    }
+  }
 `;
 
 /* Fase 1 streaming: columna de chat a un lado del vídeo (solo desktop). En
