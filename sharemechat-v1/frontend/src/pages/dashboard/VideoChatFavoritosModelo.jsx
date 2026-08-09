@@ -98,6 +98,7 @@ export default function VideoChatFavoritosModelo(props) {
     contactMode,
     openChatWith,
     centerChatPeerName,
+    peerPresence,
     callPeerName,
     callPeerId,
     callPeerAvatar,
@@ -481,20 +482,19 @@ export default function VideoChatFavoritosModelo(props) {
     </button>
   ) : null;
 
-  // Presencia REAL del peer del chat: misma fuente (Redis) que el punto de
-  // estado del listado. El listado nos reporta sus items via onItemsChange.
-  const [favItems, setFavItems] = useState([]);
-  const peerPresence = String(
-    (favItems || []).find((i) => Number(i?.id) === Number(selectedContactId))?.presence || 'offline'
-  ).toLowerCase();
+  // Presencia REAL del peer del chat: llega por prop desde DashboardModel,
+  // que la deriva del listado VISIBLE (left column), misma fuente Redis que
+  // el punto de estado del contacto. (No usar el listado interno de este
+  // componente: se desmonta al abrir el chat en desktop.)
+  const peerPresenceNorm = String(peerPresence || 'offline').toLowerCase();
 
   // Cabecera del chat (rediseño favoritos): contacto actual (avatar+nombre)
   // arriba + toggle "Ver original" a la derecha. Igual que el lado cliente.
-  // El estado usa la presencia real del peer (peerPresence), no un placeholder.
+  // El estado usa la presencia real del peer (peerPresenceNorm), no placeholder.
   const renderFavChatHeader = () => {
-    const pMeta = peerPresence === 'online'
+    const pMeta = peerPresenceNorm === 'online'
       ? { c: '#22c55e', label: t('common.presence.online', 'en línea') }
-      : peerPresence === 'busy'
+      : peerPresenceNorm === 'busy'
       ? { c: '#f59e0b', label: t('common.presence.busy', 'ocupado') }
       : { c: '#9ca3af', label: t('common.presence.offline', 'desconectado') };
     return (
@@ -842,7 +842,6 @@ export default function VideoChatFavoritosModelo(props) {
                   onSelect={handleOpenChatFromFavorites}
                   reloadTrigger={favReload}
                   selectedId={selectedContactId}
-                  onItemsChange={setFavItems}
                 />
               </div>
             </div>

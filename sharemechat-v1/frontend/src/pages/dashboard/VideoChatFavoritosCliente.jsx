@@ -41,7 +41,7 @@ export default function VideoChatFavoritosCliente(props){
   const t = (key, options) => i18n.t(key, options);
 
   const {
-      isMobile,handleOpenChatFromFavorites,favReload,selectedContactId,hasActiveDetail,hasCallTarget,setCtxUser,setCtxPos,centerChatPeerId,
+      isMobile,handleOpenChatFromFavorites,favReload,selectedContactId,hasActiveDetail,hasCallTarget,setCtxUser,setCtxPos,centerChatPeerId,peerPresence,
       centerChatPeerName,centerMessages,centerLoading,centerListRef,chatEndRef,centerInput,setCenterInput,
       sendCenterMessage,allowChat,isPendingPanel,isSentPanel,acceptInvitation,rejectInvitation,gifts,giftRenderReady,
       fmtEUR,showCenterGifts,setShowCenterGifts,sendGiftMsg,contactMode,enterCallMode,callStatus,callCameraActive,
@@ -66,13 +66,11 @@ export default function VideoChatFavoritosCliente(props){
   const [giftCat, setGiftCat] = useState('free'); // 'free' | 'paid'
   const [confirmGift, setConfirmGift] = useState(null);
 
-  // Presencia REAL del peer del chat: la tomamos de los items del listado
-  // (misma fuente Redis que el punto de estado), no de un placeholder. El
-  // listado nos reporta sus items via onItemsChange y aqui buscamos el peer.
-  const [favItems, setFavItems] = useState([]);
-  const peerPresence = String(
-    (favItems || []).find((i) => Number(i?.id) === Number(centerChatPeerId))?.presence || 'offline'
-  ).toLowerCase();
+  // Presencia REAL del peer del chat: llega por prop desde DashboardClient,
+  // que la deriva del listado VISIBLE (left column), misma fuente Redis que
+  // el punto de estado del contacto. (No usar el listado interno de este
+  // componente: se desmonta al abrir el chat en desktop.)
+  const peerPresenceNorm = String(peerPresence || 'offline').toLowerCase();
 
   // Fase 3: efectos al aparecer un mensaje-regalo NUEVO (lo ven emisor y
   // receptor, cada uno al aparecer el mensaje en su chat).
@@ -302,9 +300,9 @@ export default function VideoChatFavoritosCliente(props){
   // El estado (en línea/ocupado/desconectado) usa la presencia REAL del peer,
   // tomada del listado (peerPresence), igual que el punto del contacto.
   const renderFavChatHeader = () => {
-    const pMeta = peerPresence === 'online'
+    const pMeta = peerPresenceNorm === 'online'
       ? { c: '#22c55e', label: t('common.presence.online', 'en línea') }
-      : peerPresence === 'busy'
+      : peerPresenceNorm === 'busy'
       ? { c: '#f59e0b', label: t('common.presence.busy', 'ocupado') }
       : { c: '#9ca3af', label: t('common.presence.offline', 'desconectado') };
     return (
@@ -793,7 +791,6 @@ export default function VideoChatFavoritosCliente(props){
                 onSelect={handleOpenChatFromFavorites}
                 reloadTrigger={favReload}
                 selectedId={selectedContactId}
-                onItemsChange={setFavItems}
                 onContextMenu={(user,pos)=>{setCtxUser(user);setCtxPos(pos);}}
               />
             </div>
