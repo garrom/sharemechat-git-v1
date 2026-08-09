@@ -20,6 +20,7 @@ import {
   StyledGiftIcon,
   StyledRemoteVideo,
   StyledRemoteVideoMedia,
+  StyledRemoteVideoBlur,
   StyledRemoteVideoPlaceholder,
   StyledTitleAvatar,
   StyledPaneCenter,
@@ -147,6 +148,15 @@ export default function VideoChatRandomModelo(props) {
   );
 
   const [isDesktopRemoteVideoReady, setIsDesktopRemoteVideoReady] = React.useState(false);
+
+  // Fase 0 streaming: backdrop borroso del vídeo remoto. Vídeo secundario mudo
+  // con el mismo MediaStream; rellena el letterbox del vídeo apaisado con blur.
+  const blurVideoRef = React.useRef(null);
+  React.useEffect(() => {
+    const el = blurVideoRef.current;
+    if (!el) return;
+    if (el.srcObject !== (remoteStream || null)) el.srcObject = remoteStream || null;
+  }, [remoteStream, isMobile]);
 
   // ADR-052 Superficie 2 (2026-07-25): acumulador local de ganancia por
   // regalos en la sesion activa. El WS trae el `cost` bruto del regalo;
@@ -638,7 +648,7 @@ export default function VideoChatRandomModelo(props) {
               )}
 
               {remoteStream && !isMobile && (
-                <StyledCallCardDesktop>
+                <StyledCallCardDesktop data-full="true">
                   <StyledCallVideoArea>
                     <StyledRemoteVideo
                       ref={remoteVideoWrapRef}
@@ -669,9 +679,19 @@ export default function VideoChatRandomModelo(props) {
                           </StyledCallTopActions>
                         </StyledCallTopBar>
 
+                        <StyledRemoteVideoBlur
+                          ref={blurVideoRef}
+                          $ready={isDesktopRemoteVideoReady}
+                          autoPlay
+                          playsInline
+                          muted
+                          aria-hidden="true"
+                        />
+
                         <StyledRemoteVideoMedia
                           ref={remoteVideoRef}
                           $ready={isDesktopRemoteVideoReady}
+                          $contain
                           onLoadedMetadata={(e) => {
                             const el = e.currentTarget;
                             console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=model action=remoteVideoLoadedMetadata readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
