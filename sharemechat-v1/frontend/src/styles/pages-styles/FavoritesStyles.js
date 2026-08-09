@@ -50,6 +50,24 @@ export const Avatar = styled.img.attrs(({ $size = 40 }) => ({
   background: #eee;
 `;
 
+// Avatar de letra: para perfiles sin foto, círculo con la inicial (coherente
+// con la cabecera del chat). Evita el placeholder genérico avatarChica.png.
+export const LetterAvatar = styled.div`
+  width: ${({ $size = 38 }) => $size}px;
+  height: ${({ $size = 38 }) => $size}px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: ${({ $size = 38 }) => Math.round($size * 0.42)}px;
+  line-height: 1;
+  background: linear-gradient(135deg, #ff5c8a, #a78bfa);
+  text-transform: uppercase;
+  user-select: none;
+`;
+
 // Bloque de info (nombre + meta)
 export const Info = styled.div`
   display: flex;

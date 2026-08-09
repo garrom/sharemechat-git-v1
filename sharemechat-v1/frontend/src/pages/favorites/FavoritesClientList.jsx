@@ -10,6 +10,7 @@ import {
   StateRow,
   ItemCard,
   Avatar,
+  LetterAvatar,
   Info,
   Name,
   Badges,
@@ -29,12 +30,9 @@ import { apiFetch } from '../../config/http';
 import i18n from '../../i18n';
 
 function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, hasUnread = false, menuOpen = false }) {
-  const placeholder = '/img/avatarChica.png';
-  const [imgSrc, setImgSrc] = useState(placeholder);
+  const [imgFailed, setImgFailed] = useState(false);
 
-  useEffect(() => {
-    if (avatarUrl && typeof avatarUrl === 'string') setImgSrc(avatarUrl);
-  }, [avatarUrl]);
+  useEffect(() => { setImgFailed(false); }, [avatarUrl]);
 
   const isBot = !!user?.isBot;
   const invited = String(user?.invited || '').trim().toLowerCase();
@@ -46,6 +44,8 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
   // Bot: el menú de acciones no aplica (no se puede bloquear, reportar ni eliminar; se ocultará entero).
   const isMenuDisabled = invited === 'pending' || invited === 'sent' || (isBlocked && !blockedByMe);
   const displayName = isBot ? i18n.t('support.chat.agentName') : (user?.nickname || `Usuario #${user?.id}`);
+  const avatarInitial = (displayName || '?').trim().charAt(0).toUpperCase() || '?';
+  const hasRealAvatar = !!avatarUrl && !imgFailed;
 
   return (
     <ItemCard
@@ -70,13 +70,15 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
             height={38}
             style={{ display: 'block', objectFit: 'contain', borderRadius: '50%' }}
           />
-        ) : (
+        ) : hasRealAvatar ? (
           <Avatar
-            src={imgSrc}
+            src={avatarUrl}
             alt=""
             $size={38}
-            onError={(e) => { e.currentTarget.src = '/img/avatarChica.png'; }}
+            onError={() => setImgFailed(true)}
           />
+        ) : (
+          <LetterAvatar $size={38} aria-hidden="true">{avatarInitial}</LetterAvatar>
         )}
         <StatusDot
           className={presence === 'busy' ? 'busy' : presence === 'online' ? 'online' : 'offline'}

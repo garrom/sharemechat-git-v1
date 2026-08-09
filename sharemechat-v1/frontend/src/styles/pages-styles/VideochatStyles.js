@@ -182,7 +182,7 @@ export const StyledMainContent = styled.div`
   /* tab 'stats' se pinta full-width sin marco negro alrededor. 'favoritos'
      (rediseño puro): columnas pegadas edge-to-edge sin hueco ni padding,
      como el mock. Los demás tabs mantienen el padding 16px. */
-  padding: ${props => (props['data-tab'] === 'stats' || props['data-tab'] === 'favoritos') ? '0' : '16px'};
+  padding: ${props => props['data-tab'] === 'favoritos' ? '10px 0 0' : ((props['data-tab'] === 'stats') ? '0' : '16px')};
   box-sizing: border-box;
 
   /* Regla clave (2026-08-08 refactor):
@@ -206,7 +206,7 @@ export const StyledMainContent = styled.div`
 
   /* Favoritos puro: columnas pegadas, sin radios ni sombra (look del mock). */
   ${props => props['data-tab'] === 'favoritos' && `
-    & > * { border-radius: 0; box-shadow: none; }
+    & > * { border-radius: 0 !important; box-shadow: none !important; }
   `}
 
   @media (max-width: 768px) {
@@ -1811,6 +1811,7 @@ export const StyledChatDockMessageComposer = styled(StyledChatDock)`
   }
 
   &[data-kind='favorites-chat'] {
+    border-top: 0;
     & > input {
       background: rgba(255,255,255,0.10);
       color: #f8fafc;
