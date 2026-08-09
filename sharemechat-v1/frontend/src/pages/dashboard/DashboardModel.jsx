@@ -3435,6 +3435,7 @@ const DashboardModel = () => {
             localVideoRef={localVideoRef}
             vcListRef={vcListRef}
             messages={messages}
+            gifts={gifts}
             giftRenderReady={giftRenderReady}
             getGiftIcon={getGiftIcon}
             remoteStream={remoteStream}
