@@ -1633,14 +1633,14 @@ export const StyledMobile3ColBar = styled.div`
   box-sizing: border-box;
 
   @media (max-width: 768px) {
-    position: fixed;
-    top: var(--navbar-height);
-    left: 0;
-    right: 0;
-    z-index: 100;
+    /* En flujo (anclada arriba de la vista de chat). Antes era position:fixed
+       (commit 73316ae) y flotaba tapando los mensajes. El chat va debajo. */
+    position: relative;
     margin: 0;
     padding: 12px 10px;
     min-height: 62px;
+    flex-shrink: 0;
+    z-index: 2;
     background: var(--c-surface);
   }
 

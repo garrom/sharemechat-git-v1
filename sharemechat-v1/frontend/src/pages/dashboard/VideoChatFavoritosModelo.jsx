@@ -836,7 +836,7 @@ export default function VideoChatFavoritosModelo(props) {
       {isMobile && (
         <>
           {!hasActiveDetail && (
-            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, background: 'linear-gradient(180deg,#161a20 0%,#111418 100%)' }}>
               <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
                 <FavoritesModelList
                   onSelect={handleOpenChatFromFavorites}
