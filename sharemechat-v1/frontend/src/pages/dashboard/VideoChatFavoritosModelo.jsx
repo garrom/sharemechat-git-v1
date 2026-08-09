@@ -481,6 +481,25 @@ export default function VideoChatFavoritosModelo(props) {
     </button>
   ) : null;
 
+  // Cabecera del chat (rediseño favoritos): contacto actual (avatar+nombre)
+  // arriba + toggle "Ver original" a la derecha. Igual que el lado cliente.
+  const renderFavChatHeader = () => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: '#111418', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, position: 'relative', zIndex: 6 }}>
+      <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#ff5c8a,#a78bfa)', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+        {(centerChatPeerName || '?').charAt(0).toUpperCase()}
+      </div>
+      <div style={{ minWidth: 0, lineHeight: 1.25 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: '#e7ebf0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {centerChatPeerName || ''}
+        </div>
+        <div style={{ fontSize: 11, color: '#35d29b' }}>● {t('common.online', 'en línea')}</div>
+      </div>
+      <div style={{ marginLeft: 'auto' }}>
+        {shouldShowTranslationToggle && <TranslationToggleButton />}
+      </div>
+    </div>
+  );
+
   const renderChatMessage = (m, opts) => {
     const isMe = Number(m.senderId) === Number(user?.id);
     return buildBubble(
@@ -750,11 +769,7 @@ export default function VideoChatFavoritosModelo(props) {
                     {!isPendingPanel && !isSentPanel && contactMode !== 'call' && (
                       <StyledChatWhatsApp style={{position:'relative'}}>
                         <StyledGiftFxLayer ref={fxRef} />
-                        {shouldShowTranslationToggle && (
-                          <div style={{position:'absolute',top:6,right:12,zIndex:5}}>
-                            <TranslationToggleButton />
-                          </div>
-                        )}
+                        {renderFavChatHeader()}
                         <StyledChatScroller ref={modelCenterListRef} data-bg="whatsapp" data-kind="favorites-chat">
                           <StyledChatMessagesInner>
                             {centerMessages.length === 0 && (
