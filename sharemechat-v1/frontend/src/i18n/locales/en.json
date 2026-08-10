@@ -124,6 +124,11 @@
     }
   },
   "common": {
+    "presence": {
+      "online": "online",
+      "busy": "busy",
+      "offline": "offline"
+    },
     "close": "Close",
     "cancel": "Cancel",
     "other": "Other",
@@ -154,7 +159,13 @@
     "errors": {
       "title": "Error",
       "connectionFailedRetry": "Could not connect. Please try again.",
-      "connectionSetupFailedRetry": "Could not establish the connection. Please try again."
+      "connectionSetupFailedRetry": "Could not establish the connection. Please try again.",
+      "nicknameTaken": "That nickname is already taken. Choose another.",
+      "emailTaken": "That email is already registered."
+    },
+    "fieldInfo": {
+      "nicknameHelp": "It's your account's public name. You can change it later.",
+      "infoAriaLabel": "More information"
     },
     "media": {
       "cameraRequired": "Activate the camera first.",
@@ -896,6 +907,8 @@
       },
       "validation": {
         "nicknameRequired": "Nickname is required.",
+        "nicknameTooShort": "Nickname needs at least 3 letters or numbers.",
+        "nicknameNormalizedHint": "Will be saved as:",
         "emailRequired": "Email is required.",
         "emailInvalid": "Invalid email format.",
         "passwordMin": "Password must be at least 8 characters long",
@@ -930,6 +943,8 @@
       },
       "validation": {
         "nicknameRequired": "Nickname is required.",
+        "nicknameTooShort": "Nickname needs at least 3 letters or numbers.",
+        "nicknameNormalizedHint": "Will be saved as:",
         "emailRequired": "Email is required.",
         "emailInvalid": "Invalid email format.",
         "passwordMin": "Password must be at least 8 characters long",
@@ -985,7 +1000,8 @@
         "passwordMin": "Password must be at least 10 characters long.",
         "passwordNoSpaces": "Password cannot contain spaces.",
         "nicknameRequired": "Nickname is required.",
-        "nicknamePattern": "Nickname may contain letters, digits and . _ -",
+        "nicknameTooShort": "Nickname needs at least 3 letters or numbers.",
+        "nicknameNormalizedHint": "Will be saved as:",
         "dateOfBirthRequired": "Date of birth is required.",
         "dateOfBirthPast": "Date of birth must be in the past.",
         "confirmAdult": "You must confirm you are over 18.",
@@ -1687,6 +1703,11 @@
     },
     "videoChatRandomUser": {
       "promoTeaserTitle": "{{name}} · teaser",
+      "teaser": {
+        "chatLocked": "Become a client to chat and send gifts",
+        "cta": "Become a client",
+        "inputLocked": "Become a client to type…"
+      },
       "actions": {
         "activateCamera": "Activate camera",
         "addToFavoritesPremium": "Add to favorites (requires premium)",

@@ -10,6 +10,7 @@ import {
   StateRow,
   ItemCard,
   Avatar,
+  LetterAvatar,
   Info,
   Name,
   Badges,
@@ -29,12 +30,9 @@ import { apiFetch } from '../../config/http';
 import i18n from '../../i18n';
 
 function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, hasUnread = false, menuOpen = false }) {
-  const placeholder = '/img/avatarChica.png';
-  const [imgSrc, setImgSrc] = useState(placeholder);
+  const [imgFailed, setImgFailed] = useState(false);
 
-  useEffect(() => {
-    if (avatarUrl && typeof avatarUrl === 'string') setImgSrc(avatarUrl);
-  }, [avatarUrl]);
+  useEffect(() => { setImgFailed(false); }, [avatarUrl]);
 
   const isBot = !!user?.isBot;
   const invited = String(user?.invited || '').trim().toLowerCase();
@@ -46,6 +44,8 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
   // Bot: el menú de acciones no aplica (no se puede bloquear, reportar ni eliminar; se ocultará entero).
   const isMenuDisabled = invited === 'pending' || invited === 'sent' || (isBlocked && !blockedByMe);
   const displayName = isBot ? i18n.t('support.chat.agentName') : (user?.nickname || `Usuario #${user?.id}`);
+  const avatarInitial = (displayName || '?').trim().charAt(0).toUpperCase() || '?';
+  const hasRealAvatar = !!avatarUrl && !imgFailed;
 
   return (
     <ItemCard
@@ -66,17 +66,19 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
           <img
             src="/img/icono-agente-ia.png"
             alt=""
-            width={28}
-            height={28}
+            width={38}
+            height={38}
             style={{ display: 'block', objectFit: 'contain', borderRadius: '50%' }}
           />
-        ) : (
+        ) : hasRealAvatar ? (
           <Avatar
-            src={imgSrc}
+            src={avatarUrl}
             alt=""
-            $size={28}
-            onError={(e) => { e.currentTarget.src = '/img/avatarChica.png'; }}
+            $size={38}
+            onError={() => setImgFailed(true)}
           />
+        ) : (
+          <LetterAvatar $size={38} aria-hidden="true">{avatarInitial}</LetterAvatar>
         )}
         <StatusDot
           className={presence === 'busy' ? 'busy' : presence === 'online' ? 'online' : 'offline'}
@@ -132,8 +134,14 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
   );
 }
 
-export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selectedId = null, autoSelectBot = false, onAutoSelectHandled = null }) {
+export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selectedId = null, autoSelectBot = false, onAutoSelectHandled = null, onItemsChange = null }) {
   const [items, setItems] = useState([]);
+
+  // Exponer los items al padre (para que el header del chat lea la presencia
+  // real del peer desde la MISMA fuente que el punto de estado del listado).
+  useEffect(() => {
+    if (typeof onItemsChange === 'function') onItemsChange(items);
+  }, [items, onItemsChange]);
   const autoSelectDoneRef = useRef(false);
   const [avatarMap, setAvatarMap] = useState({});
   const [loading, setLoading] = useState(false);

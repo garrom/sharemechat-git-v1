@@ -178,11 +178,11 @@ export const StyledNavGroup = styled.div`
 export const StyledMainContent = styled.div`
   display: flex;
   flex: 1;
-  gap: ${props => props['data-tab'] === 'stats' ? '0' : '16px'};
-  /* tab 'stats' se pinta full-width sin marco negro alrededor: el propio
-     Wrap de Estadistica trae su fondo claro y ocupa 100% (mismo look que
-     DashboardMaster). Los demás tabs mantienen el padding 16px. */
-  padding: ${props => props['data-tab'] === 'stats' ? '0' : '16px'};
+  gap: ${props => (props['data-tab'] === 'stats' || props['data-tab'] === 'favoritos') ? '0' : '16px'};
+  /* tab 'stats' se pinta full-width sin marco negro alrededor. 'favoritos'
+     (rediseño puro): columnas pegadas edge-to-edge sin hueco ni padding,
+     como el mock. Los demás tabs mantienen el padding 16px. */
+  padding: ${props => props['data-tab'] === 'favoritos' ? '10px 0 0' : ((props['data-tab'] === 'stats') ? '0' : '16px')};
   box-sizing: border-box;
 
   /* Regla clave (2026-08-08 refactor):
@@ -203,6 +203,11 @@ export const StyledMainContent = styled.div`
       || props['data-tab'] === 'calling')
       ? 'hidden'
       : 'auto'};
+
+  /* Favoritos puro: columnas pegadas, sin radios ni sombra (look del mock). */
+  ${props => props['data-tab'] === 'favoritos' && `
+    & > * { border-radius: 0 !important; box-shadow: none !important; }
+  `}
 
   @media (max-width: 768px) {
     padding: 0;
@@ -232,10 +237,12 @@ export const StyledLeftColumn = styled(ColumnBlock)`
   overflow-y: auto;
   border: none;
 
+  /* Rediseño favoritos puro: columna de contactos oscura (coherente con el
+     navbar), en vez del gris claro anterior. */
   &[data-surface="favorites-premium"] {
-    background: linear-gradient(180deg, #f9fafb 0%, #f3f5f7 100%);
-    border: 1px solid #e6e7ea;
-    box-shadow: 0 10px 30px rgba(17, 24, 39, 0.06);
+    background: linear-gradient(180deg, #161a20 0%, #111418 100%);
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
   }
 
   @media (min-width: 769px) and (max-width: 1024px) {
@@ -273,6 +280,14 @@ export const StyledCenter = styled(ColumnBlock)`
   }
   @media (min-width:769px) and (max-width:1024px){
     width:50%;
+  }
+  /* Llamada de favoritos (rediseño streaming): un poco de aire alrededor de la
+     card (arriba ya lo da el padding-top de StyledMainContent en favoritos). */
+  &[data-mode='call']{
+    @media (min-width:769px){
+      padding: 0 12px 12px;
+      box-sizing: border-box;
+    }
   }
 `;
 
@@ -445,12 +460,33 @@ export const StyledRemoteVideo = styled.div`
 `;
 
 export const StyledRemoteVideoMedia = styled.video`
+  position: relative;
+  width: 100%;
+  height: 100%;
+  object-fit: ${p => (p.$contain ? 'contain' : 'cover')};
+  background: transparent;
+  display: block;
+  opacity: ${p => (p.$ready ? 1 : 0)};
+  transition: opacity 0.18s ease;
+`;
+
+/* Backdrop borroso del vídeo remoto: rellena el letterbox del vídeo apaisado
+   con blur del propio stream (vídeo secundario mudo, mismo MediaStream).
+   z-index:-1 -> queda detrás del vídeo nítido y de todos los overlays (chat,
+   topbar, cámara local), sin tocarlos. Solo streaming random desktop. */
+export const StyledRemoteVideoBlur = styled.video`
+  position: absolute;
+  inset: 0;
+  z-index: -1;
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
+  filter: blur(28px) saturate(1.25);
+  transform: scale(1.12);
   opacity: ${p => (p.$ready ? 1 : 0)};
   transition: opacity 0.18s ease;
+  pointer-events: none;
 `;
 
 export const StyledRemoteVideoPlaceholder = styled.div`
@@ -1003,16 +1039,72 @@ export const StyledChatMessagesInner = styled.div`
  *        scroll lateral y "+" para el catalogo completo. Los de pago abren
  *        modal de confirmacion antes de cobrar.
  * -------------------------------- */
+// Rediseño 2 filas (2026-08-09): la barra ahora apila hasta 2 StyledGiftTrack
+// (fila superior = pago / premium, fila inferior = gratis de objeto). En la
+// vista solo-gratis (modelo) va una unica fila. flex-direction column + gap
+// pequeño; cada fila scrollea horizontal por su cuenta.
 export const StyledGiftBar = styled.div`
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
-  padding: 8px 16px 2px;
+  padding: 6px 12px 2px;
   background: #111418;
   border-top: 1px solid rgba(255,255,255,0.08);
+
+  /* Variante barra sobre el vídeo (rediseño llamada random cliente 2026-08-09):
+     una sola fila de chips (gratis + pago), pill semitransparente con blur,
+     ocupa el centro (flex:1) de la barra inferior única sobre el vídeo. NO
+     afecta al chat puro de favoritos, que usa la variante por defecto (2 filas
+     opacas en su columna). Chips ~32px. */
+  &[data-surface="video-overlay"] {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: rgba(10,12,16,0.6);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-top: 1px solid rgba(255,255,255,0.12);
+    border-radius: 18px;
+
+    /* Una sola fila, SIN scroll: hay ancho de sobra, así que los chips van
+       grandes y centrados (2026-08-09 feedback operador). */
+    > div {
+      flex: 1;
+      min-width: 0;
+      padding: 0;
+      overflow: visible;
+      justify-content: center;
+      gap: 8px;
+    }
+    > div::-webkit-scrollbar { display: none; }
+
+    /* Chips grandes: regalo bien visible; el precio (solo pago) va en una línea
+       DEBAJO del icono, sin taparlo. */
+    button {
+      width: 50px;
+      height: 56px;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+    }
+    button img, button svg { width: 30px; height: 30px; }
+    button .gift-chip__price {
+      position: static;
+      bottom: auto;
+      right: auto;
+      box-shadow: none;
+      font-size: 8.5px;
+      padding: 0 5px;
+    }
+  }
 `;
 
 export const StyledGiftSeg = styled.div`
@@ -1044,10 +1136,11 @@ export const StyledGiftSeg = styled.div`
 `;
 
 export const StyledGiftTrack = styled.div`
-  flex: 1;
+  flex: 0 0 auto;
+  width: 100%;
   min-width: 0;
   display: flex;
-  gap: 6px;
+  gap: 5px;
   overflow-x: auto;
   padding: 2px;
   scrollbar-width: thin;
@@ -1059,9 +1152,9 @@ export const StyledGiftChip = styled.button`
   position: relative;
   appearance: none;
   flex: 0 0 auto;
-  width: 50px;
-  height: 50px;
-  border-radius: 13px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
   border: 1px solid rgba(255,255,255,0.09);
   background: radial-gradient(circle at 50% 32%, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
   display: grid;
@@ -1073,13 +1166,13 @@ export const StyledGiftChip = styled.button`
   &:active:not(:disabled) { transform: translateY(-1px) scale(.94); }
   &:disabled { opacity: .5; cursor: not-allowed; }
 
-  img, svg { width: 32px; height: 32px; display: block; }
+  img, svg { width: 24px; height: 24px; display: block; }
 
   .gift-chip__price {
     position: absolute;
     bottom: -3px;
     right: -3px;
-    font-size: 9px;
+    font-size: 8px;
     font-weight: 700;
     color: #2a1c04;
     background: linear-gradient(180deg, #ffd778, #f5b942);
@@ -1093,13 +1186,13 @@ export const StyledGiftChip = styled.button`
 export const StyledGiftMore = styled.button`
   appearance: none;
   flex: 0 0 auto;
-  width: 50px;
-  height: 50px;
-  border-radius: 13px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
   border: 1px dashed rgba(255,255,255,0.25);
   background: transparent;
   color: rgba(231,235,240,0.6);
-  font-size: 20px;
+  font-size: 16px;
   line-height: 1;
   cursor: pointer;
   display: grid;
@@ -1448,6 +1541,16 @@ export const StyledCallLocalVideo = styled.div`
   @media (min-width: 769px) {
     border-radius: 16px;
   }
+
+  /* Streaming (random): PiP un poco más pequeño. Como el vídeo es ahora contain
+     con blur lateral, un PiP grande queda solapado raro sobre el borde
+     vídeo/blur. Condicionado para no tocar las llamadas de favoritos. */
+  &[data-compact="true"] {
+    @media (min-width: 769px) {
+      width: 18%;
+      max-width: 190px;
+    }
+  }
 `;
 
 export const StyledCallBottomBar = styled.div`
@@ -1495,6 +1598,47 @@ export const StyledCallSecondaryActions = styled.div`
   justify-content: flex-end;
   gap: 8px;
   pointer-events: auto;
+`;
+
+/* Barra inferior única sobre el vídeo (rediseño llamada random cliente
+   2026-08-09): una sola fila anclada abajo, a lo ancho, con tres zonas —
+   IZQUIERDA controles (colgar/siguiente/favorito), CENTRO barra de regalos
+   (flex:1), DERECHA reportar/bloquear. z-index 7: por encima del vídeo, por
+   debajo del topbar (z9) y del PiP (z8), sin tapar HUD ni cámara local. El
+   wrapper no captura clicks (pointer-events:none); cada zona sí (auto). */
+export const StyledCallOverlayBar = styled.div`
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+
+  & > * { pointer-events: auto; }
+`;
+
+export const StyledCallOverlayControls = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+`;
+
+export const StyledCallOverlayGifts = styled.div`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+`;
+
+export const StyledCallOverlayRb = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
 `;
 
 // 2026-08-08: StyledPrimaryCta eliminado por huérfano (Fase E). Dead code
@@ -1626,14 +1770,14 @@ export const StyledMobile3ColBar = styled.div`
   box-sizing: border-box;
 
   @media (max-width: 768px) {
-    position: fixed;
-    top: var(--navbar-height);
-    left: 0;
-    right: 0;
-    z-index: 100;
+    /* En flujo (anclada arriba de la vista de chat). Antes era position:fixed
+       (commit 73316ae) y flotaba tapando los mensajes. El chat va debajo. */
+    position: relative;
     margin: 0;
     padding: 12px 10px;
     min-height: 62px;
+    flex-shrink: 0;
+    z-index: 2;
     background: var(--c-surface);
   }
 
@@ -1718,6 +1862,81 @@ export const StyledCallCardDesktop = styled.div`
     border-radius: 0;
     border: none;
   }
+
+  /* Rediseño streaming (random): la card ocupa todo el ancho disponible (sin
+     el tope de 1040px centrado que deja franjas). Condicionado para NO afectar
+     a las llamadas de favoritos, que comparten este styled. */
+  /* Streaming: ancho completo + llenar todo el alto (el vídeo crece con flex,
+     sin la franja negra inferior del height fijo). Sirve para columna (trial)
+     y fila (cliente/modelo con chat lateral). */
+  &[data-full="true"] {
+    max-width: none;
+    width: 100%;
+    margin: 0;
+    @media (min-width: 769px) {
+      width: 100%;
+      max-width: none;
+      height: 100%;
+    }
+  }
+  &[data-full="true"] > ${StyledCallVideoArea} {
+    @media (min-width: 769px) {
+      flex: 1;
+      height: auto;
+      max-height: none;
+      min-width: 0;
+    }
+  }
+
+  /* Fase 1 streaming: chat a un lado (desktop) -> la card pasa a FILA
+     [vídeo | columna chat]. Móvil sigue con overlay. */
+  &[data-chat-side="true"] {
+    @media (min-width: 769px) {
+      flex-direction: row;
+      align-items: stretch;
+      overflow: hidden;
+      border-radius: 0;
+    }
+  }
+
+`;
+
+/* Fase 1 streaming: columna de chat a un lado del vídeo (solo desktop). En
+   móvil no se renderiza (el móvil mantiene el chat overlay). */
+export const StyledCallChatColumn = styled.aside`
+  display: none;
+  @media (min-width: 769px) {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 340px;
+    width: 340px;
+    min-width: 0;
+    min-height: 0;
+    background: linear-gradient(180deg, #161a20 0%, #111418 100%);
+    border-left: 1px solid rgba(255,255,255,0.08);
+    overflow: hidden;
+  }
+`;
+
+export const StyledCallChatColHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
+  color: #e7ebf0;
+  min-width: 0;
+`;
+
+export const StyledCallChatColScroll = styled.div`
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 12px 4px;
+  scrollbar-width: thin;
+  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 999px; }
 `;
 
 
@@ -1804,6 +2023,7 @@ export const StyledChatDockMessageComposer = styled(StyledChatDock)`
   }
 
   &[data-kind='favorites-chat'] {
+    border-top: 0;
     & > input {
       background: rgba(255,255,255,0.10);
       color: #f8fafc;

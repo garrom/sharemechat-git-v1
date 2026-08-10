@@ -850,7 +850,7 @@ const DashboardUserClient = () => {
 
   const displayName = userName || t('dashboardUserClient.user.defaultName');
   return (
-    <DashboardShell>
+    <DashboardShell data-tab={activeTab}>
       <GlobalBlack />
 
       {/* ========= INICIO NAVBAR  ======== */}

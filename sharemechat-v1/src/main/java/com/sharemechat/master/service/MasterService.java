@@ -3,6 +3,7 @@ package com.sharemechat.master.service;
 import com.sharemechat.constants.Constants;
 import com.sharemechat.entity.User;
 import com.sharemechat.exception.NicknameAlreadyInUseException;
+import com.sharemechat.util.NicknameNormalizer;
 import com.sharemechat.exception.UnderageModelException;
 import com.sharemechat.master.dto.RegisterMasterRequestDTO;
 import com.sharemechat.master.entity.Master;
@@ -78,6 +79,9 @@ public class MasterService {
         }
         if (nickname == null) {
             throw new IllegalArgumentException("El nickname es obligatorio");
+        }
+        if (nickname.length() < 3) {
+            throw new IllegalArgumentException("El nickname necesita al menos 3 caracteres.");
         }
         if (!Boolean.TRUE.equals(dto.getConfirAdult())) {
             throw new IllegalArgumentException("Debes confirmar que eres mayor de 18 anyos");
@@ -155,9 +159,11 @@ public class MasterService {
     }
 
     private String sanitizeNickname(String s) {
-        if (s == null) return null;
-        String t = s.trim();
-        return t.isEmpty() ? null : t;
+        // Normalizacion industrial (NicknameNormalizer): espacios -> guion,
+        // elimina caracteres no permitidos, recorta a 30. Fix friccion registro
+        // 2026-08-10. Devuelve null si tras sanear queda vacio.
+        String n = NicknameNormalizer.normalize(s);
+        return n.isEmpty() ? null : n;
     }
 
     private String sanitizeOptional(String s) {

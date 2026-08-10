@@ -192,6 +192,9 @@ const DashboardClient = () => {
   const activeTabRef = useRef(activeTab);
   const [wsReady, setWsReady] = useState(false);
   const [centerChatPeerId, setCenterChatPeerId] = useState(null);
+  // Items del listado de favoritos (para leer la presencia REAL del peer en la
+  // cabecera del chat, misma fuente que el punto de estado del listado).
+  const [favItems, setFavItems] = useState([]);
   const [centerChatPeerName, setCenterChatPeerName] = useState('');
   const [centerMessages, setCenterMessages] = useState([]);
   const [centerInput, setCenterInput] = useState('');
@@ -3072,6 +3075,10 @@ const DashboardClient = () => {
 
   // Id activo en lista = el objetivo seleccionado
   const selectedContactId = Number(targetPeerId) || null;
+  // Presencia real del peer del chat (misma fuente que el punto del listado).
+  const peerPresence = String(
+    (favItems || []).find((i) => Number(i?.id) === Number(selectedContactId))?.presence || 'offline'
+  ).toLowerCase();
   const hasCallTarget = Number(targetPeerId) > 0;
   const hasActiveDetail = Number(targetPeerId) > 0;
 
@@ -3201,6 +3208,7 @@ const DashboardClient = () => {
                     onSelect={handleOpenChatFromFavorites}
                     reloadTrigger={favReload}
                     selectedId={selectedContactId}
+                    onItemsChange={setFavItems}
                     autoSelectBot={pendingAutoSelectBot}
                     onAutoSelectHandled={() => setPendingAutoSelectBot(false)}
                   />
@@ -3221,6 +3229,7 @@ const DashboardClient = () => {
                 hasActiveDetail={hasActiveDetail}
                 hasCallTarget={hasCallTarget}
                 centerChatPeerId={centerChatPeerId}
+                peerPresence={peerPresence}
                 centerChatPeerName={centerChatPeerName}
                 centerMessages={centerMessages}
                 centerLoading={centerLoading}
@@ -3264,7 +3273,7 @@ const DashboardClient = () => {
               />
               )}
             </StyledCenter>
-            {!showFavoritesFullCall && <StyledRightColumn data-surface="favorites-premium"/>}
+            {/* Columna derecha vacia eliminada (rediseño favoritos puro): el chat gana ese ancho. */}
           </>
         )}
       </StyledMainContent>

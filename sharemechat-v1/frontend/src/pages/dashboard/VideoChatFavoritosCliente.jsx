@@ -10,17 +10,18 @@ import { useTranslationSettings } from '../../hooks/useTranslationSettings';
 import { useMessageTranslations } from '../../hooks/useMessageTranslations';
 import { StyledCenter,StyledFavoritesShell,StyledFavoritesColumns,StyledCenterPanel,StyledCenterBody,
     StyledChatScroller,StyledChatDock,StyledChatInput,StyledVideoArea,StyledRemoteVideo,StyledVideoTitle,
-    StyledTitleAvatar,StyledLocalVideo,StyledTopActions,StyledChatWhatsApp,StyledChatContainer,
+    StyledTitleAvatar,StyledLocalVideo,StyledTopActions,StyledChatWhatsApp,StyledChatContainer,StyledRemoteVideoBlur,
     StyledChatList,StyledChatMessageRow,StyledGiftMessage,StyledGiftIcon,StyledPreCallCenter,StyledHelperLine,
     StyledBottomActionsMobile,StyledMobile3ColBar,StyledTopCenter,StyledConnectedText,StyledFloatingHangup,
-    StyledCallCardDesktop,StyledCallFooterDesktop,StyledCallVideoArea,StyledCallStage,StyledCallTopBar,
-    StyledCallTopMeta,StyledCallTopMetaText,StyledCallTopActions,StyledCallLocalVideo,StyledCallBottomBar,
-    StyledCallBottomInner,StyledCallPrimaryActions,StyledCallComposer,StyledGiftsPanel,StyledGiftGrid,
+    StyledCallCardDesktop,StyledCallChatColumn,StyledCallChatColHeader,StyledCallChatColScroll,StyledCallFooterDesktop,StyledCallVideoArea,StyledCallStage,StyledCallTopBar,
+    StyledCallTopMeta,StyledCallTopMetaText,StyledCallTopActions,StyledCallLocalVideo,
+    StyledCallComposer,StyledGiftsPanel,StyledGiftGrid,
     StyledGiftCatalog,StyledGiftSection,StyledGiftSectionTitle,StyledChatMessagesInner,StyledChatDockMessageComposer,StyledChatDockActions,
-    StyledGiftBar,StyledGiftSeg,StyledGiftTrack,StyledGiftChip,StyledGiftFxLayer,
+    StyledGiftBar,StyledGiftTrack,StyledGiftChip,StyledGiftFxLayer,
+    StyledCallOverlayBar,StyledCallOverlayControls,StyledCallOverlayGifts,
     StyledGiftConfirmOverlay,StyledGiftConfirmCard,StyledGiftConfirmActions
 } from '../../styles/pages-styles/VideochatStyles';
-import GiftIcon, { resolveGiftSlug } from '../../components/gifts/GiftIcon';
+import GiftIcon, { resolveGiftSlug, isFaceGiftCode } from '../../components/gifts/GiftIcon';
 import GiftIconDefs from '../../components/gifts/GiftIconDefs';
 import EmojiTextPicker from '../../components/EmojiTextPicker';
 import { isSingleEmoji } from '../../utils/emojiUtils';
@@ -41,7 +42,7 @@ export default function VideoChatFavoritosCliente(props){
   const t = (key, options) => i18n.t(key, options);
 
   const {
-      isMobile,handleOpenChatFromFavorites,favReload,selectedContactId,hasActiveDetail,hasCallTarget,setCtxUser,setCtxPos,centerChatPeerId,
+      isMobile,handleOpenChatFromFavorites,favReload,selectedContactId,hasActiveDetail,hasCallTarget,setCtxUser,setCtxPos,centerChatPeerId,peerPresence,
       centerChatPeerName,centerMessages,centerLoading,centerListRef,chatEndRef,centerInput,setCenterInput,
       sendCenterMessage,allowChat,isPendingPanel,isSentPanel,acceptInvitation,rejectInvitation,gifts,giftRenderReady,
       fmtEUR,showCenterGifts,setShowCenterGifts,sendGiftMsg,contactMode,enterCallMode,callStatus,callCameraActive,
@@ -61,15 +62,25 @@ export default function VideoChatFavoritosCliente(props){
     }
   }, [callStatus, currentSaldo]);
 
-  // Fase 1 rediseño: barra de regalos siempre visible (segmento gratis/pago)
-  // + modal de confirmacion para los de pago.
-  const [giftCat, setGiftCat] = useState('free'); // 'free' | 'paid'
+  // Fase 1 rediseño: barra de regalos siempre visible con TODOS los regalos
+  // activos en una sola fila (gratis de objeto + de pago); modal de
+  // confirmacion para los de pago.
   const [confirmGift, setConfirmGift] = useState(null);
+
+  // Presencia REAL del peer del chat: llega por prop desde DashboardClient,
+  // que la deriva del listado VISIBLE (left column), misma fuente Redis que
+  // el punto de estado del contacto. (No usar el listado interno de este
+  // componente: se desmonta al abrir el chat en desktop.)
+  const peerPresenceNorm = String(peerPresence || 'offline').toLowerCase();
 
   // Fase 3: efectos al aparecer un mensaje-regalo NUEVO (lo ven emisor y
   // receptor, cada uno al aparecer el mensaje en su chat).
   const fxRef = useRef(null);
   const prevIdsRef = useRef(new Set());
+  // Backdrop borroso del vídeo remoto en llamada (rediseño streaming). Se
+  // sincroniza el srcObject desde el vídeo principal en su onPlaying (el
+  // stream lo engancha el padre vía callRemoteVideoRef).
+  const callBlurVideoRef = useRef(null);
 
   useEffect(() => {
     prevIdsRef.current = new Set();
@@ -176,7 +187,11 @@ export default function VideoChatFavoritosCliente(props){
   const normalizeGiftTier = (gift) =>
     String(gift?.tier || 'QUICK').toUpperCase() === 'PREMIUM' ? 'PREMIUM' : 'QUICK';
 
-  const quickGifts = gifts.filter((gift) => normalizeGiftTier(gift) === 'QUICK');
+  // Regalos gratis de OBJETO (se excluyen las caritas: ya viven en el selector
+  // de emojis del composer).
+  const quickGifts = gifts.filter(
+    (gift) => normalizeGiftTier(gift) === 'QUICK' && !isFaceGiftCode(gift.code)
+  );
   const premiumGifts = gifts.filter((gift) => normalizeGiftTier(gift) === 'PREMIUM');
 
   const renderGiftSection = (title, items) => {
@@ -213,43 +228,73 @@ export default function VideoChatFavoritosCliente(props){
   );
 
   // Barra de regalos siempre visible (Fase 1). Gratis -> envio directo;
-  // pago -> abre modal de confirmacion. El "+" abre el catalogo completo.
+  // pago -> abre modal de confirmacion.
   const handleGiftChipClick = (g) => {
     if (!allowChat) return;
     if (normalizeGiftTier(g) === 'PREMIUM') setConfirmGift(g);
     else sendGiftMsg(g.id);
   };
 
-  const renderGiftBar = () => {
-    const items = giftCat === 'paid' ? premiumGifts : quickGifts;
+  // Dos filas (2026-08-09): fila superior = regalos de PAGO (premium), fila
+  // inferior = regalos GRATIS de objeto (quick). Cada fila es un track con
+  // scroll horizontal propio. Comportamiento por chip: PREMIUM abre modal,
+  // QUICK envia directo (via handleGiftChipClick).
+  const renderGiftChip = (g) => (
+    <StyledGiftChip
+      key={g.id}
+      type="button"
+      disabled={!allowChat}
+      title={g.name}
+      aria-label={g.name}
+      onClick={() => handleGiftChipClick(g)}
+    >
+      <GiftIcon code={g.code} iconUrl={g.icon} alt={g.name || ''} size={24} />
+      {normalizeGiftTier(g) === 'PREMIUM' && <span className="gift-chip__price">{fmtEUR(g.cost)}</span>}
+    </StyledGiftChip>
+  );
+
+  // UNA sola fila con TODOS los regalos (gratis primero, luego pago), tanto en
+  // el chat puro como en la barra sobre el vídeo (surface 'video-overlay', que
+  // añade el estilo pill semitransparente).
+  const renderGiftBar = (surface) => {
+    const allGifts = [...quickGifts, ...premiumGifts];
+    if (allGifts.length === 0) return null;
     return (
-      <StyledGiftBar data-kind="favorites-gift-bar">
-        <StyledGiftSeg>
-          <button type="button" data-active={giftCat === 'free'} onClick={() => setGiftCat('free')}>
-            {t('dashboardClient.videoChatFavoritosCliente.gifts.free', 'Gratis')}
-          </button>
-          <button type="button" data-active={giftCat === 'paid'} data-kind="paid" onClick={() => setGiftCat('paid')}>
-            {t('dashboardClient.videoChatFavoritosCliente.gifts.paid', 'Regalos')}
-          </button>
-        </StyledGiftSeg>
-        <StyledGiftTrack>
-          {items.map((g) => (
-            <StyledGiftChip
-              key={g.id}
-              type="button"
-              disabled={!allowChat}
-              title={g.name}
-              aria-label={g.name}
-              onClick={() => handleGiftChipClick(g)}
-            >
-              <GiftIcon code={g.code} iconUrl={g.icon} alt={g.name || ''} size={32} />
-              {giftCat === 'paid' && <span className="gift-chip__price">{fmtEUR(g.cost)}</span>}
-            </StyledGiftChip>
-          ))}
+      <StyledGiftBar
+        data-kind="favorites-gift-bar"
+        data-surface={surface === 'video-overlay' ? 'video-overlay' : undefined}
+      >
+        <StyledGiftTrack data-row="all">
+          {allGifts.map((g) => renderGiftChip(g))}
         </StyledGiftTrack>
       </StyledGiftBar>
     );
   };
+
+  // Barra inferior única sobre el vídeo (rediseño llamada favoritos, portado de
+  // VideoChatRandomCliente): IZQUIERDA control(es) de la llamada (colgar),
+  // CENTRO barra de regalos (gratis + pago). La llamada de favoritos NO tiene
+  // reportar/bloquear, así que se omite la zona derecha. El botón de colgar va
+  // ~34px vía style inline para NO tocar el tamaño global de BtnCall*.
+  const OVERLAY_CTRL_STYLE = { width: 34, height: 34, minWidth: 34, minHeight: 34, fontSize: 13 };
+  const renderCallOverlayBar = () => (
+    <StyledCallOverlayBar>
+      <StyledCallOverlayControls>
+        <BtnCallDanger
+          onClick={() => handleCallEnd(false)}
+          style={OVERLAY_CTRL_STYLE}
+          title={t('dashboardClient.videoChatFavoritosCliente.actions.hangup')}
+          aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.hangup')}
+        >
+          <FontAwesomeIcon icon={faPhoneSlash} />
+        </BtnCallDanger>
+      </StyledCallOverlayControls>
+
+      <StyledCallOverlayGifts>
+        {renderGiftBar('video-overlay')}
+      </StyledCallOverlayGifts>
+    </StyledCallOverlayBar>
+  );
 
   const renderGiftConfirmModal = () => {
     if (!confirmGift) return null;
@@ -286,6 +331,34 @@ export default function VideoChatFavoritosCliente(props){
           </StyledGiftConfirmActions>
         </StyledGiftConfirmCard>
       </StyledGiftConfirmOverlay>
+    );
+  };
+
+  // Cabecera del chat (rediseño favoritos): contacto actual (avatar+nombre)
+  // arriba + toggle "Ver original" a la derecha. Sustituye al toggle flotante.
+  // El estado (en línea/ocupado/desconectado) usa la presencia REAL del peer,
+  // tomada del listado (peerPresence), igual que el punto del contacto.
+  const renderFavChatHeader = () => {
+    const pMeta = peerPresenceNorm === 'online'
+      ? { c: '#22c55e', label: t('common.presence.online', 'en línea') }
+      : peerPresenceNorm === 'busy'
+      ? { c: '#f59e0b', label: t('common.presence.busy', 'ocupado') }
+      : { c: '#9ca3af', label: t('common.presence.offline', 'desconectado') };
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: '#111418', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, position: 'relative', zIndex: 6 }}>
+        <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#ff5c8a,#a78bfa)', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+          {(centerChatPeerName || '?').charAt(0).toUpperCase()}
+        </div>
+        <div style={{ minWidth: 0, lineHeight: 1.25 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: '#e7ebf0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {centerChatPeerName || ''}
+          </div>
+          <div style={{ fontSize: 11, color: pMeta.c }}>● {pMeta.label}</div>
+        </div>
+        <div style={{ marginLeft: 'auto' }}>
+          {shouldShowTranslationToggle && <TranslationToggleButton />}
+        </div>
+      </div>
     );
   };
 
@@ -398,8 +471,15 @@ export default function VideoChatFavoritosCliente(props){
     const giftData = normalizeGiftMessage(m);
     const isMe = Number(m.senderId) === Number(user?.id);
     if (giftData) {
+      // Alinea el regalo igual que las burbujas de texto (SupportMessageBubble),
+      // que llevan un avatar de 32px + gap 10px = 42px en el lado del emisor.
+      // Sin este padding el regalo sobresale ~42px respecto al texto.
       return (
-        <StyledChatMessageRow key={m.id} $side={isMe ? 'me' : 'peer'}>
+        <StyledChatMessageRow
+          key={m.id}
+          $side={isMe ? 'me' : 'peer'}
+          style={isMe ? { paddingRight: 42 } : { paddingLeft: 42 }}
+        >
           {renderGiftVisual(giftData)}
         </StyledChatMessageRow>
       );
@@ -582,9 +662,9 @@ export default function VideoChatFavoritosCliente(props){
                       </StyledTopActions>
 
                       {callStatus==='in-call'&&(
-                        <StyledCallCardDesktop>
+                        <StyledCallCardDesktop data-full="true" data-chat-side="true">
                           <StyledCallVideoArea>
-                            <StyledRemoteVideo ref={callRemoteWrapRef} style={{position:'relative',width:'100%',height:'100%',borderRadius:'18px 18px 0 0',overflow:'hidden',background:'#000'}}>
+                            <StyledRemoteVideo ref={callRemoteWrapRef} style={{position:'relative',width:'100%',height:'100%',borderRadius:0,overflow:'hidden',background:'#000'}}>
                               <StyledCallStage>
                                 <StyledCallTopBar>
                                   <StyledCallTopMeta>
@@ -614,15 +694,18 @@ export default function VideoChatFavoritosCliente(props){
                                   </StyledCallTopActions>
                                 </StyledCallTopBar>
 
+                                <StyledRemoteVideoBlur ref={callBlurVideoRef} $ready autoPlay playsInline muted aria-hidden="true" />
+
                                 <video
                                   ref={callRemoteVideoRef}
-                                  style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}
+                                  style={{width:'100%',height:'100%',objectFit:'contain',display:'block',position:'relative',zIndex:1,background:'transparent'}}
                                   autoPlay
                                   playsInline
+                                  onPlaying={(e)=>{ const s=e.currentTarget.srcObject; if(callBlurVideoRef.current && callBlurVideoRef.current.srcObject!==s) callBlurVideoRef.current.srcObject=s; }}
                                   onDoubleClick={()=>toggleFullscreen(callRemoteWrapRef.current)}
                                 />
 
-                                <StyledCallLocalVideo>
+                                <StyledCallLocalVideo data-compact="true">
                                   <video
                                     ref={callLocalVideoRef}
                                     muted
@@ -632,32 +715,40 @@ export default function VideoChatFavoritosCliente(props){
                                   />
                                 </StyledCallLocalVideo>
 
-                                <StyledCallBottomBar>
-                                  <StyledCallBottomInner>
-                                    <StyledCallPrimaryActions>
-                                      <BtnCallDanger onClick={()=>handleCallEnd(false)} title={t('dashboardClient.videoChatFavoritosCliente.actions.hangup')} aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.hangup')}>
-                                        <FontAwesomeIcon icon={faPhoneSlash}/>
-                                      </BtnCallDanger>
-                                    </StyledCallPrimaryActions>
-                                  </StyledCallBottomInner>
-                                </StyledCallBottomBar>
-
-                                <StyledChatContainer data-wide="true">
-                                  {shouldShowCallTranslationToggle && (
-                                    <div style={{position:'absolute',top:12,right:280,zIndex:100,pointerEvents:'auto'}}>
-                                      <TranslationToggleButton />
-                                    </div>
-                                  )}
-                                  <StyledChatList ref={callListRef} style={{width:'100%',maxHeight:'40%',overflowY:'auto'}}>
-                                    {renderCallMessages()}
-                                  </StyledChatList>
-                                </StyledChatContainer>
+                                {/* Barra inferior única sobre el vídeo:
+                                    control(es) de llamada (izq) + regalos gratis
+                                    y de pago (centro). Sin reportar/bloquear en
+                                    favoritos. "Ver original" NO va aquí: vive en
+                                    la cabecera de la columna de chat. */}
+                                <StyledGiftFxLayer ref={fxRef} />
+                                {renderCallOverlayBar()}
                               </StyledCallStage>
                             </StyledRemoteVideo>
                           </StyledCallVideoArea>
 
+                          <StyledCallChatColumn>
+                            <StyledCallChatColHeader>
+                              <StyledTitleAvatar src={callPeerAvatar||'/img/avatarChica.png'} alt="" style={{ width: 28, height: 28 }} />
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: '#e7ebf0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {callPeerName||t('dashboardClient.videoChatFavoritosCliente.labels.remote')}
+                                </div>
+                              </div>
+                              {/* "Ver original" como botón normal en la cabecera
+                                  del chat (movido desde el overlay del vídeo). */}
+                              {shouldShowCallTranslationToggle && <TranslationToggleButton />}
+                            </StyledCallChatColHeader>
+
+                            <StyledCallChatColScroll ref={callListRef}>
+                              {callMessages.map((m) => renderChatMessage(m, { transparent: false }))}
+                            </StyledCallChatColScroll>
+
                           <StyledCallFooterDesktop>
+                            {/* Composer de la llamada: emoji + texto + enviar.
+                                El botón de regalo ya no vive aquí: los regalos
+                                están en la barra inferior sobre el vídeo. */}
                             <StyledCallComposer>
+                              <EmojiTextPicker onInsert={(e) => setCenterInput((v) => (v || '') + e)} disabled={!allowChat} />
                               <StyledChatInput
                                 type="text"
                                 value={centerInput}
@@ -671,16 +762,9 @@ export default function VideoChatFavoritosCliente(props){
                               <BtnSend type="button" onClick={sendCenterMessage} aria-label={t('common.sendMessage')} title={t('common.sendMessage')}>
                                 <FontAwesomeIcon icon={faPaperPlane}/>
                               </BtnSend>
-
-                              <ButtonRegalo type="button" onClick={()=>setShowCenterGifts(s=>!s)} title={t('dashboardClient.videoChatFavoritosCliente.actions.sendGift')} aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.sendGift')}>
-                                <FontAwesomeIcon icon={faGift}/>
-                              </ButtonRegalo>
-
-                              {showCenterGifts&&(
-                                renderGiftPicker()
-                              )}
                             </StyledCallComposer>
                           </StyledCallFooterDesktop>
+                          </StyledCallChatColumn>
                         </StyledCallCardDesktop>
                       )}
 
@@ -700,11 +784,7 @@ export default function VideoChatFavoritosCliente(props){
                   {!isPendingPanel&&!isSentPanel&&contactMode!=='call'&&(
                     <StyledChatWhatsApp style={{position:'relative'}}>
                       <StyledGiftFxLayer ref={fxRef} />
-                      {shouldShowTranslationToggle && (
-                        <div style={{position:'absolute',top:6,right:12,zIndex:5}}>
-                          <TranslationToggleButton />
-                        </div>
-                      )}
+                      {renderFavChatHeader()}
                       <StyledChatScroller ref={centerListRef} data-bg="whatsapp" data-kind="favorites-chat">
                         <StyledChatMessagesInner>
                           {centerLoading&&<div style={{color:'#adb5bd'}}>{t('dashboardClient.videoChatFavoritosCliente.loading.history')}</div>}
@@ -717,7 +797,7 @@ export default function VideoChatFavoritosCliente(props){
                         </StyledChatMessagesInner>
                       </StyledChatScroller>
 
-                      {allowChat && renderGiftBar()}
+                      {renderGiftBar()}
 
                       <StyledChatDockMessageComposer data-kind="favorites-chat">
                         <EmojiTextPicker onInsert={(e) => setCenterInput((v) => (v || '') + e)} disabled={!allowChat} />
@@ -755,7 +835,7 @@ export default function VideoChatFavoritosCliente(props){
     {isMobile&&(
       <>
         {!hasActiveDetail&&(
-          <div style={{display:'flex',flexDirection:'column',flex:1,minHeight:0}}>
+          <div style={{display:'flex',flexDirection:'column',flex:1,minHeight:0,background:'linear-gradient(180deg,#161a20 0%,#111418 100%)'}}>
             <div style={{flex:1,minHeight:0,overflowY:'auto'}}>
               <FavoritesClientList
                 onSelect={handleOpenChatFromFavorites}
@@ -936,7 +1016,7 @@ export default function VideoChatFavoritosCliente(props){
                     </StyledChatMessagesInner>
                   </StyledChatScroller>
 
-                  {allowChat && renderGiftBar()}
+                  {renderGiftBar()}
 
                   <StyledChatDockMessageComposer data-kind="favorites-chat">
                     <EmojiTextPicker onInsert={(e) => setCenterInput((v) => (v || '') + e)} disabled={!allowChat} />

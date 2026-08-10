@@ -3,7 +3,10 @@ import styled from 'styled-components';
 import i18n from '../i18n';
 import { apiFetch } from '../config/http';
 import { getResolvedLocale } from '../i18n/localeUtils';
-import { Form as RegForm, Title, Input, Button, Error as ErrorText, Field, FieldError, CheckRow, CheckInput, CheckText } from '../styles/public-styles/RegisterClientModelStyles';
+import { registerErrorMessage } from '../i18n/registerErrorMessage';
+import { normalizeNickname } from '../utils/normalizeNickname';
+import InfoTooltip from './InfoTooltip';
+import { Form as RegForm, Title, Input, Button, Error as ErrorText, Field, FieldError, Hint, CheckRow, CheckInput, CheckText } from '../styles/public-styles/RegisterClientModelStyles';
 import { useAppModals } from './useAppModals';
 import { pushSignUp, getAcquisitionPayload } from '../utils/attribution';
 import GoogleSignInButton from './GoogleSignInButton';
@@ -33,6 +36,7 @@ const RegisterClientModalContent = ({ onClose, onGoogleAuth }) => {
   const validate = () => {
     const fe = { nickname: '', email: '', password: '' };
     if (!nickname.trim()) fe.nickname = i18n.t('auth.registerClient.validation.nicknameRequired');
+    else if (normalizeNickname(nickname).length < 3) fe.nickname = i18n.t('auth.registerClient.validation.nicknameTooShort');
     if (!email.trim()) fe.email = i18n.t('auth.registerClient.validation.emailRequired');
     else if (!/^\S+@\S+\.\S+$/.test(email)) fe.email = i18n.t('auth.registerClient.validation.emailInvalid');
     if (password.length < 8) fe.password = i18n.t('auth.registerClient.validation.passwordMin');
@@ -51,7 +55,7 @@ const RegisterClientModalContent = ({ onClose, onGoogleAuth }) => {
     const uiLocale = getResolvedLocale(i18n);
 
     const registerData = {
-      nickname: nickname.trim(),
+      nickname: normalizeNickname(nickname),
       email,
       password,
       confirAdult: isOver18,
@@ -84,11 +88,14 @@ const RegisterClientModalContent = ({ onClose, onGoogleAuth }) => {
 
       if (onClose) onClose();
     } catch (err) {
-      setError(err?.data?.message || err?.message || i18n.t('common.networkError'));
+      setError(registerErrorMessage(err));
     } finally {
       setLoading(false);
     }
   };
+
+  const nickPreview = normalizeNickname(nickname);
+  const showNickHint = !!nickname.trim() && nickPreview !== nickname.trim() && nickPreview.length >= 3;
 
   return (
     <InlineForm noValidate>
@@ -96,8 +103,13 @@ const RegisterClientModalContent = ({ onClose, onGoogleAuth }) => {
       {error && <ErrorText role="alert">{error}</ErrorText>}
 
       <Field>
-        <Input type="text" value={nickname} onChange={e => { setNickname(e.target.value); if (fieldErrors.nickname) setFieldErrors(f => ({ ...f, nickname: '' })); }} placeholder={i18n.t('auth.registerClient.placeholders.nickname')} required aria-invalid={!!fieldErrors.nickname} aria-describedby={fieldErrors.nickname ? 'nick-error' : undefined} autoComplete="nickname" />
+        <InfoTooltip text={i18n.t('common.fieldInfo.nicknameHelp')} ariaLabel={i18n.t('common.fieldInfo.infoAriaLabel')}>
+          <Input type="text" value={nickname} onChange={e => { setNickname(e.target.value); if (fieldErrors.nickname) setFieldErrors(f => ({ ...f, nickname: '' })); }} placeholder={i18n.t('auth.registerClient.placeholders.nickname')} required aria-invalid={!!fieldErrors.nickname} aria-describedby={fieldErrors.nickname ? 'nick-error' : undefined} autoComplete="nickname" style={{ paddingRight: 44 }} />
+        </InfoTooltip>
         {fieldErrors.nickname && <FieldError id="nick-error">{fieldErrors.nickname}</FieldError>}
+        {!fieldErrors.nickname && showNickHint && (
+          <Hint>{i18n.t('auth.registerClient.validation.nicknameNormalizedHint')} <strong>{nickPreview}</strong></Hint>
+        )}
       </Field>
 
       <Field>

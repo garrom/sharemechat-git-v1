@@ -1,7 +1,8 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import i18n from '../../i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faPhoneSlash, faVideo, faPaperPlane, faGift } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faPhoneSlash, faVideo, faPaperPlane, faGift, faExpand } from '@fortawesome/free-solid-svg-icons';
+import SessionHUD from '../../components/SessionHUD';
 import FavoritesModelList from '../favorites/FavoritesModelList';
 import SupportMessageBubble from '../../components/support/SupportMessageBubble';
 import { useTranslationSettings } from '../../hooks/useTranslationSettings';
@@ -23,6 +24,7 @@ import {
   StyledChatWhatsApp,
   StyledChatContainer,
   StyledChatList,
+  StyledRemoteVideoBlur,
   StyledChatMessageRow,
   StyledGiftMessage,
   StyledGiftIcon,
@@ -34,6 +36,9 @@ import {
   StyledConnectedText,
   StyledFloatingHangup,
   StyledCallCardDesktop,
+  StyledCallChatColumn,
+  StyledCallChatColHeader,
+  StyledCallChatColScroll,
   StyledCallFooterDesktop,
   StyledCallVideoArea,
   StyledCallStage,
@@ -42,9 +47,6 @@ import {
   StyledCallTopMetaText,
   StyledCallTopActions,
   StyledCallLocalVideo,
-  StyledCallBottomBar,
-  StyledCallBottomInner,
-  StyledCallPrimaryActions,
   StyledCallComposer,
   StyledChatMessagesInner,
   StyledChatDockMessageComposer,
@@ -58,8 +60,11 @@ import {
   StyledGiftBar,
   StyledGiftTrack,
   StyledGiftChip,
+  StyledCallOverlayBar,
+  StyledCallOverlayControls,
+  StyledCallOverlayGifts,
 } from '../../styles/pages-styles/VideochatStyles';
-import GiftIcon, { resolveGiftSlug } from '../../components/gifts/GiftIcon';
+import GiftIcon, { resolveGiftSlug, isFaceGiftCode } from '../../components/gifts/GiftIcon';
 import GiftIconDefs from '../../components/gifts/GiftIconDefs';
 import EmojiTextPicker from '../../components/EmojiTextPicker';
 import { isSingleEmoji } from '../../utils/emojiUtils';
@@ -92,12 +97,14 @@ export default function VideoChatFavoritosModelo(props) {
 
   const {
     isMobile,
+    modelEconomics,
     allowChat,
     isPendingPanel,
     isSentPanel,
     contactMode,
     openChatWith,
     centerChatPeerName,
+    peerPresence,
     callPeerName,
     callPeerId,
     callPeerAvatar,
@@ -197,6 +204,21 @@ export default function VideoChatFavoritosModelo(props) {
   // Fase 3: efectos al aparecer un mensaje-regalo NUEVO (lado modelo; lo ve
   // el modelo cuando el cliente le envia un regalo).
   const fxRef = useRef(null);
+  // Backdrop borroso del vídeo remoto en llamada (rediseño streaming).
+  const callBlurVideoRef = useRef(null);
+
+  // Contador de ganancia del modelo en llamada (paridad con random-modelo):
+  // suma de regalos recibidos del cliente durante la llamada, con el %reparto
+  // de regalos (modelEconomics.giftModelSharePct, fallback 90). Se resetea al
+  // terminar la llamada. La acumulación real vive tras definir callMessages.
+  const [giftsSumEur, setGiftsSumEur] = React.useState(0);
+  const seenGiftKeysRef = React.useRef(new Set());
+  React.useEffect(() => {
+    if (callStatus !== 'in-call') {
+      seenGiftKeysRef.current = new Set();
+      setGiftsSumEur(0);
+    }
+  }, [callStatus]);
   const prevIdsRef = useRef(new Set());
 
   useEffect(() => {
@@ -331,8 +353,10 @@ export default function VideoChatFavoritosModelo(props) {
   // renderizamos ninguna seccion Premium por si el backend cambia.
   const normalizeGiftTier = (gift) =>
     String(gift?.tier || 'QUICK').toUpperCase() === 'PREMIUM' ? 'PREMIUM' : 'QUICK';
+  // Solo objetos gratis: se excluyen las caritas (ya viven en el selector de
+  // emojis del composer, boton 😊).
   const modelQuickGifts = Array.isArray(gifts)
-    ? gifts.filter((g) => normalizeGiftTier(g) === 'QUICK')
+    ? gifts.filter((g) => normalizeGiftTier(g) === 'QUICK' && !isFaceGiftCode(g.code))
     : [];
 
   const renderGiftPicker = () => (
@@ -363,23 +387,60 @@ export default function VideoChatFavoritosModelo(props) {
 
   // Barra de emojis GRATIS siempre visible (modelo solo tiene free). Sin
   // segmento ni "+"; misma zona que el cliente. Envio directo.
-  const renderModelGiftBar = () => (
-    <StyledGiftBar data-kind="favorites-gift-bar">
-      <StyledGiftTrack>
-        {modelQuickGifts.map((g) => (
-          <StyledGiftChip
-            key={g.id}
-            type="button"
-            disabled={!allowChat}
-            title={g.name}
-            aria-label={g.name}
-            onClick={() => { if (allowChat && sendGiftMsg) sendGiftMsg(g.id); }}
-          >
-            <GiftIcon code={g.code} iconUrl={g.icon} alt={g.name || ''} size={32} />
-          </StyledGiftChip>
-        ))}
-      </StyledGiftTrack>
-    </StyledGiftBar>
+  // surface 'video-overlay' (desktop llamada, barra inferior sobre el vídeo):
+  // pill semitransparente de una sola fila con chips grandes (misma variante
+  // que el cliente, `StyledGiftBar[data-surface="video-overlay"]`). Por
+  // defecto (chat puro): barra opaca en su columna. El modelo solo manda
+  // gratis, así que en ambos casos va una única fila de objetos gratis.
+  const renderModelGiftBar = (surface) => {
+    if (modelQuickGifts.length === 0) return null;
+    const isOverlay = surface === 'video-overlay';
+    return (
+      <StyledGiftBar
+        data-kind="favorites-gift-bar"
+        {...(isOverlay ? { 'data-surface': 'video-overlay' } : {})}
+      >
+        <StyledGiftTrack {...(isOverlay ? { 'data-row': 'all' } : {})}>
+          {modelQuickGifts.map((g) => (
+            <StyledGiftChip
+              key={g.id}
+              type="button"
+              disabled={!allowChat}
+              title={g.name}
+              aria-label={g.name}
+              onClick={() => { if (allowChat && sendGiftMsg) sendGiftMsg(g.id); }}
+            >
+              <GiftIcon code={g.code} iconUrl={g.icon} alt={g.name || ''} size={24} />
+            </StyledGiftChip>
+          ))}
+        </StyledGiftTrack>
+      </StyledGiftBar>
+    );
+  };
+
+  // Barra inferior única sobre el vídeo (rediseño llamada favoritos modelo,
+  // paridad con el cliente): IZQUIERDA control COLGAR (~34px vía style inline
+  // para NO tocar el tamaño global de BtnCall*), CENTRO barra de regalos
+  // SOLO-GRATIS (objetos gratis, envío directo vía sendGiftMsg). La llamada de
+  // favoritos NO tiene reportar/bloquear, así que se omite la zona derecha.
+  const OVERLAY_CTRL_STYLE = { width: 34, height: 34, minWidth: 34, minHeight: 34, fontSize: 13 };
+  const renderCallOverlayBar = () => (
+    <StyledCallOverlayBar>
+      <StyledCallOverlayControls>
+        <BtnCallDanger
+          onClick={() => handleCallEnd(false)}
+          style={OVERLAY_CTRL_STYLE}
+          title={t('common.hangup')}
+          aria-label={t('common.hangup')}
+        >
+          <FontAwesomeIcon icon={faPhoneSlash} />
+        </BtnCallDanger>
+      </StyledCallOverlayControls>
+
+      <StyledCallOverlayGifts>
+        {renderModelGiftBar('video-overlay')}
+      </StyledCallOverlayGifts>
+    </StyledCallOverlayBar>
   );
 
   // Fase 1 estilos: chat P2P reutiliza SupportMessageBubble con variantes
@@ -415,8 +476,16 @@ export default function VideoChatFavoritosModelo(props) {
     const { transparent = false } = opts;
     const giftData = resolveGiftData(m);
     if (giftData) {
+      // Alinea el regalo igual que las burbujas de texto (SupportMessageBubble),
+      // que llevan avatar 32px + gap 10px = 42px en el lado del emisor. El lado
+      // se resuelve tras aplicar la variante (estandar o inverted).
+      const side = isMe ? senderMe.side : senderPeer.side;
       return (
-        <StyledChatMessageRow key={m.id} $side={isMe ? senderMe.side : senderPeer.side}>
+        <StyledChatMessageRow
+          key={m.id}
+          $side={side}
+          style={side === 'me' ? { paddingRight: 42 } : { paddingLeft: 42 }}
+        >
           {renderGiftVisual(giftData)}
         </StyledChatMessageRow>
       );
@@ -481,6 +550,39 @@ export default function VideoChatFavoritosModelo(props) {
     </button>
   ) : null;
 
+  // Presencia REAL del peer del chat: llega por prop desde DashboardModel,
+  // que la deriva del listado VISIBLE (left column), misma fuente Redis que
+  // el punto de estado del contacto. (No usar el listado interno de este
+  // componente: se desmonta al abrir el chat en desktop.)
+  const peerPresenceNorm = String(peerPresence || 'offline').toLowerCase();
+
+  // Cabecera del chat (rediseño favoritos): contacto actual (avatar+nombre)
+  // arriba + toggle "Ver original" a la derecha. Igual que el lado cliente.
+  // El estado usa la presencia real del peer (peerPresenceNorm), no placeholder.
+  const renderFavChatHeader = () => {
+    const pMeta = peerPresenceNorm === 'online'
+      ? { c: '#22c55e', label: t('common.presence.online', 'en línea') }
+      : peerPresenceNorm === 'busy'
+      ? { c: '#f59e0b', label: t('common.presence.busy', 'ocupado') }
+      : { c: '#9ca3af', label: t('common.presence.offline', 'desconectado') };
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: '#111418', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, position: 'relative', zIndex: 6 }}>
+        <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#ff5c8a,#a78bfa)', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+          {(centerChatPeerName || '?').charAt(0).toUpperCase()}
+        </div>
+        <div style={{ minWidth: 0, lineHeight: 1.25 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: '#e7ebf0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {centerChatPeerName || ''}
+          </div>
+          <div style={{ fontSize: 11, color: pMeta.c }}>● {pMeta.label}</div>
+        </div>
+        <div style={{ marginLeft: 'auto' }}>
+          {shouldShowTranslationToggle && <TranslationToggleButton />}
+        </div>
+      </div>
+    );
+  };
+
   const renderChatMessage = (m, opts) => {
     const isMe = Number(m.senderId) === Number(user?.id);
     return buildBubble(
@@ -521,6 +623,34 @@ export default function VideoChatFavoritosModelo(props) {
     if (callStartSnapshotIds == null) return [];
     return (centerMessages || []).filter((m) => m?.id != null && !callStartSnapshotIds.has(m.id));
   }, [centerMessages, callStartSnapshotIds]);
+
+  // Acumulación de regalos del cliente durante la llamada (para el SessionHUD
+  // del modelo). Solo cuenta los mensajes-regalo del peer (cliente), una vez
+  // cada uno; coste del propio regalo o del catálogo `gifts`.
+  React.useEffect(() => {
+    if (callStatus !== 'in-call') return;
+    if (!Array.isArray(callMessages)) return;
+    const pctRaw = modelEconomics?.giftModelSharePct;
+    const pct = Number.isFinite(Number(pctRaw)) && Number(pctRaw) > 0 ? Number(pctRaw) : 90;
+    let added = 0;
+    callMessages.forEach((m, idx) => {
+      if (Number(m?.senderId) === Number(user?.id)) return; // solo regalos del cliente
+      const gd = resolveGiftData(m);
+      if (!gd) return;
+      let cost = Number(gd.cost);
+      if (!Number.isFinite(cost) || cost <= 0) {
+        const cat = (gifts || []).find((x) => Number(x.id) === Number(gd.giftId));
+        cost = Number(cat?.cost);
+      }
+      if (!Number.isFinite(cost) || cost <= 0) return;
+      const key = `${idx}:${gd.giftId ?? gd.code ?? cost}`;
+      if (seenGiftKeysRef.current.has(key)) return;
+      seenGiftKeysRef.current.add(key);
+      added += (cost * pct) / 100;
+    });
+    if (added > 0) setGiftsSumEur((prev) => prev + added);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [callMessages, callStatus, modelEconomics?.giftModelSharePct]);
 
   const renderDesktopCallMessages = () => callMessages.map((m) => renderChatMessageInverted(m, { transparent: true }));
 
@@ -637,9 +767,9 @@ export default function VideoChatFavoritosModelo(props) {
                         </StyledTopActions>
 
                         {callStatus === 'in-call' && (
-                          <StyledCallCardDesktop>
+                          <StyledCallCardDesktop data-full="true" data-chat-side="true">
                             <StyledCallVideoArea>
-                              <StyledRemoteVideo ref={callRemoteWrapRef} style={{ position: 'relative', width: '100%', height: '100%', borderRadius: '18px 18px 0 0', overflow: 'hidden', background: '#000' }}>
+                              <StyledRemoteVideo ref={callRemoteWrapRef} style={{ position: 'relative', width: '100%', height: '100%', borderRadius: 0, overflow: 'hidden', background: '#000' }}>
                                 <StyledCallStage>
                                   <StyledCallTopBar>
                                     <StyledCallTopMeta>
@@ -652,6 +782,14 @@ export default function VideoChatFavoritosModelo(props) {
                                           {renderCallClientBalance()}
                                         </div>
                                       </div>
+                                      <SessionHUD
+                                        variant="model"
+                                        active={callStatus === 'in-call'}
+                                        ratePerMin={Number(modelEconomics?.chosenRateEurPerMin)}
+                                        modelSharePct={Number(modelEconomics?.modelSharePct)}
+                                        giftsSum={giftsSumEur}
+                                        inline
+                                      />
                                     </StyledCallTopMeta>
 
                                     <StyledCallTopActions>
@@ -660,21 +798,25 @@ export default function VideoChatFavoritosModelo(props) {
                                         onClick={() => toggleFullscreen(callRemoteWrapRef.current)}
                                         title={t('common.fullscreen')}
                                         aria-label={t('common.fullscreen')}
+                                        style={{ width: 36, height: 36, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}
                                       >
-                                        {t('common.fullscreen')}
+                                        <FontAwesomeIcon icon={faExpand} />
                                       </BtnCallGhost>
                                     </StyledCallTopActions>
                                   </StyledCallTopBar>
 
+                                  <StyledRemoteVideoBlur ref={callBlurVideoRef} $ready autoPlay playsInline muted aria-hidden="true" />
+
                                   <video
                                     ref={callRemoteVideoRef}
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                                    style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', position: 'relative', zIndex: 1, background: 'transparent' }}
                                     autoPlay
                                     playsInline
+                                    onPlaying={(e)=>{ const s=e.currentTarget.srcObject; if(callBlurVideoRef.current && callBlurVideoRef.current.srcObject!==s) callBlurVideoRef.current.srcObject=s; }}
                                     onDoubleClick={() => toggleFullscreen(callRemoteWrapRef.current)}
                                   />
 
-                                  <StyledCallLocalVideo>
+                                  <StyledCallLocalVideo data-compact="true">
                                     <video
                                       ref={callLocalVideoRef}
                                       muted
@@ -684,32 +826,44 @@ export default function VideoChatFavoritosModelo(props) {
                                     />
                                   </StyledCallLocalVideo>
 
-                                  <StyledCallBottomBar>
-                                    <StyledCallBottomInner>
-                                      <StyledCallPrimaryActions>
-                                        <BtnCallDanger onClick={() => handleCallEnd(false)} title={t('common.hangup')} aria-label={t('common.hangup')}>
-                                          <FontAwesomeIcon icon={faPhoneSlash} />
-                                        </BtnCallDanger>
-                                      </StyledCallPrimaryActions>
-                                    </StyledCallBottomInner>
-                                  </StyledCallBottomBar>
-
-                                  <StyledChatContainer data-wide="true">
-                                    {shouldShowCallTranslationToggle && (
-                                      <div style={{position:'absolute',top:12,right:280,zIndex:100,pointerEvents:'auto'}}>
-                                        <TranslationToggleButton />
-                                      </div>
-                                    )}
-                                    <StyledChatList ref={callListRef} style={{width:'100%',maxHeight:'40%',overflowY:'auto'}}>
-                                      {renderDesktopCallMessages()}
-                                    </StyledChatList>
-                                  </StyledChatContainer>
+                                  {/* Barra inferior única sobre el vídeo:
+                                      COLGAR (izq) + regalos gratis del modelo
+                                      (centro). Sin reportar/bloquear en
+                                      favoritos. "Ver original" NO va aquí: vive
+                                      en la cabecera de la columna de chat. */}
+                                  <StyledGiftFxLayer ref={fxRef} />
+                                  {renderCallOverlayBar()}
                                 </StyledCallStage>
                               </StyledRemoteVideo>
                             </StyledCallVideoArea>
 
+                            <StyledCallChatColumn>
+                              <StyledCallChatColHeader>
+                                <StyledTitleAvatar src={callPeerAvatar || '/img/avatarChico.png'} alt="" style={{ width: 28, height: 28 }} />
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div style={{ fontSize: 13, fontWeight: 600, color: '#e7ebf0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {callPeerName || t('dashboardModel.favorites.call.remote')}
+                                  </div>
+                                  <div style={{ fontSize: 10, color: 'rgba(231,235,240,0.6)' }}>
+                                    {renderCallClientBalance()}
+                                  </div>
+                                </div>
+                                {/* "Ver original" como botón normal en la
+                                    cabecera del chat (movido desde el overlay
+                                    del vídeo). */}
+                                {shouldShowCallTranslationToggle && <TranslationToggleButton />}
+                              </StyledCallChatColHeader>
+
+                              <StyledCallChatColScroll ref={callListRef}>
+                                {callMessages.map((m) => renderChatMessageInverted(m, { transparent: false }))}
+                              </StyledCallChatColScroll>
+
                             <StyledCallFooterDesktop>
+                              {/* Composer de la llamada: emoji + texto + enviar.
+                                  Los regalos NO van aquí: están en la barra
+                                  inferior sobre el vídeo. */}
                               <StyledCallComposer>
+                                <EmojiTextPicker onInsert={(e) => setCenterInput((v) => (v || '') + e)} disabled={!allowChat} />
                                 <StyledChatInput
                                   type="text"
                                   value={centerInput}
@@ -728,6 +882,7 @@ export default function VideoChatFavoritosModelo(props) {
                                 </BtnSend>
                               </StyledCallComposer>
                             </StyledCallFooterDesktop>
+                            </StyledCallChatColumn>
                           </StyledCallCardDesktop>
                         )}
 
@@ -750,11 +905,7 @@ export default function VideoChatFavoritosModelo(props) {
                     {!isPendingPanel && !isSentPanel && contactMode !== 'call' && (
                       <StyledChatWhatsApp style={{position:'relative'}}>
                         <StyledGiftFxLayer ref={fxRef} />
-                        {shouldShowTranslationToggle && (
-                          <div style={{position:'absolute',top:6,right:12,zIndex:5}}>
-                            <TranslationToggleButton />
-                          </div>
-                        )}
+                        {renderFavChatHeader()}
                         <StyledChatScroller ref={modelCenterListRef} data-bg="whatsapp" data-kind="favorites-chat">
                           <StyledChatMessagesInner>
                             {centerMessages.length === 0 && (
@@ -806,7 +957,7 @@ export default function VideoChatFavoritosModelo(props) {
       {isMobile && (
         <>
           {!hasActiveDetail && (
-            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, background: 'linear-gradient(180deg,#161a20 0%,#111418 100%)' }}>
               <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
                 <FavoritesModelList
                   onSelect={handleOpenChatFromFavorites}

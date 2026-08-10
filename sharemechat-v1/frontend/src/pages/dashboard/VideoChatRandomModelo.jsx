@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import i18n from '../../i18n';
 import SessionHUD from '../../components/SessionHUD';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUserPlus, faVideo, faPhoneSlash, faForward, faPaperPlane, faBan, faFlag, faExpand } from '@fortawesome/free-solid-svg-icons';
+import { faUserPlus, faHeart, faVideo, faPhoneSlash, faForward, faPaperPlane, faBan, faFlag, faExpand } from '@fortawesome/free-solid-svg-icons';
 import {
   StyledCenterVideochat,
   StyledSplit2,
@@ -17,9 +17,9 @@ import {
   StyledChatDock,
   StyledChatInput,
   StyledGiftMessage,
-  StyledGiftIcon,
   StyledRemoteVideo,
   StyledRemoteVideoMedia,
+  StyledRemoteVideoBlur,
   StyledRemoteVideoPlaceholder,
   StyledTitleAvatar,
   StyledPaneCenter,
@@ -30,6 +30,9 @@ import {
   StyledRandomSearchCol,
   StyledSearchHint,
   StyledCallCardDesktop,
+  StyledCallChatColumn,
+  StyledCallChatColHeader,
+  StyledCallChatColScroll,
   StyledCallVideoArea,
   StyledCallFooterDesktop,
   StyledCallStage,
@@ -42,7 +45,12 @@ import {
   StyledCallBottomInner,
   StyledCallPrimaryActions,
   StyledCallSecondaryActions,
+  StyledCallOverlayBar,
+  StyledCallOverlayControls,
+  StyledCallOverlayGifts,
+  StyledCallOverlayRb,
   StyledCallComposer,
+  StyledGiftFxLayer,
   StyledStatsPrecallCard,
   StyledStatsInline,
   StyledTierProgressCard,
@@ -71,6 +79,23 @@ import {
 import { useSession } from '../../components/SessionProvider';
 import { useTranslationSettings } from '../../hooks/useTranslationSettings';
 import { useMessageTranslations } from '../../hooks/useMessageTranslations';
+import GiftIcon, { resolveGiftSlug } from '../../components/gifts/GiftIcon';
+import GiftIconDefs from '../../components/gifts/GiftIconDefs';
+import EmojiTextPicker from '../../components/EmojiTextPicker';
+import { isSingleEmoji } from '../../utils/emojiUtils';
+
+// Keyframes de los efectos al recibir un regalo (portado de random cliente /
+// favoritos). El modelo es RECEPTOR de regalos en el flujo random (el backend
+// solo permite CLIENT -> MODEL, ver MatchingHandlerSupport.handleGiftInMatch),
+// asi que estos efectos se disparan cuando el CLIENTE le envia un regalo.
+// Se inyectan una vez via <style>; las particulas referencian estos nombres
+// globales. Va a nivel de modulo para no romper import/first.
+const GIFT_FX_KEYFRAMES = `
+@keyframes gfxFloat{0%{transform:translateY(0) scale(.6);opacity:0}15%{opacity:1}100%{transform:translateY(-220px) translateX(var(--dx)) scale(1.05) rotate(var(--rot));opacity:0}}
+@keyframes gfxFall{0%{transform:translateY(-30px) rotate(0);opacity:0}12%{opacity:1}100%{transform:translateY(var(--fall,420px)) translateX(var(--dx)) rotate(var(--rot));opacity:0}}
+@keyframes gfxGlow{0%{transform:scale(.2);opacity:.85}100%{transform:scale(2.6);opacity:0}}
+@keyframes gfxBigNorm{0%{transform:scale(.3);opacity:0}30%{transform:scale(2.6);opacity:1}70%{transform:scale(1);opacity:1}100%{transform:scale(1);opacity:0}}
+`;
 
 export default function VideoChatRandomModelo(props) {
   const t = (key, options) => i18n.t(key, options);
@@ -81,6 +106,7 @@ export default function VideoChatRandomModelo(props) {
     localVideoRef,
     vcListRef,
     messages,
+    gifts,
     giftRenderReady,
     getGiftIcon,
     remoteStream,
@@ -147,6 +173,125 @@ export default function VideoChatRandomModelo(props) {
   );
 
   const [isDesktopRemoteVideoReady, setIsDesktopRemoteVideoReady] = React.useState(false);
+
+  // Fase 0 streaming: backdrop borroso del vídeo remoto. Vídeo secundario mudo
+  // con el mismo MediaStream; rellena el letterbox del vídeo apaisado con blur.
+  const blurVideoRef = React.useRef(null);
+  React.useEffect(() => {
+    const el = blurVideoRef.current;
+    if (!el) return;
+    if (el.srcObject !== (remoteStream || null)) el.srcObject = remoteStream || null;
+  }, [remoteStream, isMobile]);
+
+  // Capa de efectos sobre el vídeo (portada de random cliente). El modelo la ve
+  // cuando el CLIENTE le envia un regalo: corazones para gratis, glow + confeti
+  // + serpentinas para pago.
+  const fxRef = React.useRef(null);
+  // Diff por CONTADOR (los regalos random no traen id de mensaje a nivel raiz);
+  // dispara efecto solo para los recien anadidos.
+  const prevCountRef = React.useRef(0);
+
+  const playGiftFx = (gd) => {
+    const layer = fxRef.current;
+    if (!layer || !gd) return;
+
+    let tier = gd.tier;
+    let code = gd.code;
+    if (!tier || !code) {
+      const found = Array.isArray(gifts)
+        ? gifts.find((g) => Number(g.id) === Number(gd.giftId ?? gd.id))
+        : null;
+      tier = tier || found?.tier;
+      code = code || found?.code;
+    }
+    const isPremium = String(tier || '').toUpperCase() === 'PREMIUM';
+
+    const W = layer.clientWidth || 0;
+    const H = layer.clientHeight || 0;
+    const cx = W * 0.72;
+    const cy = H - 24;
+    const rnd = (a, b) => a + (b - a) * Math.random();
+    const COLS = ['#ff5c8a', '#f5b942', '#5cc8ff', '#a78bfa', '#35d29b', '#ff7a1a'];
+
+    const spawn = (html, style, dur) => {
+      const el = document.createElement('div');
+      el.className = 'gfx-p';
+      if (html) el.innerHTML = html;
+      Object.keys(style).forEach((k) => {
+        if (k.charAt(0) === '-') el.style.setProperty(k, style[k]);
+        else el.style[k] = style[k];
+      });
+      layer.appendChild(el);
+      setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, dur);
+    };
+
+    if (!isPremium) {
+      for (let i = 0; i < 8; i++) {
+        setTimeout(() => spawn('❤️', {
+          left: (cx + rnd(-34, 20)) + 'px', top: cy + 'px', fontSize: rnd(16, 28) + 'px',
+          '--dx': rnd(-40, 40) + 'px', '--rot': rnd(-30, 30) + 'deg',
+          animation: `gfxFloat ${rnd(1.1, 1.7)}s ease-out forwards`,
+        }, 1800), i * 80);
+      }
+      return;
+    }
+
+    // Premium: glow + regalo grande->normal + confeti + serpentinas.
+    spawn('', {
+      left: (cx - 65) + 'px', top: (cy - 90) + 'px', width: '130px', height: '130px',
+      borderRadius: '50%', background: 'radial-gradient(circle,rgba(255,220,140,.7),transparent 65%)',
+      animation: 'gfxGlow .9s ease-out forwards',
+    }, 900);
+
+    const slug = resolveGiftSlug(code);
+    if (slug) {
+      spawn(`<svg><use href="#gi-${slug}"/></svg>`, {
+        left: (cx - 45) + 'px', top: (cy - 120) + 'px', width: '90px', height: '90px',
+        transformOrigin: 'bottom center', animation: 'gfxBigNorm 1.1s cubic-bezier(.22,1.4,.4,1) forwards',
+      }, 1200);
+    }
+
+    for (let c = 0; c < 40; c++) {
+      setTimeout(() => {
+        const w = rnd(6, 11);
+        spawn('', {
+          left: rnd(0, W) + 'px', top: '-20px', width: w + 'px', height: (w * 1.7) + 'px',
+          borderRadius: '2px', background: COLS[c % COLS.length],
+          '--dx': rnd(-40, 40) + 'px', '--rot': rnd(180, 620) + 'deg', '--fall': (H + 40) + 'px',
+          animation: `gfxFall ${rnd(1.4, 2.4)}s linear forwards`,
+        }, 2600);
+      }, c * 22);
+    }
+    for (let s = 0; s < 14; s++) {
+      setTimeout(() => {
+        const h = rnd(46, 90);
+        spawn('', {
+          left: rnd(0, W) + 'px', top: (-h - 10) + 'px', width: rnd(5, 8) + 'px', height: h + 'px',
+          borderRadius: '6px', background: COLS[s % COLS.length], opacity: '0.9',
+          '--dx': rnd(-70, 70) + 'px', '--rot': rnd(120, 420) + 'deg', '--fall': (H + 40) + 'px',
+          animation: `gfxFall ${rnd(1.8, 2.8)}s cubic-bezier(.4,.1,.6,1) forwards`,
+        }, 2900);
+      }, s * 40);
+    }
+  };
+
+  // Detecta mensajes-regalo NUEVOS (append-only) y dispara el efecto solo para
+  // los recien anadidos. Guardas: sin efecto si es 1a poblacion masiva (>3), si
+  // no hubo altas, o si el usuario prefiere movimiento reducido.
+  React.useEffect(() => {
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const msgs = messages || [];
+    const prevCount = prevCountRef.current;
+    const added = msgs.length - prevCount;
+    prevCountRef.current = msgs.length;
+    if (added <= 0 || added > 3 || reduce) return;
+    const newMsgs = msgs.slice(msgs.length - added);
+    newMsgs.forEach((m) => {
+      const gd = m.gift ? normalizeGift(m.gift) : null;
+      if (gd) playGiftFx(gd);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages]);
 
   // ADR-052 Superficie 2 (2026-07-25): acumulador local de ganancia por
   // regalos en la sesion activa. El WS trae el `cost` bruto del regalo;
@@ -278,13 +423,25 @@ export default function VideoChatRandomModelo(props) {
     };
   };
 
+  // Pinta el regalo con GiftIcon (por CODE), igual que random cliente: resolver
+  // por code evita imagenes rotas de objetos sin URL; el iconUrl remoto queda
+  // como fallback de retrocompat. Los emojis-carita gratis se pintan como emoji
+  // nativo (GiftIcon los mapea por code).
   const renderGiftMessage = (gift) => {
     const renderData = getGiftRenderData(gift);
-    if (!renderData?.icon) return null;
+    if (!renderData) return null;
+
+    let code = renderData.code || null;
+    if (!code && Array.isArray(gifts)) {
+      const lookupId = Number(renderData.giftId ?? renderData.id);
+      code = gifts.find((gg) => Number(gg.id) === lookupId)?.code || null;
+    }
+    const src = renderData.icon || null;
+    if (!code && !src) return null;
 
     return (
       <StyledGiftMessage $premium={renderData.isPremium}>
-        <StyledGiftIcon src={renderData.icon} alt={renderData.name || ''} $premium={renderData.isPremium} />
+        <GiftIcon code={code} iconUrl={src} alt={renderData.name || ''} size={renderData.isPremium ? 88 : 48} />
       </StyledGiftMessage>
     );
   };
@@ -324,8 +481,20 @@ export default function VideoChatRandomModelo(props) {
       const translation = !isMe && msg.id ? getTranslation(msg.id) : null;
       const hasTranslation = typeof translation === 'string' && translation.trim() !== '' && translation !== msg.text;
 
+      // Un solo emoji -> grande y sin globo (estilo WhatsApp). Solo cuando no
+      // es regalo y no hay traduccion que mostrar debajo.
+      if (!giftData && !hasTranslation && isSingleEmoji(msg.text)) {
+        return (
+          <StyledChatMessageRow key={msg.id || index} $side={variant}>
+            <span role="img" aria-label={(msg.text || '').trim()} style={{ fontSize: 40, lineHeight: 1 }}>
+              {(msg.text || '').trim()}
+            </span>
+          </StyledChatMessageRow>
+        );
+      }
+
       return (
-        <StyledChatMessageRow key={msg.id || index}>
+        <StyledChatMessageRow key={msg.id || index} $side={variant}>
           {giftData ? (
             renderGiftMessage(giftData)
           ) : (
@@ -356,7 +525,10 @@ export default function VideoChatRandomModelo(props) {
   const shouldShowTranslationToggle = translationEnabled && viewerLang && messages.some(
     (m) => m.from === 'peer' && m.id && !m.gift
   );
-  const TranslationToggleButton = () => shouldShowTranslationToggle ? (
+  // floating=true -> pill absoluta sobre el vídeo (móvil, chat overlay).
+  // floating=false (default) -> botón normal para la cabecera de la columna de
+  // chat (desktop), igual que el random cliente.
+  const TranslationToggleButton = ({ floating = false }) => shouldShowTranslationToggle ? (
     <button
       type="button"
       onClick={toggleShowOriginal}
@@ -364,10 +536,12 @@ export default function VideoChatRandomModelo(props) {
         ? i18n.t('chat.translation.showTranslations', 'Mostrar traducciones')
         : i18n.t('chat.translation.showOriginal', 'Ver original')}
       style={{
-        position: 'absolute',
-        top: 12,
-        left: 12,
-        zIndex: 100,
+        ...(floating ? {
+          position: 'absolute',
+          top: 12,
+          left: 12,
+          zIndex: 100,
+        } : {}),
         background: showOriginal ? '#fff' : '#dbeafe',
         color: '#1e3a8a',
         border: '1px solid #bfdbfe',
@@ -456,6 +630,81 @@ export default function VideoChatRandomModelo(props) {
     </StyledCallBottomBar>
   );
 
+  // Barra inferior única sobre el vídeo (desktop): [controles izq] + [centro
+  // spacer] + [reportar/bloquear der] en una sola fila. IMPORTANTE: en el flujo
+  // random el modelo es RECEPTOR de regalos; el backend
+  // (MatchingHandlerSupport.handleGiftInMatch) solo permite CLIENT -> MODEL, por
+  // lo que el modelo NO dispone de barra selectora de regalos aqui (a diferencia
+  // del cliente). El envio de emojis del modelo va por el composer (EmojiTextPicker
+  // -> mensaje de chat). El centro queda como spacer para conservar el layout de
+  // 3 zonas. Los botones van mas pequeños que el tamaño global (44px) via style
+  // inline, para NO tocar BtnCall* que tambien usan las llamadas de favoritos.
+  const OVERLAY_CTRL_STYLE = { width: 34, height: 34, minWidth: 34, minHeight: 34, fontSize: 13 };
+  const OVERLAY_RB_STYLE = { width: 32, height: 32, minWidth: 32, minHeight: 32, fontSize: 12 };
+  const renderCallOverlayBar = () => (
+    <StyledCallOverlayBar>
+      <StyledCallOverlayControls>
+        <BtnCallDanger
+          onClick={stopAll}
+          style={OVERLAY_CTRL_STYLE}
+          title={t('common.hangup')}
+          aria-label={t('common.hangup')}
+        >
+          <FontAwesomeIcon icon={faPhoneSlash} />
+        </BtnCallDanger>
+
+        <BtnCallLight
+          onClick={() => handleNext && handleNext()}
+          disabled={!!nextDisabled}
+          aria-disabled={!!nextDisabled}
+          style={OVERLAY_CTRL_STYLE}
+          title={t('home.hero.nextAria')}
+          aria-label={t('home.hero.nextAria')}
+        >
+          <FontAwesomeIcon icon={faForward} />
+        </BtnCallLight>
+
+        {currentClientId && (
+          <BtnCallLight
+            onClick={handleAddFavorite}
+            style={OVERLAY_CTRL_STYLE}
+            aria-label={t('common.actions.addToFavorites')}
+            title={t('common.actions.addToFavorites')}
+          >
+            <FontAwesomeIcon icon={faHeart} />
+          </BtnCallLight>
+        )}
+      </StyledCallOverlayControls>
+
+      {/* Centro: spacer (el modelo no envia regalos en random; ver comentario
+          arriba). Se mantiene para empujar controles a la izq y reportar/bloquear
+          a la der, igual layout que el cliente. */}
+      <StyledCallOverlayGifts />
+
+      <StyledCallOverlayRb>
+        <BtnCallAlert
+          type="button"
+          onClick={() => handleReportPeer && handleReportPeer()}
+          style={OVERLAY_RB_STYLE}
+          aria-label={t('modals.report.title')}
+          title={t('modals.report.title')}
+        >
+          <FontAwesomeIcon icon={faFlag} />
+        </BtnCallAlert>
+
+        <BtnCallAlert
+          type="button"
+          onClick={() => handleBlockPeer && handleBlockPeer()}
+          style={OVERLAY_RB_STYLE}
+          aria-label={t('modals.block.title')}
+          title={t('modals.block.title')}
+        >
+          <FontAwesomeIcon icon={faBan} />
+        </BtnCallAlert>
+      </StyledCallOverlayRb>
+    </StyledCallOverlayBar>
+  );
+
   const renderCallTopMeta = (hud = null) => (
     <StyledCallTopMeta>
       {showTrialBadge && <TrialBadge />}
@@ -496,6 +745,8 @@ export default function VideoChatRandomModelo(props) {
 
   return (
     <StyledCenterVideochat>
+      <GiftIconDefs />
+      <style dangerouslySetInnerHTML={{ __html: GIFT_FX_KEYFRAMES }} />
       <StyledSplit2 data-mode={!isMobile && remoteStream ? 'full-remote' : 'split'}>
         <StyledPane data-side="left">
           {!isMobile && (
@@ -638,11 +889,11 @@ export default function VideoChatRandomModelo(props) {
               )}
 
               {remoteStream && !isMobile && (
-                <StyledCallCardDesktop>
+                <StyledCallCardDesktop data-full="true" data-chat-side="true">
                   <StyledCallVideoArea>
                     <StyledRemoteVideo
                       ref={remoteVideoWrapRef}
-                      style={{position:'relative',width:'100%',height:'100%',borderRadius:'18px 18px 0 0',overflow:'hidden',background:'#000'}}
+                      style={{position:'relative',width:'100%',height:'100%',borderRadius:0,overflow:'hidden',background:'#000'}}
                     >
                       <StyledCallStage>
                         <StyledCallTopBar>
@@ -669,9 +920,19 @@ export default function VideoChatRandomModelo(props) {
                           </StyledCallTopActions>
                         </StyledCallTopBar>
 
+                        <StyledRemoteVideoBlur
+                          ref={blurVideoRef}
+                          $ready={isDesktopRemoteVideoReady}
+                          autoPlay
+                          playsInline
+                          muted
+                          aria-hidden="true"
+                        />
+
                         <StyledRemoteVideoMedia
                           ref={remoteVideoRef}
                           $ready={isDesktopRemoteVideoReady}
+                          $contain
                           onLoadedMetadata={(e) => {
                             const el = e.currentTarget;
                             console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=model action=remoteVideoLoadedMetadata readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
@@ -702,7 +963,7 @@ export default function VideoChatRandomModelo(props) {
                         )}
 
                         {cameraActive && (
-                          <StyledCallLocalVideo>
+                          <StyledCallLocalVideo data-compact="true">
                             <video
                               ref={localVideoRef}
                               muted
@@ -718,20 +979,35 @@ export default function VideoChatRandomModelo(props) {
                           </StyledCallLocalVideo>
                         )}
 
-                        {cameraActive && renderCallActions()}
-
-                        <StyledChatContainer data-wide="true">
-                          <TranslationToggleButton />
-                          <StyledChatList ref={vcListRef}>
-                            {renderMessages()}
-                          </StyledChatList>
-                        </StyledChatContainer>
+                        {/* Barra inferior única sobre el vídeo: controles (izq)
+                            + spacer (centro) + reportar/bloquear (der). La capa
+                            de efectos vive aqui (sobre el vídeo) para que el
+                            modelo vea los efectos al RECIBIR regalos del cliente.
+                            "Ver original" va en la cabecera de la columna de chat. */}
+                        <StyledGiftFxLayer ref={fxRef} />
+                        {cameraActive && renderCallOverlayBar()}
                       </StyledCallStage>
                     </StyledRemoteVideo>
                   </StyledCallVideoArea>
 
+                  <StyledCallChatColumn>
+                    <StyledCallChatColHeader>
+                      <StyledTitleAvatar src={clientAvatar || '/img/avatarChico.png'} alt="" style={{ width: 28, height: 28 }} />
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#e7ebf0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {clientNickname || t('dashboardModel.videoChatRandomModelo.labels.clientDefault')}
+                        </div>
+                      </div>
+                      <TranslationToggleButton />
+                    </StyledCallChatColHeader>
+
+                    <StyledCallChatColScroll ref={vcListRef}>
+                      {renderMessages()}
+                    </StyledCallChatColScroll>
+
                   <StyledCallFooterDesktop>
                     <StyledCallComposer>
+                      <EmojiTextPicker onInsert={(e) => setChatInput((v) => (v || '') + e)} />
                       <StyledChatInput
                         type="text"
                         value={chatInput}
@@ -750,6 +1026,7 @@ export default function VideoChatRandomModelo(props) {
                       </BtnSend>
                     </StyledCallComposer>
                   </StyledCallFooterDesktop>
+                  </StyledCallChatColumn>
                 </StyledCallCardDesktop>
               )}
 
@@ -797,7 +1074,7 @@ export default function VideoChatRandomModelo(props) {
                       />
 
                       {cameraActive && (
-                        <StyledCallLocalVideo>
+                        <StyledCallLocalVideo data-compact="true">
                           <video
                             ref={localVideoRef}
                             muted
@@ -816,7 +1093,7 @@ export default function VideoChatRandomModelo(props) {
                       {cameraActive && renderCallActions()}
 
                       <StyledChatContainer data-wide="true">
-                        <TranslationToggleButton />
+                        <TranslationToggleButton floating />
                         <StyledChatList ref={vcListRef}>
                           {renderMessages()}
                         </StyledChatList>
@@ -832,6 +1109,7 @@ export default function VideoChatRandomModelo(props) {
 
       {remoteStream && isMobile && (
         <StyledChatDock data-surface="call-dark">
+          <EmojiTextPicker onInsert={(e) => setChatInput((v) => (v || '') + e)} />
           <StyledChatInput
             type="text"
             value={chatInput}

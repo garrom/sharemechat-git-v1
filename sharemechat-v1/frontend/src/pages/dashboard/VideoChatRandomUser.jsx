@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import i18n from '../../i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { TEASERS_PAGE_SIZE, TEASERS_PAGE_DEFAULT } from '../../config/appConfig';
@@ -10,7 +10,11 @@ import {
   faForward,
   faChevronLeft,
   faChevronRight,
-  faFlag
+  faFlag,
+  faGift,
+  faLock,
+  faPaperPlane,
+  faExpand
 } from '@fortawesome/free-solid-svg-icons';
 
 import {
@@ -21,6 +25,7 @@ import {
   StyledPrecallVideoArea,
   StyledPrecallLocalStage,
   StyledRemoteVideo,
+  StyledRemoteVideoBlur,
   StyledTitleAvatar,
   StyledPreCallCenter,
   StyledHelperLine,
@@ -30,7 +35,11 @@ import {
   StyledPaneCenter,
   StyledPaneCenterStack,
   StyledStatusText,
+  StyledChatInput,
   StyledCallCardDesktop,
+  StyledCallChatColumn,
+  StyledCallChatColHeader,
+  StyledCallChatColScroll,
   StyledCallFooterDesktop,
   StyledCallVideoArea,
   StyledCallStage,
@@ -61,7 +70,9 @@ import {
   BtnCallAlert,
   BtnCallGhost,
   BtnTeaserPrev,
-  BtnTeaserNext
+  BtnTeaserNext,
+  ButtonRegalo,
+  BtnSend
 } from '../../styles/ButtonStyles';
 
 import PromoVideoLightbox from '../../components/PromoVideoLightbox';
@@ -97,6 +108,14 @@ export default function VideoChatRandomUser(props) {
     onGoPremium,
     handleReportPeer,
   } = props;
+
+  // Fase 0 streaming (trial): backdrop borroso del vídeo remoto (mismo stream).
+  const blurVideoRef = useRef(null);
+  useEffect(() => {
+    const el = blurVideoRef.current;
+    if (!el) return;
+    if (el.srcObject !== (remoteStream || null)) el.srcObject = remoteStream || null;
+  }, [remoteStream, isMobile]);
 
   const [promoVideos, setPromoVideos] = useState([]);
   const [activePromoIndex, setActivePromoIndex] = useState(null);
@@ -295,7 +314,10 @@ export default function VideoChatRandomUser(props) {
 
   return (
     <StyledCenterVideochat>
-      <TrialFreeBanner />
+      {/* En llamada desktop el CTA ya vive en la columna de chat (gancho);
+          ocultamos la barra azul ahí para no duplicar. Se mantiene en precall
+          y en móvil (donde es el único CTA). */}
+      {!(remoteStream && !isMobile) && <TrialFreeBanner />}
       <StyledSplit2 data-mode={!isMobile && remoteStream ? 'full-remote' : 'split'}>
         <StyledPane data-side="left">
           {!isMobile && (
@@ -420,23 +442,25 @@ export default function VideoChatRandomUser(props) {
               )}
 
               {remoteStream && !isMobile && (
-                <StyledCallCardDesktop>
+                <StyledCallCardDesktop data-full="true" data-chat-side="true">
                   <StyledCallVideoArea>
-                    <StyledRemoteVideo ref={remoteVideoWrapRef} style={{position:'relative',width:'100%',height:'100%',borderRadius:'18px 18px 0 0',overflow:'hidden',background:'#000'}}>
+                    <StyledRemoteVideo ref={remoteVideoWrapRef} style={{position:'relative',width:'100%',height:'100%',borderRadius:0,overflow:'hidden',background:'#000'}}>
                       <StyledCallStage>
                         <StyledCallTopBar>
                           {renderCallTopMeta()}
                           <StyledCallTopActions>
-                            <BtnCallGhost type="button" onClick={() => toggleFullscreen(remoteVideoWrapRef.current)} title={t('dashboardUserClient.videoChatRandomUser.actions.fullscreen')} aria-label={t('dashboardUserClient.videoChatRandomUser.actions.fullscreen')}>
-                              {t('dashboardUserClient.videoChatRandomUser.actions.fullscreen')}
+                            <BtnCallGhost type="button" onClick={() => toggleFullscreen(remoteVideoWrapRef.current)} title={t('dashboardUserClient.videoChatRandomUser.actions.fullscreen')} aria-label={t('dashboardUserClient.videoChatRandomUser.actions.fullscreen')} style={{ width: 36, height: 36, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}>
+                              <FontAwesomeIcon icon={faExpand} />
                             </BtnCallGhost>
                           </StyledCallTopActions>
                         </StyledCallTopBar>
 
-                        <video ref={remoteVideoRef} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} autoPlay playsInline onDoubleClick={() => toggleFullscreen(remoteVideoWrapRef.current)} />
+                        <StyledRemoteVideoBlur ref={blurVideoRef} $ready={!!remoteStream} autoPlay playsInline muted aria-hidden="true" />
+
+                        <video ref={remoteVideoRef} style={{width:'100%',height:'100%',objectFit:'contain',display:'block',position:'relative',zIndex:1,background:'transparent'}} autoPlay playsInline onDoubleClick={() => toggleFullscreen(remoteVideoWrapRef.current)} />
 
                         {cameraActive && (
-                          <StyledCallLocalVideo>
+                          <StyledCallLocalVideo data-compact="true">
                             <video ref={localVideoRef} muted autoPlay playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} />
                           </StyledCallLocalVideo>
                         )}
@@ -446,13 +470,58 @@ export default function VideoChatRandomUser(props) {
                     </StyledRemoteVideo>
                   </StyledCallVideoArea>
 
-                  <StyledCallFooterDesktop>
-                    <StyledCallComposer>
-                      <div style={{width:'100%',textAlign:'center',fontSize:14,color:'rgba(255,255,255,0.74)'}}>
-                        {statusText || t('dashboardUserClient.videoChatRandomUser.status.default')}
+                  {/* Columna de chat de GANCHO (trial): se ve igual que la del
+                      cliente normal, pero TODO está bloqueado -> al pulsar,
+                      CTA "hazte cliente" (onGoPremium). */}
+                  <StyledCallChatColumn>
+                    <StyledCallChatColHeader>
+                      <StyledTitleAvatar src={modelAvatar || '/img/avatarChica.png'} alt="" style={{ width: 28, height: 28 }} />
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#e7ebf0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {modelNickname || t('dashboardUserClient.report.displayName')}
+                        </div>
+                        {statusText && (
+                          <div style={{ fontSize: 10, color: 'rgba(231,235,240,0.6)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {statusText}
+                          </div>
+                        )}
                       </div>
-                    </StyledCallComposer>
-                  </StyledCallFooterDesktop>
+                    </StyledCallChatColHeader>
+
+                    <StyledCallChatColScroll>
+                      <button
+                        type="button"
+                        onClick={onGoPremium}
+                        style={{ margin: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '18px 16px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 14, color: '#e7ebf0', cursor: 'pointer', textAlign: 'center' }}
+                      >
+                        <FontAwesomeIcon icon={faLock} style={{ fontSize: 20, color: '#ff5c8a' }} />
+                        <div style={{ fontSize: 13, lineHeight: 1.4, color: 'rgba(231,235,240,0.85)' }}>
+                          {t('dashboardUserClient.videoChatRandomUser.teaser.chatLocked', 'Hazte cliente para chatear y enviar regalos')}
+                        </div>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: 'linear-gradient(135deg,#ff5c8a,#a78bfa)', borderRadius: 999, padding: '6px 14px' }}>
+                          {t('dashboardUserClient.videoChatRandomUser.teaser.cta', 'Hazte cliente')}
+                        </span>
+                      </button>
+                    </StyledCallChatColScroll>
+
+                    <StyledCallFooterDesktop>
+                      <StyledCallComposer>
+                        <StyledChatInput
+                          type="text"
+                          readOnly
+                          placeholder={t('dashboardUserClient.videoChatRandomUser.teaser.inputLocked', 'Hazte cliente para escribir…')}
+                          onClick={onGoPremium}
+                          style={{ cursor: 'pointer' }}
+                        />
+                        <BtnSend type="button" onClick={onGoPremium} aria-label={t('dashboardUserClient.videoChatRandomUser.teaser.cta', 'Hazte cliente')} title={t('dashboardUserClient.videoChatRandomUser.teaser.cta', 'Hazte cliente')}>
+                          <FontAwesomeIcon icon={faPaperPlane} />
+                        </BtnSend>
+                        <ButtonRegalo type="button" onClick={onGoPremium} aria-label={t('dashboardUserClient.videoChatRandomUser.teaser.cta', 'Hazte cliente')} title={t('dashboardUserClient.videoChatRandomUser.teaser.cta', 'Hazte cliente')}>
+                          <FontAwesomeIcon icon={faGift} />
+                        </ButtonRegalo>
+                      </StyledCallComposer>
+                    </StyledCallFooterDesktop>
+                  </StyledCallChatColumn>
                 </StyledCallCardDesktop>
               )}
 

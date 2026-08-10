@@ -191,6 +191,9 @@ const DashboardModel = () => {
   const [centerMessages, setCenterMessages] = useState([]);
   const [centerInput, setCenterInput] = useState('');
   const [centerChatPeerName, setCenterChatPeerName] = useState('');
+  // Items del listado de favoritos (para leer la presencia REAL del peer en la
+  // cabecera del chat, misma fuente que el punto de estado del listado).
+  const [favItems, setFavItems] = useState([]);
   const [centerLoading, setCenterLoading] = useState(false);
   const [showMsgPanel, setShowMsgPanel] = useState(false);
   const [openChatWith, setOpenChatWith] = useState(null);
@@ -3280,6 +3283,10 @@ const DashboardModel = () => {
 
   // Id activo en lista = el objetivo seleccionado
   const selectedContactId = Number(targetPeerId) || null;
+  // Presencia real del peer del chat (misma fuente que el punto del listado).
+  const peerPresence = String(
+    (favItems || []).find((i) => Number(i?.id) === Number(selectedContactId))?.presence || 'offline'
+  ).toLowerCase();
   const hasActiveDetail = Number(targetPeerId) > 0;
   const hasCallTarget = Number(targetPeerId) > 0;
 
@@ -3428,6 +3435,7 @@ const DashboardModel = () => {
             localVideoRef={localVideoRef}
             vcListRef={vcListRef}
             messages={messages}
+            gifts={gifts}
             giftRenderReady={giftRenderReady}
             getGiftIcon={getGiftIcon}
             remoteStream={remoteStream}
@@ -3480,6 +3488,7 @@ const DashboardModel = () => {
                     onSelect={handleOpenChatFromFavorites}
                     reloadTrigger={favReload}
                     selectedId={selectedContactId}
+                    onItemsChange={setFavItems}
                     autoSelectBot={pendingAutoSelectBot}
                     onAutoSelectHandled={() => setPendingAutoSelectBot(false)}
                   />
@@ -3495,6 +3504,7 @@ const DashboardModel = () => {
               ) : activeTab === 'favoritos' && (
                 <VideoChatFavoritosModelo
                   isMobile={isMobile}
+                  modelEconomics={modelEconomics}
                   allowChat={allowChat}
                   isPendingPanel={isPendingPanel}
                   isSentPanel={isSentPanel}
@@ -3534,6 +3544,7 @@ const DashboardModel = () => {
                   handleOpenChatFromFavorites={handleOpenChatFromFavorites}
                   favReload={favReload}
                   selectedContactId={selectedContactId}
+                  peerPresence={peerPresence}
                   hasActiveDetail={hasActiveDetail}
                   hasCallTarget={hasCallTarget}
                   backToList={backToList}
@@ -3546,7 +3557,7 @@ const DashboardModel = () => {
               )}
             </StyledCenter>
 
-            {!showFavoritesFullCall && <StyledRightColumn data-surface="favorites-premium" />}
+            {/* Columna derecha vacia eliminada (rediseño favoritos puro): el chat gana ese ancho. */}
           </>
         )}
       </StyledMainContent>

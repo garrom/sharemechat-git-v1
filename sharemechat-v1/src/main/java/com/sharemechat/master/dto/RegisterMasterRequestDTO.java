@@ -33,10 +33,10 @@ public class RegisterMasterRequestDTO {
     @Past(message = "La fecha de nacimiento debe ser una fecha pasada")
     private LocalDate dateOfBirth;
 
+    // fix friccion registro (2026-08-10): el servicio SANEA el nickname con
+    // NicknameNormalizer (espacios -> guion; recorta a 30) en vez de rechazar.
     @NotBlank(message = "El nickname es obligatorio")
-    @Size(min = 3, max = 30)
-    @Pattern(regexp = "^[\\p{L}\\p{N}._-]{3,30}$",
-            message = "El nickname solo puede contener letras, digitos y . _ -")
+    @Size(max = 60, message = "El nickname es demasiado largo")
     private String nickname;
 
     @NotNull(message = "Debes confirmar que eres mayor de edad")

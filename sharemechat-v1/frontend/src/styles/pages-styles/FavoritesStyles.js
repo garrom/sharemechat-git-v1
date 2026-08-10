@@ -10,7 +10,7 @@ export const List = styled.ul`
 // Estados vacíos o cargando
 export const StateRow = styled.div`
   padding: 12px;
-  color: #6c757d;
+  color: rgba(231,235,240,0.6);
   font-size: 14px;
 `;
 
@@ -20,17 +20,20 @@ export const ItemCard = styled.li`
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 8px 10px;
-  border: 1px solid #eee;
-  border-radius: 10px;
-  background: #fff;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: #e7ebf0;
   cursor: ${({ $clickable }) => ($clickable ? 'pointer' : 'default')};
-  margin-bottom: 8px;
+  margin-bottom: 2px;
   transition: background-color .12s ease, border-color .12s ease;
 
+  &:hover { background: rgba(255,255,255,0.06); }
+
   &[data-selected="true"]{
-    background: #f1f5f9;
-    border-color: #d7dde5;
+    background: rgba(255,92,138,0.12);
+    border-color: rgba(255,92,138,0.28);
   }
 `;
 
@@ -47,6 +50,24 @@ export const Avatar = styled.img.attrs(({ $size = 40 }) => ({
   background: #eee;
 `;
 
+// Avatar de letra: para perfiles sin foto, círculo con la inicial (coherente
+// con la cabecera del chat). Evita el placeholder genérico avatarChica.png.
+export const LetterAvatar = styled.div`
+  width: ${({ $size = 38 }) => $size}px;
+  height: ${({ $size = 38 }) => $size}px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: ${({ $size = 38 }) => Math.round($size * 0.42)}px;
+  line-height: 1;
+  background: linear-gradient(135deg, #ff5c8a, #a78bfa);
+  text-transform: uppercase;
+  user-select: none;
+`;
+
 // Bloque de info (nombre + meta)
 export const Info = styled.div`
   display: flex;
@@ -57,7 +78,7 @@ export const Info = styled.div`
 
 export const Name = styled.span`
   font-weight: 600;
-  color: #1f2933;
+  color: #e7ebf0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis; /* ... si no cabe */
@@ -145,13 +166,15 @@ export const FavMenuTrigger = styled.button`
   align-items: center;
   justify-content: center;
   line-height: 1;
-  transition: background-color .12s ease, transform .08s ease;
+  color: rgba(231,235,240,0.55);
+  transition: background-color .12s ease, transform .08s ease, color .12s ease;
 
-  &:hover { background: rgba(0,0,0,0.06); }
+  &:hover { background: rgba(255,255,255,0.08); color: #fff; }
   &:active { transform: translateY(1px); }
 
   &[data-open="true"]{
-    background: rgba(0,0,0,0.08);
+    background: rgba(255,255,255,0.12);
+    color: #fff;
   }
 
   @media (max-width: 768px){
