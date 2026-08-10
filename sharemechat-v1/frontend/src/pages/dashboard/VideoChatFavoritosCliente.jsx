@@ -253,34 +253,20 @@ export default function VideoChatFavoritosCliente(props){
     </StyledGiftChip>
   );
 
-  // surface 'video-overlay' (desktop llamada, barra inferior sobre el vídeo):
-  // UNA sola fila con TODOS los regalos (gratis primero, luego pago), pill
-  // semitransparente. Por defecto (chat puro de favoritos): DOS filas (pago
-  // arriba, gratis abajo), cada una con su scroll horizontal.
+  // UNA sola fila con TODOS los regalos (gratis primero, luego pago), tanto en
+  // el chat puro como en la barra sobre el vídeo (surface 'video-overlay', que
+  // añade el estilo pill semitransparente).
   const renderGiftBar = (surface) => {
-    if (surface === 'video-overlay') {
-      const allGifts = [...quickGifts, ...premiumGifts];
-      if (allGifts.length === 0) return null;
-      return (
-        <StyledGiftBar data-kind="favorites-gift-bar" data-surface="video-overlay">
-          <StyledGiftTrack data-row="all">
-            {allGifts.map((g) => renderGiftChip(g))}
-          </StyledGiftTrack>
-        </StyledGiftBar>
-      );
-    }
+    const allGifts = [...quickGifts, ...premiumGifts];
+    if (allGifts.length === 0) return null;
     return (
-      <StyledGiftBar data-kind="favorites-gift-bar">
-        {premiumGifts.length > 0 && (
-          <StyledGiftTrack data-row="paid">
-            {premiumGifts.map((g) => renderGiftChip(g))}
-          </StyledGiftTrack>
-        )}
-        {quickGifts.length > 0 && (
-          <StyledGiftTrack data-row="free">
-            {quickGifts.map((g) => renderGiftChip(g))}
-          </StyledGiftTrack>
-        )}
+      <StyledGiftBar
+        data-kind="favorites-gift-bar"
+        data-surface={surface === 'video-overlay' ? 'video-overlay' : undefined}
+      >
+        <StyledGiftTrack data-row="all">
+          {allGifts.map((g) => renderGiftChip(g))}
+        </StyledGiftTrack>
       </StyledGiftBar>
     );
   };
