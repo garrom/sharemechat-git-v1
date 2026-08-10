@@ -96,6 +96,15 @@ export const FieldError = styled.div`
   margin-top: 4px;
 `;
 
+/* AVISO SUAVE (no-error): p.ej. previsualizacion del nickname normalizado.
+   Sin espacios -> guion; el usuario ve como se guardara sin recibir un error. */
+export const Hint = styled.div`
+  color: #86efac;
+  font-size: 0.78rem;
+  margin-top: 4px;
+  strong { color: #d1fae5; font-weight: 600; }
+`;
+
 /* BOTÓN VERDE PASTILLA (igual que StyledButton) */
 export const Button = styled.button`
   ${buttonBase}

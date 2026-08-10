@@ -4,7 +4,8 @@ import i18n from '../i18n';
 import { apiFetch } from '../config/http';
 import { getResolvedLocale } from '../i18n/localeUtils';
 import { registerErrorMessage } from '../i18n/registerErrorMessage';
-import { Form as RegForm, Title, Input, Button, LinkButton, Error as ErrorText, Field, FieldError, Label, CheckRow, CheckInput, CheckText } from '../styles/public-styles/RegisterClientModelStyles';
+import { normalizeNickname } from '../utils/normalizeNickname';
+import { Form as RegForm, Title, Input, Button, LinkButton, Error as ErrorText, Field, FieldError, Hint, Label, CheckRow, CheckInput, CheckText } from '../styles/public-styles/RegisterClientModelStyles';
 import { useAppModals } from './useAppModals';
 import { pushSignUp, getAcquisitionPayload } from '../utils/attribution';
 
@@ -60,7 +61,7 @@ const RegisterMasterModalContent = ({ onClose, onBack }) => {
     if (!password || password.length < 10) fe.password = i18n.t('auth.registerMaster.validation.passwordMin');
     else if (/\s/.test(password)) fe.password = i18n.t('auth.registerMaster.validation.passwordNoSpaces');
     if (!nickname.trim()) fe.nickname = i18n.t('auth.registerMaster.validation.nicknameRequired');
-    else if (!/^[\p{L}\p{N}._-]{3,30}$/u.test(nickname.trim())) fe.nickname = i18n.t('auth.registerMaster.validation.nicknamePattern');
+    else if (normalizeNickname(nickname).length < 3) fe.nickname = i18n.t('auth.registerMaster.validation.nicknameTooShort');
     if (!dateOfBirth) fe.dateOfBirth = i18n.t('auth.registerMaster.validation.dateOfBirthRequired');
     else {
       const d = new Date(dateOfBirth + 'T00:00:00');
@@ -85,7 +86,7 @@ const RegisterMasterModalContent = ({ onClose, onBack }) => {
     const payload = {
       email: email.trim(),
       password,
-      nickname: nickname.trim(),
+      nickname: normalizeNickname(nickname),
       dateOfBirth,
       confirAdult: isOver18,
       acceptedTerm: acceptsTerms,
@@ -124,6 +125,9 @@ const RegisterMasterModalContent = ({ onClose, onBack }) => {
       setLoading(false);
     }
   };
+
+  const nickPreview = normalizeNickname(nickname);
+  const showNickHint = !!nickname.trim() && nickPreview !== nickname.trim() && nickPreview.length >= 3;
 
   return (
     <InlineForm noValidate>
@@ -170,6 +174,9 @@ const RegisterMasterModalContent = ({ onClose, onBack }) => {
           autoComplete="username"
         />
         {fieldErrors.nickname && <FieldError>{fieldErrors.nickname}</FieldError>}
+        {!fieldErrors.nickname && showNickHint && (
+          <Hint>{i18n.t('auth.registerMaster.validation.nicknameNormalizedHint')} <strong>{nickPreview}</strong></Hint>
+        )}
       </Field>
 
       <Field>

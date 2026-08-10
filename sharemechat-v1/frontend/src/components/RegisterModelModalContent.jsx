@@ -4,7 +4,8 @@ import i18n from '../i18n';
 import { apiFetch } from '../config/http';
 import { getResolvedLocale } from '../i18n/localeUtils';
 import { registerErrorMessage } from '../i18n/registerErrorMessage';
-import { Form as RegForm, Title, Input, Button, Error as ErrorText, Field, FieldError, Label, CheckRow, CheckInput, CheckText } from '../styles/public-styles/RegisterClientModelStyles';
+import { normalizeNickname } from '../utils/normalizeNickname';
+import { Form as RegForm, Title, Input, Button, Error as ErrorText, Field, FieldError, Hint, Label, CheckRow, CheckInput, CheckText } from '../styles/public-styles/RegisterClientModelStyles';
 import { useAppModals } from './useAppModals';
 import { pushSignUp, getAcquisitionPayload } from '../utils/attribution';
 
@@ -33,7 +34,7 @@ const RegisterModelModalContent = ({ onClose }) => {
   const validate = () => {
     const fe = { nickname: '', email: '', password: '', dateOfBirth: '' };
     if (!nickname.trim()) fe.nickname = i18n.t('auth.registerModel.validation.nicknameRequired');
-    else if (!/^[\p{L}\p{N}._-]{3,30}$/u.test(nickname.trim())) fe.nickname = i18n.t('auth.registerModel.validation.nicknamePattern');
+    else if (normalizeNickname(nickname).length < 3) fe.nickname = i18n.t('auth.registerModel.validation.nicknameTooShort');
     if (!email.trim()) fe.email = i18n.t('auth.registerModel.validation.emailRequired');
     else if (!/^\S+@\S+\.\S+$/.test(email)) fe.email = i18n.t('auth.registerModel.validation.emailInvalid');
     if (password.length < 8) fe.password = i18n.t('auth.registerModel.validation.passwordMin');
@@ -53,7 +54,7 @@ const RegisterModelModalContent = ({ onClose }) => {
     const uiLocale = getResolvedLocale(i18n);
 
     const registerData = {
-      nickname: nickname.trim(),
+      nickname: normalizeNickname(nickname),
       email,
       password,
       dateOfBirth,
@@ -93,6 +94,9 @@ const RegisterModelModalContent = ({ onClose }) => {
     }
   };
 
+  const nickPreview = normalizeNickname(nickname);
+  const showNickHint = !!nickname.trim() && nickPreview !== nickname.trim() && nickPreview.length >= 3;
+
   return (
     <InlineForm noValidate>
       <Title>{i18n.t('auth.registerModel.title')}</Title>
@@ -101,6 +105,9 @@ const RegisterModelModalContent = ({ onClose }) => {
       <Field>
         <Input type="text" value={nickname} onChange={e => { setNickname(e.target.value); if (fieldErrors.nickname) setFieldErrors(f => ({ ...f, nickname: '' })); }} placeholder={i18n.t('auth.registerModel.placeholders.nickname')} required aria-invalid={!!fieldErrors.nickname} aria-describedby={fieldErrors.nickname ? 'nick-error' : undefined} autoComplete="nickname" />
         {fieldErrors.nickname && <FieldError id="nick-error">{fieldErrors.nickname}</FieldError>}
+        {!fieldErrors.nickname && showNickHint && (
+          <Hint>{i18n.t('auth.registerModel.validation.nicknameNormalizedHint')} <strong>{nickPreview}</strong></Hint>
+        )}
       </Field>
 
       <Field>

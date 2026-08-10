@@ -2,6 +2,7 @@ package com.sharemechat.service;
 
 import com.sharemechat.constants.Constants;
 import com.sharemechat.consent.ConsentState;
+import com.sharemechat.util.NicknameNormalizer;
 import com.sharemechat.dto.*;
 import com.sharemechat.entity.LoginResponse;
 import com.sharemechat.entity.Unsubscribe;
@@ -95,6 +96,9 @@ public class UserService {
         }
         if (nickname == null) {
             throw new IllegalArgumentException("El nickname es obligatorio");
+        }
+        if (nickname.length() < 3) {
+            throw new IllegalArgumentException("El nickname necesita al menos 3 caracteres.");
         }
         validatePasswordPolicy(password);
 
@@ -223,6 +227,9 @@ public class UserService {
         }
         if (nickname == null) {
             throw new IllegalArgumentException("El nickname es obligatorio");
+        }
+        if (nickname.length() < 3) {
+            throw new IllegalArgumentException("El nickname necesita al menos 3 caracteres.");
         }
         validatePasswordPolicy(password);
 
@@ -597,11 +604,16 @@ public class UserService {
         return s.toLowerCase(Locale.ROOT);
     }
 
-    /** Elimina cualquier espacio (incluido NBSP) en el nickname. */
+    /**
+     * Normaliza el nickname de forma industrial (NicknameNormalizer): espacios
+     * -> guion, elimina caracteres no permitidos, colapsa y recorta a 30. En
+     * vez de rechazar un espacio, lo corrige (fix friccion registro 2026-08-10).
+     * Devuelve null si tras sanear queda vacio, para conservar el check
+     * "obligatorio" del llamante.
+     */
     private String sanitizeNickname(String s) {
-        if (s == null) return null;
-        String noSpaces = s.replaceAll("[\\s\\u00A0]+", "");
-        return noSpaces; // si prefieres permitir espacios simples: return s.trim().replaceAll("[\\s\\u00A0]+", " ");
+        String n = NicknameNormalizer.normalize(s);
+        return n.isEmpty() ? null : n;
     }
 
     /** No modificamos la contraseña: validamos política y rechazamos si no cumple. */
