@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import i18n from '../i18n';
 import { apiFetch } from '../config/http';
 import { getResolvedLocale } from '../i18n/localeUtils';
+import { registerErrorMessage } from '../i18n/registerErrorMessage';
 import { Form as RegForm, Title, Input, Button, LinkButton, Error as ErrorText, Field, FieldError, Label, CheckRow, CheckInput, CheckText } from '../styles/public-styles/RegisterClientModelStyles';
 import { useAppModals } from './useAppModals';
 import { pushSignUp, getAcquisitionPayload } from '../utils/attribution';
@@ -118,7 +119,7 @@ const RegisterMasterModalContent = ({ onClose, onBack }) => {
 
       if (onClose) onClose();
     } catch (err) {
-      setError(err?.data?.message || err?.message || i18n.t('common.networkError'));
+      setError(registerErrorMessage(err));
     } finally {
       setLoading(false);
     }

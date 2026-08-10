@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import i18n from '../i18n';
 import { apiFetch } from '../config/http';
 import { getResolvedLocale } from '../i18n/localeUtils';
+import { registerErrorMessage } from '../i18n/registerErrorMessage';
 import { Form as RegForm, Title, Input, Button, Error as ErrorText, Field, FieldError, Label, CheckRow, CheckInput, CheckText } from '../styles/public-styles/RegisterClientModelStyles';
 import { useAppModals } from './useAppModals';
 import { pushSignUp, getAcquisitionPayload } from '../utils/attribution';
@@ -32,6 +33,7 @@ const RegisterModelModalContent = ({ onClose }) => {
   const validate = () => {
     const fe = { nickname: '', email: '', password: '', dateOfBirth: '' };
     if (!nickname.trim()) fe.nickname = i18n.t('auth.registerModel.validation.nicknameRequired');
+    else if (!/^[\p{L}\p{N}._-]{3,30}$/u.test(nickname.trim())) fe.nickname = i18n.t('auth.registerModel.validation.nicknamePattern');
     if (!email.trim()) fe.email = i18n.t('auth.registerModel.validation.emailRequired');
     else if (!/^\S+@\S+\.\S+$/.test(email)) fe.email = i18n.t('auth.registerModel.validation.emailInvalid');
     if (password.length < 8) fe.password = i18n.t('auth.registerModel.validation.passwordMin');
@@ -84,7 +86,7 @@ const RegisterModelModalContent = ({ onClose }) => {
 
       if (onClose) onClose();
     } catch (err) {
-      setError(err?.data?.message || err?.message || i18n.t('common.networkError'));
+      setError(registerErrorMessage(err));
       console.error('Error en el registro:', err);
     } finally {
       setLoading(false);

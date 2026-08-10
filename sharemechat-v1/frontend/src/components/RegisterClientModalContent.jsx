@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import i18n from '../i18n';
 import { apiFetch } from '../config/http';
 import { getResolvedLocale } from '../i18n/localeUtils';
+import { registerErrorMessage } from '../i18n/registerErrorMessage';
 import { Form as RegForm, Title, Input, Button, Error as ErrorText, Field, FieldError, CheckRow, CheckInput, CheckText } from '../styles/public-styles/RegisterClientModelStyles';
 import { useAppModals } from './useAppModals';
 import { pushSignUp, getAcquisitionPayload } from '../utils/attribution';
@@ -33,6 +34,7 @@ const RegisterClientModalContent = ({ onClose, onGoogleAuth }) => {
   const validate = () => {
     const fe = { nickname: '', email: '', password: '' };
     if (!nickname.trim()) fe.nickname = i18n.t('auth.registerClient.validation.nicknameRequired');
+    else if (!/^[\p{L}\p{N}._-]{3,30}$/u.test(nickname.trim())) fe.nickname = i18n.t('auth.registerClient.validation.nicknamePattern');
     if (!email.trim()) fe.email = i18n.t('auth.registerClient.validation.emailRequired');
     else if (!/^\S+@\S+\.\S+$/.test(email)) fe.email = i18n.t('auth.registerClient.validation.emailInvalid');
     if (password.length < 8) fe.password = i18n.t('auth.registerClient.validation.passwordMin');
@@ -84,7 +86,7 @@ const RegisterClientModalContent = ({ onClose, onGoogleAuth }) => {
 
       if (onClose) onClose();
     } catch (err) {
-      setError(err?.data?.message || err?.message || i18n.t('common.networkError'));
+      setError(registerErrorMessage(err));
     } finally {
       setLoading(false);
     }

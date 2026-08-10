@@ -159,7 +159,9 @@
     "errors": {
       "title": "Error",
       "connectionFailedRetry": "Could not connect. Please try again.",
-      "connectionSetupFailedRetry": "Could not establish the connection. Please try again."
+      "connectionSetupFailedRetry": "Could not establish the connection. Please try again.",
+      "nicknameTaken": "That nickname is already taken. Choose another.",
+      "emailTaken": "That email is already registered."
     },
     "media": {
       "cameraRequired": "Activate the camera first.",
@@ -901,6 +903,7 @@
       },
       "validation": {
         "nicknameRequired": "Nickname is required.",
+        "nicknamePattern": "Nickname must be 3-30 characters: letters, numbers and . _ -",
         "emailRequired": "Email is required.",
         "emailInvalid": "Invalid email format.",
         "passwordMin": "Password must be at least 8 characters long",
@@ -935,6 +938,7 @@
       },
       "validation": {
         "nicknameRequired": "Nickname is required.",
+        "nicknamePattern": "Nickname must be 3-30 characters: letters, numbers and . _ -",
         "emailRequired": "Email is required.",
         "emailInvalid": "Invalid email format.",
         "passwordMin": "Password must be at least 8 characters long",

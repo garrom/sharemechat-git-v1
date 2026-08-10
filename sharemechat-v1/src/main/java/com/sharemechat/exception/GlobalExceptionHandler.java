@@ -23,6 +23,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleEmailInUse(EmailAlreadyInUseException ex, HttpServletRequest req) {
         log.warn("Email en uso: {}", ex.getMessage());
         ApiError body = new ApiError(HttpStatus.BAD_REQUEST.value(), "Bad Request", ex.getMessage(), req.getRequestURI());
+        // Code estable para que el frontend traduzca (i18n) el mensaje segun idioma.
+        body.setCode("EMAIL_TAKEN");
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
@@ -180,6 +182,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleNicknameInUse(NicknameAlreadyInUseException ex, HttpServletRequest req) {
         log.warn("Nickname en uso: {}", ex.getMessage());
         ApiError body = new ApiError(HttpStatus.BAD_REQUEST.value(), "Bad Request", ex.getMessage(), req.getRequestURI());
+        // Code estable para que el frontend traduzca (i18n) el mensaje segun idioma.
+        body.setCode("NICKNAME_TAKEN");
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
