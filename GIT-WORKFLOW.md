@@ -20,9 +20,12 @@
    worktree**. Nunca se trabaja directamente sobre `main`.
 2. **`main` es la única fuente de verdad de despliegue.** Lo que se despliega sale de `main`
    salvo excepción explícita y marcada (§7.2). El drift-check está construido sobre esta premisa.
-3. **El operador es el punto de serialización.** Integrar a `main` y desplegar son acciones
-   **privilegiadas**: las autoriza el operador, **una a una**. Nunca dos integraciones/deploys
-   en vuelo a la vez.
+3. **El operador autoriza la DECISIÓN; git serializa la ejecución.** Integrar a `main` y
+   desplegar son acciones **privilegiadas**: el operador autoriza *que se haga*. Pero la
+   serialización técnica **la hace git, no el operador**: dos push a `main` a la vez → el
+   segundo es rechazado (`non-fast-forward`) y se re-sincroniza. **Ninguna sesión debe
+   preguntar al operador "¿hay otra sesión integrando?"** — eso lo resuelve el rechazo de push
+   (§6), no una coordinación humana.
 4. **Autorización explícita y por-instancia.** "Puedes hacer merge/deploy" vale para **esa**
    acción concreta, no es permiso permanente ni transferible a la siguiente.
 5. **Nada destructivo sin verificar.** Antes de borrar/forzar (reset --hard, push --force,
@@ -106,7 +109,7 @@ commit = qué hace cada sesión. **Leer trabajo ajeno sin fusionar:** `git show 
 ## 6. Integración a `main` (privilegiada)
 
 Merge a `main` **solo** con instrucción explícita del operador para esa integración concreta.
-**Vía elegida: merge local coordinado** (sin PR obligatorio; el operador serializa):
+**Vía elegida: merge local coordinado** (sin PR obligatorio):
 
 1. `git fetch origin` y **rebase/merge de `origin/main`** sobre la rama a integrar (conflictos se
    resuelven en la rama, no en main).
@@ -118,8 +121,16 @@ Merge a `main` **solo** con instrucción explícita del operador para esa integr
 *(PR de GitHub queda como opción puntual cuando quieras revisión inline o circular un borrador
 entre sesiones, no como vía por defecto.)*
 
-**Serialización: una integración en vuelo a la vez.** Si otra sesión integra, esperar turno
-(lo arbitra el operador).
+**Serialización = git, no el operador.** No hay que preguntar "¿hay otra integración en vuelo?".
+El paso 1 (`fetch` + `merge origin/main`) + el paso 3 lo resuelven solos:
+
+- Si otra sesión pusheó a `main` primero, tu `git push origin main` es **rechazado**
+  (`non-fast-forward`). No hay pisón silencioso.
+- Ante el rechazo: `git fetch origin`, `git merge origin/main` en tu rama (integra lo de la otra),
+  re-verifica y **vuelve a pushear**. Reintento mecánico, no decisión humana.
+- **Prohibido** resolver un rechazo con `--force` (borraría el trabajo de la otra sesión).
+
+Es decir: el operador autoriza *que integres*; **quién va primero lo decide el rechazo de push**.
 
 ---
 
@@ -186,11 +197,13 @@ Posible y seguro con este marco, porque las salvaguardas no son "prohibir" sino 
   disco ni `--force`/reset/borrado sin verificar.
 
 **Checklist antes de una acción privilegiada:**
-1. `git fetch origin` — ¿sincronizado con `origin/main`?
-2. ¿Hay otra integración/deploy en vuelo? (preguntar al operador si dudo).
-3. ¿La instrucción del operador cubre **esta** acción concreta?
-4. (Deploy) correr drift-check; si `CRITICAL`, **parar y avisar**.
-5. Ejecutar, actualizar manifest/bitácora en el mismo commit, avisar resultado con el `<sha>`.
+1. `git fetch origin` + `merge origin/main` — sincronizar con `origin/main` (NO preguntar al
+   operador si otra sesión integra; si colisionáis, el push a main será rechazado y se reintenta, §6).
+2. ¿La instrucción del operador cubre **esta** acción concreta?
+3. (Deploy) correr drift-check; si `CRITICAL`, **parar y avisar**.
+4. Ejecutar. Si `git push origin main` es rechazado (non-fast-forward): re-sincronizar y reintentar
+   (nunca `--force`).
+5. Actualizar manifest/bitácora en el mismo commit, avisar resultado con el `<sha>`.
 
 ---
 
