@@ -1,12 +1,12 @@
 # GIT-WORKFLOW.md — Política de ramas, commits, merges, push y deploy
 
 > **Ámbito.** Repo Sharemechat, operado en **múltiples sesiones simultáneas** (varias
-> sesiones de IA + el operador), cada una potencialmente en un worktree distinto.
+> sesiones de IA + el operador), cada una en su propio worktree.
 > Objetivo: que ninguna sesión pise a otra, y que — **solo bajo instrucción explícita
 > del operador** — cualquier sesión pueda integrar y desplegar de forma segura.
 >
-> **Estado:** propuesta v1 (2026-08-10). Las secciones marcadas `⟡ DECISIÓN OPERADOR`
-> requieren tu confirmación antes de considerarse vinculantes.
+> **Estado:** v1.1 (2026-08-11). Decisiones de §10 **resueltas** por el operador y revisadas
+> por las sesiones activas. Vinculante una vez integrada a `main`.
 >
 > Complementa, no sustituye: [`CLAUDE.md`](CLAUDE.md) (reglas esenciales + deploy),
 > `sharemechat-v1/docs/documentation-governance.md` (convenciones de commit y bitácora),
@@ -24,90 +24,102 @@
    **privilegiadas**: las autoriza el operador, **una a una**. Nunca dos integraciones/deploys
    en vuelo a la vez.
 4. **Autorización explícita y por-instancia.** "Puedes hacer merge/deploy" vale para **esa**
-   acción concreta, no es un permiso permanente ni transferible a la siguiente.
+   acción concreta, no es permiso permanente ni transferible a la siguiente.
 5. **Nada destructivo sin verificar.** Antes de borrar/forzar (reset --hard, push --force,
-   borrar rama) se mira el objeto y se confirma. El drift-check `CRITICAL` **aborta siempre**;
-   está prohibido sortearlo con `-SkipDriftCheck` (ver `CLAUDE.md`).
+   borrar rama, `worktree remove`, borrar untracked) se mira el objeto y se confirma. El
+   drift-check `CRITICAL` **aborta siempre**; prohibido sortearlo con `-SkipDriftCheck` (`CLAUDE.md`).
 
 ---
 
 ## 2. Modelo de aislamiento: 1 sesión = 1 worktree = 1 rama
 
-- Cada sesión tiene **un worktree** bajo `.claude/worktrees/<slug>/` y **una rama** `claude/<slug>`.
-- El **nombre del worktree y el de la rama coinciden**. (Hoy hay cruces: p.ej. worktree
-  `…origin-attribution` con rama `…dashboard-favoritos-scroll` → a corregir, §8.)
-- El directorio **top-level** del repo (`sharemechat-git-v1/`) debe quedar en `main` en reposo,
-  no en una feature branch. Si una sesión necesita el top-level, primero comprueba en qué rama está.
+- Cada sesión tiene **un worktree** bajo `.claude/worktrees/<nombre>/` y **una rama**.
+- **El nombre del worktree y el de la rama COINCIDEN** (el worktree se llama como la rama sin
+  el prefijo `claude/`). Los cruces dir↔rama están prohibidos: son la causa raíz del desmadre.
+- El directorio **top-level** del repo (`sharemechat-git-v1/`) queda en `main` **en reposo**.
+  Si una sesión lo usa como worktree de una feature, es estado transitorio: al terminar
+  (merge+deploy) vuelve a `main`.
 
-`⟡ DECISIÓN OPERADOR (worktrees):` `CLAUDE.md` dice hoy *"NO usar git worktree bajo ningún
-concepto"* y *"NO crear .claude/worktrees/"*. La práctica actual (4 worktrees activos) lo
-contradice, y los worktrees son **la herramienta correcta** para paralelismo sin pisarse.
-**Recomendación:** bendecir worktrees oficialmente y **retirar esa prohibición de `CLAUDE.md`**.
-Alternativa (si prefieres prohibirlos de verdad): consolidar a un único checkout y serializar
-todas las sesiones sobre él (más simple pero mata el paralelismo real). Hasta que decidas, esta
-política asume el modelo de worktrees.
+**Worktrees: permitidos y recomendados.** Este es el mecanismo oficial de paralelismo
+multi-sesión. *Nota histórica:* `CLAUDE.md` prohibía worktrees; esa regla era **pre-multi-sesión**
+(un solo checkout, un solo agente) y queda **retirada** por esta política. El motivo se documenta
+aquí para que no se "restaure" el veto por inercia: **con varias sesiones IA en paralelo, un
+worktree por sesión es lo que evita que se pisen; sin ellos habría que serializar todo el trabajo
+sobre un único checkout.**
 
 ---
 
 ## 3. Ramas
 
-**Naming**
-- Trabajo de IA: `claude/<slug-descriptivo>` (p.ej. `claude/seed-customer-acquisition`).
-- Trabajo del operador / features largas: `feat/<slug>`, `fix/<slug>`, `chore/<slug>`.
+**Naming (patrón determinista → nombre predecible desde el tema)**
+- Trabajo de IA: **`claude/<frente>-<slug>`**. `<frente>` sale de un vocabulario corto y fijo:
+  `seo`, `blog`, `cms`, `chat`, `kyc`, `payments`, `deploy`, `infra`, `docs`, `moderation`…
+  Así, sabiendo el tema, el nombre de la rama (y del worktree) es **adivinable sin preguntar**.
+- Trabajo del operador / features largas multi-frente: `feat/<slug>`, `fix/<slug>`, `chore/<slug>`.
+
+**Migración de ramas ya existentes (no romper lo vivo)**
+- Las ramas creadas **antes** de este patrón (p.ej. `feat/streaming-layout`) **terminan su vida
+  tal cual**; §3 permite `feat/*` para trabajo de operador o features largas. **No** se renombran
+  en caliente.
+- El patrón `claude/<frente>-<slug>` aplica a **todo frente nuevo** a partir de ahora.
 
 **Ciclo de vida**
-- **Vida corta.** Una rama nace de `origin/main` actualizado, vive lo que dura su tarea,
-  se integra y **se borra** (local y remota). Ramas que acumulan >X días o >N commits por
-  detrás de main son deuda (hoy hay varias a 780+ commits → §8).
-- **Origen limpio.** Antes de empezar: `git fetch origin && git switch -c claude/<slug> origin/main`.
-- **Una rama = una tarea.** No mezclar frentes no relacionados en la misma rama.
+- **Vida corta.** Nace de `origin/main` actualizado, vive lo que dura su tarea, se integra y
+  **se borra** (local + remota). Ramas muy por detrás de main y sin commits únicos son deuda (§8).
+- **Origen limpio:** `git fetch origin && git switch -c claude/<frente>-<slug> origin/main`.
+- **Una rama = una tarea.** No mezclar frentes no relacionados en la misma rama (riesgo real:
+  una rama `feat/*` que acumula 4-5 frentes complica el merge y el "vida corta").
 
 ---
 
 ## 4. Commits
 
-- **Convención de mensaje:** ver `documentation-governance.md`. Resumen operativo:
-  - **Sin `Co-Authored-By:`** — autoría única del operador (regla de `CLAUDE.md`).
+- **Convención de mensaje** (ver `documentation-governance.md`):
+  - **Sin `Co-Authored-By:`** — autoría única del operador (`CLAUDE.md`).
   - Prefijo tipo-scope cuando aplique (`feat(cms): …`, `fix(chat): …`, `chore(deploy-state): …`).
-  - **Regla del mismo commit:** la entrada de bitácora/doc que motiva el cambio va en **el
-    mismo commit** que el cambio, no en uno posterior.
-- **Higiene de contenido:** nunca credenciales, IPs internas, ARNs ni secrets (ni en el diff ni
-  en el mensaje). Secrets a runtime vía stdin/env, jamás a disco versionado.
-- **Commits atómicos:** un cambio coherente por commit; preferir varios commits pequeños a uno
-  gigante mezclado.
-- **Commit en la rama propia** por defecto. Commitear en **otra** rama (checkout ajeno) solo
-  bajo instrucción explícita (§6).
+  - **Regla del mismo commit:** la entrada de bitácora/doc que motiva el cambio va en **el mismo
+    commit** que el cambio, no en uno posterior.
+- **Higiene:** nunca credenciales, IPs internas, ARNs ni secrets (ni en diff ni en mensaje).
+  Secrets a runtime vía stdin/env, jamás a disco versionado.
+- **Atómicos:** un cambio coherente por commit; mejor varios pequeños que uno gigante mezclado.
+- **En la rama propia** por defecto. Commitear en **otra** rama (checkout ajeno) solo bajo
+  instrucción explícita (§6/§9).
 
 ---
 
 ## 5. Push
 
-- **Siempre a la rama propia:** `git push origin HEAD`. 
+- **Siempre a la rama propia:** `git push origin HEAD` (o `git push -u origin HEAD` la primera
+  vez, para dejar el upstream configurado y evitar el aviso "no upstream").
+- **Push inmediato = publicar tu existencia.** Empujar la rama nada más crearla y tras cada
+  commit. **Regla dura: una rama que no está en `origin` no existe para las demás sesiones.**
 - **Nunca** `git push origin HEAD:main` ni fast-forward directo a `main` a mitad de trabajo.
-- **Nunca** `--force` sobre una rama compartida/remota sin instrucción explícita y verificación.
-- Empujar pronto y a menudo la rama propia = respaldo + visibilidad para las otras sesiones.
+- **Nunca** `--force` sobre rama compartida/remota sin instrucción explícita y verificación.
 
-**Leer trabajo de otra rama sin fusionar:** `git show origin/<rama>:<ruta>` (solo lectura).
-No mergees ramas ajenas a la tuya para "ver" algo.
+**El registro de "quién está en qué" ES git** (no un fichero, que en ramas aisladas daría
+conflictos): con todas las ramas vivas en `origin` y nombre-por-frente,
+`git fetch origin && git branch -r -v` muestra el **mapa completo** — cada rama + su último
+commit = qué hace cada sesión. **Leer trabajo ajeno sin fusionar:** `git show origin/<rama>:<ruta>`.
 
 ---
 
 ## 6. Integración a `main` (privilegiada)
 
 Merge a `main` **solo** con instrucción explícita del operador para esa integración concreta.
-Procedimiento:
+**Vía elegida: merge local coordinado** (sin PR obligatorio; el operador serializa):
 
-1. `git fetch origin` y **rebase/merge de `origin/main`** sobre la rama a integrar (resolver
-   conflictos en la rama, no en main).
+1. `git fetch origin` y **rebase/merge de `origin/main`** sobre la rama a integrar (conflictos se
+   resuelven en la rama, no en main).
 2. Verificar que compila / tests relevantes pasan (si aplica al cambio).
-3. Integrar por **una** de estas vías (según indique el operador):
-   - **PR** (preferido si hay revisión): abrir, mergear tras aprobación.
-   - **Merge local coordinado**: `git switch main && git merge --no-ff claude/<slug> && git push origin main`.
+3. `git switch main && git merge --no-ff <rama> && git push origin main`.
 4. **Borrar la rama** integrada (local + remota) y **retirar su worktree** si ya no se usa.
-5. Avisar al operador: "integrado `<slug>` a main (`<sha>`)".
+5. Avisar al operador: "integrado `<rama>` a main (`<sha>`)".
 
-Regla de serialización: **una integración en vuelo a la vez.** Si otra sesión está integrando,
-esperar turno (lo arbitra el operador).
+*(PR de GitHub queda como opción puntual cuando quieras revisión inline o circular un borrador
+entre sesiones, no como vía por defecto.)*
+
+**Serialización: una integración en vuelo a la vez.** Si otra sesión integra, esperar turno
+(lo arbitra el operador).
 
 ---
 
@@ -115,23 +127,23 @@ esperar turno (lo arbitra el operador).
 
 ### 7.1 Modelo por defecto: merge-a-main → deploy-desde-main
 El drift-check compara cada surface contra `origin/main`; por eso lo desplegado debe salir de
-`main`. Flujo normal:
+`main` (desplegar fuera de main deja a `main` sin reflejar producción = el incidente de drift del
+2026-06-08). Flujo normal:
 
 1. Integrar a `main` (§6).
-2. Desplegar con el tooling existente (nunca a mano saltándose el check):
+2. Desplegar con el tooling (nunca a mano saltándose el check):
    - Frontend: `ops/scripts/deploy-frontend.ps1 -Environment <env> [-Surface product|admin|both] -AssumeYesNonCritical`
      (default `both`; `CRITICAL` **aborta siempre**; no usar `-SkipDriftCheck`).
    - Backend manual (`scp`+`systemctl restart`): inmediatamente después
-     `ops/scripts/update-manifest-backend.ps1 -Environment <env>` (borrando el `.bak` previo,
-     N=1 backup).
+     `ops/scripts/update-manifest-backend.ps1 -Environment <env>` (borrando el `.bak` previo, N=1).
 3. El manifest `ops/deploy-state/<env>.yaml` queda actualizado y commiteado.
 
 ### 7.2 Excepción: deploy directo de una rama (hotfix / preview)
-Permitido **solo bajo instrucción explícita** y sabiendo que:
-- El drift-check reportará divergencia vs `main` (esperado). Documentar en el manifest **qué rama
-  y commit** se desplegó y por qué.
-- Es **estado transitorio**: hay que integrar esa rama a `main` cuanto antes para que `main`
-  vuelva a reflejar producción. Un deploy de rama que no se integra es deuda de despliegue.
+Permitido **solo bajo instrucción explícita** sabiendo que:
+- El drift-check reportará divergencia vs `main` (`ALERT` esperado). Documentar en el manifest
+  **qué rama y commit** se desplegó y por qué.
+- Es **estado transitorio**: integrar esa rama a `main` cuanto antes. Un deploy de rama que no se
+  integra es deuda de despliegue. (Caso vivo hoy: deploys a TEST desde `feat/streaming-layout`.)
 
 ### 7.3 Serialización
 **Un deploy por entorno en vuelo a la vez.** Dos sesiones desplegando el mismo entorno se pisan
@@ -139,36 +151,42 @@ el manifest. Lo arbitra el operador.
 
 ---
 
-## 8. Higiene / limpieza pendiente (estado 2026-08-10)
+## 8. Higiene / limpieza
 
-- **Podar ramas zombis:** locales a 780-796 commits por detrás de `origin/main`
-  (`amazing-hamilton`, `keen-driscoll`, `nifty-aryabhata`, `pedantic-blackwell`, `wizardly-dewdney`,
-  `competent-chandrasekhar`, `affectionate-easley`…). Confirmar que no tienen trabajo sin
-  integrar y borrarlas.
-- **Resolver cruce dir↔rama** del worktree `…origin-attribution` (tiene checkouteada
-  `…dashboard-favoritos-scroll`).
-- **Dejar el top-level en `main`** en reposo (hoy en `feat/streaming-layout`).
-- **Confirmar qué ramas remotas son "vivas"** (hoy solo 3 `claude/*` + `feat/streaming-layout`
-  en origin) y borrar remotas muertas.
+**Hecho (2026-08-11):** borradas 8 ramas zombis local-only, fully-merged, 0 commits únicos
+(`amazing-hamilton`, `keen-driscoll`, `nifty-aryabhata`, `pedantic-blackwell`, `wizardly-dewdney`,
+`competent-chandrasekhar`, `affectionate-easley`, `feat/gift-emojis-chat-redesign`).
+
+**Pendiente, coordinado (NO en caliente):**
+- **Top-level en `feat/streaming-layout`**: vivo, pendiente de merge a main + deploy PROD. Se deja
+  en `main` **después** de ese merge+deploy, no antes.
+- **Cruce dir↔rama** en worktree `…origin-attribution-0c86b5` (tiene checkouteada
+  `…dashboard-favoritos-scroll-issue-490e84`). Verificado: la rama es **puntero stale** (0 commits
+  únicos, ya contenida en main y en `feat/streaming-layout`) y los untracked `gifts/`/`gift-*`
+  tienen sus paths **ya commiteados** en `feat/streaming-layout` (restos). Fix, **tras** merge+PROD
+  de streaming-layout y con la sesión de ese worktree idle:
+  1. `diff` de los untracked vs `feat/streaming-layout` para certificar que no hay contenido único.
+  2. `git switch claude/sharemechat-origin-attribution-0c86b5` en ese worktree (deshace el cruce),
+     o `git worktree remove` si ya no se usa. **Ojo: es el cwd de una sesión** → hacerlo desde otra
+     sesión o con esa idle, nunca en caliente.
+  3. Borrar la rama stale `claude/dashboard-favoritos-scroll-issue-490e84` tras confirmar.
 
 ---
 
-## 9. Cómo se habilita "cualquier sesión bajo mi instrucción puede merge/commit/deploy de cualquier rama"
+## 9. Cómo se habilita "cualquier sesión, bajo mi instrucción, puede merge/commit/deploy de cualquier rama"
 
-Esto **sí** es posible y seguro con este marco, porque las salvaguardas no son "prohibir", son
-"serializar + verificar":
+Posible y seguro con este marco, porque las salvaguardas no son "prohibir" sino "serializar + verificar":
 
-- **Commit de cualquier rama:** la sesión hace checkout de esa rama en un worktree y commitea.
-  Permitido bajo instrucción.
+- **Commit de cualquier rama:** checkout de esa rama en un worktree y commit. Bajo instrucción.
 - **Merge de cualquier rama a main:** §6, bajo instrucción, sincronizando con `origin/main` antes.
-- **Deploy de cualquier rama:** §7 — por defecto integrando a main primero; excepción marcada si
-  pides deploy directo de rama.
-- **Lo único innegociable:** (a) el operador autoriza cada acción privilegiada; (b) una
-  integración y un deploy-por-entorno en vuelo a la vez; (c) `CRITICAL` del drift-check aborta;
-  (d) nunca secrets a disco ni `--force`/reset sin verificar.
+- **Deploy de cualquier rama:** §7 — por defecto integrando a main primero; excepción marcada
+  (§7.2) si pides deploy directo de rama.
+- **Innegociable:** (a) el operador autoriza cada acción privilegiada; (b) una integración y un
+  deploy-por-entorno en vuelo a la vez; (c) `CRITICAL` del drift-check aborta; (d) nunca secrets a
+  disco ni `--force`/reset/borrado sin verificar.
 
-Checklist que una sesión ejecuta antes de una acción privilegiada:
-1. `git fetch origin` — ¿estoy sincronizado con `origin/main`?
+**Checklist antes de una acción privilegiada:**
+1. `git fetch origin` — ¿sincronizado con `origin/main`?
 2. ¿Hay otra integración/deploy en vuelo? (preguntar al operador si dudo).
 3. ¿La instrucción del operador cubre **esta** acción concreta?
 4. (Deploy) correr drift-check; si `CRITICAL`, **parar y avisar**.
@@ -176,12 +194,12 @@ Checklist que una sesión ejecuta antes de una acción privilegiada:
 
 ---
 
-## 10. Decisiones pendientes del operador
+## 10. Decisiones tomadas (operador, 2026-08-11)
 
-1. `⟡` **Worktrees**: bendecirlos y retirar la prohibición de `CLAUDE.md` (recomendado), o
-   prohibirlos de verdad y consolidar a un checkout único.
-2. `⟡` **Ubicación canónica** de este documento: raíz (como ahora) con puntero desde `CLAUDE.md`,
-   o moverlo a `docs/04-operations/` (coherente con doc-governance) dejando puntero en raíz.
-3. `⟡` **Modelo de deploy**: confirmar "merge-a-main → deploy" como default y deploy-directo-de-rama
-   como excepción marcada (recomendado), vs. permitir deploy de rama como vía de primera clase.
-4. `⟡` **Vía de integración**: ¿PR con revisión por defecto, o merge local coordinado? (afecta a §6).
+1. **Worktrees:** permitidos y oficiales; se retira la prohibición de `CLAUDE.md` (§2), con motivo
+   documentado.
+2. **Ubicación de este documento:** raíz del repo + puntero desde `CLAUDE.md`.
+3. **Modelo de deploy:** merge-a-main → deploy por defecto; deploy directo de rama = excepción
+   marcada (§7).
+4. **Vía de integración:** merge local coordinado (§6); PR opcional para revisión/circulación.
+5. **Patrón de nombres + registro-vía-git:** §3 y §5. Revisado y aceptado por las sesiones activas.
