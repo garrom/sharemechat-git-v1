@@ -73,8 +73,7 @@ Los antiguos apéndices de raíz `shareme-context.md` (stub puntero) y `shareme-
 - Documentación nueva: dentro de `sharemechat-v1/docs/`, archivo más específico posible, sin duplicar
 - Nunca incluir credenciales, IPs internas, ARNs ni secrets en el repo
 - Antes de añadir dependencias: verificar OWASP Dependency-Check
-- NO usar `git worktree` bajo ningún concepto
-- NO crear carpetas auxiliares tipo `.claude/worktrees/`
+- **Ramas, commits, merges, push y deploy (trabajo multi-sesión):** seguir [`GIT-WORKFLOW.md`](GIT-WORKFLOW.md) en la raíz. Modelo: 1 sesión = 1 worktree = 1 rama `claude/<frente>-<slug>`; push inmediato; integrar a `main` y desplegar solo bajo instrucción explícita del operador y serializado. Los **worktrees están permitidos** (bajo `.claude/worktrees/`, nombre = rama); la antigua prohibición era pre-multi-sesión y queda retirada — ver el motivo en `GIT-WORKFLOW.md` §2.
 
 ---
 
