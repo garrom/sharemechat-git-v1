@@ -163,6 +163,10 @@
       "nicknameTaken": "Ese nickname ya está en uso. Elige otro.",
       "emailTaken": "Ese email ya está registrado."
     },
+    "fieldInfo": {
+      "nicknameHelp": "Es el nombre público de tu cuenta. Podrás cambiarlo después.",
+      "infoAriaLabel": "Más información"
+    },
     "media": {
       "cameraRequired": "Primero activa la cámara.",
       "cameraRequiredForCall": "Primero activa la cámara para llamar.",

@@ -5,6 +5,7 @@ import { apiFetch } from '../config/http';
 import { getResolvedLocale } from '../i18n/localeUtils';
 import { registerErrorMessage } from '../i18n/registerErrorMessage';
 import { normalizeNickname } from '../utils/normalizeNickname';
+import InfoTooltip from './InfoTooltip';
 import { Form as RegForm, Title, Input, Button, Error as ErrorText, Field, FieldError, Hint, Label, CheckRow, CheckInput, CheckText } from '../styles/public-styles/RegisterClientModelStyles';
 import { useAppModals } from './useAppModals';
 import { pushSignUp, getAcquisitionPayload } from '../utils/attribution';
@@ -103,7 +104,9 @@ const RegisterModelModalContent = ({ onClose }) => {
       {error && <ErrorText role="alert">{error}</ErrorText>}
 
       <Field>
-        <Input type="text" value={nickname} onChange={e => { setNickname(e.target.value); if (fieldErrors.nickname) setFieldErrors(f => ({ ...f, nickname: '' })); }} placeholder={i18n.t('auth.registerModel.placeholders.nickname')} required aria-invalid={!!fieldErrors.nickname} aria-describedby={fieldErrors.nickname ? 'nick-error' : undefined} autoComplete="nickname" />
+        <InfoTooltip text={i18n.t('common.fieldInfo.nicknameHelp')} ariaLabel={i18n.t('common.fieldInfo.infoAriaLabel')}>
+          <Input type="text" value={nickname} onChange={e => { setNickname(e.target.value); if (fieldErrors.nickname) setFieldErrors(f => ({ ...f, nickname: '' })); }} placeholder={i18n.t('auth.registerModel.placeholders.nickname')} required aria-invalid={!!fieldErrors.nickname} aria-describedby={fieldErrors.nickname ? 'nick-error' : undefined} autoComplete="nickname" style={{ paddingRight: 44 }} />
+        </InfoTooltip>
         {fieldErrors.nickname && <FieldError id="nick-error">{fieldErrors.nickname}</FieldError>}
         {!fieldErrors.nickname && showNickHint && (
           <Hint>{i18n.t('auth.registerModel.validation.nicknameNormalizedHint')} <strong>{nickPreview}</strong></Hint>
