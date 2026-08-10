@@ -47,9 +47,6 @@ import {
   StyledCallTopMetaText,
   StyledCallTopActions,
   StyledCallLocalVideo,
-  StyledCallBottomBar,
-  StyledCallBottomInner,
-  StyledCallPrimaryActions,
   StyledCallComposer,
   StyledChatMessagesInner,
   StyledChatDockMessageComposer,
@@ -63,6 +60,9 @@ import {
   StyledGiftBar,
   StyledGiftTrack,
   StyledGiftChip,
+  StyledCallOverlayBar,
+  StyledCallOverlayControls,
+  StyledCallOverlayGifts,
 } from '../../styles/pages-styles/VideochatStyles';
 import GiftIcon, { resolveGiftSlug, isFaceGiftCode } from '../../components/gifts/GiftIcon';
 import GiftIconDefs from '../../components/gifts/GiftIconDefs';
@@ -387,23 +387,60 @@ export default function VideoChatFavoritosModelo(props) {
 
   // Barra de emojis GRATIS siempre visible (modelo solo tiene free). Sin
   // segmento ni "+"; misma zona que el cliente. Envio directo.
-  const renderModelGiftBar = () => (
-    <StyledGiftBar data-kind="favorites-gift-bar">
-      <StyledGiftTrack>
-        {modelQuickGifts.map((g) => (
-          <StyledGiftChip
-            key={g.id}
-            type="button"
-            disabled={!allowChat}
-            title={g.name}
-            aria-label={g.name}
-            onClick={() => { if (allowChat && sendGiftMsg) sendGiftMsg(g.id); }}
-          >
-            <GiftIcon code={g.code} iconUrl={g.icon} alt={g.name || ''} size={24} />
-          </StyledGiftChip>
-        ))}
-      </StyledGiftTrack>
-    </StyledGiftBar>
+  // surface 'video-overlay' (desktop llamada, barra inferior sobre el vídeo):
+  // pill semitransparente de una sola fila con chips grandes (misma variante
+  // que el cliente, `StyledGiftBar[data-surface="video-overlay"]`). Por
+  // defecto (chat puro): barra opaca en su columna. El modelo solo manda
+  // gratis, así que en ambos casos va una única fila de objetos gratis.
+  const renderModelGiftBar = (surface) => {
+    if (modelQuickGifts.length === 0) return null;
+    const isOverlay = surface === 'video-overlay';
+    return (
+      <StyledGiftBar
+        data-kind="favorites-gift-bar"
+        {...(isOverlay ? { 'data-surface': 'video-overlay' } : {})}
+      >
+        <StyledGiftTrack {...(isOverlay ? { 'data-row': 'all' } : {})}>
+          {modelQuickGifts.map((g) => (
+            <StyledGiftChip
+              key={g.id}
+              type="button"
+              disabled={!allowChat}
+              title={g.name}
+              aria-label={g.name}
+              onClick={() => { if (allowChat && sendGiftMsg) sendGiftMsg(g.id); }}
+            >
+              <GiftIcon code={g.code} iconUrl={g.icon} alt={g.name || ''} size={24} />
+            </StyledGiftChip>
+          ))}
+        </StyledGiftTrack>
+      </StyledGiftBar>
+    );
+  };
+
+  // Barra inferior única sobre el vídeo (rediseño llamada favoritos modelo,
+  // paridad con el cliente): IZQUIERDA control COLGAR (~34px vía style inline
+  // para NO tocar el tamaño global de BtnCall*), CENTRO barra de regalos
+  // SOLO-GRATIS (objetos gratis, envío directo vía sendGiftMsg). La llamada de
+  // favoritos NO tiene reportar/bloquear, así que se omite la zona derecha.
+  const OVERLAY_CTRL_STYLE = { width: 34, height: 34, minWidth: 34, minHeight: 34, fontSize: 13 };
+  const renderCallOverlayBar = () => (
+    <StyledCallOverlayBar>
+      <StyledCallOverlayControls>
+        <BtnCallDanger
+          onClick={() => handleCallEnd(false)}
+          style={OVERLAY_CTRL_STYLE}
+          title={t('common.hangup')}
+          aria-label={t('common.hangup')}
+        >
+          <FontAwesomeIcon icon={faPhoneSlash} />
+        </BtnCallDanger>
+      </StyledCallOverlayControls>
+
+      <StyledCallOverlayGifts>
+        {renderModelGiftBar('video-overlay')}
+      </StyledCallOverlayGifts>
+    </StyledCallOverlayBar>
   );
 
   // Fase 1 estilos: chat P2P reutiliza SupportMessageBubble con variantes
@@ -789,24 +826,13 @@ export default function VideoChatFavoritosModelo(props) {
                                     />
                                   </StyledCallLocalVideo>
 
-                                  <StyledCallBottomBar>
-                                    <StyledCallBottomInner>
-                                      <StyledCallPrimaryActions>
-                                        <BtnCallDanger onClick={() => handleCallEnd(false)} title={t('common.hangup')} aria-label={t('common.hangup')}>
-                                          <FontAwesomeIcon icon={faPhoneSlash} />
-                                        </BtnCallDanger>
-                                      </StyledCallPrimaryActions>
-                                    </StyledCallBottomInner>
-                                  </StyledCallBottomBar>
-
-                                  {/* "Ver original" flotante sobre el video
-                                      (abajo-izq), lejos del HUD (arriba-izq),
-                                      PiP (arriba-der) y hangup (abajo-centro). */}
-                                  {shouldShowCallTranslationToggle && (
-                                    <div style={{ position: 'absolute', left: 12, bottom: 12, zIndex: 30, pointerEvents: 'auto' }}>
-                                      <TranslationToggleButton />
-                                    </div>
-                                  )}
+                                  {/* Barra inferior única sobre el vídeo:
+                                      COLGAR (izq) + regalos gratis del modelo
+                                      (centro). Sin reportar/bloquear en
+                                      favoritos. "Ver original" NO va aquí: vive
+                                      en la cabecera de la columna de chat. */}
+                                  <StyledGiftFxLayer ref={fxRef} />
+                                  {renderCallOverlayBar()}
                                 </StyledCallStage>
                               </StyledRemoteVideo>
                             </StyledCallVideoArea>
@@ -822,6 +848,10 @@ export default function VideoChatFavoritosModelo(props) {
                                     {renderCallClientBalance()}
                                   </div>
                                 </div>
+                                {/* "Ver original" como botón normal en la
+                                    cabecera del chat (movido desde el overlay
+                                    del vídeo). */}
+                                {shouldShowCallTranslationToggle && <TranslationToggleButton />}
                               </StyledCallChatColHeader>
 
                               <StyledCallChatColScroll ref={callListRef}>
@@ -829,7 +859,11 @@ export default function VideoChatFavoritosModelo(props) {
                               </StyledCallChatColScroll>
 
                             <StyledCallFooterDesktop>
+                              {/* Composer de la llamada: emoji + texto + enviar.
+                                  Los regalos NO van aquí: están en la barra
+                                  inferior sobre el vídeo. */}
                               <StyledCallComposer>
+                                <EmojiTextPicker onInsert={(e) => setCenterInput((v) => (v || '') + e)} disabled={!allowChat} />
                                 <StyledChatInput
                                   type="text"
                                   value={centerInput}
