@@ -271,6 +271,22 @@ const DashboardModel = () => {
   const activeTabRef = useRef(activeTab);
 
   const history = useHistory();
+
+  // Contrato de modelo: si hay versión vigente sin aceptar, la modelo tiene el
+  // WS bloqueado (ModelContractWsInterceptor) → no aparece online ni puede
+  // stream/gifts, pero no se entera. Mostramos un aviso llamativo que la lleva
+  // al Perfil (donde está la acción de aceptar).
+  const [contractPending, setContractPending] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const st = await apiFetch('/consent/model-contract/status');
+        if (!cancelled) setContractPending(st?.accepted === false);
+      } catch { /* silencioso: no debe bloquear el dashboard */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
   // location ya declarada arriba como routerLocation (junto al activeTab
   // initializer). Reutilizamos la misma referencia para autoSelectSupportBot.
   // Flag consumido por FavoritesModelList: cuando se llega al dashboard desde
@@ -3377,6 +3393,37 @@ const DashboardModel = () => {
         onLogout={handleLogout}
       />
       {/* ========= FIN NAVBAR  ======== */}
+
+      {/* Aviso de acción pendiente: contrato de modelo sin aceptar. Llamativo y
+          clickable → lleva al Perfil, donde está la acción de aceptar. */}
+      {contractPending && (
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => history.push('/perfil-model')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); history.push('/perfil-model'); } }}
+          style={{
+            cursor: 'pointer',
+            margin: '8px 12px',
+            padding: '9px 14px',
+            background: 'linear-gradient(90deg, #f97316, #f59e0b)',
+            color: '#fff',
+            fontSize: 13.5,
+            fontWeight: 700,
+            borderRadius: 12,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            boxShadow: '0 4px 16px rgba(245,158,11,0.45)',
+          }}
+        >
+          <span style={{ fontSize: 16, lineHeight: 1 }}>⚠️</span>
+          <span>{i18n.t('dashboardModel.contractPending.banner', { defaultValue: 'Acción pendiente: acepta el contrato actualizado en tu Perfil.' })}</span>
+          <span style={{ marginLeft: 'auto', fontWeight: 800, whiteSpace: 'nowrap' }}>
+            {i18n.t('dashboardModel.contractPending.cta', { defaultValue: 'Ir a Perfil →' })}
+          </span>
+        </div>
+      )}
 
       {/* ADR-050 #D-34 (2026-07-16): aviso pre-corte por moderacion. Solo modelo. */}
       {modWarning && (
