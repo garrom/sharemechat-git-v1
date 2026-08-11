@@ -1291,6 +1291,10 @@
     }
   },
   "dashboardModel": {
+    "contractPending": {
+      "banner": "Action required: accept the updated contract in your Profile.",
+      "cta": "Go to Profile →"
+    },
     "streamingBan": {
       "title": "Streaming suspended",
       "body": "Our automatic moderation system detected disallowed content during a trial session with a Free client. Your access to video chat is temporarily blocked.",

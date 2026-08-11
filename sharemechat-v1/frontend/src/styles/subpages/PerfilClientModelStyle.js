@@ -514,8 +514,11 @@ export const SecurityCard = styled(ProfileCard)`
 `;
 
 export const ContractNoticeCard = styled(ProfileCard)`
-  border-color: #e2d4bf;
-  background: linear-gradient(180deg, #fffdf9 0%, #fffaf2 100%);
+  /* Aviso de acción pendiente: color vivo (ámbar) en vez del crema pastel,
+     para que la modelo lo note y no pase por alto que debe reaceptar. */
+  border: 2px solid #f59e0b;
+  background: linear-gradient(180deg, #fff3d1 0%, #ffe4a3 100%);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.30);
 `;
 
 export const CardHeader = styled.header`

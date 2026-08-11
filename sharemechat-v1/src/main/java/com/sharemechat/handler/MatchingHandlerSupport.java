@@ -360,6 +360,15 @@ public class MatchingHandlerSupport {
                     try {
                         statusService.setAvailable(userId);
                     } catch (Exception ignore) {}
+                    // Fix supply asimetrico (2026-08-11): al enrolarse, la modelo
+                    // intenta emparejar PROACTIVAMENTE con los clientes ya en
+                    // espera. Sin esto, un cliente que llego antes (encolado, sin
+                    // modelo entonces) no casaba nunca cuando la modelo entraba
+                    // despues: el path de modelo solo encolaba y el modelo no
+                    // manda start-match al abrir, asi que nadie re-escaneaba la
+                    // cola de clientes. Critico en fase de poco supply. matchModel
+                    // re-gestiona el bucket (remove + re-add si no hay match).
+                    matchModel(session);
                 } else {
                     // Gate Age Verification del cliente (sub-frente Didit cliente,
                     // 2026-06-20). Bloquea matching aleatorio si client_kyc_status

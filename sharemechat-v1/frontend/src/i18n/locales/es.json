@@ -1291,6 +1291,10 @@
     }
   },
   "dashboardModel": {
+    "contractPending": {
+      "banner": "Acción pendiente: acepta el contrato actualizado en tu Perfil.",
+      "cta": "Ir a Perfil →"
+    },
     "streamingBan": {
       "title": "Streaming suspendido",
       "body": "Nuestro sistema automático ha detectado contenido no permitido en un stream de prueba con un cliente Free. Tu acceso al videochat está temporalmente bloqueado.",
