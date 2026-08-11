@@ -21,7 +21,8 @@ Contexto: PROD en **PRELAUNCH**. Cuello de botella = **captación de modelos**.
 ## P1 — Crítico / fundacional
 | Tarea | Estado (código) | Qué es | Evidencia |
 |---|---|---|---|
-| **Frente de TESTS + CI** | 🔴 gap real | Backend 81 tests pero **todo unit/mock, 0 integración, sin CI**; frontend **0 tests**. Sin red: **matching, streaming/facturación, dinero (TransactionService + gift charge)**. Cubrir esos 3 pilares + primeros tests front + CI mínimo. Los bugs de hoy (matching, HUD, gift) no tenían test. | `src/test/java` (81), sin `.github/`; `MatchingHandlerSupportTest` solo `isApprovedClient`; gift charge excluido |
+| **Frente de TESTS + CI (metodología)** | 🔴 gap real | Backend 81 tests pero **todo unit/mock, 0 integración, sin CI**; frontend **0 tests**. Sin red: **matching, streaming/facturación, dinero (TransactionService + gift charge)**. Adoptar un **acercamiento a Clean Architecture / TDD (Robert C. Martin)** adaptado al proyecto: capa de integración para el core de dinero/tiempo-real, arquitectura testeable (puertos/seams), TDD en cambios nuevos, CI mínimo. Estrategia en ADR/doc aparte. Los bugs de hoy caían justo en el hueco sin test. | `src/test/java` (81), sin `.github/`; `MatchingHandlerSupportTest` solo `isApprovedClient`; gift charge excluido |
+| **Cripto (NOWPayments) — mejoras UX de pago** | 🟡 pendiente (lidera operador) | Cripto ya implementado y en PROD; mejorar la **experiencia de pago del usuario**. Urgente. En el tejado del operador. | `psp/` NOWPayments |
 | **Verificar gaps PROD post-nivelado** | 🟡 pendiente | El nivelado propagó código+migraciones, NO env/credenciales/assets. Verificar en PROD: `CLAUDE_API_KEY`, `KYC_DIDIT_MASTER_CALLBACK_URL`, PDFs de contrato en S3. | infra (no código) |
 | **Compliance: 5 políticas PSP firmadas** | 🟡 pendiente (legal) | Las 5 políticas en estado PLANIFICADO sin firma legal. Bloqueante duro de go-live. *(2257 + Records Custodian YA existen en `footer/Legal.jsx` — no re-hacer.)* | `Legal.jsx:302,1197,1271` (2257 hecho) |
 | **Reconciliar docs obsoletos** | 🟡 en curso | Refrescar `current-phase.md` (lista Tickets, KYC, Operational Mode… como pendientes cuando están hechos). Este backlog es el ancla. | current-phase (stale) |
@@ -38,7 +39,6 @@ Contexto: PROD en **PRELAUNCH**. Cuello de botella = **captación de modelos**.
 ## P3 — Medio
 | Tarea | Estado | Qué es |
 |---|---|---|
-| **Master/Studio: adapter payout real (Paxum)** | 🟡 parcial | Todo el sistema Master HECHO (registro, dashboard tabs, split, invitación, suspensión). Falta el **adapter Paxum real** (hoy solo `NoopPayoutAdapter` manual). |
 | **ADR-052: purga afiliadas (V38) + reparto nuevo (V39)** | 🟡 pendiente | Rediseño estructural reparto + retirada afiliadas. |
 | **#D-29: doc reparto 75% vs 50-60% real** | 🟡 pendiente | Doc obsoleto contamina copy fundadoras. |
 | **Contratos Master v1 + Modelo v4.2 a S3 PROD + re-firma** | 🟡 pendiente | Subir PDFs/manifest + re-firma masiva. |
@@ -49,12 +49,12 @@ Contexto: PROD en **PRELAUNCH**. Cuello de botella = **captación de modelos**.
 #D-24 packs premium · #D-26 T&C v5 (alinea ADR-052) · #D-13/#D-14 (job ESCALATED, notif API) · #D-16 (atomicidad gift WS) · #D-6/#D-1..7 (doc↔código CMS) · #12/#14/#16 GDPR (MFA, aviso saldo bajo).
 
 ## P5 — Algún día
-Traductor **T7** (traducir mensajes PROPIOS al idioma del peer — **no está en código**, opcional; `useMessageTranslations.js:41` salta los propios) · UX #17-21 · WAF/consolidación AWS · #15 retención chat · #D-25 xlsx.
+**Master/Studio: adapter payout real (Paxum)** — todo Master hecho salvo el rail real, hoy `NoopPayoutAdapter` manual; despriorizado por el operador · Traductor **T7** (traducir mensajes PROPIOS al idioma del peer — **no está en código**, opcional; `useMessageTranslations.js:41` salta los propios) · UX #17-21 · WAF/consolidación AWS · #15 retención chat · #D-25 xlsx.
 
-## BLOQ — Bloqueado por terceros
-| Tarea | Bloqueo |
+## Gated por decisión de lanzamiento del operador
+| Tarea | Nota |
 |---|---|
-| **PSP tarjeta real** | Solo **NOWPayments cripto** implementado (adapter + webhook firmado). CCBill/Segpay/Verotel **no existen en código**. Registry extensible listo. Sin PSP tarjeta no hay monetización con tarjeta. |
+| **PSP tarjeta real (CardBilling / grupo Verotel)** | **Proveedor ya negociado** (CardBilling, grupo Verotel) → NO está bloqueado por terceros; depende de **cuándo el operador decida lanzar**. Falta construir el **adapter** (hoy solo NOWPayments cripto en código). Registry `PaymentProvider` extensible listo. Prioridad y fecha las fija el operador. |
 
 ---
 
