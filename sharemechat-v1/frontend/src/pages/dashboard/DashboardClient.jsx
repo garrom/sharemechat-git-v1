@@ -1910,6 +1910,16 @@ const DashboardClient = () => {
       try {
         setNexting(true);
         resetRandomTechMediaReadySignal();
+        // Teardown local INMEDIATO del peer actual al pulsar "next". Sin esto,
+        // remoteStream sigue apuntando al stream muerto hasta que llega el nuevo
+        // match; como el SessionHUD se activa con `active={!!remoteStream}`, el
+        // cronómetro y el coste estimado seguían corriendo sin streaming real
+        // (se veía pegado con cambios rápidos). Espejo del cleanup de
+        // onPeerDisconnectedPost. El backend ya cerró/cobró la sesión anterior
+        // por su cuenta (endSession); esto es solo UI.
+        setCurrentModelId(null);
+        setRemoteStream(null);
+        setMessages([]);
         socketRef.current.send(JSON.stringify({ type: 'next' }));
       } catch (e) {
         console.error('Error enviando NEXT:', e);
