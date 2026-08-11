@@ -1,97 +1,75 @@
 # Backlog priorizado — SharemeChat
 
-> **Fuente de verdad de PRIORIDADES.** Este fichero es el índice único de *qué atacar y en qué
-> orden*. El detalle de cada frente vive en su ADR / `known-debt.md` / `current-phase.md`; aquí
-> solo va **prioridad (1-5) + estado real reconciliado**. Si otro doc contradice el estado de aquí,
-> gana este (y hay que actualizar el otro).
+> **Fuente de verdad de PRIORIDADES.** Índice único de *qué atacar y en qué orden*. Prioridad
+> (1-5) + estado **verificado contra CÓDIGO FUENTE** (no docs). Si otro doc contradice esto, gana
+> este y hay que actualizar el otro.
 >
-> **Última reconciliación:** 2026-08-11 (post nivelado PROD → `main fed5e01`, migraciones V47-V51).
-> **Motivo de creación:** los docs de roadmap acumulaban tareas ya cerradas listadas como pendientes
-> (Tickets ADR-054, anti-fraude Sightengine, Madagascar allowlist, replicación a PROD…). Este índice
-> corta esa deriva.
+> **Reconciliación:** 2026-08-11, verificada contra el código por 4 pasadas (producto, economía/PSP,
+> compliance/GDPR, testing/SEO). Muchos frentes que los docs listaban pendientes están **hechos**.
 
-## Escala de prioridad
+## Escala
 | P | Significado |
 |---|---|
-| **P1** | Crítico e inmediato: bloquea go-live/captación, o puede estar **roto en PROD ahora**. |
-| **P2** | Alto: prerrequisito de apertura pública o alto impacto; siguiente en cola. |
-| **P3** | Medio: mejora importante, no bloquea. |
-| **P4** | Bajo: deuda acotada, sin urgencia. |
-| **P5** | Algún día / nice-to-have. |
-| **BLOQ** | Bloqueado por terceros — no accionable ahora (se vigila, no se prioriza). |
+| **P1** | Crítico/inmediato: bloquea go-live/captación, roto en PROD ahora, o fundacional de calidad. |
+| **P2** | Alto: prerrequisito de apertura pública o alto impacto. |
+| **P3** | Medio. **P4** Bajo. **P5** Algún día. **BLOQ** Bloqueado por terceros. |
 
-Contexto: PROD en **PRELAUNCH** (producto 503). Cuello de botella estratégico = **captación de modelos**
-(pivote Master/Studio + fundadoras LATAM/Madagascar).
+Contexto: PROD en **PRELAUNCH**. Cuello de botella = **captación de modelos**.
 
 ---
 
-## P1 — Crítico / inmediato
-| Tarea | Estado | Go-live | Qué es | Ref |
-|---|---|:---:|---|---|
-| **Verificar gaps PROD post-nivelado** | pendiente | sí | El nivelado propagó código+migraciones, NO env vars/credenciales/assets. Verificar en PROD: `CLAUDE_API_KEY` (chat IA), `KYC_DIDIT_MASTER_CALLBACK_URL`, PDFs de contrato en S3. Pueden estar rotos AHORA. | pending-hardening §5.4 |
-| **Compliance entregables** | pendiente | **sí (duro)** | Declaración 2257 en footer (dev), Records Custodian nombrado (legal), 5 políticas PSP firmadas (legal). Bloqueante duro; riesgo congelación merchant. | pending-hardening Parte 4; pre-mortem B1/B2 |
-| **Bug SEO internal-linking (SPA sin `<a href>`)** | por verificar | mata orgánico | Verificar si el blog se enlaza con `<a href>` real para que Google/Bing/ChatGPT lo descubran. Bing/GEO ya habilitado por consola Google Cloud (2026-08). ~8-12h si sigue roto. | pre-mortem T2/T3 |
-| **Reconciliar docs obsoletos** | en curso (este doc) | no | current-phase lista Tickets como sin-hacer y B.3→PROD como pendiente (ambos ya hechos). Refrescar current-phase + marcar cerrados. Este backlog es el primer paso. | current-phase (stale) |
+## P1 — Crítico / fundacional
+| Tarea | Estado (código) | Qué es | Evidencia |
+|---|---|---|---|
+| **Frente de TESTS + CI** | 🔴 gap real | Backend 81 tests pero **todo unit/mock, 0 integración, sin CI**; frontend **0 tests**. Sin red: **matching, streaming/facturación, dinero (TransactionService + gift charge)**. Cubrir esos 3 pilares + primeros tests front + CI mínimo. Los bugs de hoy (matching, HUD, gift) no tenían test. | `src/test/java` (81), sin `.github/`; `MatchingHandlerSupportTest` solo `isApprovedClient`; gift charge excluido |
+| **Verificar gaps PROD post-nivelado** | 🟡 pendiente | El nivelado propagó código+migraciones, NO env/credenciales/assets. Verificar en PROD: `CLAUDE_API_KEY`, `KYC_DIDIT_MASTER_CALLBACK_URL`, PDFs de contrato en S3. | infra (no código) |
+| **Compliance: 5 políticas PSP firmadas** | 🟡 pendiente (legal) | Las 5 políticas en estado PLANIFICADO sin firma legal. Bloqueante duro de go-live. *(2257 + Records Custodian YA existen en `footer/Legal.jsx` — no re-hacer.)* | `Legal.jsx:302,1197,1271` (2257 hecho) |
+| **Reconciliar docs obsoletos** | 🟡 en curso | Refrescar `current-phase.md` (lista Tickets, KYC, Operational Mode… como pendientes cuando están hechos). Este backlog es el ancla. | current-phase (stale) |
 
 ## P2 — Alto
-| Tarea | Estado | Go-live | Qué es | Ref |
-|---|---|:---:|---|---|
-| **BFPM Fase 4B-b** | siguiente paso | sí (prereq PSP) | Reporting backoffice BFPM + política refund cuando el saldo incluye bonus. Prerrequisito de integrar PSP real. | current-phase Frente 2.6 |
-| **Product Operational Mode — validar** | parcial | sí | Validar PRELAUNCH/MAINTENANCE/CLOSED end-to-end + tratamiento frontend de los códigos. Habilita producto cerrado + registro abierto. | pending-hardening §1B |
-| **Country-gating: blacklist + granularidad US** | pendiente | sí | Blacklist homogénea REST/WS; US requiere granularidad sub-estatal (FSC v. Paxton). | go-live-roadmap Fase 0; pre-mortem F3 |
-| **KYC modelo automatizado** | pendiente | sí | Hoy manual 24-48h = cuello de botella y churn de modelos. Automatizar Didit-driven. | go-live-roadmap Fase 2 |
-| **GDPR: DPO playbook #D-15 + DSR + aceptación versionada** | pendiente | sí (#D-15 duro) | #D-15 (art.15 sobre convs humanas) obligatorio pre-PROD; delete-account + DSR; `legal_acceptances` versionado. | known-debt #D-15/#12/#13/G3 |
-| **Endurecer superficies económicas no-directas** | pendiente | sí | `ccbill/notify` (firma/idempotencia/replay), refund admin, payout review, gifts/settlement WS. Antes de dinero real. | pending-hardening §1C |
-| **SEO US: cluster contenido US-EN** | parcial | mata orgánico | Bing ya habilitado; falta cluster US-EN + alternativeto.net + Reddit orgánico. | pending-hardening §6.2 |
+| Tarea | Estado (código) | Qué es | Evidencia |
+|---|---|---|---|
+| **BFPM Fase 4B-b** | 🟡 parcial | Motor contable bonus HECHO (partida doble). Falta **resumen admin BFPM** + **política refund con bonus** (#D-35). | `TransactionService:246`; `PspWebhookOrchestrator:231` (#D-35) |
+| **GDPR: delete-account (art.17) + DSR self-service + aceptación versionada** | 🟡 parcial | Export art.15 admin-driven HECHO; **falta borrado de cuenta (art.17)** y DSR self-service. Versionado parcial (`ConsentEvent` append-only + `model_contract_acceptances`), falta catálogo por documento. #D-15 (DPO playbook) obligatorio pre-PROD. | `GdprExportService`; no hay deleteAccount; `ConsentEvent` |
+| **Country-gating: WS independiente + granularidad US** | 🟡 parcial | Allowlist REST HECHA. Gaps: **el WS no se gatea por país de forma independiente** (solo transitivo vía JWT) + **sin granularidad sub-estatal US** (FSC v. Paxton). | `CountryAccessService` (solo REST, ISO-2) |
+| **Endurecer superficies económicas restantes** | 🟡 parcial | Webhook NOWPayments HECHO (firma HMAC-512 + idempotencia + lock). Revisar guards de **payout review** (¿lock pesimista?) y settlement. | `PspWebhookOrchestrator`; `MasterPayoutService:95` |
+| **SEO US — cluster contenido + marketing** | 🟡 parcial | Bing/GEO habilitado; blog crawleable (a href + sitemap + prerender OK). Falta **cluster US-EN + alternativeto.net + Reddit orgánico** (marketing, no código). | `BlogContent.jsx:385`; `SitemapController` |
 
 ## P3 — Medio
-| Tarea | Estado | Go-live | Qué es | Ref |
-|---|---|:---:|---|---|
-| **ADR-052: purga afiliadas (V38) + reparto nuevo (V39)** | técnica pendiente | no | Rediseño estructural del reparto + retirada del programa de afiliadas. | current-phase Frente 3 |
-| **#D-29: doc reparto 75% vs 50-60% real** | pendiente | no | Doc obsoleto contamina copy fundadoras y 4 docs. Corregir. | known-debt #D-29 |
-| **Contrato Master v1 + Modelo v4.2 a S3 PROD + re-firma** | pendiente | no | Subir PDFs/manifest a S3 PROD/AUDIT + re-firma masiva modelos. | pending-hardening §5.4 |
-| **Reactivar vendor moderación (Sightengine) con cuota** | listo, OFF | no | Ya implementado; OFF por saldo free agotado. Reactivar con plan mensual (acción operador + reemplazar credenciales antes de `enabled=true`). | known-debt #D-9/10/11 |
-| **Founding Models (cohorte fundadora)** | bloqueado por dep. técnica | no | Tramo 70% en BD + badge `is_founder` + bypass PRELAUNCH allowlist. | pending-hardening §6.4 |
-| **Master/Studio S5.a.8+ (ADR-056)** | **en pausa (decisión operador 2026-08-11)** | no | Tabs Historial/Payout dashboard Master → S6 payouts multi-rail. No urgente ahora. | current-phase Frente 5 |
-| **GDPR #12/#13/#14/#16** | pendiente | parcial | delete-account, DSR endpoints, MFA, aviso saldo bajo en streaming. | known-debt 2026-07-02 |
+| Tarea | Estado | Qué es |
+|---|---|---|
+| **Master/Studio: adapter payout real (Paxum)** | 🟡 parcial | Todo el sistema Master HECHO (registro, dashboard tabs, split, invitación, suspensión). Falta el **adapter Paxum real** (hoy solo `NoopPayoutAdapter` manual). |
+| **ADR-052: purga afiliadas (V38) + reparto nuevo (V39)** | 🟡 pendiente | Rediseño estructural reparto + retirada afiliadas. |
+| **#D-29: doc reparto 75% vs 50-60% real** | 🟡 pendiente | Doc obsoleto contamina copy fundadoras. |
+| **Contratos Master v1 + Modelo v4.2 a S3 PROD + re-firma** | 🟡 pendiente | Subir PDFs/manifest + re-firma masiva. |
+| **Reactivar vendor moderación (Sightengine) con cuota** | 🟢 listo, OFF | Anti-fraude cámara implementado (face-presence + frame-diff/frozen + no-face → kill). OFF por saldo free. Acción operador: plan mensual + credenciales antes de `enabled=true`. |
+| **Founding Models (cohorte fundadora)** | 🔴 pendiente | Tramo 70% BD + badge `is_founder` + bypass PRELAUNCH allowlist. |
 
 ## P4 — Bajo
-| Tarea | Estado | Qué es | Ref |
-|---|---|---|---|
-| #D-24 | pendiente | Packs premium residual (cálculo dinámico min + UX picker). | known-debt |
-| #D-26 | pendiente | T&C/contrato modelo v5 con política descuentos D7 (alinea con ADR-052). | known-debt |
-| #D-13 / #D-14 | pendiente | Job expiración `ESCALATED>48h`; Browser Notification API agentes. | known-debt |
-| #D-16 | pendiente | Ventana no-atómica `processGift`↔`sendGift` en gift WS. | known-debt |
-| #D-6 / #D-1..7 | pendiente | Discrepancias doc↔código subsistema CMS (mayoría documental). | known-debt |
+#D-24 packs premium · #D-26 T&C v5 (alinea ADR-052) · #D-13/#D-14 (job ESCALATED, notif API) · #D-16 (atomicidad gift WS) · #D-6/#D-1..7 (doc↔código CMS) · #12/#14/#16 GDPR (MFA, aviso saldo bajo).
 
 ## P5 — Algún día
-| Tarea | Ref |
-|---|---|
-| UX #17-21 (refresco saldo, guía assets, nombres tier, transparencia kill-switch, geografía bot). | known-debt |
-| Traductor T7 (traducir mensajes propios al idioma del peer). | pending-hardening §5.3 |
-| WAF rate-based CloudFront + consolidación AWS. | known-debt; pre-mortem E |
-| #15 job retención chat (alta post-volumen). | known-debt |
-| #D-25 recalibración xlsx modelo-financiero. | known-debt |
+Traductor **T7** (traducir mensajes PROPIOS al idioma del peer — **no está en código**, opcional; `useMessageTranslations.js:41` salta los propios) · UX #17-21 · WAF/consolidación AWS · #15 retención chat · #D-25 xlsx.
 
 ## BLOQ — Bloqueado por terceros
-| Tarea | Bloqueo | Ref |
-|---|---|---|
-| **PSP tarjeta real + firma webhook** | CCBill (manual oficial), Verotel/CardBilling (sin contacto formal), Segpay descartado. NOWPayments cripto cubre puente. Sin PSP tarjeta no hay monetización real. | go-live-roadmap Fase 3; pre-mortem A1 |
+| Tarea | Bloqueo |
+|---|---|
+| **PSP tarjeta real** | Solo **NOWPayments cripto** implementado (adapter + webhook firmado). CCBill/Segpay/Verotel **no existen en código**. Registry extensible listo. Sin PSP tarjeta no hay monetización con tarjeta. |
 
 ---
 
-## Cerrado recientemente (NO re-listar)
-Para cortar la deriva de docs obsoletos, lo hecho que la doc vieja aún lista como pendiente:
+## Cerrado / verificado en código (NO re-listar — corta la deriva de docs obsoletos)
 - **PROD nivelado a main** (fed5e01, V47-V51) — 2026-08-11.
-- **B6 Madagascar** en allowlist registro modelo (TEST+PROD) — verificado 2026-08-11.
-- **Anti-fraude cámara (A10)** — implementado con Sightengine; OFF solo por saldo free (ver P3 reactivar).
-- **Sistema Tickets ADR-054 (T1-T6 + refactor D8)** — HECHO (current-phase lo lista mal).
-- **Traductor chat P2P (§5.3, V51)** — HECHO.
-- **Chat Soporte LLM / panel humano (ADR-046)** — TEST/AUDIT; PROD cubierto por el nivelado (verificar credenciales en P1).
-- **Google Sign-In Fase 1** — en PROD pero OFF por feature flag (desbloqueo = brand verification Google).
-- **Bing/GEO para ChatGPT** — habilitado por consola Google Cloud (2026-08).
+- **B6 Madagascar** allowlist registro modelo (TEST+PROD) — verificado.
+- **A5 Product Operational Mode** — REST (`ProductOperationalModeFilter`) + WS (`...WsInterceptor`) + frontend (`http.js`, `PreLaunchScreen`). HECHO.
+- **A7 KYC modelo automatizado** — Didit webhook-driven (`KycSessionService:531`, HMAC+anti-replay), fija `verification_status` sin admin manual. HECHO. *(El "manual" es revisión de assets, otro flujo.)*
+- **A9 SEO internal-linking** — FALSO positivo: `<a href>` real (`BlogContent.jsx:385`), sitemap dinámico (`SitemapController`), prerender Puppeteer. Crawleable.
+- **A10 anti-fraude cámara** — Sightengine real + frame-diff/frozen/no-face → `killStreamAsAdmin`. HECHO (OFF por saldo).
+- **2257 + Records Custodian** — `footer/Legal.jsx`. HECHO.
+- **Gifts + efectos** (4 superficies) · **Tickets ADR-054** · **Google Sign-In** (off en PROD por flag) · **Chat Soporte LLM + panel humano ADR-046** — HECHO.
+- **Master/Studio ADR-056** — registro, dashboard (tabs), split dual, invitación, suspensión HECHO (solo falta Paxum, ver P3).
+- **Traductor chat P2P entrada + "ver original"** (V51) · **facturación streaming lump-sum** — HECHO.
 
-## Mantenimiento de este índice
-- Al cerrar una tarea: moverla a "Cerrado recientemente" con fecha, no borrarla en silencio.
-- Al detectar un doc que contradice esto: actualizar el doc, no este índice (salvo error real de estado).
-- Reconciliar tras cada deploy grande.
+## Mantenimiento
+- Al cerrar: mover a "Cerrado/verificado" con fecha + ref de código, no borrar en silencio.
+- Reconciliar contra CÓDIGO (no docs) tras cada frente grande.
