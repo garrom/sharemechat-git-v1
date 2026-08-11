@@ -10,6 +10,25 @@ La documentación del repositorio principal debe contener conocimiento funcional
 
 Antes de modificar o crear documentación, identificar primero la naturaleza real del cambio o hallazgo.
 
+## Regla de ESTADO y PRIORIDAD (2026-08-12) — corta la deriva de docs obsoletos
+
+La causa raíz de la documentación desfasada es que el **estado** (hecho/pendiente) y la
+**prioridad** de cada frente se escribían en varios docs a la vez (`current-phase.md`,
+`pending-hardening.md`, `known-debt.md`, `project-log.md`, memoria) y derivaban por separado
+(p. ej. un frente "hecho" en un doc y "pendiente" en otro).
+
+Regla, aplicando "responsabilidad única" a los docs — **separar el QUÉ/POR QUÉ (durable) del
+ESTADO (volátil)**:
+
+1. **El estado y la prioridad de un frente viven en UN solo sitio: `docs/07-roadmap/backlog-priorizado.md`.** Los ADRs y docs de arquitectura describen el QUÉ/POR QUÉ; **no** llevan done/pending.
+2. **El estado se verifica contra CÓDIGO, no contra docs.** Cada entrada del backlog referencia el código (fichero:línea o commit) contra el que se verificó. Si un doc contradice el backlog, se actualiza el doc.
+3. **Reconciliar el backlog tras cada frente grande o deploy.** Al cerrar algo: moverlo a "Cerrado/verificado" con fecha + ref de código, no borrarlo en silencio.
+4. Los demás docs de estado quedan como **narrativa** (describen los frentes), **no como fuente de verdad de estado** — llevan un aviso a tal efecto.
+5. `project-log.md` sigue siendo bitácora **append-only** (histórico fechado; no se pudre por naturaleza).
+
+Objetivo a futuro (con el CI de ADR-059): automatizar un chequeo de frescura del backlog,
+acercándolo a "estado derivado" en vez de escrito a mano (el giro tipo control de versiones).
+
 ## Clasificación del caso
 
 ### Caso 1. Cambio de arquitectura o diseño técnico
@@ -91,8 +110,8 @@ Ejemplos:
 - AUDIT entra en nueva fase
 
 Acción:
-- actualizar `docs/07-roadmap/current-phase.md`
-- actualizar `docs/07-roadmap/pending-hardening.md` o `audit-environment-plan.md` si aplica
+- actualizar `docs/07-roadmap/backlog-priorizado.md` (**ÚNICA fuente de estado/prioridad**; ver "Regla de ESTADO y PRIORIDAD"). Verificar contra CÓDIGO.
+- **NO** duplicar el estado en `current-phase.md` / `pending-hardening.md`: son narrativa, no fuente de verdad.
 
 ### Caso 8. Skill operativa nueva o modificada
 Ejemplos:
