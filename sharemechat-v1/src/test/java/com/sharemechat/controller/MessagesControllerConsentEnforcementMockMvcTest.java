@@ -9,7 +9,9 @@ import com.sharemechat.exception.GlobalExceptionHandler;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.service.ConsentEnforcementService;
 import com.sharemechat.service.MessageService;
+import com.sharemechat.service.MessageTranslationService;
 import com.sharemechat.service.ProductAccessGuardService;
+import com.sharemechat.service.translation.TranslationProvider;
 import com.sharemechat.support.service.SupportBotProvider;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -39,6 +41,8 @@ class MessagesControllerConsentEnforcementMockMvcTest {
     @Test
     void sendMessageAllowsCompliantUser() throws Exception {
         MessageService messageService = mock(MessageService.class);
+        MessageTranslationService messageTranslationService = mock(MessageTranslationService.class);
+        TranslationProvider translationProvider = mock(TranslationProvider.class);
         UserRepository userRepository = mock(UserRepository.class);
         ConsentEnforcementService consentEnforcementService = mock(ConsentEnforcementService.class);
         ProductAccessGuardService productAccessGuardService = mock(ProductAccessGuardService.class);
@@ -55,6 +59,8 @@ class MessagesControllerConsentEnforcementMockMvcTest {
 
         MessagesController controller = new MessagesController(
                 messageService,
+                messageTranslationService,
+                translationProvider,
                 userRepository,
                 consentEnforcementService,
                 productAccessGuardService,
@@ -78,6 +84,8 @@ class MessagesControllerConsentEnforcementMockMvcTest {
     @Test
     void sendMessageRejectsNonCompliantUser() throws Exception {
         MessageService messageService = mock(MessageService.class);
+        MessageTranslationService messageTranslationService = mock(MessageTranslationService.class);
+        TranslationProvider translationProvider = mock(TranslationProvider.class);
         UserRepository userRepository = mock(UserRepository.class);
         ConsentEnforcementService consentEnforcementService = mock(ConsentEnforcementService.class);
         ProductAccessGuardService productAccessGuardService = mock(ProductAccessGuardService.class);
@@ -91,6 +99,8 @@ class MessagesControllerConsentEnforcementMockMvcTest {
 
         MessagesController controller = new MessagesController(
                 messageService,
+                messageTranslationService,
+                translationProvider,
                 userRepository,
                 consentEnforcementService,
                 productAccessGuardService,
@@ -116,6 +126,8 @@ class MessagesControllerConsentEnforcementMockMvcTest {
     @Test
     void conversationsRejectNonCompliantUser() throws Exception {
         MessageService messageService = mock(MessageService.class);
+        MessageTranslationService messageTranslationService = mock(MessageTranslationService.class);
+        TranslationProvider translationProvider = mock(TranslationProvider.class);
         UserRepository userRepository = mock(UserRepository.class);
         ConsentEnforcementService consentEnforcementService = mock(ConsentEnforcementService.class);
         ProductAccessGuardService productAccessGuardService = mock(ProductAccessGuardService.class);
@@ -129,6 +141,8 @@ class MessagesControllerConsentEnforcementMockMvcTest {
 
         MessagesController controller = new MessagesController(
                 messageService,
+                messageTranslationService,
+                translationProvider,
                 userRepository,
                 consentEnforcementService,
                 productAccessGuardService,
@@ -152,6 +166,8 @@ class MessagesControllerConsentEnforcementMockMvcTest {
     @Test
     void historyAllowsCompliantUser() throws Exception {
         MessageService messageService = mock(MessageService.class);
+        MessageTranslationService messageTranslationService = mock(MessageTranslationService.class);
+        TranslationProvider translationProvider = mock(TranslationProvider.class);
         UserRepository userRepository = mock(UserRepository.class);
         ConsentEnforcementService consentEnforcementService = mock(ConsentEnforcementService.class);
         ProductAccessGuardService productAccessGuardService = mock(ProductAccessGuardService.class);
@@ -166,6 +182,8 @@ class MessagesControllerConsentEnforcementMockMvcTest {
 
         MessagesController controller = new MessagesController(
                 messageService,
+                messageTranslationService,
+                translationProvider,
                 userRepository,
                 consentEnforcementService,
                 productAccessGuardService,
