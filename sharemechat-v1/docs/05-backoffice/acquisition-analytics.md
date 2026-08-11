@@ -16,7 +16,11 @@ de dónde viene" manda este panel.
 
 ## Qué muestra
 
-Ventana temporal seleccionable (7 / 30 / 90 días). KPIs y desgloses:
+Ventana temporal seleccionable (7 / 30 / 90 días), compartida por dos **pestañas**:
+**"Tablas"** (grid de tarjetas con scroll interno por tarjeta — escalable, sin scroll de página
+infinito) y **"Gráficos"** (barras horizontales por desglose + barras por día, en SVG/CSS puro,
+sin dependencia de librería de charts). Responsive por defecto (`grid auto-fit`, 2→1 columnas).
+Los KPIs se muestran en ambas pestañas. KPIs y desgloses:
 
 - **KPIs**: registros totales; con atribución (% de cobertura de la capa B); email verificado (%).
 - **Por canal** (`utm_source`) — los registros sin atribución cuentan como `(direct/none)`.
