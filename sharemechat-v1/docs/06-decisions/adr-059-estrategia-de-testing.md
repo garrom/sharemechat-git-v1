@@ -1,0 +1,73 @@
+# ADR-059 - Estrategia de testing: acercamiento a Clean Architecture / TDD + integración + CI
+
+> Estado: TRANSITORIO (se materializa por fases; pasa a VIGENTE cuando las fases 0-1 estén en marcha)
+> Fecha: 2026-08-12
+> Vigencia esperada: indefinida (marco de calidad del proyecto)
+> Reemplaza: N/A
+> Ver también: `docs/07-roadmap/backlog-priorizado.md` (frente P1 "Tests + CI"), Robert C. Martin (Clean Architecture, Clean Code, TDD)
+
+## Estado
+Propuesto
+
+## Contexto
+
+Verificación contra código (2026-08-12): el backend tiene **81 ficheros de test** pero **100% unitarios/mock o MockMvc standalone**; **cero tests de integración** (sin Testcontainers, sin `@SpringBootTest` de contexto, sin BD real), **sin CI** (no hay `.github/`), y el **frontend tiene cero tests**.
+
+La cobertura está **sesgada a la periferia** (moderación, soporte, KYC, CMS, compliance) y deja **sin red los tres pilares de negocio en tiempo real**:
+- **Dinero** — `TransactionService` (wallet, cargos, balances, payouts) sin tests; el path económico gift CLIENT→MODEL está explícitamente excluido y delegado a "smoke manual".
+- **Matching** — `MatchingHandlerSupportTest` solo cubre `isApprovedClient()`; el matchmaking real (cola, pairing, `next`, ciclo WS) sin tests.
+- **Streaming/facturación** — `StreamService.endSession` y el cobro por duración sin tests.
+
+Estos tres pilares están **acoplados** a Redis, a los WebSocket handlers y a JDBC, lo que los hace difíciles de testear — y por eso no se testean. Los tres bugs corregidos en la sesión del 2026-08-11 (timer/coste del HUD, enrolado de matching, gift) caían **justo en ese hueco**; se detectaron en producción-de-pruebas a mano, no por la suite.
+
+Restricciones: operador único, fase PRELAUNCH (ventana buena para invertir en la red antes de abrir), no se busca perfección sino un **acercamiento** pragmático a la metodología de Robert C. Martin.
+
+## Opciones consideradas
+
+### Opción 1 — Status quo (seguir con unit/mock en la periferia)
+Pros: cero esfuerzo.
+Contras: el core de dinero/tiempo-real seguirá sin red; los bugs de regresión (como los de hoy) se seguirán cazando a mano en producción.
+
+### Opción 2 — Reescritura completa a Clean Architecture (puertos/adaptadores estrictos)
+Pros: máxima testeabilidad teórica.
+Contras: coste enorme, riesgo de romper lo que funciona, inviable para un operador único pre-launch. Uncle Bob mismo defiende evolución incremental, no big-bang.
+
+### Opción 3 — Acercamiento pragmático (elegida)
+Adoptar los principios de Clean Architecture / TDD de forma incremental y priorizada por riesgo, sin reescribir.
+
+## Decisión
+
+Adoptar un **acercamiento** a la metodología de Robert C. Martin, en cinco piezas:
+
+1. **Inversión de dependencias / "humble object"** — extraer la lógica de negocio pura del glue de framework, de forma incremental. Ej.: sacar la **decisión de matching** de `MatchingHandlerSupport` (WS + Redis) a un servicio/policy plano testeable; aislar el **cálculo de cobro** de `StreamService` de la persistencia. No es reescribir: es adelgazar el handler y dejar la lógica en un objeto testeable sin infraestructura.
+2. **Completar la pirámide** — mantener la base unitaria y **añadir la capa de integración que falta**: `@SpringBootTest` + **Testcontainers** (MySQL + Redis reales) para los flujos de dinero/matching/streaming de punta a punta dentro del backend. Unos pocos E2E (Playwright) para happy-paths críticos, más adelante.
+3. **TDD hacia delante** — cada feature/bugfix nuevo entra con un test que falla primero. No se hace TDD-retrofit del código existente; se aplica a lo nuevo y al core según se endurece.
+4. **FIRST** como listón de calidad de cada test (Fast, Independent, Repeatable, Self-validating, Timely).
+5. **CI** — GitHub Actions que corre `mvn test` + `react-scripts test` en cada push/PR. Es la red que garantiza que la suite se ejecuta (hoy un test no compilaba sin que nadie lo detectara).
+
+**Roll-out por fases (priorizado por riesgo):**
+- **Fase 0 — CI mínimo**: Actions corriendo la suite actual; arreglar que el frontend al menos ejecute. Barato, inmediato, frena la deriva.
+- **Fase 1 — Dinero**: extraer + integración `TransactionService` + gift charge CLIENT→MODEL.
+- **Fase 2 — Matching + ciclo WS**: extraer la decisión de match; testear enrolado/pairing/next.
+- **Fase 3 — Streaming/facturación**: `endSession`, cobro por duración.
+- **Fase 4 — Primeros tests de frontend** (registro, pago, SessionHUD) + primeros E2E.
+
+## Justificación
+
+El coste está en el sitio equivocado: mucha red en la periferia de bajo riesgo y ninguna en el dinero y el tiempo real. La tesis de Uncle Bob aplica directa — *si el negocio es difícil de testear, la arquitectura está mal*: el remedio no es más mocks, es **desacoplar la lógica de la infraestructura** y **testear el core con dependencias reales** (Testcontainers) donde la interacción con BD/Redis es la fuente de bugs. El acercamiento incremental encaja con un operador único y no arriesga lo que ya funciona.
+
+## Impacto
+
+- **Arquitectura**: seams nuevos (servicios/policies puros) extraídos de handlers WS y servicios acoplados; sin reescritura.
+- **Código**: dependencia de test `testcontainers` (mysql + redis) en `pom.xml`; frontend estrena Jest/RTL (infra ya presente vía CRA). Nuevos tests de integración por fase.
+- **Operaciones**: `.github/workflows/ci.yml` nuevo; la suite pasa a ser bloqueante en PR.
+- **Riesgos**: Testcontainers requiere Docker en el runner CI (disponible en GitHub Actions) y localmente (opcional; los unit no lo necesitan).
+
+## Consecuencias
+
+- **Positivas**: red bajo el dinero/matching/streaming; regresiones cazadas por CI, no en producción; arquitectura más testeable y mantenible; TDD hace de los bugs futuros tests primero.
+- **Negativas / trade-offs**: los tests de integración son más lentos que los unit (se separan en CI); la extracción de seams añade indirección puntual; inversión de tiempo inicial (fases 0-1) antes de ver retorno.
+
+## Notas
+
+Materialización y prioridad viva en `docs/07-roadmap/backlog-priorizado.md` (frente P1). Primer paso concreto (PoC): Fase 0 (CI) + un test de integración con Testcontainers sobre el path de dinero, para validar el patrón antes de extender.
