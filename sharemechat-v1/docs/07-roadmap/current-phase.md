@@ -1,5 +1,14 @@
 # Fase actual
 
+> ⚠️ **Este doc es NARRATIVA de los frentes, NO la fuente de verdad de su ESTADO.**
+> El estado (hecho/pendiente) y la prioridad viven **solo** en
+> [`backlog-priorizado.md`](backlog-priorizado.md), verificados contra código
+> (ver `documentation-governance.md` → "Regla de ESTADO y PRIORIDAD").
+> Lo que aquí ponga como "pendiente/hecho" **puede estar desfasado** — manda el backlog.
+> _Reconciliación de estado conocida al 2026-08-12: varios frentes que este doc lista
+> pendientes (Tickets, KYC modelo, Operational Mode, anti-fraude, replicación PROD) están
+> HECHOS — ver el backlog._
+
 ## Fase activa general
 
 SharemeChat está en **Fase 0 — Cierre de riesgos pre-PRO** del roadmap hacia GO LIVE.
