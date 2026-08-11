@@ -141,6 +141,18 @@
 			<artifactId>spring-security-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- ADR-059 Fase 1: tests de integracion con dependencias reales (Testcontainers).
+		     Versiones gestionadas por el BOM de Spring Boot 3.5. -->
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>mysql</artifactId>
+			<scope>test</scope>
+		</dependency>
 
 		<!-- ADR-044: Caffeine cache para BdC externalizada del Agente IA de soporte -->
 		<dependency>
