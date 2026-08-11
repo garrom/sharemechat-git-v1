@@ -20,6 +20,7 @@ import AdminModelBansPanel from './AdminModelBansPanel';
 import AdminOverviewPanel from './AdminOverviewPanel';
 import AdminProfilePage from './AdminProfilePage';
 import AdminStatsPanel from './AdminStatsPanel';
+import AdminAcquisitionPanel from './AdminAcquisitionPanel';
 import AdminSupportPanel from './AdminSupportPanel';
 import AdminContentPanel from './content/AdminContentPanel';
 import AdminMastersPanel from './AdminMastersPanel';
@@ -68,6 +69,10 @@ const DashboardAdmin = () => {
     users: {
       title: t('admin.users.title', { defaultValue: 'Clientes y Modelos' }),
       subtitle: t('admin.users.subtitle', { defaultValue: 'Embudo de registros y conversion.' }),
+    },
+    acquisition: {
+      title: t('admin.acquisition.title', { defaultValue: 'Adquisición' }),
+      subtitle: t('admin.acquisition.subtitle', { defaultValue: 'De qué canal, país y rol vienen los registros reales (first-party).' }),
     },
     models: {
       title: t('admin.shell.views.models.title'),
@@ -155,6 +160,7 @@ const DashboardAdmin = () => {
     canViewModelBans: adminView || supportView || auditView,
     canModerateModelBans: adminView || supportView,
     canViewStats: adminView || hasBackofficePermission(user, 'stats.read_overview'),
+    canViewAcquisition: adminView,
     canViewFinance: adminView
       || (
         hasBackofficePermission(user, 'finance.read_summary')
@@ -214,6 +220,7 @@ const DashboardAdmin = () => {
       'overview',
       capabilities.canViewStats || capabilities.canViewStreams ? 'operations' : null,
       capabilities.canViewModels ? 'users' : null,
+      capabilities.canViewAcquisition ? 'acquisition' : null,
       capabilities.canViewModels ? 'models' : null,
       capabilities.canViewAssetModeration ? 'asset-moderation' : null,
       capabilities.canViewStreamModeration ? 'stream-moderation' : null,
@@ -293,6 +300,11 @@ const DashboardAdmin = () => {
             key: 'users',
             label: t('admin.users.sidebarLabel', { defaultValue: 'Clientes y Modelos' }),
             meta: t('admin.users.sidebarMeta', { defaultValue: 'Registros y conversion' }),
+          } : null,
+          capabilities.canViewAcquisition ? {
+            key: 'acquisition',
+            label: t('admin.acquisition.sidebar.label', { defaultValue: 'Adquisición' }),
+            meta: t('admin.acquisition.sidebar.meta', { defaultValue: 'Canal, país y landing de los registros' }),
           } : null,
           capabilities.canViewModels ? {
             key: 'models',
@@ -515,6 +527,15 @@ const DashboardAdmin = () => {
               capabilities={capabilities}
               onOpen={setActiveView}
             />
+          )}
+
+          {activeView === 'acquisition' && (
+            <AdminPage
+              title={t('admin.acquisition.wrapper.title', { defaultValue: 'Adquisición' })}
+              subtitle={t('admin.acquisition.wrapper.subtitle', { defaultValue: 'De dónde vienen los registros reales (first-party, sin GA4)' })}
+            >
+              <AdminAcquisitionPanel />
+            </AdminPage>
           )}
 
           {activeView === 'operations' && (
