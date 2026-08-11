@@ -8,6 +8,17 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-08-11 — Panel de Adquisición en backoffice (analítica first-party sobre capa B, ADR-057)
+
+Nuevo panel admin de crecimiento que visualiza **de qué canal / país / rol / landing vienen los registros reales**, apoyado en la capa B de atribución ya existente (ADR-057, `user_acquisition`) cruzada con `users`. Motivación: GA4 está contaminado de forma **estructural** en este vertical (consent-mode + ad-blockers de audiencia adulto/privacy-conscious, además de tráfico interno y bots), así que la fuente de verdad para "quién se registra y de dónde" pasa a ser first-party (server-side).
+
+Cambio **aditivo y de solo lectura**: se descartó tocar registro/entidad/migración/seguridad porque la captura (capa B) ya estaba implementada y probada en `main`; solo faltaba la visualización.
+
+- **Backend**: `AdminService.getAcquisitionOverview(days)` (agrega con `NamedParameterJdbcTemplate` sobre `users`+`user_acquisition`, ventana 1..365d, default 30) + `GET /api/admin/acquisition/overview`. Seguridad sin cambios: catch-all `/api/admin/**` = `ROLE_ADMIN`.
+- **Frontend**: `AdminAcquisitionPanel.jsx` + cableado en `DashboardAdmin.jsx` (vista `acquisition`, admin-only).
+- **Docs**: `docs/05-backoffice/acquisition-analytics.md`. Sin ADR nuevo (la decisión first-party vs GA4 la cubre ADR-057).
+- **Límites v1**: no filtra tráfico interno (no hay flag `is_internal`); registros pre-capa-B aparecen como `(direct/none)` — el KPI de cobertura lo hace visible.
+
 ## 2026-08-07 (tarde) — ADR-054 D8 rediseño: canales separados chat casual / ticket + 5 categorías nuevas + offset AUTO_INCREMENT + prompt bot actualizado
 
 Rediseño estructural del sistema soporte tras feedback UX del operador tras el rediseño anterior de esta misma sesión (mañana). El operador articuló su modelo mental correcto (que había estado implícito en ADR-054 pero implementado de forma cruzada):

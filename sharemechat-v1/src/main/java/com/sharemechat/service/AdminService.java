@@ -108,6 +108,67 @@ public class AdminService {
         this.kycSessionRepository = kycSessionRepository;
     }
 
+    /**
+     * Panel de adquisicion / crecimiento (backoffice). Agrega la capa B de
+     * atribucion first-touch (ADR-057, tabla user_acquisition) junto con users,
+     * para responder "de que canal/pais/rol vienen los registros reales" sin
+     * depender de GA4 (server-side, sin contaminacion de bots/consent/adblock).
+     * Read-only. windowDays acota la ventana temporal (default 30, cap 1..365).
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> getAcquisitionOverview(Integer windowDays) {
+        int days = (windowDays == null) ? 30 : Math.max(1, Math.min(365, windowDays));
+        MapSqlParameterSource p = new MapSqlParameterSource().addValue("days", days);
+        final String since  = "created_at >= DATE_SUB(NOW(), INTERVAL :days DAY)";
+        final String sinceU = "u.created_at >= DATE_SUB(NOW(), INTERVAL :days DAY)";
+
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("windowDays", days);
+
+        long total = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE " + since, p, Long.class);
+        long attributed = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM users u JOIN user_acquisition ua ON ua.user_id = u.id WHERE " + sinceU,
+                p, Long.class);
+        long verified = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE " + since + " AND email_verified_at IS NOT NULL",
+                p, Long.class);
+        out.put("totalRegistrations", total);
+        out.put("withAttribution", attributed);
+        out.put("attributionCoveragePct", pct(attributed, total));
+        out.put("emailVerified", verified);
+        out.put("emailVerifiedPct", pct(verified, total));
+
+        // Registros por dia (serie temporal).
+        out.put("byDay", jdbc.queryForList(
+                "SELECT DATE(created_at) AS day, COUNT(*) AS count FROM users WHERE " + since
+                        + " GROUP BY DATE(created_at) ORDER BY day", p));
+        // Por canal (utm_source). LEFT JOIN: los registros sin atribucion cuentan como directo/none.
+        out.put("bySource", jdbc.queryForList(
+                "SELECT COALESCE(NULLIF(ua.utm_source,''),'(direct/none)') AS source, COUNT(*) AS count "
+                        + "FROM users u LEFT JOIN user_acquisition ua ON ua.user_id = u.id WHERE " + sinceU
+                        + " GROUP BY source ORDER BY count DESC", p));
+        // Por host de referencia (de donde clico).
+        out.put("byReferrerHost", jdbc.queryForList(
+                "SELECT COALESCE(NULLIF(ua.referrer_host,''),'(none)') AS host, COUNT(*) AS count "
+                        + "FROM users u LEFT JOIN user_acquisition ua ON ua.user_id = u.id WHERE " + sinceU
+                        + " GROUP BY host ORDER BY count DESC LIMIT 15", p));
+        // Por pais detectado en el registro.
+        out.put("byCountry", jdbc.queryForList(
+                "SELECT COALESCE(country_detected,'(unknown)') AS country, COUNT(*) AS count FROM users WHERE " + since
+                        + " GROUP BY country ORDER BY count DESC LIMIT 20", p));
+        // Por rol / tipo de formulario (cliente vs modelo vs master).
+        out.put("byRole", jdbc.queryForList(
+                "SELECT role, user_type AS userType, COUNT(*) AS count FROM users WHERE " + since
+                        + " GROUP BY role, user_type ORDER BY count DESC", p));
+        // Landing page que trajo el registro (mide el GEO/blog: que articulo convierte).
+        out.put("topLandingPaths", jdbc.queryForList(
+                "SELECT COALESCE(NULLIF(ua.landing_path,''),'(none)') AS path, COUNT(*) AS count "
+                        + "FROM users u JOIN user_acquisition ua ON ua.user_id = u.id WHERE " + sinceU
+                        + " GROUP BY path ORDER BY count DESC LIMIT 15", p));
+        return out;
+    }
+
     @Transactional(readOnly = true)
     public List<UserDTO> getModels(String verification) {
         return getModels(verification, false);
