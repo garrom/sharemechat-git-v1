@@ -278,6 +278,14 @@ public class AdminController {
         ));
     }
 
+    // Panel de adquisicion / crecimiento (ADR-057 capa B). Read-only, first-party.
+    // Protegido por el catch-all /api/admin/** = ROLE_ADMIN (SecurityConfig).
+    @GetMapping("/acquisition/overview")
+    public ResponseEntity<Map<String, Object>> acquisitionOverview(
+            @RequestParam(required = false) Integer days) {
+        return ResponseEntity.ok(adminService.getAcquisitionOverview(days));
+    }
+
     @GetMapping("/administration/backoffice-users")
     public ResponseEntity<BackofficeAdministrationDTOs.BackofficeAdminOverview> backofficeUsers() {
         return ResponseEntity.ok(adminServiceBackofficeOverview());
