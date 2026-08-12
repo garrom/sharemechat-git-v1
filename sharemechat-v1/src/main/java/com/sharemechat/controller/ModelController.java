@@ -285,15 +285,16 @@ public class ModelController {
                 .map(MasterModelSplit::getInternalSharePct)
                 .orElse(null);
 
-        // ADR-056 Opcion D iter.2 (2026-08-02): saldo informativo acumulado.
-        // La modelo bajo Master no cobra por plataforma (paga el Master
-        // fuera), pero necesita ver cuánto ha generado neto pactado.
-        BigDecimal grossAttributed = transactionRepository.sumAttributedGrossEarnings(user.getId());
+        // ADR-056 Opcion D (rev. 2026-08-13): saldo informativo acumulado.
+        // La modelo bajo Master no cobra por plataforma (paga el Master fuera),
+        // pero necesita ver cuánto ha generado neto pactado. Se suma el neto
+        // redondeado POR FILA (mismo criterio que la columna "Neto Modelo" de la
+        // tabla) para que la modelo, al sumar su tabla, obtenga su saldo. Incluye
+        // STREAM/GIFT/TRIAL.
         BigDecimal accumulatedNetPactado = BigDecimal.ZERO;
-        if (grossAttributed != null && pct != null && grossAttributed.signum() > 0 && pct.signum() > 0) {
-            accumulatedNetPactado = grossAttributed
-                    .multiply(pct)
-                    .divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+        if (pct != null && pct.signum() > 0) {
+            BigDecimal net = transactionRepository.sumAttributedNetPactado(user.getId(), pct);
+            if (net != null) accumulatedNetPactado = net;
         }
 
         return ResponseEntity.ok(ModelMasterInfoDTO.of(displayName, pct, accumulatedNetPactado));

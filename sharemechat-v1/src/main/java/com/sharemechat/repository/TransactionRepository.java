@@ -279,16 +279,24 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             Pageable pageable);
 
     /**
-     * ADR-056 Opcion D iter.2 (2026-08-02): sumatorio bruto de earnings
-     * atribuidas a la modelo (STREAM_EARNING + GIFT_EARNING). Sirve al
-     * endpoint /models/me/master-info para calcular accumulatedNetPactado
-     * = grossAttributed * internalSharePct/100. Ignora gifts con amount=0.
+     * ADR-056 Opcion D (rev. 2026-08-13): saldo informativo NETO PACTADO de la
+     * modelo bajo Master = suma del neto por transaccion atribuida, redondeado
+     * POR FILA a 2 decimales (mismo criterio que la columna "Neto Modelo" de la
+     * pestana Facturacion), para que lo que la modelo suma en su tabla cuadre
+     * con el saldo que ve. Sirve al endpoint /models/me/master-info.
+     *
+     * Incluye STREAM_EARNING + GIFT_EARNING + TRIAL_EARNING (el trial tambien es
+     * ganancia generada por la modelo; se decidio contarlo el 2026-08-13). Ignora
+     * gifts con amount=0. Nativa por el ROUND por fila: sumar el bruto y redondear
+     * el total una sola vez daba un desajuste de centimos con la tabla.
      */
-    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t "
-            + "WHERE t.attributedModelUserId = :modelId "
-            + "  AND t.operationType IN ('STREAM_EARNING', 'GIFT_EARNING') "
-            + "  AND NOT (t.operationType = 'GIFT_EARNING' AND t.amount = 0)")
-    BigDecimal sumAttributedGrossEarnings(@Param("modelId") Long modelId);
+    @Query(value = "SELECT COALESCE(SUM(ROUND(amount * :pct / 100, 2)), 0) FROM transactions "
+            + "WHERE attributed_model_user_id = :modelId "
+            + "  AND operation_type IN ('STREAM_EARNING', 'GIFT_EARNING', 'TRIAL_EARNING') "
+            + "  AND NOT (operation_type = 'GIFT_EARNING' AND amount = 0)",
+            nativeQuery = true)
+    BigDecimal sumAttributedNetPactado(@Param("modelId") Long modelId,
+                                       @Param("pct") java.math.BigDecimal pct);
 
     /**
      * ADR-056 iter.6 (2026-08-02): top modelos del Master por facturación
