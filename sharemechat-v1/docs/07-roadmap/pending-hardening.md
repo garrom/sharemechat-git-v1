@@ -799,3 +799,17 @@ Sub-tareas:
 - **6.4.T1 — Tramo fundadora en BD**: crear registro `TierConfig` (o equivalente en el esquema real de tiers) con `percentage=70` marcado como "founder" e inmune al recálculo por volumen. Requiere revisar `sistema-tiers-modelos.md` (bloqueado por 6.3) y `TierService`.
 - **6.4.T2 — Badge fundadora en perfil modelo**: campo `founder_since` en `Model` o flag `is_founder` + badge visual en la ficha pública. Estimación: sesión corta.
 - **6.4.T3 — Verificar bypass PRELAUNCH via allowlist-by-userId funciona** para ensayo privado con las fundadoras antes del GO LIVE público (mencionado en A0004 §Secuencia paso 2). Ya existe según `product.access.allowlist.user-ids`; solo falta smoke.
+
+## Parte 7 — Determinismo de migraciones Flyway (bloquea bootstrap desde cero) — PRIORIDAD MEDIA
+
+**Contexto (frente testing ADR-059, 2026-08-12)**: el fresh-apply de las 51 migraciones (V1..V51 seguidas, como en un entorno nuevo o en CI) es **no-determinista**. `V42__add_master_studio_system.sql` reconstruye `model_pricing_tiers`: cierra las filas sembradas por V39 (que tienen `effective_from = CURRENT_TIMESTAMP` del momento de V39) e inserta filas nuevas con `effective_from = CURRENT_TIMESTAMP` (momento de V42), sobre la unique `(target_type, tier_code, effective_from)`. Si V39 y V42 caen en el **mismo segundo** de reloj (precisión `DATETIME` = segundo), la tupla `(INDIVIDUAL, T1, <ese-segundo>)` colisiona → `Duplicate entry ... for key uq_mpt_target_code_effective` y el arranque **aborta**.
+
+**No afecta a TEST/AUDIT/PROD ya migrados** (V39 y V42 se aplicaron en deploys separados por días → `effective_from` distintos). **Sí afecta** a: (a) montar un entorno nuevo desde cero (staging, DR, rebuild de la BD desde migraciones), (b) la CI de tests de integración (mitigado, ver abajo). Es **flaky**: según el segundo de reloj, unas veces colisiona y otras no.
+
+**Mitigación aplicada (NO resuelve la raíz)**: los tests de integración (ADR-059) no re-ejecutan las 51 migraciones; aplican un **baseline determinista** (`src/test/resources/db/migration-it/V1__it_baseline.sql`, volcado tras aplicar las 51 migraciones en dos tandas con pausa entre V41 y V42). Regenerable con `scratchpad/gen-baseline.sh`. Esto desbloquea la CI pero deja la raíz sin arreglar.
+
+**Raíz sin resolver** (V42 **no** se puede editar: cambiaría su checksum Flyway y abortaría el arranque de TEST/AUDIT/PROD ya migrados):
+
+- **7.T1 — Documentar el riesgo de bootstrap**: cualquier `flyway migrate` fresh de V1..V51 puede fallar en V42 por timing. El runbook de "levantar entorno nuevo" debe aplicar en tandas con pausa, o partir de un dump de esquema en vez del historial completo.
+- **7.T2 — Doctrina para migraciones futuras**: no usar `CURRENT_TIMESTAMP` (precisión segundo) como parte de una clave única cuando otra migración pueda insertar la misma tupla lógica en el mismo segundo. Preferir `effective_from` explícito/parametrizado, `DATETIME(6)` (microsegundos), o una versión-secuencia en lugar de timestamp.
+- **7.T3 — (opcional) baseline oficial de arranque**: si se quiere soportar bootstrap fresh fiable, considerar Flyway `baselineVersion` sobre un dump de esquema versionado (mismo patrón que el baseline de tests) en vez de re-ejecutar todo el historial.

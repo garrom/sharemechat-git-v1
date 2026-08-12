@@ -18,13 +18,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * ADR-059 Fase 1 (PoC): primer test de INTEGRACIÓN con dependencias reales.
  *
- * <p>Levanta un MySQL real con Testcontainers, deja que Flyway aplique TODAS las
- * migraciones (V1..V51 — el mismo esquema que TEST/AUDIT/PROD) y un repositorio
- * del path de dinero consulta ese esquema real. Valida el patrón Testcontainers
- * + esquema real, que es la base de la capa de integración que faltaba (dinero,
- * matching, streaming). El siguiente paso (mismo frente) es subir del repositorio
- * a la LÓGICA de negocio: TransactionService (cargos/balances/gift charge) con
- * @SpringBootTest + este mismo MySQL + Redis.
+ * <p>Levanta un MySQL real con Testcontainers, deja que Flyway aplique el BASELINE
+ * de esquema real (classpath:db/migration-it — el mismo esquema que TEST/AUDIT/PROD,
+ * volcado tras las 51 migraciones) y un repositorio del path de dinero consulta ese
+ * esquema real. Valida el patrón Testcontainers + esquema real, base de la capa de
+ * integración que faltaba (dinero, matching, streaming).
+ *
+ * <p>Usa el baseline y NO las 51 migraciones directas porque V42 colisiona de forma
+ * no-determinista en fresh-apply (unique con timestamp de segundo; ver
+ * docs/pending-hardening). El baseline se regenera con scratchpad/gen-baseline.sh.
+ *
+ * <p>El escalón superior (contexto Spring completo + servicio + @Transactional real)
+ * es {@link TransactionServiceIntegrationTest}.
  *
  * <p>Requiere Docker (disponible en el runner de CI y en el equipo si Docker
  * Desktop está arrancado).
@@ -45,8 +50,9 @@ class MoneyPersistenceIntegrationTest {
         registry.add("spring.datasource.username", MYSQL::getUsername);
         registry.add("spring.datasource.password", MYSQL::getPassword);
         registry.add("spring.datasource.driver-class-name", () -> "com.mysql.cj.jdbc.Driver");
-        // Flyway es la autoridad del esquema; Hibernate no lo toca.
+        // Flyway es la autoridad del esquema (baseline determinista); Hibernate no lo toca.
         registry.add("spring.flyway.enabled", () -> "true");
+        registry.add("spring.flyway.locations", () -> "classpath:db/migration-it");
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
     }
 
