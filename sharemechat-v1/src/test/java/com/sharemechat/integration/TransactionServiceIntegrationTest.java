@@ -52,14 +52,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * (doble ledger cliente↔plataforma), los guards de {@code addBalance}
  * (saldo insuficiente en GASTO, y que GASTO no altera total_pagos), y el regalo
  * en chat {@code processGiftInChat} (lock de 2 wallets + reparto por tramo:
- * débito al cliente, crédito a la modelo y margen a la plataforma). Los métodos
- * usan {@code SELECT ... FOR UPDATE}, por eso exigen MySQL real. Cada test es
+ * débito al cliente, crédito a la modelo y margen a la plataforma), en sus dos
+ * variantes: modelo individual, y modelo bajo Master (el earning se atribuye al
+ * Master y la caché de la modelo no se toca). Los métodos usan
+ * {@code SELECT ... FOR UPDATE}, por eso exigen MySQL real. Cada test es
  * {@code @Transactional}: revierte al terminar, dejando la BD limpia.
  *
- * <p>Pendiente (mismo frente): variante del gift con modelo bajo Master
- * (el earning se atribuye al Master, no a la modelo) y
- * {@code manualRefundToClient} (refund ligado a ticket, ADR-054). Luego
- * matching/streaming (Fases 2-4 del ADR).
+ * <p>Pendiente (mismo frente): {@code manualRefundToClient} (refund ligado a
+ * ticket, ADR-054). Luego matching/streaming (Fases 2-4 del ADR).
  *
  * <p>Requiere Docker (disponible en el runner de CI).
  */
@@ -126,7 +126,7 @@ class TransactionServiceIntegrationTest {
      * deriva del user y {@code save()} hace persist (isNew=true). Si se seteara,
      * Spring Data lo tomaría como merge/UPDATE de una fila inexistente.
      */
-    private Long persistModelUser(String nick, String email) {
+    private Long persistModelUser(String nick, String email, Long masterUserId) {
         User u = new User();
         u.setNickname(nick);
         u.setEmail(email);
@@ -137,10 +137,25 @@ class TransactionServiceIntegrationTest {
         User saved = userRepository.save(u);
 
         Model m = new Model();
-        m.setUser(saved);            // @MapsId deriva user_id (individual: masterUserId = null)
+        m.setUser(saved);            // @MapsId deriva user_id; NO setUserId
+        if (masterUserId != null) {  // null = modelo individual; NOT NULL = bajo Master
+            m.setMasterUserId(masterUserId);
+        }
         modelRepository.save(m);
 
         return saved.getId();
+    }
+
+    /** Usuario con rol MASTER (estudio). Devuelve su id. */
+    private Long persistMasterUser(String nick, String email) {
+        User u = new User();
+        u.setNickname(nick);
+        u.setEmail(email);
+        u.setPassword("x");
+        u.setRole(Constants.Roles.MASTER);
+        u.setUserType(Constants.UserTypes.FORM_MASTER);
+        u.setUiLocale("es");
+        return userRepository.save(u).getId();
     }
 
     /** Gift activo con coste dado. Devuelve su id. */
@@ -262,7 +277,7 @@ class TransactionServiceIntegrationTest {
                 "order-gift", "pack-gift", true, "TEST");
 
         // Modelo individual (sin Master) y gift de 10.00.
-        Long modelId = persistModelUser("ci-gift-model", "ci-gift-model@example.test");
+        Long modelId = persistModelUser("ci-gift-model", "ci-gift-model@example.test", null);
         Long giftId = persistGift("Rosa", "10.00");
 
         // Envío del gift en chat (streamId null → sin sesión requerida).
@@ -287,6 +302,53 @@ class TransactionServiceIntegrationTest {
         assertThat(model.getTotalIngresos()).isEqualByComparingTo("5.00");
 
         // Plataforma: margen GIFT_MARGIN por 5.00 (cost - modelEarning).
+        List<PlatformTransaction> margins = platformTransactionRepository.findAll().stream()
+                .filter(p -> "GIFT_MARGIN".equals(p.getOperationType()))
+                .collect(Collectors.toList());
+        assertThat(margins).hasSize(1);
+        assertThat(margins.get(0).getAmount()).isEqualByComparingTo("5.00");
+    }
+
+    @Test
+    @Transactional
+    void processGiftInChat_bajo_master_atribuye_earning_al_master_no_a_la_modelo() {
+        // Cliente con saldo 20.00.
+        Long clientId = persistFormClient("ci-giftm-client", "ci-giftm-client@example.test");
+        transactionService.creditPackWithBonus(
+                clientId, new BigDecimal("20.00"), BigDecimal.ZERO,
+                "order-giftm", "pack-giftm", true, "TEST");
+
+        // Master + modelo BAJO ese Master + gift de 10.00.
+        Long masterId = persistMasterUser("ci-giftm-master", "ci-giftm-master@example.test");
+        Long modelId = persistModelUser("ci-giftm-model", "ci-giftm-model@example.test", masterId);
+        Long giftId = persistGift("Rosa", "10.00");
+
+        transactionService.processGiftInChat(clientId, modelId, giftId);
+
+        // Reparto por tramo INDIVIDUAL T1 50%: earning 5.00, margen 5.00.
+        // Bajo Master, el earning se atribuye al MASTER, no a la modelo.
+
+        // Cliente debitado igual (GIFT_SEND, 20 -> 10).
+        Balance clientBal = balanceRepository.findTopByUserIdOrderByTimestampDescIdDesc(clientId).orElseThrow();
+        assertThat(clientBal.getBalance()).isEqualByComparingTo("10.00");
+        assertThat(clientBal.getOperationType()).isEqualTo("GIFT_SEND");
+
+        // El MASTER recibe el earning: balance 5.00 (GIFT_EARNING) con atribución a la modelo.
+        Balance masterBal = balanceRepository.findTopByUserIdOrderByTimestampDescIdDesc(masterId).orElseThrow();
+        assertThat(masterBal.getBalance()).isEqualByComparingTo("5.00");
+        assertThat(masterBal.getOperationType()).isEqualTo("GIFT_EARNING");
+        Transaction masterTx = transactionRepository.findById(masterBal.getTransactionId()).orElseThrow();
+        assertThat(masterTx.getAttributedModelUserId()).isEqualTo(modelId);
+
+        // La modelo NO recibe balance (todo va al Master).
+        assertThat(balanceRepository.findTopByUserIdOrderByTimestampDescIdDesc(modelId)).isEmpty();
+
+        // Model entity NO se toca bajo Master (saldo/total_ingresos quedan en 0).
+        Model model = modelRepository.findByUser(userRepository.findById(modelId).orElseThrow()).orElseThrow();
+        assertThat(model.getSaldoActual()).isEqualByComparingTo("0.00");
+        assertThat(model.getTotalIngresos()).isEqualByComparingTo("0.00");
+
+        // Plataforma: margen GIFT_MARGIN 5.00 (igual que en el caso individual).
         List<PlatformTransaction> margins = platformTransactionRepository.findAll().stream()
                 .filter(p -> "GIFT_MARGIN".equals(p.getOperationType()))
                 .collect(Collectors.toList());
