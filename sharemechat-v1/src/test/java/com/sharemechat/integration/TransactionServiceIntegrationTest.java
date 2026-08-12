@@ -17,6 +17,8 @@ import com.sharemechat.repository.PlatformTransactionRepository;
 import com.sharemechat.repository.TransactionRepository;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.service.TransactionService;
+import com.sharemechat.support.entity.SupportTicket;
+import com.sharemechat.support.repository.SupportTicketRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -55,13 +57,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * débito al cliente, crédito a la modelo y margen a la plataforma), en sus dos
  * variantes: modelo individual, y modelo bajo Master (el earning se atribuye al
  * Master y la caché de la modelo no se toca), y el refund manual de admin
- * {@code manualRefundToClient} (crédito al cliente + gasto a la plataforma). Los
- * métodos usan {@code SELECT ... FOR UPDATE}, por eso exigen MySQL real. Cada
- * test es {@code @Transactional}: revierte al terminar, dejando la BD limpia.
+ * {@code manualRefundToClient} en sus dos variantes: libre (crédito al cliente +
+ * gasto a la plataforma) y ligado a ticket (ADR-054: cierra el SupportTicket en
+ * RESOLVED_COMPENSATED, linkándolo a la Transaction). Los métodos usan
+ * {@code SELECT ... FOR UPDATE}, por eso exigen MySQL real. Cada test es
+ * {@code @Transactional}: revierte al terminar, dejando la BD limpia.
  *
- * <p>Pendiente (mismo frente): variante del refund con {@code ticketId} (ADR-054:
- * valida y cierra el ticket en RESOLVED_COMPENSATED). Luego matching/streaming
- * (Fases 2-4 del ADR).
+ * <p>Con esto el bloque de dinero de {@code TransactionService} queda cubierto;
+ * el siguiente frente es matching/streaming (Fases 2-4 del ADR).
  *
  * <p>Requiere Docker (disponible en el runner de CI).
  */
@@ -90,6 +93,7 @@ class TransactionServiceIntegrationTest {
     @Autowired PlatformTransactionRepository platformTransactionRepository;
     @Autowired GiftRepository giftRepository;
     @Autowired ModelRepository modelRepository;
+    @Autowired SupportTicketRepository supportTicketRepository;
 
     // --- Helpers ---
 
@@ -400,5 +404,42 @@ class TransactionServiceIntegrationTest {
                 .collect(Collectors.toList());
         assertThat(expenses).hasSize(1);
         assertThat(expenses.get(0).getAmount()).isEqualByComparingTo("-10.00");
+    }
+
+    @Test
+    @Transactional
+    void manualRefundToClient_con_ticket_cierra_el_ticket_en_resolved_compensated() {
+        Long clientId = persistFormClient("ci-reftk-client", "ci-reftk-client@example.test");
+        transactionService.creditPackWithBonus(
+                clientId, new BigDecimal("20.00"), BigDecimal.ZERO,
+                "order-reftk", "pack-reftk", true, "TEST");
+        Long adminId = persistAdminUser("ci-reftk-admin", "ci-reftk-admin@example.test");
+
+        // Ticket del cliente en el estado previo a la compensación (ADR-054 D4).
+        SupportTicket ticket = new SupportTicket();
+        ticket.setUserId(clientId);
+        ticket.setCategory("PAYMENT_NOT_CREDITED");
+        ticket.setStatus("RESOLVED_COMPENSATED_PENDING_CREDIT");
+        ticket.setDescription("incidencia CI");
+        final Long ticketId = supportTicketRepository.save(ticket).getId();
+
+        TransactionRequestDTO req = dto("10.00", null, "compensacion via ticket");
+        req.setTicketId(ticketId);
+
+        BigDecimal newBalance = transactionService.manualRefundToClient(clientId, adminId, req);
+        assertThat(newBalance).isEqualByComparingTo("30.00");
+
+        // El ticket queda cerrado (RESOLVED_COMPENSATED) y linkado a la Transaction del refund.
+        SupportTicket closed = supportTicketRepository.findById(ticketId).orElseThrow();
+        assertThat(closed.getStatus()).isEqualTo("RESOLVED_COMPENSATED");
+        assertThat(closed.getCompensatedAmountEur()).isEqualByComparingTo("10.00");
+        assertThat(closed.getResolvedByAdminId()).isEqualTo(adminId);
+        assertThat(closed.getCompensatedTransactionId()).isNotNull();
+
+        // La Transaction del refund lleva el ticketId, y el ticket apunta a esa Transaction.
+        Balance clientBal = balanceRepository.findTopByUserIdOrderByTimestampDescIdDesc(clientId).orElseThrow();
+        Transaction refundTx = transactionRepository.findById(clientBal.getTransactionId()).orElseThrow();
+        assertThat(refundTx.getTicketId()).isEqualTo(ticketId);
+        assertThat(closed.getCompensatedTransactionId()).isEqualTo(refundTx.getId());
     }
 }
