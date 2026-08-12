@@ -95,7 +95,16 @@ class MoneyPersistenceIntegrationTest {
         recipient.setUiLocale("es");
         recipient = userRepository.saveAndFlush(recipient);
 
-        final Long modelId = 987654L;         // id atribuido ficticio, aislado del baseline
+        // La columna transactions.attributed_model_user_id tiene FK a users,
+        // así que el id atribuido debe ser un user MODEL real.
+        User model = new User();
+        model.setNickname("it-net-model");
+        model.setEmail("it-net-model@example.test");
+        model.setPassword("x");
+        model.setRole(Constants.Roles.MODEL);
+        model.setUserType(Constants.UserTypes.FORM_MODEL);
+        model.setUiLocale("es");
+        final Long modelId = userRepository.saveAndFlush(model).getId();
 
         saveEarning(recipient, "STREAM_EARNING", "3.18", modelId);
         saveEarning(recipient, "GIFT_EARNING",   "7.00", modelId);
