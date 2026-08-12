@@ -4,11 +4,15 @@ import com.sharemechat.constants.Constants;
 import com.sharemechat.dto.TransactionRequestDTO;
 import com.sharemechat.entity.Balance;
 import com.sharemechat.entity.Client;
+import com.sharemechat.entity.Gift;
+import com.sharemechat.entity.Model;
 import com.sharemechat.entity.PlatformTransaction;
 import com.sharemechat.entity.Transaction;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.BalanceRepository;
 import com.sharemechat.repository.ClientRepository;
+import com.sharemechat.repository.GiftRepository;
+import com.sharemechat.repository.ModelRepository;
 import com.sharemechat.repository.PlatformTransactionRepository;
 import com.sharemechat.repository.TransactionRepository;
 import com.sharemechat.repository.UserRepository;
@@ -45,14 +49,17 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * {@code @Transactional} activo — sobre los métodos de dinero del cliente.
  *
  * <p>Cubre: primer pago (activación premium), recarga de pack con bonus
- * (doble ledger cliente↔plataforma) y los guards de {@code addBalance}
- * (saldo insuficiente en GASTO, y que GASTO no altera total_pagos). Los métodos
+ * (doble ledger cliente↔plataforma), los guards de {@code addBalance}
+ * (saldo insuficiente en GASTO, y que GASTO no altera total_pagos), y el regalo
+ * en chat {@code processGiftInChat} (lock de 2 wallets + reparto por tramo:
+ * débito al cliente, crédito a la modelo y margen a la plataforma). Los métodos
  * usan {@code SELECT ... FOR UPDATE}, por eso exigen MySQL real. Cada test es
  * {@code @Transactional}: revierte al terminar, dejando la BD limpia.
  *
- * <p>Pendiente (mismo frente, requiere setup de Model + tramo + Gift):
- * {@code processGift}/{@code processGiftInChat} (regalo cliente→modelo con
- * reparto por tramo y lock de 2 wallets).
+ * <p>Pendiente (mismo frente): variante del gift con modelo bajo Master
+ * (el earning se atribuye al Master, no a la modelo) y
+ * {@code manualRefundToClient} (refund ligado a ticket, ADR-054). Luego
+ * matching/streaming (Fases 2-4 del ADR).
  *
  * <p>Requiere Docker (disponible en el runner de CI).
  */
@@ -79,6 +86,8 @@ class TransactionServiceIntegrationTest {
     @Autowired BalanceRepository balanceRepository;
     @Autowired ClientRepository clientRepository;
     @Autowired PlatformTransactionRepository platformTransactionRepository;
+    @Autowired GiftRepository giftRepository;
+    @Autowired ModelRepository modelRepository;
 
     // --- Helpers ---
 
@@ -106,6 +115,42 @@ class TransactionServiceIntegrationTest {
     private Client reloadClient(Long userId) {
         User u = userRepository.findById(userId).orElseThrow();
         return clientRepository.findByUser(u).orElseThrow();
+    }
+
+    /**
+     * Usuario con rol MODEL (individual, sin Master) + su entidad {@link Model}
+     * (como en producción: una modelo aprobada siempre tiene su fila en models).
+     * Devuelve el id del usuario.
+     *
+     * <p>Importante: NO se setea userId en el Model; con {@code @MapsId} el id se
+     * deriva del user y {@code save()} hace persist (isNew=true). Si se seteara,
+     * Spring Data lo tomaría como merge/UPDATE de una fila inexistente.
+     */
+    private Long persistModelUser(String nick, String email) {
+        User u = new User();
+        u.setNickname(nick);
+        u.setEmail(email);
+        u.setPassword("x");
+        u.setRole(Constants.Roles.MODEL);
+        u.setUserType(Constants.UserTypes.FORM_MODEL);
+        u.setUiLocale("es");
+        User saved = userRepository.save(u);
+
+        Model m = new Model();
+        m.setUser(saved);            // @MapsId deriva user_id (individual: masterUserId = null)
+        modelRepository.save(m);
+
+        return saved.getId();
+    }
+
+    /** Gift activo con coste dado. Devuelve su id. */
+    private Long persistGift(String name, String cost) {
+        Gift g = new Gift();
+        g.setName(name);
+        g.setIcon("gift.png");   // NOT NULL
+        g.setCost(new BigDecimal(cost));
+        // tier=QUICK, featured=false, active=true, displayOrder=0 por defecto en la entidad.
+        return giftRepository.save(g).getId();
     }
 
     // --- Tests ---
@@ -205,5 +250,47 @@ class TransactionServiceIntegrationTest {
         Client client = reloadClient(userId);
         assertThat(client.getSaldoActual()).isEqualByComparingTo("15.00"); // 20 - 5
         assertThat(client.getTotalPagos()).isEqualByComparingTo("20.00");  // GASTO no toca total_pagos
+    }
+
+    @Test
+    @Transactional
+    void processGiftInChat_reparte_por_tramo_debita_cliente_acredita_modelo_y_plataforma() {
+        // Cliente con saldo 20.00 (recarga simple, promueve a CLIENT).
+        Long clientId = persistFormClient("ci-gift-client", "ci-gift-client@example.test");
+        transactionService.creditPackWithBonus(
+                clientId, new BigDecimal("20.00"), BigDecimal.ZERO,
+                "order-gift", "pack-gift", true, "TEST");
+
+        // Modelo individual (sin Master) y gift de 10.00.
+        Long modelId = persistModelUser("ci-gift-model", "ci-gift-model@example.test");
+        Long giftId = persistGift("Rosa", "10.00");
+
+        // Envío del gift en chat (streamId null → sin sesión requerida).
+        transactionService.processGiftInChat(clientId, modelId, giftId);
+
+        // Modelo sin historial ⇒ tramo T1 INDIVIDUAL (50%). cost=10 ⇒ modelo 5.00, plataforma 5.00.
+
+        // Cliente debitado: última fila de balance = 20 - 10 = 10.00 (GIFT_SEND).
+        Balance clientBal = balanceRepository.findTopByUserIdOrderByTimestampDescIdDesc(clientId).orElseThrow();
+        assertThat(clientBal.getBalance()).isEqualByComparingTo("10.00");
+        assertThat(clientBal.getOperationType()).isEqualTo("GIFT_SEND");
+        assertThat(reloadClient(clientId).getSaldoActual()).isEqualByComparingTo("10.00");
+
+        // Modelo acreditada: última fila de balance = 0 + 5 = 5.00 (GIFT_EARNING).
+        Balance modelBal = balanceRepository.findTopByUserIdOrderByTimestampDescIdDesc(modelId).orElseThrow();
+        assertThat(modelBal.getBalance()).isEqualByComparingTo("5.00");
+        assertThat(modelBal.getOperationType()).isEqualTo("GIFT_EARNING");
+
+        // Caché de la entidad Model (individual): saldo y total_ingresos.
+        Model model = modelRepository.findByUser(userRepository.findById(modelId).orElseThrow()).orElseThrow();
+        assertThat(model.getSaldoActual()).isEqualByComparingTo("5.00");
+        assertThat(model.getTotalIngresos()).isEqualByComparingTo("5.00");
+
+        // Plataforma: margen GIFT_MARGIN por 5.00 (cost - modelEarning).
+        List<PlatformTransaction> margins = platformTransactionRepository.findAll().stream()
+                .filter(p -> "GIFT_MARGIN".equals(p.getOperationType()))
+                .collect(Collectors.toList());
+        assertThat(margins).hasSize(1);
+        assertThat(margins.get(0).getAmount()).isEqualByComparingTo("5.00");
     }
 }
