@@ -117,7 +117,15 @@ class TransactionServiceIntegrationTest {
         return clientRepository.findByUser(u).orElseThrow();
     }
 
-    /** Usuario con rol MODEL (individual, sin Master). Devuelve su id. */
+    /**
+     * Usuario con rol MODEL (individual, sin Master) + su entidad {@link Model}
+     * (como en producción: una modelo aprobada siempre tiene su fila en models).
+     * Devuelve el id del usuario.
+     *
+     * <p>Importante: NO se setea userId en el Model; con {@code @MapsId} el id se
+     * deriva del user y {@code save()} hace persist (isNew=true). Si se seteara,
+     * Spring Data lo tomaría como merge/UPDATE de una fila inexistente.
+     */
     private Long persistModelUser(String nick, String email) {
         User u = new User();
         u.setNickname(nick);
@@ -126,7 +134,13 @@ class TransactionServiceIntegrationTest {
         u.setRole(Constants.Roles.MODEL);
         u.setUserType(Constants.UserTypes.FORM_MODEL);
         u.setUiLocale("es");
-        return userRepository.save(u).getId();
+        User saved = userRepository.save(u);
+
+        Model m = new Model();
+        m.setUser(saved);            // @MapsId deriva user_id (individual: masterUserId = null)
+        modelRepository.save(m);
+
+        return saved.getId();
     }
 
     /** Gift activo con coste dado. Devuelve su id. */
