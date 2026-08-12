@@ -54,12 +54,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * en chat {@code processGiftInChat} (lock de 2 wallets + reparto por tramo:
  * débito al cliente, crédito a la modelo y margen a la plataforma), en sus dos
  * variantes: modelo individual, y modelo bajo Master (el earning se atribuye al
- * Master y la caché de la modelo no se toca). Los métodos usan
- * {@code SELECT ... FOR UPDATE}, por eso exigen MySQL real. Cada test es
- * {@code @Transactional}: revierte al terminar, dejando la BD limpia.
+ * Master y la caché de la modelo no se toca), y el refund manual de admin
+ * {@code manualRefundToClient} (crédito al cliente + gasto a la plataforma). Los
+ * métodos usan {@code SELECT ... FOR UPDATE}, por eso exigen MySQL real. Cada
+ * test es {@code @Transactional}: revierte al terminar, dejando la BD limpia.
  *
- * <p>Pendiente (mismo frente): {@code manualRefundToClient} (refund ligado a
- * ticket, ADR-054). Luego matching/streaming (Fases 2-4 del ADR).
+ * <p>Pendiente (mismo frente): variante del refund con {@code ticketId} (ADR-054:
+ * valida y cierra el ticket en RESOLVED_COMPENSATED). Luego matching/streaming
+ * (Fases 2-4 del ADR).
  *
  * <p>Requiere Docker (disponible en el runner de CI).
  */
@@ -154,6 +156,18 @@ class TransactionServiceIntegrationTest {
         u.setPassword("x");
         u.setRole(Constants.Roles.MASTER);
         u.setUserType(Constants.UserTypes.FORM_MASTER);
+        u.setUiLocale("es");
+        return userRepository.save(u).getId();
+    }
+
+    /** Usuario con rol ADMIN (para adminId de refunds; no se valida contra users). */
+    private Long persistAdminUser(String nick, String email) {
+        User u = new User();
+        u.setNickname(nick);
+        u.setEmail(email);
+        u.setPassword("x");
+        u.setRole(Constants.Roles.ADMIN);
+        u.setUserType(Constants.UserTypes.FORM_CLIENT); // userType no relevante en este flujo
         u.setUiLocale("es");
         return userRepository.save(u).getId();
     }
@@ -354,5 +368,37 @@ class TransactionServiceIntegrationTest {
                 .collect(Collectors.toList());
         assertThat(margins).hasSize(1);
         assertThat(margins.get(0).getAmount()).isEqualByComparingTo("5.00");
+    }
+
+    @Test
+    @Transactional
+    void manualRefundToClient_acredita_al_cliente_y_carga_a_la_plataforma() {
+        // Cliente CLIENT con saldo 20.00.
+        Long clientId = persistFormClient("ci-refund-client", "ci-refund-client@example.test");
+        transactionService.creditPackWithBonus(
+                clientId, new BigDecimal("20.00"), BigDecimal.ZERO,
+                "order-refund", "pack-refund", true, "TEST");
+
+        Long adminId = persistAdminUser("ci-refund-admin", "ci-refund-admin@example.test");
+
+        // Refund libre (sin ticket) de 10.00.
+        BigDecimal newBalance = transactionService.manualRefundToClient(
+                clientId, adminId, dto("10.00", null, "compensacion CI"));
+
+        // Retorno = saldo previo + refund.
+        assertThat(newBalance).isEqualByComparingTo("30.00");
+
+        // Cliente acreditado: última fila de balance = 30.00 (MANUAL_REFUND).
+        Balance clientBal = balanceRepository.findTopByUserIdOrderByTimestampDescIdDesc(clientId).orElseThrow();
+        assertThat(clientBal.getBalance()).isEqualByComparingTo("30.00");
+        assertThat(clientBal.getOperationType()).isEqualTo(Constants.OperationTypes.MANUAL_REFUND);
+        assertThat(reloadClient(clientId).getSaldoActual()).isEqualByComparingTo("30.00");
+
+        // Plataforma asume el gasto: MANUAL_REFUND_EXPENSE por -10.00.
+        List<PlatformTransaction> expenses = platformTransactionRepository.findAll().stream()
+                .filter(p -> Constants.OperationTypes.MANUAL_REFUND_EXPENSE.equals(p.getOperationType()))
+                .collect(Collectors.toList());
+        assertThat(expenses).hasSize(1);
+        assertThat(expenses.get(0).getAmount()).isEqualByComparingTo("-10.00");
     }
 }
