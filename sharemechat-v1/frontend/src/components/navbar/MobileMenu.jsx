@@ -71,7 +71,14 @@ const MobileMenu = ({
           title={item.title}
           disabled={item.disabled}
         >
-          {item.iconImgSrc
+          {item.iconNode
+            /*
+              iconNode: nodo React arbitrario (p. ej. el SVG de IconSupport,
+              que hereda color via currentColor). Tiene prioridad sobre
+              iconImgSrc / icon FA.
+            */
+            ? item.iconNode
+            : item.iconImgSrc
             /*
               Fix Subpasada 2C: reducimos la imagen de 40x40 a 20x20 para
               igualar la altura visual del item Support al resto de items
