@@ -6,6 +6,7 @@ import DesktopTabs from './DesktopTabs';
 import DesktopActions from './DesktopActions';
 import MobileMenu from './MobileMenu';
 import MobileBottomNav from './MobileBottomNav';
+import IconSupport from './IconSupport';
 
 const NavbarClient = ({
   activeTab,
@@ -163,7 +164,7 @@ const NavbarClient = ({
         ...(onGoSupport
           ? [{
               key: 'support',
-              iconImgSrc: '/img/icono-agente-ia.png',
+              iconNode: <IconSupport size={20} />,
               label: supportLabel,
               onClick: onGoSupport,
               useIconWrapper: true,

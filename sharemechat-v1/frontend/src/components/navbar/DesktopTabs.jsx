@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyledNavTab } from '../../styles/NavbarStyles';
+import IconSupport from './IconSupport';
 
 const DesktopTabs = ({
   activeTab,
@@ -74,13 +75,7 @@ const DesktopTabs = ({
             padding: '4px 8px',
           }}
         >
-          <img
-            src="/img/icono-agente-ia.png"
-            alt=""
-            width={72}
-            height={72}
-            style={{ display: 'block' }}
-          />
+          <IconSupport size={24} />
         </StyledNavTab>
       )}
     </div>
