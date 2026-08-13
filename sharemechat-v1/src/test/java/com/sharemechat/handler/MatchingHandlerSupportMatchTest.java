@@ -6,12 +6,14 @@ import com.sharemechat.entity.User;
 import com.sharemechat.master.repository.MasterModelSplitRepository;
 import com.sharemechat.repository.ModelRepository;
 import com.sharemechat.repository.UserRepository;
+import com.sharemechat.service.NextRateLimitService;
 import com.sharemechat.service.SeenService;
 import com.sharemechat.service.StatusService;
 import com.sharemechat.service.StreamLockService;
 import com.sharemechat.service.StreamService;
 import com.sharemechat.service.UserBlockService;
 import com.sharemechat.service.UserLanguageService;
+import com.sharemechat.service.UserTrialService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -45,7 +47,12 @@ import static org.mockito.Mockito.when;
  *
  * <p>Casos: (1) modelo entra con cliente encolado → casa (blinda el bug 2026-08-11);
  * (2) sin oferta → no-client-available; (3) bloqueo mutuo → no casa; (4) modelo bajo
- * Master sin split vigente → excluida del pool (fail-CLOSED, ADR-056).
+ * Master sin split vigente → excluida del pool (fail-CLOSED, ADR-056); (5) ranking por
+ * idioma en el lado cliente (matchClient elige el modelo de mismo idioma aunque otro
+ * entre antes); (6) viewer en rol USER → trial (startTrialStream, no startSession);
+ * (7) USER sin trial disponible → trial-unavailable y no empareja; (8) next rate-limited
+ * → next-ignored/rate-limit sin re-emparejar; (9) next en gracia → next-ignored/grace
+ * sin consumir el rate-limit.
  */
 class MatchingHandlerSupportMatchTest {
 
@@ -61,6 +68,8 @@ class MatchingHandlerSupportMatchTest {
     private StatusService statusService;
     private ModelRepository modelRepository;
     private MasterModelSplitRepository masterModelSplitRepository;
+    private UserTrialService userTrialService;
+    private NextRateLimitService nextRateLimitService;
 
     private MatchingRuntimeState state;
     private MatchingHandlerSupport support;
@@ -78,6 +87,8 @@ class MatchingHandlerSupportMatchTest {
         statusService = mock(StatusService.class);
         modelRepository = mock(ModelRepository.class);
         masterModelSplitRepository = mock(MasterModelSplitRepository.class);
+        userTrialService = mock(UserTrialService.class);
+        nextRateLimitService = mock(NextRateLimitService.class);
 
         // Cliente CLIENT + FORM_CLIENT + KYC APPROVED.
         User clientUser = new User();
@@ -109,8 +120,8 @@ class MatchingHandlerSupportMatchTest {
         state = new MatchingRuntimeState();
         support = new MatchingHandlerSupport(
                 state, null, userRepository, streamService, null, null, null,
-                statusService, null, null, null, userBlockService, seenService,
-                streamLockService, null, userLanguageService, null, null, null, null,
+                statusService, null, null, userTrialService, userBlockService, seenService,
+                streamLockService, nextRateLimitService, userLanguageService, null, null, null, null,
                 modelRepository, masterModelSplitRepository, 60);
 
         clientSession = newSession("sid-client", CLIENT_ID);
@@ -128,6 +139,36 @@ class MatchingHandlerSupportMatchTest {
 
     private void setRole(WebSocketSession s) throws Exception {
         support.handleTextMessage(s, new TextMessage("{\"type\":\"set-role\"}"));
+    }
+
+    private void startMatch(WebSocketSession s) throws Exception {
+        support.handleTextMessage(s, new TextMessage("{\"type\":\"start-match\"}"));
+    }
+
+    private void next(WebSocketSession s) throws Exception {
+        support.handleTextMessage(s, new TextMessage("{\"type\":\"next\"}"));
+    }
+
+    /** Registra un User MODEL aprobado y activo para {@code id} y devuelve su sesion en el pool. */
+    private WebSocketSession newApprovedModel(Long id, String sid) {
+        User m = new User();
+        m.setId(id);
+        m.setRole(Constants.Roles.MODEL);
+        m.setVerificationStatus(Constants.VerificationStatuses.APPROVED);
+        m.setIsActive(true);
+        m.setUnsubscribe(false);
+        when(userRepository.findById(id)).thenReturn(Optional.of(m));
+        return newSession(sid, id);
+    }
+
+    /** Reemplaza el user del cliente por uno con el rol dado (userType FORM_CLIENT + KYC APPROVED). */
+    private void setClientRole(String role) {
+        User u = new User();
+        u.setId(CLIENT_ID);
+        u.setRole(role);
+        u.setUserType(Constants.UserTypes.FORM_CLIENT);
+        u.setClientKycStatus(Constants.VerificationStatuses.APPROVED);
+        when(userRepository.findById(CLIENT_ID)).thenReturn(Optional.of(u));
     }
 
     private List<String> payloadsSentTo(WebSocketSession s) throws Exception {
@@ -190,5 +231,81 @@ class MatchingHandlerSupportMatchTest {
 
         verify(streamService, never()).startSession(anyLong(), anyLong(), anyString());
         assertThat(receivedType(modelSession, "match")).isFalse();
+    }
+
+    @Test
+    void cliente_elige_el_modelo_de_mejor_idioma_aunque_entre_antes_otro() throws Exception {
+        // Dos modelos en cola: X (id 3, idioma distinto score<100) entra ANTES;
+        // Y (MODEL_ID, mismo idioma score 100) entra DESPUES. El ranking del lado
+        // cliente (rank 0 = mismo idioma) debe elegir a Y pese al orden FIFO.
+        WebSocketSession modelX = newApprovedModel(3L, "sid-model-x");
+        when(userLanguageService.languageMatchScore(CLIENT_ID, 3L)).thenReturn(50);
+        // (CLIENT_ID, MODEL_ID) -> 100 por el default del @BeforeEach (mismo idioma).
+
+        setRole(modelX);            // X se encola (matchModel proactivo, sin clientes)
+        setRole(modelSession);      // Y se encola
+        setRole(clientSession);     // cliente enrolado (set-role de cliente solo encola)
+        startMatch(clientSession);  // cliente escanea modelos -> matchClient
+
+        verify(streamService).startSession(CLIENT_ID, MODEL_ID, Constants.StreamTypes.RANDOM);
+        verify(streamService, never()).startSession(eq(CLIENT_ID), eq(3L), anyString());
+        assertThat(receivedType(clientSession, "match")).isTrue();
+        assertThat(receivedType(modelSession, "match")).isTrue();   // Y casado
+        assertThat(receivedType(modelX, "match")).isFalse();        // X descartado por peor idioma
+    }
+
+    @Test
+    void viewer_en_rol_USER_dispara_trial_no_sesion_de_pago() throws Exception {
+        setClientRole(Constants.Roles.USER);            // el cliente es USER (trial)
+        when(userTrialService.canStartTrial(CLIENT_ID)).thenReturn(true);
+
+        setRole(clientSession);   // USER se encola como "client"
+        setRole(modelSession);    // modelo entra -> matchModel encuentra al USER
+
+        verify(userTrialService).startTrialStream(CLIENT_ID, MODEL_ID);
+        verify(streamService, never()).startSession(anyLong(), anyLong(), anyString());
+        assertThat(receivedType(clientSession, "match")).isTrue();
+        assertThat(receivedType(modelSession, "match")).isTrue();
+    }
+
+    @Test
+    void viewer_USER_sin_trial_disponible_recibe_trial_unavailable_y_no_empareja() throws Exception {
+        setClientRole(Constants.Roles.USER);
+        when(userTrialService.canStartTrial(CLIENT_ID)).thenReturn(false);
+
+        setRole(clientSession);
+        setRole(modelSession);
+
+        assertThat(receivedType(clientSession, "trial-unavailable")).isTrue();
+        verify(userTrialService, never()).startTrialStream(anyLong(), anyLong());
+        verify(streamService, never()).startSession(anyLong(), anyLong(), anyString());
+        assertThat(receivedType(modelSession, "match")).isFalse();
+    }
+
+    @Test
+    void next_rate_limited_devuelve_next_ignored_y_no_rematch() throws Exception {
+        when(nextRateLimitService.checkAndConsume(CLIENT_ID)).thenReturn(Optional.of(3000L));
+
+        next(clientSession);
+
+        assertThat(payloadsSentTo(clientSession).stream().anyMatch(p ->
+                p.contains("\"type\":\"next-ignored\"")
+                        && p.contains("\"reason\":\"rate-limit\"")
+                        && p.contains("\"retryAfterMs\":3000"))).isTrue();
+        verify(streamService, never()).startSession(anyLong(), anyLong(), anyString());
+    }
+
+    @Test
+    void next_en_periodo_de_gracia_devuelve_grace_sin_consumir_rate_limit() throws Exception {
+        // lastMatchAt reciente (<1500ms) -> grace, corta antes del rate-limit.
+        state.getLastMatchAt().put(clientSession.getId(), System.currentTimeMillis());
+
+        next(clientSession);
+
+        assertThat(receivedType(clientSession, "next-ignored")).isTrue();
+        assertThat(payloadsSentTo(clientSession).stream()
+                .anyMatch(p -> p.contains("\"reason\":\"grace\""))).isTrue();
+        verify(nextRateLimitService, never()).checkAndConsume(anyLong());
+        verify(streamService, never()).startSession(anyLong(), anyLong(), anyString());
     }
 }
