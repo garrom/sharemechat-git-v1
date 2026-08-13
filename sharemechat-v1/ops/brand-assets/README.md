@@ -17,7 +17,7 @@ Wordmark monolítico "Sharemechat" — 286×30, `viewBox="0 0 286 30"`,
 paths puros (sin `<text>`, no requiere fuente para rasterizar). Dos
 colores:
 - `Shareme` → `white`
-- `chat` → `#B50A0A` (rojo de marca, "chat" sobre fondo oscuro)
+- `chat` → `#ea1d1d` (rojo de marca, "chat" sobre fondo oscuro)
 
 Sin separación visual entre `Shareme` y `chat`: el wordmark es una
 sola palabra de dos colores. Diseñado para fondos oscuros.
@@ -55,7 +55,7 @@ Pesos típicos:
 | Uso | Hex | Nota |
 |---|---|---|
 | Fondo de marca (oscuro) | `#0b0f14` | mismo `theme-color` del SPA + HeroContainer pre-launch |
-| Rojo de marca (wordmark) | `#B50A0A` | "chat" del wordmark |
+| Rojo de marca (wordmark) | `#ea1d1d` | "chat" del wordmark |
 | Rojo de marca (monograma) | `#FF1A1A` | borde + "S" del monograma; tono más vibrante para los assets sociales |
 | Texto principal | `#FFFFFF` | "Shareme" del wordmark, "Chat" del monograma |
 | Fondo monograma | `#0A0A0A` | círculo interior del monograma (ligeramente más oscuro que el fondo de página) |
