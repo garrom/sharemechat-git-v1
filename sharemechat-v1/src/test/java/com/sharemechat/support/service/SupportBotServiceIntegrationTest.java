@@ -5,9 +5,11 @@ import com.sharemechat.entity.User;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.support.dto.ClaudeApiResponse;
 import com.sharemechat.support.dto.SupportMessageResponseDTO;
+import com.sharemechat.support.entity.BackofficeAgentProfile;
 import com.sharemechat.support.entity.SupportConversation;
 import com.sharemechat.support.entity.SupportMessage;
 import com.sharemechat.support.entity.SupportRateLimitDaily;
+import com.sharemechat.support.repository.BackofficeAgentProfileRepository;
 import com.sharemechat.support.repository.SupportConversationRepository;
 import com.sharemechat.support.repository.SupportMessageRepository;
 import com.sharemechat.support.repository.SupportRateLimitDailyRepository;
@@ -78,6 +80,7 @@ class SupportBotServiceIntegrationTest {
     @Autowired SupportConversationRepository conversationRepo;
     @Autowired SupportMessageRepository messageRepo;
     @Autowired SupportRateLimitDailyRepository rateLimitRepo;
+    @Autowired BackofficeAgentProfileRepository profileRepo;
     @Autowired UserRepository userRepository;
 
     private Long persistUser(String nick, String email) {
@@ -193,11 +196,19 @@ class SupportBotServiceIntegrationTest {
         Long userId = persistUser("ci-bot-human", "ci-bot-human@example.test");
         Long agentId = persistUser("ci-bot-agent", "ci-bot-agent@example.test");
 
+        // Perfil de agente real: la CHECK `chk_support_conv_assign_bicolumn` exige
+        // que assigned_agent_id y assigned_profile_id sean ambos NOT NULL (o ambos
+        // NULL); assigned_profile_id además es FK a backoffice_agent_profile.
+        BackofficeAgentProfile profile = new BackofficeAgentProfile();
+        profile.setDisplayName("CI Agente Soporte");
+        Long profileId = profileRepo.saveAndFlush(profile).getId();
+
         // Conversación activa ya reclamada por un agente humano (ADR-046).
         SupportConversation conv = new SupportConversation();
         conv.setUserId(userId);
         conv.setResolutionStatus(Constants.SupportResolutionStatuses.HUMAN_HANDLING);
         conv.setAssignedAgentId(agentId);
+        conv.setAssignedProfileId(profileId);
         Long convId = conversationRepo.saveAndFlush(conv).getId();
 
         SupportMessageResponseDTO out = supportBotService.handleUserMessage(userId, "sigo esperando", null);
