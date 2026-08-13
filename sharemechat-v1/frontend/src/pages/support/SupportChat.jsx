@@ -16,6 +16,7 @@ import { faPaperPlane, faUserTie } from '@fortawesome/free-solid-svg-icons';
 import i18n from '../../i18n';
 import useSupportChat from '../../hooks/useSupportChat';
 import SupportMessageBubble from '../../components/support/SupportMessageBubble';
+import SupportAvatar from '../../components/support/SupportAvatar';
 import SupportEscalateModal from './SupportEscalateModal';
 
 const MAX_INPUT = 4000;
@@ -58,14 +59,6 @@ const headerStyle = {
   border: '1px solid #e5e7eb',
   borderRadius: 8,
   marginBottom: 8,
-};
-
-const avatarImgStyle = {
-  width: 40,
-  height: 40,
-  display: 'block',
-  objectFit: 'contain',
-  flexShrink: 0,
 };
 
 const escalateBtnStyle = (disabled) => ({
@@ -282,11 +275,7 @@ export default function SupportChat({ pinnedConversationId, readOnly, ticketCont
           técnico asignado se propaga al banner de status humano abajo. */}
       {!pinnedConversationId && (
         <header style={headerStyle}>
-          <img
-            src="/img/icono-agente-ia.png"
-            alt=""
-            style={avatarImgStyle}
-          />
+          <SupportAvatar size={40} />
           <strong>{i18n.t('support.chat.agentName')}</strong>
           {!readOnly && (
             <button
