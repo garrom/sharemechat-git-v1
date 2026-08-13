@@ -6,6 +6,7 @@ import com.sharemechat.entity.Balance;
 import com.sharemechat.entity.Client;
 import com.sharemechat.entity.Gift;
 import com.sharemechat.entity.Model;
+import com.sharemechat.entity.PayoutRequest;
 import com.sharemechat.entity.PlatformTransaction;
 import com.sharemechat.entity.Transaction;
 import com.sharemechat.entity.User;
@@ -13,6 +14,7 @@ import com.sharemechat.repository.BalanceRepository;
 import com.sharemechat.repository.ClientRepository;
 import com.sharemechat.repository.GiftRepository;
 import com.sharemechat.repository.ModelRepository;
+import com.sharemechat.repository.PayoutRequestRepository;
 import com.sharemechat.repository.PlatformTransactionRepository;
 import com.sharemechat.repository.TransactionRepository;
 import com.sharemechat.repository.UserRepository;
@@ -59,9 +61,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * Master y la caché de la modelo no se toca), y el refund manual de admin
  * {@code manualRefundToClient} en sus dos variantes: libre (crédito al cliente +
  * gasto a la plataforma) y ligado a ticket (ADR-054: cierra el SupportTicket en
- * RESOLVED_COMPENSATED, linkándolo a la Transaction). Los métodos usan
- * {@code SELECT ... FOR UPDATE}, por eso exigen MySQL real. Cada test es
- * {@code @Transactional}: revierte al terminar, dejando la BD limpia.
+ * RESOLVED_COMPENSATED, linkándolo a la Transaction), y el retiro de la modelo
+ * ({@code requestPayout}: valida rol/umbral/saldo, crea la PayoutRequest y debita
+ * el ledger; {@code adminReviewPayoutRequest} en rechazo re-acredita el saldo).
+ * Los métodos usan {@code SELECT ... FOR UPDATE}, por eso exigen MySQL real. Cada
+ * test es {@code @Transactional}: revierte al terminar, dejando la BD limpia.
  *
  * <p>Con esto el bloque de dinero de {@code TransactionService} queda cubierto;
  * el siguiente frente es matching/streaming (Fases 2-4 del ADR).
@@ -94,6 +98,7 @@ class TransactionServiceIntegrationTest {
     @Autowired GiftRepository giftRepository;
     @Autowired ModelRepository modelRepository;
     @Autowired SupportTicketRepository supportTicketRepository;
+    @Autowired PayoutRequestRepository payoutRequestRepository;
 
     // --- Helpers ---
 
@@ -121,6 +126,34 @@ class TransactionServiceIntegrationTest {
     private Client reloadClient(Long userId) {
         User u = userRepository.findById(userId).orElseThrow();
         return clientRepository.findByUser(u).orElseThrow();
+    }
+
+    /** Da saldo CONSISTENTE a un modelo: Transaction+Balance (STREAM_EARNING) + Model.saldoActual. */
+    private void seedModelBalance(Long modelUserId, String amount) {
+        User modelUser = userRepository.findById(modelUserId).orElseThrow();
+        BigDecimal amt = new BigDecimal(amount);
+        Transaction tx = new Transaction();
+        tx.setUser(modelUser);
+        tx.setAmount(amt);
+        tx.setOperationType("STREAM_EARNING");
+        Transaction saved = transactionRepository.saveAndFlush(tx);
+        Balance b = new Balance();
+        b.setUserId(modelUserId);
+        b.setTransactionId(saved.getId());
+        b.setOperationType("STREAM_EARNING");
+        b.setAmount(amt);
+        b.setBalance(amt);
+        b.setDescription("seed saldo test");
+        balanceRepository.saveAndFlush(b);
+        Model m = modelRepository.findByUser(modelUser).orElseThrow();
+        m.setSaldoActual(amt);
+        modelRepository.saveAndFlush(m);
+    }
+
+    private PayoutRequest onlyPayoutRequestOf(Long modelUserId) {
+        return payoutRequestRepository.findAll().stream()
+                .filter(p -> modelUserId.equals(p.getModelUserId()))
+                .findFirst().orElseThrow();
     }
 
     /**
@@ -441,5 +474,74 @@ class TransactionServiceIntegrationTest {
         Transaction refundTx = transactionRepository.findById(clientBal.getTransactionId()).orElseThrow();
         assertThat(refundTx.getTicketId()).isEqualTo(ticketId);
         assertThat(closed.getCompensatedTransactionId()).isEqualTo(refundTx.getId());
+    }
+
+    @Test
+    @Transactional
+    void requestPayout_crea_solicitud_REQUESTED_y_debita_el_saldo() {
+        Long modelId = persistModelUser("ci-payout-model", "ci-payout-model@example.test", null);
+        seedModelBalance(modelId, "100.00");
+
+        transactionService.requestPayout(modelId, dto("60.00", null, "retiro CI"));
+
+        // PayoutRequest creada en REQUESTED por 60.00 EUR.
+        PayoutRequest pr = onlyPayoutRequestOf(modelId);
+        assertThat(pr.getStatus()).isEqualTo("REQUESTED");
+        assertThat(pr.getAmount()).isEqualByComparingTo("60.00");
+        assertThat(pr.getCurrency()).isEqualTo("EUR");
+
+        // Ledger debitado: 100 - 60 = 40 (PAYOUT_REQUEST) + Model.saldoActual.
+        Balance last = balanceRepository.findTopByUserIdOrderByTimestampDescIdDesc(modelId).orElseThrow();
+        assertThat(last.getOperationType()).isEqualTo("PAYOUT_REQUEST");
+        assertThat(last.getBalance()).isEqualByComparingTo("40.00");
+        Model m = modelRepository.findByUser(userRepository.findById(modelId).orElseThrow()).orElseThrow();
+        assertThat(m.getSaldoActual()).isEqualByComparingTo("40.00");
+    }
+
+    @Test
+    @Transactional
+    void requestPayout_con_saldo_insuficiente_lanza() {
+        Long modelId = persistModelUser("ci-payout-insuf", "ci-payout-insuf@example.test", null);
+        seedModelBalance(modelId, "100.00");
+
+        assertThatThrownBy(() ->
+                transactionService.requestPayout(modelId, dto("200.00", null, "retiro")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Saldo insuficiente");
+    }
+
+    @Test
+    @Transactional
+    void requestPayout_bajo_el_minimo_lanza() {
+        Long modelId = persistModelUser("ci-payout-min", "ci-payout-min@example.test", null);
+        seedModelBalance(modelId, "100.00");
+
+        assertThatThrownBy(() ->
+                transactionService.requestPayout(modelId, dto("30.00", null, "retiro")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("50 EUR");
+    }
+
+    @Test
+    @Transactional
+    void adminReviewPayoutRequest_rechazo_reacredita_el_saldo() {
+        Long modelId = persistModelUser("ci-payout-rej-model", "ci-payout-rej-model@example.test", null);
+        seedModelBalance(modelId, "100.00");
+        Long adminId = persistAdminUser("ci-payout-rej-admin", "ci-payout-rej-admin@example.test");
+
+        transactionService.requestPayout(modelId, dto("60.00", null, "retiro")); // saldo -> 40
+        PayoutRequest pr = onlyPayoutRequestOf(modelId);
+
+        PayoutRequest reviewed = transactionService.adminReviewPayoutRequest(
+                pr.getId(), adminId, "REJECTED", "no procede");
+
+        // El rechazo revierte el débito: saldo vuelve a 100 (PAYOUT_REQUEST_REVERT).
+        assertThat(reviewed.getStatus()).isEqualTo("REJECTED");
+        assertThat(reviewed.getReviewedByUserId()).isEqualTo(adminId);
+        Balance last = balanceRepository.findTopByUserIdOrderByTimestampDescIdDesc(modelId).orElseThrow();
+        assertThat(last.getOperationType()).isEqualTo("PAYOUT_REQUEST_REVERT");
+        assertThat(last.getBalance()).isEqualByComparingTo("100.00");
+        Model m = modelRepository.findByUser(userRepository.findById(modelId).orElseThrow()).orElseThrow();
+        assertThat(m.getSaldoActual()).isEqualByComparingTo("100.00");
     }
 }
