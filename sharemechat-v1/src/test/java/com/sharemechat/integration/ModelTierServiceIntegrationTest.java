@@ -161,4 +161,71 @@ class ModelTierServiceIntegrationTest {
         assertThat(snap.getPricingTierCode()).isEqualTo("T2");
         assertThat(snap.getModelSharePct()).isEqualByComparingTo("54.00");
     }
+
+    /** Genera un STREAM_CHARGE bruto atribuido a la modelo (via stream_record.model). */
+    private void persistStreamChargeGross(Long modelId, String grossAmount) {
+        Long clientId = persistUser(Constants.Roles.CLIENT, Constants.UserTypes.FORM_CLIENT,
+                "ci-tier-cli-" + modelId, "ci-tier-cli-" + modelId + "@example.test");
+        User clientUser = userRepository.findById(clientId).orElseThrow();
+        User modelUser = userRepository.findById(modelId).orElseThrow();
+        StreamRecord sr = new StreamRecord();
+        sr.setClient(clientUser);
+        sr.setModel(modelUser);
+        sr.setStartTime(LocalDateTime.now().minusMinutes(30));
+        sr.setStreamType(Constants.StreamTypes.RANDOM);
+        StreamRecord savedSr = streamRecordRepository.saveAndFlush(sr);
+        Transaction tx = new Transaction();
+        tx.setUser(clientUser);
+        tx.setAmount(new BigDecimal(grossAmount).negate());
+        tx.setOperationType("STREAM_CHARGE");
+        tx.setStreamRecord(savedSr);
+        transactionRepository.saveAndFlush(tx);
+    }
+
+    @Test
+    @Transactional
+    void computeAndUpsertSnapshot_marca_pro_status_segun_el_umbral() {
+        // Umbral Pro por defecto = 1500 (billing.pro-status.min-billed-gross-eur-30d).
+        Long proModel = persistModelIndividual("ci-tier-pro", "ci-tier-pro@example.test");
+        persistStreamChargeGross(proModel, "2000"); // bruto 2000 >= 1500
+        ModelTierDailySnapshot proSnap = modelTierService.computeAndUpsertSnapshot(proModel, LocalDate.now());
+        assertThat(proSnap.getBilledGrossEur30d()).isEqualByComparingTo("2000.00");
+        assertThat(proSnap.getProStatusActive()).isTrue();
+
+        // Sin bruto -> 0 < 1500 -> Estatus Pro inactivo.
+        Long freeModel = persistModelIndividual("ci-tier-nopro", "ci-tier-nopro@example.test");
+        ModelTierDailySnapshot freeSnap = modelTierService.computeAndUpsertSnapshot(freeModel, LocalDate.now());
+        assertThat(freeSnap.getBilledGrossEur30d()).isEqualByComparingTo("0.00");
+        assertThat(freeSnap.getProStatusActive()).isFalse();
+    }
+
+    @Test
+    @Transactional
+    void computeAndUpsertSnapshot_recorta_la_tarifa_al_max_del_tramo() {
+        Long modelId = persistModelIndividual("ci-tier-clip", "ci-tier-clip@example.test");
+        // Tarifa elegida 5.00 €/min, muy por encima del rate_max de T1 (1.00).
+        User u = userRepository.findById(modelId).orElseThrow();
+        u.setChosenRateEurPerMin(new BigDecimal("5.00"));
+        userRepository.saveAndFlush(u);
+
+        // Sin bruto -> T1 (rate_max 1.00). Debe recortar 5.00 -> 1.00.
+        modelTierService.computeAndUpsertSnapshot(modelId, LocalDate.now());
+
+        User after = userRepository.findById(modelId).orElseThrow();
+        assertThat(after.getChosenRateEurPerMin()).isEqualByComparingTo("1.00");
+    }
+
+    @Test
+    @Transactional
+    void computeAndUpsertSnapshot_no_toca_la_tarifa_dentro_de_rango() {
+        Long modelId = persistModelIndividual("ci-tier-noclip", "ci-tier-noclip@example.test");
+        User u = userRepository.findById(modelId).orElseThrow();
+        u.setChosenRateEurPerMin(new BigDecimal("0.50")); // <= rate_max T1 (1.00)
+        userRepository.saveAndFlush(u);
+
+        modelTierService.computeAndUpsertSnapshot(modelId, LocalDate.now());
+
+        User after = userRepository.findById(modelId).orElseThrow();
+        assertThat(after.getChosenRateEurPerMin()).isEqualByComparingTo("0.50");
+    }
 }
