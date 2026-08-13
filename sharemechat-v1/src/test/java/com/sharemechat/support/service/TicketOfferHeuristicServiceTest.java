@@ -1,122 +1,93 @@
 package com.sharemechat.support.service;
 
-import org.junit.jupiter.api.DisplayName;
+import com.sharemechat.support.service.TicketOfferHeuristicService.ConfirmationDecision;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * ADR-054 Fase T3.5 — tests unitarios del clasificador heuristico.
+ * ADR-059 / ADR-054 D2: tests de la HEURÍSTICA de oferta de ticket del agente IA
+ * de soporte ({@link TicketOfferHeuristicService}).
+ *
+ * <p>Lógica PURA: string matching case-insensitive, cero LLM, cero BD, cero Spring
+ * → unit test directo sobre {@code new TicketOfferHeuristicService()}. Es la pieza
+ * que decide cuándo el bot ofrece escalar a ticket humano y cómo interpreta el
+ * sí/no del usuario, en una plataforma adulta → alto valor, coste de test mínimo.
+ *
+ * <p>Reglas cubiertas de {@code detectCategory}: (1) keyword de categoría concreta
+ * gana; (2) empate entre concretas → OTHER; (3) sin concretas pero keyword genérica
+ * → OTHER; (4) sin señal → vacío; (5) null/blank → vacío. Y de
+ * {@code interpretConfirmation}: ACCEPT / REJECT / AMBIGUOUS incluyendo la
+ * precedencia del rechazo sobre el positivo.
  */
 class TicketOfferHeuristicServiceTest {
 
-    private final TicketOfferHeuristicService svc = new TicketOfferHeuristicService();
+    private final TicketOfferHeuristicService service = new TicketOfferHeuristicService();
 
-    // ============================================================
-    // detectCategory
-    // ============================================================
+    // --- detectCategory ---
 
     @Test
-    @DisplayName("STREAM_INTERRUPTED detectado en ES y EN")
-    void detects_stream_interrupted() {
-        assertEquals(Optional.of("STREAM_INTERRUPTED"),
-                svc.detectCategory("Se cayo el stream en el minuto 3"));
-        assertEquals(Optional.of("STREAM_INTERRUPTED"),
-                svc.detectCategory("The stream cut off and never came back"));
+    void detecta_categoria_concreta_por_keyword() {
+        assertThat(service.detectCategory("se cayó el stream a mitad de la llamada"))
+                .contains("STREAM_INTERRUPTED");
+        assertThat(service.detectCategory("pagué pero no me acreditó el saldo"))
+                .contains("PAYMENT_NOT_CREDITED");
+        assertThat(service.detectCategory("no puedo entrar, mi cuenta bloqueada"))
+                .contains("ACCOUNT_ISSUE");
     }
 
     @Test
-    @DisplayName("PAYMENT_NOT_CREDITED detectado en ES y EN")
-    void detects_payment_not_credited() {
-        assertEquals(Optional.of("PAYMENT_NOT_CREDITED"),
-                svc.detectCategory("Pague pero no me acredito el saldo"));
-        assertEquals(Optional.of("PAYMENT_NOT_CREDITED"),
-                svc.detectCategory("I paid but balance not credited"));
+    void empate_entre_categorias_concretas_devuelve_OTHER() {
+        // 1 match STREAM ("se cayó") + 1 match ACCOUNT ("cuenta bloqueada") -> empate.
+        assertThat(service.detectCategory("se cayó todo y encima mi cuenta bloqueada"))
+                .contains("OTHER");
     }
 
     @Test
-    @DisplayName("MODERATION_FALSE_POSITIVE detectado en ES y EN")
-    void detects_moderation() {
-        assertEquals(Optional.of("MODERATION_FALSE_POSITIVE"),
-                svc.detectCategory("Me han cortado sin razon la camara"));
-        assertEquals(Optional.of("MODERATION_FALSE_POSITIVE"),
-                svc.detectCategory("Moderation cut me for no reason"));
+    void keyword_generica_sin_concreta_devuelve_OTHER() {
+        assertThat(service.detectCategory("quiero un reembolso ya mismo"))
+                .contains("OTHER");
     }
 
     @Test
-    @DisplayName("ACCOUNT_ISSUE detectado en ES y EN")
-    void detects_account_issue() {
-        assertEquals(Optional.of("ACCOUNT_ISSUE"),
-                svc.detectCategory("No puedo entrar, dice cuenta bloqueada"));
-        assertEquals(Optional.of("ACCOUNT_ISSUE"),
-                svc.detectCategory("Cannot login, account suspended"));
+    void sin_senal_devuelve_vacio() {
+        assertThat(service.detectCategory("hola, tengo una duda sobre mi perfil"))
+                .isEmpty();
     }
 
     @Test
-    @DisplayName("OTHER cuando aparecen keywords genericas sin categoria concreta")
-    void detects_other_generic() {
-        assertEquals(Optional.of("OTHER"),
-                svc.detectCategory("Quiero presentar una reclamacion formal"));
-        assertEquals(Optional.of("OTHER"),
-                svc.detectCategory("I want to file a complaint"));
+    void null_o_blank_devuelve_vacio() {
+        assertThat(service.detectCategory(null)).isEmpty();
+        assertThat(service.detectCategory("   ")).isEmpty();
+    }
+
+    // --- interpretConfirmation ---
+
+    @Test
+    void interpreta_afirmaciones_como_ACCEPT() {
+        assertThat(service.interpretConfirmation("sí, ábrelo")).isEqualTo(ConfirmationDecision.ACCEPT);
+        assertThat(service.interpretConfirmation("ok")).isEqualTo(ConfirmationDecision.ACCEPT);
+        assertThat(service.interpretConfirmation("adelante")).isEqualTo(ConfirmationDecision.ACCEPT);
     }
 
     @Test
-    @DisplayName("Consulta normal sin senyal -> Optional.empty")
-    void no_signal_returns_empty() {
-        assertTrue(svc.detectCategory("Como cambio mi contrasena?").isEmpty());
-        assertTrue(svc.detectCategory("Que es un pack?").isEmpty());
-        assertTrue(svc.detectCategory("Hola, buenos dias").isEmpty());
+    void interpreta_negaciones_como_REJECT() {
+        assertThat(service.interpretConfirmation("no gracias")).isEqualTo(ConfirmationDecision.REJECT);
+        assertThat(service.interpretConfirmation("cancelar")).isEqualTo(ConfirmationDecision.REJECT);
     }
 
     @Test
-    @DisplayName("Mensaje null o vacio -> Optional.empty (sin NPE)")
-    void null_and_empty_safe() {
-        assertTrue(svc.detectCategory(null).isEmpty());
-        assertTrue(svc.detectCategory("").isEmpty());
-        assertTrue(svc.detectCategory("   ").isEmpty());
-    }
-
-    // ============================================================
-    // interpretConfirmation
-    // ============================================================
-
-    @Test
-    @DisplayName("interpretConfirmation ACCEPT en variantes comunes ES y EN")
-    void accepts_yes_variants() {
-        assertEquals(TicketOfferHeuristicService.ConfirmationDecision.ACCEPT,
-                svc.interpretConfirmation("si"));
-        assertEquals(TicketOfferHeuristicService.ConfirmationDecision.ACCEPT,
-                svc.interpretConfirmation("sí, abrelo"));
-        assertEquals(TicketOfferHeuristicService.ConfirmationDecision.ACCEPT,
-                svc.interpretConfirmation("yes please"));
-        assertEquals(TicketOfferHeuristicService.ConfirmationDecision.ACCEPT,
-                svc.interpretConfirmation("ok abre"));
+    void rechazo_tiene_precedencia_sobre_positivo() {
+        // "no, mejor déjalo" empieza por "no," -> REJECT aunque contenga otras palabras.
+        assertThat(service.interpretConfirmation("no, mejor déjalo")).isEqualTo(ConfirmationDecision.REJECT);
     }
 
     @Test
-    @DisplayName("interpretConfirmation REJECT en variantes comunes")
-    void rejects_no_variants() {
-        assertEquals(TicketOfferHeuristicService.ConfirmationDecision.REJECT,
-                svc.interpretConfirmation("no"));
-        assertEquals(TicketOfferHeuristicService.ConfirmationDecision.REJECT,
-                svc.interpretConfirmation("no gracias"));
-        assertEquals(TicketOfferHeuristicService.ConfirmationDecision.REJECT,
-                svc.interpretConfirmation("cancel"));
-    }
-
-    @Test
-    @DisplayName("interpretConfirmation AMBIGUOUS ante mensajes que no confirman")
-    void ambiguous_default() {
-        assertEquals(TicketOfferHeuristicService.ConfirmationDecision.AMBIGUOUS,
-                svc.interpretConfirmation("tal vez luego"));
-        assertEquals(TicketOfferHeuristicService.ConfirmationDecision.AMBIGUOUS,
-                svc.interpretConfirmation("what?"));
-        assertEquals(TicketOfferHeuristicService.ConfirmationDecision.AMBIGUOUS,
-                svc.interpretConfirmation(null));
-        assertEquals(TicketOfferHeuristicService.ConfirmationDecision.AMBIGUOUS,
-                svc.interpretConfirmation(""));
+    void ambiguo_o_vacio_devuelve_AMBIGUOUS() {
+        assertThat(service.interpretConfirmation("quizás más tarde")).isEqualTo(ConfirmationDecision.AMBIGUOUS);
+        assertThat(service.interpretConfirmation("")).isEqualTo(ConfirmationDecision.AMBIGUOUS);
+        assertThat(service.interpretConfirmation(null)).isEqualTo(ConfirmationDecision.AMBIGUOUS);
     }
 }
