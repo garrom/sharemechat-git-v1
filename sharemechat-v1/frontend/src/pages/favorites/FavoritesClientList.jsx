@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronDown, faTrash, faBan, faUnlock,faFlag, faUser } from '@fortawesome/free-solid-svg-icons';
 import ModelProfileExpanded from '../subpages/ModelProfileExpanded';
+import SupportAvatar from '../../components/support/SupportAvatar';
 
 import {
   List,
@@ -60,16 +61,7 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
     >
       <DotWrap>
         {isBot ? (
-          // Fase 1 estilos: el bot usaba 48x48 mientras el resto usa 28x28,
-          // lo que hacia el ItemCard del bot visiblemente mas alto. Alineado
-          // ahora al mismo 28x28 del avatar normal.
-          <img
-            src="/img/icono-agente-ia.png"
-            alt=""
-            width={38}
-            height={38}
-            style={{ display: 'block', objectFit: 'contain', borderRadius: '50%' }}
-          />
+          <SupportAvatar size={38} />
         ) : hasRealAvatar ? (
           <Avatar
             src={avatarUrl}
