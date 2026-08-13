@@ -1,13 +1,13 @@
 # ADR-059 - Estrategia de testing: acercamiento a Clean Architecture / TDD + integración + CI
 
-> Estado: TRANSITORIO (se materializa por fases; pasa a VIGENTE cuando las fases 0-1 estén en marcha)
+> Estado: VIGENTE (fases 0-3 materializadas 2026-08-14; ver "Materialización")
 > Fecha: 2026-08-12
 > Vigencia esperada: indefinida (marco de calidad del proyecto)
 > Reemplaza: N/A
 > Ver también: `docs/07-roadmap/backlog-priorizado.md` (frente P1 "Tests + CI"), Robert C. Martin (Clean Architecture, Clean Code, TDD)
 
 ## Estado
-Propuesto
+Vigente (fases 0-3 materializadas; ver "Materialización")
 
 ## Contexto
 
@@ -71,3 +71,15 @@ El coste está en el sitio equivocado: mucha red en la periferia de bajo riesgo 
 ## Notas
 
 Materialización y prioridad viva en `docs/07-roadmap/backlog-priorizado.md` (frente P1). Primer paso concreto (PoC): Fase 0 (CI) + un test de integración con Testcontainers sobre el path de dinero, para validar el patrón antes de extender.
+
+## Materialización (2026-08-12 → 08-14)
+
+Fases 0-3 en marcha + parte de la periferia crítica. Estado a 2026-08-14:
+
+- **Fase 0 — CI**: `.github/workflows/ci.yml` (raíz, `on: push`), jobs Backend (`./mvnw -B -ntp test`) y Frontend (`react-scripts test --passWithNoTests`), runner `ubuntu-latest` (Docker → Testcontainers corre en CI). **Verde.** Bug fundacional cazado y resuelto: `mvnw` commiteado sin bit +x (modo `100644`) daba exit 126 en el runner Linux.
+- **Patrón de integración**: `@SpringBootTest(webEnvironment=NONE)` + `@ActiveProfiles("ci")` + `@Testcontainers` (MySQL 8.4). Perfil `ci` en `src/test/resources/application-ci.properties` (resuelve placeholders, vendors OFF). **GOTCHA de esquema**: el fresh-apply de las 51 migraciones es no-determinista (V42 colisiona en `uq_mpt_target_code_effective` cuando dos filas caen en el mismo segundo de `effective_from=CURRENT_TIMESTAMP`); los tests aplican un **baseline determinista** (`src/test/resources/db/migration-it/V1__it_baseline.sql`, 78 tablas) vía `spring.flyway.locations=classpath:db/migration-it`, NO las migraciones. Deuda anotada en `pending-hardening.md`.
+- **Cobertura (~59 tests de integración/unit)**: dinero (`TransactionService`: primer pago, packs+bonus, gift individual y bajo Master, refunds, payout×4), streaming (`StreamService.endSession`), matching (unit Mockito sobre `MatchingHandlerSupport`: pairing, ranking por idioma, `next`, trial), trial (`UserTrialService`), tramos (`ModelTierService`: mapeo umbral→tramo, snapshot, Estatus Pro, recorte de tarifa), bot IA de soporte (heurística de ticket unit + rate-limit + orquestación `SupportBotService` con `ClaudeApiClient` mockeado), y Master (splits `MasterModelManagementService.setInternalShare`, invitaciones `MasterModelInvitationService.inviteModel`).
+- **Verificación local**: los tests Testcontainers NO corren en local (Windows: docker-java no conecta al named pipe de Docker Desktop) → **la CI Linux es el juez**; los unit puros (matching, heurística) sí corren en local.
+- **No requiere despliegue ni nivelación** de test/audit/prod: son ficheros de test + CI, cero cambios de runtime/migraciones/frontend.
+
+Pendiente: `MasterPayoutService`, KYC/verificación + Google Sign-In, `SupportHumanHandlingService`, suspensión de Master, y **Fase 4** (primeros tests de frontend + E2E). Extracción de seams (puertos/policies) según se endurezca el core.
