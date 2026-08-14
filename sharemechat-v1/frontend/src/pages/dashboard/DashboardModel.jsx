@@ -2095,6 +2095,22 @@ const DashboardModel = () => {
     }
   };
 
+  // Regalos GRATIS del modelo en random: se envían como emoji unicode por el
+  // canal de CHAT (socket de matching), NO por el canal de regalos (que en
+  // random es solo CLIENT -> MODEL a nivel backend). Envío directo al pulsar el
+  // chip (sin pasar por el input). Se renderiza como emoji grande en el chat.
+  const sendRandomGiftEmoji = (emoji) => {
+    if (guardSensitiveAction({ setError })) return;
+    const e = typeof emoji === 'string' ? emoji.trim() : '';
+    if (!e) return;
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      const message = { type: 'chat', message: e };
+      lastSentRef.current = { text: message.message, at: Date.now() };
+      socketRef.current.send(JSON.stringify(message));
+      setMessages((prev) => [...prev, { from: 'me', text: message.message }]);
+    }
+  };
+
   const sendRandomMediaReady = () => {
     if (guardSensitiveAction()) return;
     if (mediaReadySentRef.current) return;
@@ -3510,6 +3526,7 @@ const DashboardModel = () => {
             chatInput={chatInput}
             setChatInput={setChatInput}
             sendChatMessage={sendChatMessage}
+            sendRandomGiftEmoji={sendRandomGiftEmoji}
             handleBlockPeer={handleBlockPeer}
             handleReportPeer={handleReportPeer}
             error={error}
