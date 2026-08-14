@@ -385,6 +385,13 @@ export default function VideoChatFavoritosModelo(props) {
     </StyledGiftsPanel>
   );
 
+  // Envío de regalos/emoji habilitado: o bien el favorito está aceptado
+  // (`allowChat`), o bien hay una LLAMADA ACTIVA. Durante la llamada el backend
+  // ya autoriza mensajear por el stream activo (MessageService.isPairActive),
+  // así que gatear por `allowChat` deshabilitaba de más cuando llama la modelo
+  // (allowChat=false). Con la llamada en curso, habilitado.
+  const giftSendEnabled = allowChat || callStatus === 'in-call';
+
   // Barra de emojis GRATIS siempre visible (modelo solo tiene free). Sin
   // segmento ni "+"; misma zona que el cliente. Envio directo.
   // surface 'video-overlay' (desktop llamada, barra inferior sobre el vídeo):
@@ -405,10 +412,10 @@ export default function VideoChatFavoritosModelo(props) {
             <StyledGiftChip
               key={g.id}
               type="button"
-              disabled={!allowChat}
+              disabled={!giftSendEnabled}
               title={g.name}
               aria-label={g.name}
-              onClick={() => { if (allowChat && sendGiftMsg) sendGiftMsg(g.id); }}
+              onClick={() => { if (giftSendEnabled && sendGiftMsg) sendGiftMsg(g.id); }}
             >
               <GiftIcon code={g.code} iconUrl={g.icon} alt={g.name || ''} size={24} />
             </StyledGiftChip>
@@ -863,7 +870,7 @@ export default function VideoChatFavoritosModelo(props) {
                                   Los regalos NO van aquí: están en la barra
                                   inferior sobre el vídeo. */}
                               <StyledCallComposer>
-                                <EmojiTextPicker onInsert={(e) => setCenterInput((v) => (v || '') + e)} disabled={!allowChat} />
+                                <EmojiTextPicker onInsert={(e) => setCenterInput((v) => (v || '') + e)} disabled={!giftSendEnabled} />
                                 <StyledChatInput
                                   type="text"
                                   value={centerInput}
@@ -1092,7 +1099,11 @@ export default function VideoChatFavoritosModelo(props) {
                     </StyledChatContainer>
                   </StyledVideoArea>
 
+                  {/* Móvil in-call: sistema nuevo de regalos (barra gratis del
+                      modelo) + 😊 + enviar, paridad con desktop. */}
+                  {callStatus === 'in-call' && renderModelGiftBar()}
                   <StyledChatDock data-surface="call-dark" style={{ display: callStatus === 'in-call' ? 'flex' : 'none' }}>
+                    <EmojiTextPicker onInsert={(e) => setCenterInput((v) => (v || '') + e)} disabled={!giftSendEnabled} />
                     <StyledChatInput
                       type="text"
                       value={centerInput}
@@ -1106,6 +1117,9 @@ export default function VideoChatFavoritosModelo(props) {
                         }
                       }}
                     />
+                    <BtnSend type="button" onClick={sendCenterMessage} aria-label={t('common.sendMessage')} title={t('common.sendMessage')}>
+                      <FontAwesomeIcon icon={faPaperPlane} />
+                    </BtnSend>
                   </StyledChatDock>
 
                   {(callStatus === 'connecting' || callStatus === 'ringing' || callStatus === 'incoming') && (
