@@ -342,7 +342,7 @@ export default function VideoChatFavoritosModelo(props) {
 
     return (
       <StyledGiftMessage $premium={isPremium} style={{ minWidth: 0 }}>
-        <GiftIcon code={code} iconUrl={src} alt={normalizedGift.name || ''} size={31} />
+        <GiftIcon code={code} iconUrl={src} alt={normalizedGift.name || ''} size={isPremium ? 36 : 34} />
       </StyledGiftMessage>
     );
   };

@@ -4,8 +4,10 @@
 //   1. Regalo de PAGO (premium)  -> vector SVG propio (look premium/marca).
 //   2. Emoji GRATIS (quick)      -> emoji unicode nativo (mejor aspecto y
 //      universal; mismo criterio que el selector de emojis del composer).
-//   3. Si no casa ninguno        -> fallback al `iconUrl` remoto (retrocompat
-//      con el catalogo .webp servido por /products/emojis/available).
+//   3. Si no casa ninguno        -> vector generico de regalo (#gi-gift). Se
+//      IGNORA a proposito el `iconUrl` remoto: el catalogo .webp del render
+//      viejo no existe para la mayoria de codes -> 404 -> imagen rota. El
+//      generico siempre esta disponible via <GiftIconDefs/>.
 // Requiere <GiftIconDefs/> montado una vez para el caso SVG.
 //
 // Mapeo alineado con el catalogo real ACTIVO de BD (tabla gifts):
@@ -65,7 +67,7 @@ export function resolveGiftSlug(code) {
   return null;
 }
 
-export default function GiftIcon({ code, slug, iconUrl, alt = '', size = 48, className, style }) {
+export default function GiftIcon({ code, slug, alt = '', size = 48, className, style }) {
   // Acepta `code` (de BD, preferido) o `slug` (uso directo / retrocompat).
   const raw = code != null ? code : slug;
   const c = raw != null ? String(raw).toLowerCase() : null;
@@ -104,17 +106,14 @@ export default function GiftIcon({ code, slug, iconUrl, alt = '', size = 48, cla
     );
   }
 
-  // 3) Fallback al icono remoto actual.
-  if (iconUrl) {
-    return (
-      <img
-        className={className}
-        style={{ objectFit: 'contain', display: 'block', width: size, height: size, ...style }}
-        src={iconUrl}
-        alt={alt}
-      />
-    );
-  }
-
-  return null;
+  // 3) Sin code resoluble: NO usamos el `iconUrl` remoto. Es un `.webp` del
+  //    render VIEJO que hoy no se genera para la mayoria de codes -> 404 ->
+  //    imagen rota "no disponible" (intermitente segun si el .webp existe o no
+  //    en S3). Caemos a un vector generico de regalo, SIEMPRE disponible via
+  //    <GiftIconDefs/>. Asi el fallback nunca muestra una imagen rota.
+  return (
+    <svg className={className} style={{ display: 'block', width: size, height: size, ...style }} role="img" aria-label={alt || 'gift'}>
+      <use href="#gi-gift" />
+    </svg>
+  );
 }
