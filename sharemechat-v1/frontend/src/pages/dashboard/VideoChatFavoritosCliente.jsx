@@ -947,7 +947,11 @@ export default function VideoChatFavoritosCliente(props){
                   </StyledChatContainer>
                 </StyledVideoArea>
 
+                {/* Móvil in-call: sistema nuevo de regalos (barra) + 😊,
+                    paridad con desktop y con el chat móvil sin llamada. */}
+                {callStatus==='in-call' && renderGiftBar()}
                 <StyledChatDock data-surface="call-dark" style={{display:callStatus==='in-call'?'flex':'none'}}>
+                  <EmojiTextPicker onInsert={(e) => setCenterInput((v) => (v || '') + e)} disabled={!allowChat} />
                   <StyledChatInput
                     type="text"
                     value={centerInput}

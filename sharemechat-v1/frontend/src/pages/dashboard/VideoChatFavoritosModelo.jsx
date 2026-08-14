@@ -1099,7 +1099,11 @@ export default function VideoChatFavoritosModelo(props) {
                     </StyledChatContainer>
                   </StyledVideoArea>
 
+                  {/* Móvil in-call: sistema nuevo de regalos (barra gratis del
+                      modelo) + 😊 + enviar, paridad con desktop. */}
+                  {callStatus === 'in-call' && renderModelGiftBar()}
                   <StyledChatDock data-surface="call-dark" style={{ display: callStatus === 'in-call' ? 'flex' : 'none' }}>
+                    <EmojiTextPicker onInsert={(e) => setCenterInput((v) => (v || '') + e)} disabled={!giftSendEnabled} />
                     <StyledChatInput
                       type="text"
                       value={centerInput}
@@ -1113,6 +1117,9 @@ export default function VideoChatFavoritosModelo(props) {
                         }
                       }}
                     />
+                    <BtnSend type="button" onClick={sendCenterMessage} aria-label={t('common.sendMessage')} title={t('common.sendMessage')}>
+                      <FontAwesomeIcon icon={faPaperPlane} />
+                    </BtnSend>
                   </StyledChatDock>
 
                   {(callStatus === 'connecting' || callStatus === 'ringing' || callStatus === 'incoming') && (
