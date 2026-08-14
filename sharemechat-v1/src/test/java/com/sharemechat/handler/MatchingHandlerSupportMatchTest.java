@@ -308,4 +308,14 @@ class MatchingHandlerSupportMatchTest {
         verify(nextRateLimitService, never()).checkAndConsume(anyLong());
         verify(streamService, never()).startSession(anyLong(), anyLong(), anyString());
     }
+
+    @Test
+    void cliente_sin_modelos_disponibles_recibe_no_model_available() throws Exception {
+        // Cliente hace set-role + start-match sin ninguna modelo en el pool.
+        setRole(clientSession);
+        startMatch(clientSession);
+
+        verify(streamService, never()).startSession(anyLong(), anyLong(), anyString());
+        assertThat(receivedType(clientSession, "no-model-available")).isTrue();
+    }
 }

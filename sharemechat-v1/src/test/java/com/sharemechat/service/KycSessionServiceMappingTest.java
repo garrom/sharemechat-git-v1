@@ -1,6 +1,7 @@
 package com.sharemechat.service;
 
 import com.sharemechat.constants.Constants;
+import com.sharemechat.entity.KycSession;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Test;
 
@@ -122,5 +123,21 @@ class KycSessionServiceMappingTest {
         assertThat(svc.extractProviderEventId(j)).isEqualTo("att-1"); // attemptId es autoridad de idempotencia
         assertThat(svc.extractDecisionCode(j)).isEqualTo(9102);
         assertThat(svc.extractProviderStatus(j)).isEqualTo("declined");
+    }
+
+    @Test
+    void extractDiditAgeEstimation_lee_edad_y_score_del_liveness_check() {
+        // Path Adaptive Workflow: decision.liveness_checks[0].{age_estimation,score}.
+        KycSession s = new KycSession();
+        svc.extractDiditAgeEstimation(
+                new JSONObject("{\"decision\":{\"liveness_checks\":[{\"age_estimation\":24.5,\"score\":92.3}]}}"), s);
+        assertThat(s.getEstimatedAgeDecimal()).isEqualByComparingTo("24.5");
+        assertThat(s.getConfidenceScore()).isEqualByComparingTo("92.3");
+
+        // Sin bloque decision -> no toca (mejor esfuerzo, quedan null).
+        KycSession s2 = new KycSession();
+        svc.extractDiditAgeEstimation(new JSONObject("{}"), s2);
+        assertThat(s2.getEstimatedAgeDecimal()).isNull();
+        assertThat(s2.getConfidenceScore()).isNull();
     }
 }
