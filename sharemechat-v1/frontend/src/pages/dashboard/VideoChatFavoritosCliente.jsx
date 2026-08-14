@@ -2,7 +2,7 @@
 import React,{useEffect,useRef,useState,useMemo} from 'react';
 import i18n from '../../i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faPhoneSlash, faVideo, faPaperPlane, faGift, faExpand } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faPhoneSlash, faVideo, faPaperPlane, faExpand } from '@fortawesome/free-solid-svg-icons';
 import FavoritesClientList from '../favorites/FavoritesClientList';
 import SupportMessageBubble from '../../components/support/SupportMessageBubble';
 import SessionHUD from '../../components/SessionHUD';
@@ -25,7 +25,7 @@ import GiftIcon, { resolveGiftSlug, isFaceGiftCode } from '../../components/gift
 import GiftIconDefs from '../../components/gifts/GiftIconDefs';
 import EmojiTextPicker from '../../components/EmojiTextPicker';
 import { isSingleEmoji } from '../../utils/emojiUtils';
-import { ButtonLlamar,ButtonColgar,ButtonAceptar,ButtonRechazar,ButtonEnviar,ButtonRegalo,ButtonActivarCam,
+import { ButtonLlamar,ButtonColgar,ButtonAceptar,ButtonRechazar,ButtonEnviar,ButtonActivarCam,
     ButtonActivarCamMobile,ButtonVolver,ActionButton,BtnRoundVideo,BtnHangup,BtnCallDanger,BtnCallGhost,BtnSend
 } from '../../styles/ButtonStyles';
 
@@ -45,7 +45,7 @@ export default function VideoChatFavoritosCliente(props){
       isMobile,handleOpenChatFromFavorites,favReload,selectedContactId,hasActiveDetail,hasCallTarget,setCtxUser,setCtxPos,centerChatPeerId,peerPresence,
       centerChatPeerName,centerMessages,centerLoading,centerListRef,chatEndRef,centerInput,setCenterInput,
       sendCenterMessage,allowChat,isPendingPanel,isSentPanel,acceptInvitation,rejectInvitation,gifts,giftRenderReady,
-      fmtEUR,showCenterGifts,setShowCenterGifts,sendGiftMsg,contactMode,enterCallMode,callStatus,callCameraActive,
+      fmtEUR,showCenterGifts,sendGiftMsg,contactMode,enterCallMode,callStatus,callCameraActive,
       callPeerId,callPeerName,callPeerAvatar,callRemoteVideoRef,callLocalVideoRef,callRemoteWrapRef,callListRef,
       handleCallActivateCamera,handleCallInvite,handleCallAccept,handleCallReject,handleCallEnd,toggleFullscreen,
       callError,backToList,user,
@@ -942,7 +942,7 @@ export default function VideoChatFavoritosCliente(props){
 
                   <StyledChatContainer data-wide="true" style={{display:'flex',flexDirection:'column',justifyContent:'flex-end',zIndex:5}}>
                     <StyledChatList ref={callListRef} style={{width:'100%'}}>
-                      {centerMessages.map((m) => renderChatMessage(m, { transparent: true }))}
+                      {callMessages.map((m) => renderChatMessage(m, { transparent: true }))}
                     </StyledChatList>
                   </StyledChatContainer>
                 </StyledVideoArea>
@@ -961,16 +961,6 @@ export default function VideoChatFavoritosCliente(props){
                     onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendCenterMessage();}}}
                     onFocus={()=>setTimeout(()=>chatEndRef.current?.scrollIntoView({block:'end'}),50)}
                   />
-                  <ButtonRegalo
-                    data-gift-button="true"
-                    title={t('dashboardClient.videoChatFavoritosCliente.actions.sendGift')}
-                    onClick={()=>setShowCenterGifts(s=>!s)}
-                    aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.sendGift')}
-                  >
-                    <FontAwesomeIcon icon={faGift}/>
-                  </ButtonRegalo>
-
-                  {showCenterGifts&&renderGiftPicker()}
                 </StyledChatDock>
 
                 {(callStatus==='connecting'||callStatus==='ringing'||callStatus==='incoming')&&(
