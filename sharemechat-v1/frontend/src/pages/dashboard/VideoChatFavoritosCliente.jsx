@@ -430,8 +430,8 @@ export default function VideoChatFavoritosCliente(props){
     if (!code && !src) return null;
 
     return (
-      <StyledGiftMessage $premium={isPremium}>
-        <GiftIcon code={code} iconUrl={src} alt={giftData.name || ''} size={isPremium ? 88 : 48} />
+      <StyledGiftMessage $premium={isPremium} style={{ minWidth: 0 }}>
+        <GiftIcon code={code} iconUrl={src} alt={giftData.name || ''} size={31} />
       </StyledGiftMessage>
     );
   };
@@ -487,8 +487,8 @@ export default function VideoChatFavoritosCliente(props){
     // Un solo emoji -> grande y sin globo (estilo WhatsApp).
     if (isSingleEmoji(m.body)) {
       return (
-        <StyledChatMessageRow key={m.id} $side={isMe ? 'me' : 'peer'}>
-          <span role="img" aria-label={(m.body || '').trim()} style={{ fontSize: 40, lineHeight: 1 }}>
+        <StyledChatMessageRow key={m.id} $side={isMe ? 'me' : 'peer'} style={isMe ? { paddingRight: 42 } : { paddingLeft: 42 }}>
+          <span role="img" aria-label={(m.body || '').trim()} style={{ fontSize: 34, lineHeight: 1 }}>
             {(m.body || '').trim()}
           </span>
         </StyledChatMessageRow>
