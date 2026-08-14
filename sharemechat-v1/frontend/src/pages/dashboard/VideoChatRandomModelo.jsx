@@ -444,8 +444,8 @@ export default function VideoChatRandomModelo(props) {
     if (!code && !src) return null;
 
     return (
-      <StyledGiftMessage $premium={renderData.isPremium}>
-        <GiftIcon code={code} iconUrl={src} alt={renderData.name || ''} size={renderData.isPremium ? 88 : 48} />
+      <StyledGiftMessage $premium={renderData.isPremium} style={{ minWidth: 0 }}>
+        <GiftIcon code={code} iconUrl={src} alt={renderData.name || ''} size={renderData.isPremium ? 36 : 34} />
       </StyledGiftMessage>
     );
   };
@@ -490,7 +490,7 @@ export default function VideoChatRandomModelo(props) {
       if (!giftData && !hasTranslation && isSingleEmoji(msg.text)) {
         return (
           <StyledChatMessageRow key={msg.id || index} $side={variant}>
-            <span role="img" aria-label={(msg.text || '').trim()} style={{ fontSize: 40, lineHeight: 1 }}>
+            <span role="img" aria-label={(msg.text || '').trim()} style={{ fontSize: 34, lineHeight: 1 }}>
               {(msg.text || '').trim()}
             </span>
           </StyledChatMessageRow>
@@ -542,9 +542,10 @@ export default function VideoChatRandomModelo(props) {
       style={{
         ...(floating ? {
           position: 'absolute',
-          top: 12,
+          bottom: 12,
           left: 12,
-          zIndex: 100,
+          zIndex: 30,
+          pointerEvents: 'auto',
         } : {}),
         background: showOriginal ? '#fff' : '#dbeafe',
         color: '#1e3a8a',

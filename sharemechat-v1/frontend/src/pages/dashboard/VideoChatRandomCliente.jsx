@@ -322,8 +322,8 @@ export default function VideoChatRandomCliente(props) {
     if (!code && !src) return null;
 
     return (
-      <StyledGiftMessage $premium={isPremium}>
-        <GiftIcon code={code} iconUrl={src} alt={normalized.name || ''} size={isPremium ? 88 : 48} />
+      <StyledGiftMessage $premium={isPremium} style={{ minWidth: 0 }}>
+        <GiftIcon code={code} iconUrl={src} alt={normalized.name || ''} size={isPremium ? 36 : 34} />
       </StyledGiftMessage>
     );
   };
@@ -473,7 +473,7 @@ export default function VideoChatRandomCliente(props) {
       if (!giftVisual && !hasTranslation && isSingleEmoji(msg.text)) {
         return (
           <StyledChatMessageRow key={msg.id || index} $side={variant}>
-            <span role="img" aria-label={(msg.text || '').trim()} style={{ fontSize: 40, lineHeight: 1 }}>
+            <span role="img" aria-label={(msg.text || '').trim()} style={{ fontSize: 34, lineHeight: 1 }}>
               {(msg.text || '').trim()}
             </span>
           </StyledChatMessageRow>
