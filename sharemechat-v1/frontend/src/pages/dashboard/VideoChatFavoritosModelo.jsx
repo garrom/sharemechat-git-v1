@@ -1094,7 +1094,7 @@ export default function VideoChatFavoritosModelo(props) {
 
                     <StyledChatContainer data-wide="true" style={{display:'flex',flexDirection:'column',justifyContent:'flex-end',zIndex:5}}>
                       <StyledChatList ref={callListRef} style={{ width: '100%' }}>
-                        {centerMessages.map((m) => renderChatMessageInverted(m, { transparent: true }))}
+                        {callMessages.map((m) => renderChatMessageInverted(m, { transparent: true }))}
                       </StyledChatList>
                     </StyledChatContainer>
                   </StyledVideoArea>
