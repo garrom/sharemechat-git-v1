@@ -8,6 +8,19 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-08-15 — ADR-059: completados los E2E de los happy-paths críticos (login + registro→pago/checkout); 4 specs Playwright en verde
+
+Continuación del frente E2E arrancado la entrada anterior. Se añaden las dos specs que quedaban pendientes y con ellas quedan cubiertos los **4 happy-paths críticos** del producto (arranque, registro, login, primer pago). Ambas siguen el patrón acordado (**backend MOCKEADO** por `page.route('**/api/**')`, cero Spring+MySQL) y están mapeadas sobre el código real, no sobre supuestos:
+
+- **`login.spec.js`** — entra por `/login` (Home abre el modal solo), teclea credenciales, POST `/api/auth/login` interceptado (payload verificado), `refresh()` = GET `/api/users/me` mockeado devolviendo un usuario CLIENT, y se comprueba que `resolveHomeUrl` redirige a `/client`. Gotcha resuelto: el título "Iniciar sesión" colisiona con los botones homónimos del navbar → se ancla por rol `heading`.
+- **`checkout-primer-pago.spec.js`** — el flujo registro→pago aterriza en `/dashboard-user-client` (rol USER + userType FORM_CLIENT). Se mockea `/users/me` con `clientKycStatus=APPROVED` + `emailVerifiedAt` (los dos gates de `handleFirstPayment`) + `productAccessMode=OPEN` (RequireRole). Se dispara el pago desde "Cargar saldo" (mismo handler que el CTA "Hazte Premium" de la navbar, que en ese ancho queda tras la hamburguesa), se elige un pack en el modal, POST `/api/billing/nowpayments/checkout` interceptado (packId verificado) y se comprueba que la app redirige a la `invoiceUrl` del PSP (`window.location.href`; la hosted page se stubea con otro `route` para que la navegación cross-origin complete).
+
+Total E2E: **4 specs** (`smoke`, `registro-cliente`, `login`, `checkout-primer-pago`), verdes en local y en el job `e2e` de CI. Con esto la capa unit/component/integración/E2E se considera **robusta y completa para los flujos críticos**; deuda menor restante: clase base común de los `IntegrationTest` backend.
+
+**Hallazgo lateral (flagueado como tarea aparte, no mezclado en el PR):** el snapshot del E2E de checkout destapó una **fuga de i18n** — en `frontend/src/i18n/locales/es.json` el bloque `videochat.trial` (`modelBadge.title/subtitle`, `userBanner.text/cta`) contiene texto en **inglés** sin traducir ("FREE", "Trial client · No adult content", "Free mode", "Go Premium"), así que un usuario español ve inglés en el badge/banner del videochat trial. Requiere copy de marca a confirmar; queda como chip de trabajo independiente.
+
+Sin cambios de runtime de producción (ficheros de test); no requiere despliegue ni nivelación. Memoria del agente `project_testing_adr059_fase1` actualizada.
+
 ## 2026-08-15 — ADR-059: capa unit/component robusta (198 tests) + E2E Playwright arrancado (smoke + registro cliente) + bug de empaquetado `process`/`buffer` cazado por E2E
 
 Cierre de la **base de la pirámide** del ADR-059 y arranque de la capa **E2E**. La capa unit/component pasó de 165 a **198 tests** (backend 107 + frontend 91): +33 de frontend sobre el snapshot del 08-14 — batch2 de hooks (`useTranslationSettings`, `useSupportPendingCount`) y batch3 de utils (`attribution` [ADR-057, consent-gated: solo emite con consentimiento 'accepted', en no-prod va a `window.__smcAttribution` no a GA4], `runtimeEnv` [origins por hostname + Google OFF en PROD], `normalizeNickname`, `registerErrorMessage`). Con esto la base (unit + component + integración backend con Testcontainers) se considera **robusta** y el frente vira a E2E.
