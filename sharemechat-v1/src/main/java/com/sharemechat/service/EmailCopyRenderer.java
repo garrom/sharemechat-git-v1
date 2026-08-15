@@ -45,6 +45,15 @@ public class EmailCopyRenderer {
     private static final String REGISTER_HERO_URL =
             "https://assets.sharemechat.com/email/register-hero_v1.jpg";
 
+    /**
+     * Hero apaisado (1200x600 JPEG) para el email de APROBACION de modelo
+     * (renderModelReviewDecision, rama APPROVE). Imagen distinta al registro:
+     * chica europea "pulgar arriba", encaja con el momento celebratorio.
+     * Mismo bucket/CDN que el register-hero.
+     */
+    private static final String APPROVE_HERO_URL =
+            "https://assets.sharemechat.com/email/approve-hero_v1.jpg";
+
     private final EmailLocaleResolver localeResolver;
     private final AssetRejectionReasonCopy assetRejectionReasonCopy;
     private final ProductOperationalModeService operationalMode;
@@ -179,10 +188,19 @@ public class EmailCopyRenderer {
      * cambia el "Necesitas ayuda / Need help" del pie.
      */
     private String wrapRegistration(String bodyInner, boolean withHero, String locale) {
+        return wrapRegistration(bodyInner, withHero ? REGISTER_HERO_URL : null, locale);
+    }
+
+    /**
+     * Variante que acepta la URL del hero explicita (null/blank = sin foto).
+     * Permite que cada email elija su imagen: registro/bienvenida usan
+     * REGISTER_HERO_URL; la aprobacion de modelo usa APPROVE_HERO_URL.
+     */
+    private String wrapRegistration(String bodyInner, String heroUrl, String locale) {
         boolean es = "es".equals(locale);
-        String hero = withHero
+        String hero = (heroUrl != null && !heroUrl.isBlank())
                 ? "<tr><td style=\"padding:0;font-size:0;line-height:0;\">"
-                  + "<img src=\"" + REGISTER_HERO_URL + "\" width=\"600\" alt=\"SharemeChat\" style=\"display:block;width:100%;max-width:600px;height:auto;border:0;outline:none;text-decoration:none;\" />"
+                  + "<img src=\"" + heroUrl + "\" width=\"600\" alt=\"SharemeChat\" style=\"display:block;width:100%;max-width:600px;height:auto;border:0;outline:none;text-decoration:none;\" />"
                   + "</td></tr>"
                 : "";
         String help = es ? "&iquest;Necesitas ayuda?" : "Need help?";
@@ -685,7 +703,7 @@ public class EmailCopyRenderer {
                 String body = reviewBody("¡Enhorabuena! Ya eres modelo verificada", lead,
                         ctaButton(loginUrl, "Acceder a mi panel"));
                 return new EmailContent("Tu cuenta de modelo ha sido aprobada",
-                        wrapRegistration(body, true, locale));
+                        wrapRegistration(body, APPROVE_HERO_URL, locale));
             }
             String lead = prelaunch
                     ? "Hi " + displayName + ", we've reviewed your verification and your <b>SharemeChat</b> model account is approved. You can now access your dashboard and set up your profile; we'll let you know as soon as the platform opens."
@@ -693,7 +711,7 @@ public class EmailCopyRenderer {
             String body = reviewBody("Congratulations! You're now a verified model", lead,
                     ctaButton(loginUrl, "Go to my dashboard"));
             return new EmailContent("Your model account has been approved",
-                    wrapRegistration(body, true, locale));
+                    wrapRegistration(body, APPROVE_HERO_URL, locale));
         }
 
         if (repeat) {
