@@ -107,6 +107,7 @@ Ejecución operativa, no aspiracional:
 
 ## 8. Referencias
 
+- [promo-100-primeros-clientes.md](promo-100-primeros-clientes.md) — bono de bienvenida 10 € a los 100 primeros clientes (adquisición) e impacto económico.
 - [ADR-047 — Pivote de coming-soon a soft launch con PSP puente cripto + Paxum](../06-decisions/adr-047-pivote-soft-launch-cripto-paxum.md)
 - [ADR-048 — Página pública de modelo `/m/:slug` como palanca central](../06-decisions/adr-048-pagina-publica-modelo-slug.md)
 - [ADR-052 — Rediseño estructural del reparto, rango de precio autoservicio y retirada del programa de afiliadas](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md)

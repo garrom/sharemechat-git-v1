@@ -8,6 +8,28 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-08-15 — ADR-059: expansión de cobertura frontend (Jest 91 → 229) — utils puros críticos + componentes de seguridad/infra
+
+Tras cerrar los 4 happy-paths E2E (ver la entrada de los 4 specs Playwright, más abajo), tanda de tests **unit/component de frontend** el mismo día para tapar el hueco de **utils puros críticos y componentes de seguridad/infra** que estaban sin cubrir pese a su peso (routing de sesión, control de acceso, gate PRELAUNCH, failover de mantenimiento, consent GDPR). Frontend Jest **91 → 229** (32 suites verdes); total unit/component **≈336** (backend 107 + frontend 229) + 4 specs E2E. Método: encadenado por batches (rama basada en `origin/main` → verde en local → CI 3 jobs → merge verificado con `merge-base`/`cat-file`), 8 merges independientes.
+
+**Qué se cubrió (todo de valor real, cero relleno):**
+- **Utils de routing/acceso** — `runtimeSurface` (`resolveHomeUrl` por rol, `navigateToUrl` history-vs-`window.location`, flags product/admin), `backofficeAccess` (permisos/roles), `clientKycGate` (gate de pago + defensa open-redirect).
+- **Utils de media/cámara** — `mediaState` (salud del track de video), `virtualCameraGuard` (anti-fraude Nivel 1: blacklist virtual cameras + fallback `enumerateDevices`), `apiErrors`, `emojiUtils`.
+- **Componentes seguridad/infra/UX** — `RequireRole` (gate PRELAUNCH ADR-009 + rol/userType/backoffice), `MaintenanceProvider` (overlay failover + auto-recuperación por poll con fake timers), `CookieBanner` (consent GDPR + first-touch), `TrialCooldownModal` (`formatRemaining`, 10 ramas), `LocaleSwitcher` (basename `/en` ADR-022 + alternates blog ADR-025), `ModalProvider` (API promise-based + alert/confirm/selectOptions).
+
+**Aprendizaje técnico (jsdom):** mockear `window.location` de forma fiable a través de reads asíncronos requiere `delete window.location; window.location = mock` — `Object.defineProperty(...,{value})` NO engancha entre re-definiciones; y CRA resetea las implementaciones de los mocks entre tests (re-setear en `beforeEach`). Detalle en ADR-059 (subsección "Actualización 2026-08-15 (cont.)").
+
+Frente 100% tests + docs: cero cambios de runtime de producción, no requiere despliegue.
+## 2026-08-15 — Promoción de lanzamiento registrada: bono 10 € a los 100 primeros clientes (caja-neutral) + rediseño de los emails de registro
+
+Se registra a nivel de negocio la **promoción de adquisición** que acompaña la apertura: **bono de 10 € para los 100 primeros clientes**, acreditado automáticamente al activar el modo premium (primera recarga, mínimo 10 € por [ADR-011](06-decisions/adr-011-pricing-simplification-and-minimum-threshold.md)). Doc nuevo [`docs/01-business/promo-100-primeros-clientes.md`](01-business/promo-100-primeros-clientes.md), enlazado desde `unit-economics.md` (nueva sección *Promociones de adquisición*) y `launch-strategy.md`.
+
+**Impacto económico (100 clientes, gasto completo, reparto modelo 50 %):** caja-**neutral (≈ 0 €)**. Los **1.000 €** de recargas reales (mínimo 10 €/cliente, obligatorio para activar) cubren **exactamente** los **1.000 €** de pago a modelos; la plataforma cede su comisión (que es el bono). El **50 % no es aproximación**: es el tramo **T1** real de apertura (0–1.000 € rolling 30d, [ADR-056 §D3](06-decisions/adr-056-sistema-master-studio.md)), donde arrancan todas las modelos. **Coste real a reservar ≤ 500 €** (mitad del bono que es pago real a modelos), cubierto por las recargas; con gasto parcial la plataforma queda en positivo. Lectura: **CAC ≈ 0–5 €/cliente** + 1.000 € de liquidez inyectada a modelos (cuello de botella del marketplace).
+
+**Dos amplificadores de coste dejados por escrito:** (1) si el bono se gasta en **gifts** el reparto modelo es **90 %** (no 50 %) → sensibilidad principal de la promo; (2) el operador fija **70 % para las 15 primeras modelos ("fundadoras")**, tramo que **NO está en `unit-economics` ni en ninguna ADR** (documenta 50-60 %) → marcado como **pendiente de ADR** si se confirma. La promo **no está implementada**: cuando se implemente debe seguir el contrato BFPM ([ADR-012](06-decisions/adr-012-bfpm-platform-funded-bonus.md), asientos atómicos `BONUS_GRANT`↔`BONUS_FUNDING`, invariante Σ=0); disparador nuevo (activación premium) inexistente hoy, más contador/tope de 100 y políticas de caducidad/refund por decidir. No activar en PROD hasta validación.
+
+**Contexto — rediseño de los 3 emails de registro** (frente en curso, aún no desplegado): dirección elegida = foto en la **bienvenida**, **validación** limpia sin foto, **página "email verificado"** minimalista. El bono se comunica en la bienvenida (variante cliente; la de modelo va sin bono). Solo docs de negocio en esta entrada; sin cambios de runtime ni despliegue.
+
 ## 2026-08-15 — ADR-059: completados los E2E de los happy-paths críticos (login + registro→pago/checkout); 4 specs Playwright en verde
 
 Continuación del frente E2E arrancado la entrada anterior. Se añaden las dos specs que quedaban pendientes y con ellas quedan cubiertos los **4 happy-paths críticos** del producto (arranque, registro, login, primer pago). Ambas siguen el patrón acordado (**backend MOCKEADO** por `page.route('**/api/**')`, cero Spring+MySQL) y están mapeadas sobre el código real, no sobre supuestos:
