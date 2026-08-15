@@ -161,6 +161,28 @@ public class ProductOperationalModeService {
         return m == null ? Mode.OPEN : m;
     }
 
+    /**
+     * Modo efectivo para usuarios MODELO: el override
+     * {@code product.access.mode-model} si esta configurado, o el modo global
+     * en su defecto. Permite un modo distinto por rol (p.ej. cliente PRELAUNCH
+     * / modelo OPEN) sin ampliar el JWT: el filtro/interceptor resuelven si el
+     * usuario es modelo (cargando el User, como EmailVerifiedFilter) y pasan el
+     * booleano; este service permanece puro.
+     */
+    public Mode modelMode() {
+        Mode m = props.getAccess().getModeModel();
+        return m == null ? currentMode() : m;
+    }
+
+    /**
+     * Modo efectivo para un usuario concreto segun sea modelo o no. Consumido
+     * por /api/users/me para que la SPA renderice PreLaunchScreen o producto
+     * por rol, sin logica extra en el frontend.
+     */
+    public Mode effectiveModeForUser(boolean isModel) {
+        return isModel ? modelMode() : currentMode();
+    }
+
     public boolean hasAllowlist() {
         return !allowlistUserIds.isEmpty();
     }
@@ -184,7 +206,7 @@ public class ProductOperationalModeService {
      * @param userId  userId autenticado, o null si no hay sesión válida o si
      *                el filtro decidió no extraerlo por optimización.
      */
-    public Decision decideForRequest(Authentication auth, String method, String path, Long userId) {
+    public Decision decideForRequest(Authentication auth, String method, String path, Long userId, boolean isModel) {
         String safePath = path == null ? "" : path;
         String safeMethod = method == null ? "" : method;
 
@@ -206,7 +228,10 @@ public class ProductOperationalModeService {
             }
         }
 
-        Mode mode = currentMode();
+        // Modo efectivo por rol: la modelo puede regirse por modelMode()
+        // (p.ej. OPEN) mientras el cliente sigue el modo global (p.ej.
+        // PRELAUNCH). isModel lo resuelve el filtro cargando el User.
+        Mode mode = isModel ? modelMode() : currentMode();
 
         if (mode != Mode.OPEN && isAllowlistedUser(userId)) {
             return Decision.allow("allowlist_user");
@@ -273,8 +298,8 @@ public class ProductOperationalModeService {
      * @param endpoint path del handshake (p. ej. "/match", "/messages").
      * @param userId   userId autenticado, o null.
      */
-    public Decision decideForWsHandshake(Authentication auth, String endpoint, Long userId) {
-        Mode mode = currentMode();
+    public Decision decideForWsHandshake(Authentication auth, String endpoint, Long userId, boolean isModel) {
+        Mode mode = isModel ? modelMode() : currentMode();
         if (mode == Mode.OPEN) {
             return Decision.allow("mode_open");
         }

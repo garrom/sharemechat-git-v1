@@ -1,7 +1,10 @@
 package com.sharemechat.security;
 
 import com.sharemechat.config.ProductOperationalProperties.Mode;
+import com.sharemechat.constants.Constants;
 import com.sharemechat.constants.ProductOperationalConstants;
+import com.sharemechat.entity.User;
+import com.sharemechat.repository.UserRepository;
 import com.sharemechat.service.ProductOperationalModeService;
 import com.sharemechat.service.ProductOperationalModeService.Decision;
 import jakarta.servlet.FilterChain;
@@ -52,15 +55,18 @@ public class ProductOperationalModeFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
     private final String cookieDomain;
     private final boolean secureCookies;
+    private final UserRepository userRepository;
 
     public ProductOperationalModeFilter(ProductOperationalModeService service,
                                         JwtUtil jwtUtil,
                                         String cookieDomain,
-                                        boolean secureCookies) {
+                                        boolean secureCookies,
+                                        UserRepository userRepository) {
         this.service = service;
         this.jwtUtil = jwtUtil;
         this.cookieDomain = cookieDomain;
         this.secureCookies = secureCookies;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -91,7 +97,16 @@ public class ProductOperationalModeFilter extends OncePerRequestFilter {
             userId = extractUserIdSafe(request);
         }
 
-        Decision decision = service.decideForRequest(auth, method, path, userId);
+        // Modo por rol: resolvemos si la sesion es de una MODELO (rol MODEL o
+        // candidata USER+FORM_MODEL) para aplicarle modelMode(). Se carga el
+        // User del repositorio (mismo patron que EmailVerifiedFilter). Solo
+        // cuando el modo puede diferir por rol; en OPEN total no aporta nada.
+        boolean isModel = false;
+        if (service.currentMode() != Mode.OPEN || service.modelMode() != Mode.OPEN) {
+            isModel = resolveIsModel(auth);
+        }
+
+        Decision decision = service.decideForRequest(auth, method, path, userId, isModel);
 
         if (decision.isAllow()) {
             chain.doFilter(request, response);
@@ -205,6 +220,31 @@ public class ProductOperationalModeFilter extends OncePerRequestFilter {
             if (s.startsWith(BackofficeAuthorities.BO_PERMISSION_PREFIX)) return true;
         }
         return false;
+    }
+
+    /**
+     * Determina si la sesion autenticada es de una MODELO: rol MODEL
+     * (escalada) o candidata (rol USER + userType FORM_MODEL). Carga el User
+     * del repositorio (fuente autoritativa, mismo patron que
+     * EmailVerifiedFilter); no usa claims del JWT para no depender de datos
+     * stale/manipulables (el rol del JWT queda fijo al login). Fail-closed:
+     * ante cualquier duda devuelve false, de modo que la modelo cae al modo
+     * global (mas restrictivo) en vez de abrirse por error.
+     */
+    private boolean resolveIsModel(Authentication auth) {
+        if (auth == null || !auth.isAuthenticated()) return false;
+        String email = auth.getName();
+        if (email == null || email.isBlank() || "anonymousUser".equals(email)) return false;
+        try {
+            User u = userRepository.findByEmail(email).orElse(null);
+            if (u == null) return false;
+            String role = u.getRole();
+            String userType = u.getUserType();
+            return Constants.Roles.MODEL.equals(role)
+                    || (Constants.Roles.USER.equals(role) && Constants.UserTypes.FORM_MODEL.equals(userType));
+        } catch (Exception ex) {
+            return false;
+        }
     }
 
     /**

@@ -59,6 +59,13 @@ public class ProductOperationalProperties {
 
     public static class Access {
         private Mode mode = Mode.OPEN;
+        /**
+         * Override de modo para usuarios MODELO (rol MODEL o candidata
+         * USER+FORM_MODEL). {@code null} = usa {@link #mode} (comportamiento
+         * previo intacto). Permite, p.ej., cliente en PRELAUNCH y modelo en
+         * OPEN a la vez. Se activa por env {@code PRODUCT_ACCESS_MODE_MODEL}.
+         */
+        private Mode modeModel = null;
         private Allowlist allowlist = new Allowlist();
 
         public Mode getMode() {
@@ -67,6 +74,15 @@ public class ProductOperationalProperties {
 
         public void setMode(Mode mode) {
             this.mode = mode == null ? Mode.OPEN : mode;
+        }
+
+        public Mode getModeModel() {
+            return modeModel;
+        }
+
+        public void setModeModel(Mode modeModel) {
+            // null permitido: significa "sin override" -> cae a mode.
+            this.modeModel = modeModel;
         }
 
         public Allowlist getAllowlist() {
