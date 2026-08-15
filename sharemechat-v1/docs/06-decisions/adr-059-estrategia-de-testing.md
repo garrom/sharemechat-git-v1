@@ -1,13 +1,13 @@
 # ADR-059 - Estrategia de testing: acercamiento a Clean Architecture / TDD + integración + CI
 
-> Estado: VIGENTE (fases 0-3 materializadas 2026-08-14; ver "Materialización")
+> Estado: VIGENTE (fases 0-3 + Fase 4 unit/component + E2E arrancado 2026-08-15; ver "Materialización")
 > Fecha: 2026-08-12
 > Vigencia esperada: indefinida (marco de calidad del proyecto)
 > Reemplaza: N/A
 > Ver también: `docs/07-roadmap/backlog-priorizado.md` (frente P1 "Tests + CI"), Robert C. Martin (Clean Architecture, Clean Code, TDD)
 
 ## Estado
-Vigente (fases 0-3 materializadas; ver "Materialización")
+Vigente (fases 0-3 + Fase 4 capa unit/component + E2E Playwright arrancado; ver "Materialización")
 
 ## Contexto
 
@@ -85,3 +85,9 @@ Fases 0-3 en marcha + parte de la periferia crítica. Estado a 2026-08-14:
 Backend **cerrado** (2026-08-15): el login federado se resolvió con un unit test directo del controller (mocks + `MockHttpServletRequest/Response`, sin MockMvc/Security ni refactor de producción), y se cerraron los casos menores (matchClient sin-oferta, age estimation). Queda deuda menor: extraer clase base común de los `IntegrationTest`.
 
 **Fase 4 (frontend) EN MARCHA** (58 tests, Jest/RTL — infra CRA+Jest+RTL ya presente). Cubierto: los 3 registros, `SessionHUD`, checkout, y hooks/dominio (traductor, polling, interacción core + helpers, modales). Se han cimentado **4 patrones de test de hooks**: harness simple, polling con fake timers (`await act(async()=>{})` + `advanceTimersByTime`, asertar nº de llamadas), captura-de-API para state machines, y modal-promise (mockear `openModal`, renderizar el `content` capturado, disparar handlers). Pendiente Fase 4: más hooks/utils (`useSupportPendingCount`, `useTranslationSettings`, utils `registerErrorMessage`/`normalizeNickname`) y **E2E (Playwright)** para happy-paths críticos (registro→pago, login). Extracción de seams (puertos/policies) según se endurezca el core.
+
+### Actualización 2026-08-15 — capa unit/component robusta (198) + E2E Playwright arrancado
+
+- **Capa unit/component cerrada (165 → 198 tests; backend 107 + frontend 91)**. Frontend +33 sobre el snapshot del 08-14: batch2 hooks (`useTranslationSettings`, `useSupportPendingCount`), batch3 utils (`attribution` [ADR-057, consent-gated], `runtimeEnv`, `normalizeNickname`, `registerErrorMessage`) y el resto de `useAppModals`/dominio. La base de pirámide (unit + component + integración backend) se considera **robusta**.
+- **E2E Playwright arrancado** — **tercer job de CI** `e2e` en `.github/workflows/ci.yml` (backend + frontend + e2e). Enfoque: **backend MOCKEADO por interceptación de red** (`page.route('**/api/**')`; el backend real ya está cubierto por los 107 tests de integración). Infra: `@playwright/test` + `playwright.config.js` (Chromium sobre el frontend **product** vía `env-cmd -f .env.product react-scripts start` en :3100). Specs: `smoke` (la app carga y React monta) + `registro-cliente` (happy-path completo: age-gate saltado por localStorage → Home → género → cliente → form → modal de éxito, con el POST `/api/users/register/client` interceptado y su payload verificado). Pendiente: login, registro→pago.
+- **Valor inmediato del E2E — bug de empaquetado cazado el primer día**: `src/polyfills.js` importaba `process` y `buffer` sin declararlos en `package.json` (`buffer` colaba como transitiva de `simple-peer`; `process` sin proveedor). En local funcionaba por caché de webpack; un `npm ci` LIMPIO (CI, o cualquier build de deploy del frontend desde cero) rompía el bundle con `Cannot find module 'process'` → React no montaba → **página en blanco**. Bomba latente en el pipeline de deploy que los tests unitarios (jsdom) no ven. Fix: declarar ambos shims explícitos en devDependencies. Justifica por sí solo la capa E2E.
