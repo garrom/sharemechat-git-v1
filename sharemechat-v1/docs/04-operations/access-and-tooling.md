@@ -58,7 +58,7 @@ Debe devolver `ok`. `BatchMode=yes` evita prompts interactivos (passphrase, host
 
 - **TEST**: la EC2 se enciende y apaga manualmente. Si el alias no responde, la EC2 puede estar parada — verificar en la consola AWS antes de asumir problema de configuración. El backend corre bajo `sharemechat-test.service` (systemd, `Restart=on-failure`, arranca automáticamente tras cada boot de la EC2); ver detalle en [test.md](../03-environments/test.md).
 - **AUDIT**: la EC2 está siempre encendida y el backend corre como `sharemechat-audit.service`. El alias debería responder en todo momento.
-- **PROD**: el entorno aún no existe como producto (solo landing). El alias `prod-backend` se documentará cuando se monte la EC2 backend de PROD.
+- **PROD**: EC2 backend **operativa** (nivelada a main 2026-08-11, `sharemechat-prod.service`); el modo operativo del producto sigue `PRELAUNCH`. El alias SSH `prod-backend` responde (verificado 2026-08-15). *(El mapping tenía `pro-backend` mal escrito, corregido 2026-08-14.)*
 
 Si tu equipo aún no tiene los alias `audit-backend` o `prod-backend` configurados, añadirlos a `~/.ssh/config` antes de operar sobre esos entornos. Los datos para rellenarlos viven en el mapping local.
 
