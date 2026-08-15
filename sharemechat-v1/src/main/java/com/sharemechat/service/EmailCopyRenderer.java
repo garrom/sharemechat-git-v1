@@ -666,80 +666,77 @@ public class EmailCopyRenderer {
      * awaiting-admin documentado en didit-setup.md. action ∈ APPROVE/REJECT/REPEAT.
      * PENDING NO emite email (estado intermedio).
      */
-    public EmailContent renderModelReviewDecision(User user, String action) {
+    public EmailContent renderModelReviewDecision(User user, String action, String loginUrl) {
         String locale = localeResolver.resolve(user);
         String displayName = htmlEscape(safeLabel(user));
         boolean approve = "APPROVE".equalsIgnoreCase(action);
         boolean repeat = "REPEAT".equalsIgnoreCase(action);
-
-        if (repeat) {
-            if ("es".equals(locale)) {
-                return new EmailContent(
-                        "Necesitamos repetir tu verificación",
-                        wrapWithLogo("""
-                                <p>Hola %s,</p>
-                                <p>Algo no ha ido bien en la verificación de tu cuenta en <b>SharemeChat</b>. Por favor, inicia sesión y vuelve a iniciar el proceso de verificación de identidad desde tu panel.</p>
-                                <p>Si tienes cualquier duda, contacta con nuestro equipo de soporte y te ayudamos.</p>
-                                <p>Gracias,<br>El equipo de SharemeChat</p>
-                                """.formatted(displayName))
-                );
-            }
-            return new EmailContent(
-                    "We need to repeat your verification",
-                    wrapWithLogo("""
-                            <p>Hello %s,</p>
-                            <p>Something didn't go right with your <b>SharemeChat</b> account verification. Please log in and start the identity verification process again from your dashboard.</p>
-                            <p>If you have any questions, contact our support team and we'll help.</p>
-                            <p>Thanks,<br>The SharemeChat team</p>
-                            """.formatted(displayName))
-            );
-        }
+        boolean prelaunch = isPrelaunch();
+        boolean es = "es".equals(locale);
 
         if (approve) {
-            if ("es".equals(locale)) {
-                return new EmailContent(
-                        "Tu cuenta de modelo ha sido aprobada",
-                        wrapWithLogo("""
-                                <p>Hola %s,</p>
-                                <p>Hemos revisado tu verificación y tu cuenta de modelo en <b>SharemeChat</b> ha sido aprobada.</p>
-                                <p>Ya puedes acceder a tu panel y empezar a operar en la plataforma.</p>
-                                <p>Si tienes cualquier duda, escríbenos y te ayudamos.</p>
-                                <p>Gracias por unirte a SharemeChat,<br>El equipo de SharemeChat</p>
-                                """.formatted(displayName))
-                );
+            // Momento celebratorio -> marco de marca CON foto + CTA al panel.
+            // Mode-aware: en PRELAUNCH no prometemos "empezar" (aun no hay
+            // clientes); solo preparar perfil y esperar la apertura.
+            if (es) {
+                String lead = prelaunch
+                        ? "Hola " + displayName + ", hemos revisado tu verificación y tu cuenta de modelo en <b>SharemeChat</b> ya está aprobada. Ya puedes acceder a tu panel y preparar tu perfil; te avisaremos en cuanto abramos la plataforma."
+                        : "Hola " + displayName + ", hemos revisado tu verificación y tu cuenta de modelo en <b>SharemeChat</b> ya está aprobada. Ya puedes acceder a tu panel y empezar en la plataforma.";
+                String body = reviewBody("¡Enhorabuena! Ya eres modelo verificada", lead,
+                        ctaButton(loginUrl, "Acceder a mi panel"));
+                return new EmailContent("Tu cuenta de modelo ha sido aprobada",
+                        wrapRegistration(body, true, locale));
             }
-            return new EmailContent(
-                    "Your model account has been approved",
-                    wrapWithLogo("""
-                            <p>Hello %s,</p>
-                            <p>We've reviewed your verification and your <b>SharemeChat</b> model account has been approved.</p>
-                            <p>You can now access your dashboard and start operating on the platform.</p>
-                            <p>If you have any questions, get in touch and we'll help.</p>
-                            <p>Thanks for joining SharemeChat,<br>The SharemeChat team</p>
-                            """.formatted(displayName))
-            );
+            String lead = prelaunch
+                    ? "Hi " + displayName + ", we've reviewed your verification and your <b>SharemeChat</b> model account is approved. You can now access your dashboard and set up your profile; we'll let you know as soon as the platform opens."
+                    : "Hi " + displayName + ", we've reviewed your verification and your <b>SharemeChat</b> model account is approved. You can now access your dashboard and get started on the platform.";
+            String body = reviewBody("Congratulations! You're now a verified model", lead,
+                    ctaButton(loginUrl, "Go to my dashboard"));
+            return new EmailContent("Your model account has been approved",
+                    wrapRegistration(body, true, locale));
         }
 
-        if ("es".equals(locale)) {
-            return new EmailContent(
-                    "Tu verificación no ha sido aprobada",
-                    wrapWithLogo("""
-                            <p>Hola %s,</p>
-                            <p>Hemos revisado tu solicitud para operar como modelo en <b>SharemeChat</b> y, tras evaluarla, no ha sido aprobada en esta ocasión.</p>
-                            <p>Si crees que se trata de un error o quieres entender mejor la decisión, contacta con nuestro equipo de soporte y la revisaremos contigo.</p>
-                            <p>Gracias por tu interés,<br>El equipo de SharemeChat</p>
-                            """.formatted(displayName))
-            );
+        if (repeat) {
+            // Marco de marca SIN foto (no es celebratorio) + CTA para reintentar.
+            if (es) {
+                String lead = "Hola " + displayName + ", algo no ha ido bien en la verificación de tu cuenta en <b>SharemeChat</b>. Accede a tu panel y vuelve a iniciar el proceso de verificación de identidad. Si tienes cualquier duda, escríbenos a soporte y te ayudamos.";
+                String body = reviewBody("Necesitamos repetir tu verificación", lead,
+                        ctaButton(loginUrl, "Acceder a mi panel"));
+                return new EmailContent("Necesitamos repetir tu verificación",
+                        wrapRegistration(body, false, locale));
+            }
+            String lead = "Hi " + displayName + ", something didn't go right with your <b>SharemeChat</b> account verification. Log in to your dashboard and start the identity verification again. If you have any questions, contact support and we'll help.";
+            String body = reviewBody("We need to repeat your verification", lead,
+                    ctaButton(loginUrl, "Go to my dashboard"));
+            return new EmailContent("We need to repeat your verification",
+                    wrapRegistration(body, false, locale));
         }
-        return new EmailContent(
-                "Your verification has not been approved",
-                wrapWithLogo("""
-                        <p>Hello %s,</p>
-                        <p>We've reviewed your application to operate as a model on <b>SharemeChat</b> and, after evaluating it, it has not been approved on this occasion.</p>
-                        <p>If you believe this is a mistake or want to better understand the decision, please contact our support team and we'll review it with you.</p>
-                        <p>Thanks for your interest,<br>The SharemeChat team</p>
-                        """.formatted(displayName))
-        );
+
+        // REJECT: sobrio, sin foto, sin CTA (una negativa no lleva boton ni hero).
+        if (es) {
+            String lead = "Hola " + displayName + ", hemos revisado tu solicitud para operar como modelo en <b>SharemeChat</b> y, tras evaluarla, no ha sido aprobada en esta ocasión. Si crees que se trata de un error o quieres entender mejor la decisión, contacta con nuestro equipo de soporte y la revisaremos contigo.";
+            String body = reviewBody("Tu verificación no ha sido aprobada", lead, "");
+            return new EmailContent("Tu verificación no ha sido aprobada",
+                    wrapRegistration(body, false, locale));
+        }
+        String lead = "Hi " + displayName + ", we've reviewed your application to operate as a model on <b>SharemeChat</b> and, after evaluating it, it has not been approved on this occasion. If you believe this is a mistake or want to better understand the decision, please contact our support team and we'll review it with you.";
+        String body = reviewBody("Your verification has not been approved", lead, "");
+        return new EmailContent("Your verification has not been approved",
+                wrapRegistration(body, false, locale));
+    }
+
+    /**
+     * Cuerpo de un email de decisión de review de modelo (aprobada / repetir /
+     * no aprobada): titular + un parrafo de apoyo + CTA opcional. {@code lead}
+     * viene como HTML (nickname ya escapado). Sin foto: el hero lo decide el
+     * wrapRegistration del llamante.
+     */
+    private String reviewBody(String headline, String lead, String cta) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<h1 style=\"font-size:22px;font-weight:bold;margin:0 0 10px;color:#141820;line-height:1.25;\">").append(headline).append("</h1>");
+        sb.append("<p style=\"margin:0 0 24px;color:#42505f;font-size:15px;line-height:1.6;\">").append(lead).append("</p>");
+        if (cta != null && !cta.isBlank()) sb.append(cta);
+        return sb.toString();
     }
 
     // renderReferralMagicLink + renderReferralInvitation retirados el

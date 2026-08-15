@@ -86,6 +86,7 @@ public class AdminService {
     private final EmailService emailService;
     private final EmailCopyRenderer emailCopyRenderer;
     private final KycSessionRepository kycSessionRepository;
+    private final com.sharemechat.config.PublicSiteProperties publicSiteProperties;
 
     public AdminService(UserRepository userRepository, UserService userService,
                         ModelRepository modelRepository, AdminRepository adminRepository,
@@ -94,7 +95,8 @@ public class AdminService {
                         EmailVerificationService emailVerificationService,
                         EmailService emailService,
                         EmailCopyRenderer emailCopyRenderer,
-                        KycSessionRepository kycSessionRepository) {
+                        KycSessionRepository kycSessionRepository,
+                        com.sharemechat.config.PublicSiteProperties publicSiteProperties) {
         this.userRepository = userRepository;
         this.userService = userService;
         this.modelRepository = modelRepository;
@@ -106,6 +108,7 @@ public class AdminService {
         this.emailService = emailService;
         this.emailCopyRenderer = emailCopyRenderer;
         this.kycSessionRepository = kycSessionRepository;
+        this.publicSiteProperties = publicSiteProperties;
     }
 
     /**
@@ -329,8 +332,9 @@ public class AdminService {
         // de la decisión.
         if ("APPROVE".equals(a) || "REJECT".equals(a) || "REPEAT".equals(a)) {
             try {
+                String loginUrl = publicSiteProperties.getBaseUrl() + "/login";
                 EmailCopyRenderer.EmailContent content =
-                        emailCopyRenderer.renderModelReviewDecision(user, a);
+                        emailCopyRenderer.renderModelReviewDecision(user, a, loginUrl);
                 EmailMessage.Category category = switch (a) {
                     case "APPROVE" -> EmailMessage.Category.MODEL_REVIEW_APPROVED;
                     case "REJECT" -> EmailMessage.Category.MODEL_REVIEW_REJECTED;

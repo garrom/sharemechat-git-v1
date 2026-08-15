@@ -1,5 +1,6 @@
 package com.sharemechat.service;
 
+import com.sharemechat.config.PublicSiteProperties;
 import com.sharemechat.constants.Constants;
 import com.sharemechat.entity.KycSession;
 import com.sharemechat.entity.User;
@@ -21,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -47,6 +49,7 @@ class AdminServiceReviewModelTest {
     private EmailService emailService;
     private EmailCopyRenderer emailCopyRenderer;
     private KycSessionRepository kycSessionRepository;
+    private PublicSiteProperties publicSiteProperties;
     private AdminService adminService;
 
     @BeforeEach
@@ -62,12 +65,14 @@ class AdminServiceReviewModelTest {
         emailService = mock(EmailService.class);
         emailCopyRenderer = mock(EmailCopyRenderer.class);
         kycSessionRepository = mock(KycSessionRepository.class);
+        publicSiteProperties = mock(PublicSiteProperties.class);
+        when(publicSiteProperties.getBaseUrl()).thenReturn("https://test.sharemechat.com");
 
         adminService = new AdminService(
                 userRepository, userService, modelRepository, adminRepository,
                 jdbc, modelDocumentRepository, checklistRepository,
                 emailVerificationService, emailService, emailCopyRenderer,
-                kycSessionRepository
+                kycSessionRepository, publicSiteProperties
         );
     }
 
@@ -87,7 +92,7 @@ class AdminServiceReviewModelTest {
         User user = newPendingModel(100L, "demo+model@sharemechat.com");
         when(userRepository.findById(100L)).thenReturn(Optional.of(user));
         when(modelRepository.existsById(100L)).thenReturn(false);
-        when(emailCopyRenderer.renderModelReviewDecision(any(User.class), eq("APPROVE")))
+        when(emailCopyRenderer.renderModelReviewDecision(any(User.class), eq("APPROVE"), anyString()))
                 .thenReturn(new EmailCopyRenderer.EmailContent(
                         "Tu cuenta de modelo ha sido aprobada", "<p>body approve</p>"));
 
@@ -111,7 +116,7 @@ class AdminServiceReviewModelTest {
     void rejectSendsRejectedEmail() {
         User user = newPendingModel(101L, "demo+model2@sharemechat.com");
         when(userRepository.findById(101L)).thenReturn(Optional.of(user));
-        when(emailCopyRenderer.renderModelReviewDecision(any(User.class), eq("REJECT")))
+        when(emailCopyRenderer.renderModelReviewDecision(any(User.class), eq("REJECT"), anyString()))
                 .thenReturn(new EmailCopyRenderer.EmailContent(
                         "Tu verificación no ha sido aprobada", "<p>body reject</p>"));
 
@@ -160,7 +165,7 @@ class AdminServiceReviewModelTest {
         when(userRepository.findById(104L)).thenReturn(Optional.of(user));
         when(kycSessionRepository.findTopByUserIdAndSessionTypeOrderByIdDesc(
                 104L, Constants.SessionTypes.MODEL)).thenReturn(Optional.of(existing));
-        when(emailCopyRenderer.renderModelReviewDecision(any(User.class), eq("REPEAT")))
+        when(emailCopyRenderer.renderModelReviewDecision(any(User.class), eq("REPEAT"), anyString()))
                 .thenReturn(new EmailCopyRenderer.EmailContent(
                         "Necesitamos repetir tu verificación", "<p>body repeat</p>"));
 
@@ -185,7 +190,7 @@ class AdminServiceReviewModelTest {
         User user = newPendingModel(103L, "demo+model4@sharemechat.com");
         when(userRepository.findById(103L)).thenReturn(Optional.of(user));
         when(modelRepository.existsById(103L)).thenReturn(true);
-        when(emailCopyRenderer.renderModelReviewDecision(any(User.class), eq("APPROVE")))
+        when(emailCopyRenderer.renderModelReviewDecision(any(User.class), eq("APPROVE"), anyString()))
                 .thenReturn(new EmailCopyRenderer.EmailContent("subject", "<p>body</p>"));
         doThrow(new RuntimeException("graph down"))
                 .when(emailService).send(any(EmailMessage.class));
