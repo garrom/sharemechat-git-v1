@@ -13,12 +13,12 @@
   "videochat": {
     "trial": {
       "modelBadge": {
-        "title": "FREE",
-        "subtitle": "Trial client · No adult content"
+        "title": "GRATIS",
+        "subtitle": "Cliente de prueba · Sin contenido adulto"
       },
       "userBanner": {
-        "text": "Free mode",
-        "cta": "Go Premium"
+        "text": "Modo gratuito",
+        "cta": "Hazte Premium"
       }
     }
   },
