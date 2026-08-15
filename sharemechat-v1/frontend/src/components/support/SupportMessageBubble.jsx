@@ -298,20 +298,27 @@ const SupportMessageBubble = ({
   // para P2P_ME, blanco para P2P_PEER. La inicial se obtiene del
   // nickname que el caller pasa via props (peerNickname / userNickname).
   if (sender === 'P2P_ME') {
+    // En el overlay móvil del videochat (transparent) pegamos el mensaje propio
+    // a la IZQUIERDA con el avatar-inicial a la izquierda, igual que P2P_PEER,
+    // para una columna limpia (poco ancho en pantalla). En desktop / chat
+    // normal se mantiene a la derecha como siempre.
+    const meSide = transparent ? 'left' : 'right';
+    const meAvatar = <Avatar $bg="#15803d">{initialOf(userNickname || 'Y')}</Avatar>;
     return (
       <div>
-        <Row $side="right">
-          <ColumnWrap $side="right">
+        <Row $side={meSide}>
+          {meSide === 'left' && meAvatar}
+          <ColumnWrap $side={meSide}>
             <Bubble $bg="#dcfce7" $fg="#14532d" $border="#86efac" $transparent={transparent}>
               {content}
               {hasTranslation && <TranslationLine>{translation}</TranslationLine>}
             </Bubble>
-            <MetaLine $side="right">
+            <MetaLine $side={meSide}>
               {ts}
               {pending ? <PendingTag>enviando…</PendingTag> : null}
             </MetaLine>
           </ColumnWrap>
-          <Avatar $bg="#15803d">{initialOf(userNickname || 'Y')}</Avatar>
+          {meSide === 'right' && meAvatar}
         </Row>
       </div>
     );
