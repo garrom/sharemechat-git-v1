@@ -497,10 +497,13 @@ export default function VideoChatFavoritosModelo(props) {
         </StyledChatMessageRow>
       );
     }
-    // Un solo emoji -> grande y sin globo (estilo WhatsApp).
+    // Un solo emoji -> grande y sin globo (estilo WhatsApp). MISMO lado que el
+    // regalo: usar el `side` YA resuelto (invertido si aplica), NO el `isMe`
+    // crudo, o el emoji queda con el padding en el lado contrario al regalo.
     if (isSingleEmoji(m.body)) {
+      const side = isMe ? senderMe.side : senderPeer.side;
       return (
-        <StyledChatMessageRow key={m.id} $side={isMe ? senderMe.side : senderPeer.side} style={isMe ? { paddingRight: 42 } : { paddingLeft: 42 }}>
+        <StyledChatMessageRow key={m.id} $side={side} style={side === 'me' ? { paddingRight: 42 } : { paddingLeft: 42 }}>
           <span role="img" aria-label={(m.body || '').trim()} style={{ fontSize: 34, lineHeight: 1 }}>
             {(m.body || '').trim()}
           </span>
