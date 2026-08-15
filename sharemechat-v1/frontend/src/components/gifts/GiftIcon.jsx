@@ -1,18 +1,20 @@
 // GiftIcon.jsx
 // Componente unico para pintar un icono-regalo del chat. Resuelve por el
 // `code` del regalo (de BD):
-//   1. Regalo de PAGO (premium)  -> vector SVG propio (look premium/marca).
-//   2. Emoji GRATIS (quick)      -> emoji unicode nativo (mejor aspecto y
-//      universal; mismo criterio que el selector de emojis del composer).
-//   3. Si no casa ninguno        -> vector generico de regalo (#gi-gift). Se
-//      IGNORA a proposito el `iconUrl` remoto: el catalogo .webp del render
-//      viejo no existe para la mayoria de codes -> 404 -> imagen rota. El
-//      generico siempre esta disponible via <GiftIconDefs/>.
-// Requiere <GiftIconDefs/> montado una vez para el caso SVG.
+//   1. GRATIS (caritas del boton 😊 + objetos gratis de la barra) -> emoji
+//      unicode nativo. Decision de producto (opcion A): los gratis se pintan
+//      SIEMPRE como emoji, los mande el cliente o la modelo, para que el mismo
+//      objeto se vea IGUAL con independencia del emisor (en random la modelo
+//      solo puede enviar por chat/emoji, y asi el cliente lo iguala).
+//   2. Regalo de PAGO (premium) -> vector SVG propio (look premium/marca).
+//   3. Si no casa ninguno       -> vector generico de regalo (#gi-gift). Se
+//      IGNORA a proposito el `iconUrl` remoto (.webp del render viejo -> 404).
+// Requiere <GiftIconDefs/> montado una vez para el caso SVG (pago).
 //
-// Mapeo alineado con el catalogo real ACTIVO de BD (tabla gifts):
-//   pago:   corona, diamante, labios, rosa
-//   gratis: flirty, hot, kiss, laugh, love, ok, sad, wow, basic
+// Catalogo real ACTIVO de BD (tabla gifts):
+//   pago (SVG):     rosa, cocktail, teddy, gift, ring, corona, rocket, diamante
+//   gratis objeto:  heart, star, fire, sparkle, rosebud, labios (emoji)
+//   gratis carita:  flirty, hot, kiss, laugh, love, ok, sad, wow, basic (emoji)
 import React from 'react';
 
 // Slugs con icono vectorial propio (deben existir como <symbol id="gi-<slug>">).
@@ -41,6 +43,20 @@ const CODE_TO_EMOJI = {
   sad: '\u{1F622}',    // triste
   wow: '\u{1F62E}',    // sorpresa
   basic: '\u{1F642}',  // sonrisa simple
+};
+
+// Objetos GRATIS de la barra: code de BD -> emoji unicode nativo (opcion A).
+// A diferencia de las caritas, estos SI son objetos y SIGUEN en la barra de
+// regalos (no en el selector 😊) -> por eso NO se anaden a FACE_GIFT_CODES.
+// Se exporta para que el envio del modelo en random (por chat) use el MISMO
+// caracter que aqui, y el objeto se vea identico lo mande quien lo mande.
+export const OBJECT_CODE_TO_EMOJI = {
+  heart: '❤️',  // corazon
+  star: '⭐',         // estrella
+  fire: '\u{1F525}',      // fuego
+  sparkle: '✨',      // destello
+  rosebud: '\u{1F339}',   // rosa
+  labios: '\u{1F48B}',    // beso/labios
 };
 
 // Codigos-carita: regalos gratis que son una CARA (no un objeto). Se excluyen
@@ -72,18 +88,12 @@ export default function GiftIcon({ code, slug, alt = '', size = 48, className, s
   const raw = code != null ? code : slug;
   const c = raw != null ? String(raw).toLowerCase() : null;
 
-  // 1) Regalo de pago con vector propio.
-  const resolvedSlug = resolveGiftSlug(c);
-  if (resolvedSlug) {
-    return (
-      <svg className={className} style={{ display: 'block', width: size, height: size, ...style }} role="img" aria-label={alt || resolvedSlug}>
-        <use href={`#gi-${resolvedSlug}`} />
-      </svg>
-    );
-  }
-
-  // 2) Emoji gratis nativo.
-  if (c && CODE_TO_EMOJI[c]) {
+  // 1) GRATIS -> emoji nativo (caritas del 😊 + objetos gratis de la barra).
+  //    Va ANTES que el SVG: un objeto gratis (heart/star/...) se pinta emoji
+  //    aunque tambien tenga slug SVG. Opcion A: el mismo objeto se ve igual lo
+  //    mande el cliente (regalo real) o la modelo (chat/emoji en random).
+  const emojiChar = c ? (CODE_TO_EMOJI[c] || OBJECT_CODE_TO_EMOJI[c]) : null;
+  if (emojiChar) {
     return (
       <span
         className={className}
@@ -101,8 +111,18 @@ export default function GiftIcon({ code, slug, alt = '', size = 48, className, s
           ...style,
         }}
       >
-        {CODE_TO_EMOJI[c]}
+        {emojiChar}
       </span>
+    );
+  }
+
+  // 2) Regalo de PAGO con vector propio de marca.
+  const resolvedSlug = resolveGiftSlug(c);
+  if (resolvedSlug) {
+    return (
+      <svg className={className} style={{ display: 'block', width: size, height: size, ...style }} role="img" aria-label={alt || resolvedSlug}>
+        <use href={`#gi-${resolvedSlug}`} />
+      </svg>
     );
   }
 
