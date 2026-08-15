@@ -43,4 +43,4 @@ El programa de afiliadas internas (30% revshare por cliente atribuido) queda **r
 
 ## Madurez observada
 
-La economía interna y la trazabilidad contable parecen más maduras que la integración PSP externa. Ningún PSP está cerrado contractualmente: la vía activa de onboarding es CardBilling / Verotel (condicional, con due diligence en curso), mientras que CCBill quedó como vía silente tras conversaciones iniciales. La integración PSP a nivel de código sigue siendo parcial. El detalle de la estrategia vive en [psp-strategy.md](psp-strategy.md).
+La economía interna y la trazabilidad contable están más maduras que la integración PSP externa. El cobro cripto (NOWPayments) está vivo en PROD; el cobro con tarjeta se canaliza con CardBilling (grupo Verotel), que aceptó la estructura de la sociedad, con el onboarding en pausa por decisión del operador. La integración de tarjeta a nivel de código está pendiente (el registry `PaymentProvider` está listo para el adapter). El detalle vive en [psp-strategy.md](psp-strategy.md).

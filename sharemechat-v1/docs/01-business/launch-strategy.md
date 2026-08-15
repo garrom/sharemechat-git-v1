@@ -11,7 +11,7 @@
 Al cierre de este documento, la percepción operativa del proyecto identifica dos bloqueos al arranque real:
 
 - **Tráfico cero**: la plataforma está en coming-soon con solo registros abiertos. El plan SEO (blog) y el plan de afiliación no están generando tráfico. La meta previa era acumular clientes y modelos registradas antes de lanzar.
-- **PSP tarjeta bloqueado**: la vía activa CardBilling / Verotel queda cerrada por requisito de director residente en Estonia inviable a corto plazo. Otras opciones adult (CCBill, Epoch, Verotel / CardBilling group) también descartadas por razones distintas. Cripto (NOWPayments) y Paxum son las dos únicas vías viables a corto plazo. Vendo y CommerceGate quedan como contactos abiertos.
+- **PSP tarjeta en curso**: el cobro con tarjeta se canaliza con **CardBilling (grupo Verotel)**, que aceptó la estructura de la sociedad (el requisito de residencia del director en el país de constitución fue lo que descartó a **Segpay**, no a CardBilling); su onboarding está en pausa por decisión del operador. Mientras tanto, **cripto (NOWPayments)** cubre el cobro en producción. Estado vigente y vías descartadas en [psp-strategy.md](psp-strategy.md) y [pagos-descartados.md](pagos-descartados.md).
 
 Ante esto, la tentación inicial es añadir una zona peer-to-peer gratis (tipo Omegle moderado, con registro + KYC) como canal de tráfico orgánico paralelo. Este documento registra por qué esa vía se descarta y qué estrategia se adopta en su lugar.
 
@@ -21,7 +21,7 @@ No son dos problemas independientes. Es **un problema real** (PSP tarjeta) más 
 
 - El SEO no convierte porque el CTA final es "regístrate y espera". Ningún blog trae conversiones a un coming-soon.
 - Los afiliados no venden porque no tienen producto vivo que promocionar.
-- Sin PSP tarjeta no hay negocio adult premium en 2026 a escala completa, pero cripto + Paxum es un mercado real (5-12% del volumen total) suficiente para operar en modo puente.
+- Sin PSP tarjeta no hay negocio adult premium en 2026 a escala completa, pero cripto es un mercado real (5-12% del volumen total) suficiente para operar en modo puente.
 
 **Conclusión operativa**: el problema real es que el proyecto está en coming-soon indefinido esperando la perfección (todos los métodos de pago desde el día uno) y eso está impidiendo lo bueno (estar en el mercado y aprender).
 
@@ -48,7 +48,7 @@ Ya implementado parcialmente. Estado actual: **chat texto siempre gratis, emojis
 
 Este movimiento no requiere trabajo nuevo salvo mantener la mecánica actual. El único pendiente es la **página pública de la modelo** navegable con fotos/vídeos KYC-aprobados como entrada natural al freemium (Movimiento E abajo).
 
-### C. Lanzar YA con cripto (NOWPayments) + Paxum sin esperar tarjeta
+### C. Lanzar YA con cripto (NOWPayments) sin esperar tarjeta
 
 **Objetivo del soft launch cripto-only: producto vivo, no facturación**. Lo que se gana:
 
@@ -110,7 +110,7 @@ Ejecución operativa, no aspiracional:
 - [ADR-047 — Pivote de coming-soon a soft launch con PSP puente cripto + Paxum](../06-decisions/adr-047-pivote-soft-launch-cripto-paxum.md)
 - [ADR-048 — Página pública de modelo `/m/:slug` como palanca central](../06-decisions/adr-048-pagina-publica-modelo-slug.md)
 - [ADR-052 — Rediseño estructural del reparto, rango de precio autoservicio y retirada del programa de afiliadas](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md)
-- [psp-strategy.md](psp-strategy.md) — estrategia de PSP (pendiente actualización en Fase B con el nuevo estado post-CardBilling / Verotel).
+- [psp-strategy.md](psp-strategy.md) — estrategia de pagos vigente (cobro y pago). Vías descartadas en [pagos-descartados.md](pagos-descartados.md).
 - [model-profile-strategy.md](model-profile-strategy.md) — detalle de la página pública de modelo.
 - [sistema-tiers-modelos.md](sistema-tiers-modelos.md) — sistema de tramos, reparto escalonado, rango de precio autoservicio, Estatus Pro y primer minuto trial.
 - [affiliate-program.md](affiliate-program.md) — stub de retirada del programa de afiliadas (ADR-052 §D11).
