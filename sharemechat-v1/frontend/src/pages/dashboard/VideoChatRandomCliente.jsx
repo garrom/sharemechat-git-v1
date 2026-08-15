@@ -323,7 +323,7 @@ export default function VideoChatRandomCliente(props) {
 
     return (
       <StyledGiftMessage $premium={isPremium} style={{ minWidth: 0 }}>
-        <GiftIcon code={code} iconUrl={src} alt={normalized.name || ''} size={isPremium ? 36 : 34} />
+        <GiftIcon code={code} iconUrl={src} alt={normalized.name || ''} size={42} />
       </StyledGiftMessage>
     );
   };
