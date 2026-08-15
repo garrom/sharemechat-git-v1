@@ -223,56 +223,115 @@ public class EmailCopyRenderer {
                 == ProductOperationalProperties.Mode.PRELAUNCH;
     }
 
-    public EmailContent renderWelcome(User user) {
+    public EmailContent renderWelcome(User user, String loginUrl) {
         String locale = localeResolver.resolve(user);
         // H2 sink (Lote 1): escapado HTML antes de inyectar en text blocks.
         String nickname = htmlEscape(safeLabel(user));
         boolean prelaunch = isPrelaunch();
+        String userType = String.valueOf(user != null ? user.getUserType() : "");
+        boolean isModel = "FORM_MODEL".equalsIgnoreCase(userType);
 
         if ("es".equals(locale)) {
-            String body = prelaunch
-                    // Variante COMING-SOON (PRELAUNCH): la app aun no esta
-                    // disponible para el usuario tras el registro; se le
-                    // avisara por email cuando pueda entrar.
-                    ? """
-                      <p>Hola %s,</p>
-                      <p>¡Bienvenido a <b>SharemeChat</b>! Gracias por registrarte en la aplicación.</p>
-                      <p>Estamos ultimando los últimos detalles; te avisaremos por email en cuanto esté disponible.</p>
-                      <p>Si no te registraste tú, contacta con soporte.</p>
-                      """.formatted(nickname)
-                    // Variante OPEN (estandar): copy original conservado.
-                    : """
-                      <p>Hola %s,</p>
-                      <p>Tu cuenta en <b>SharemeChat</b> se ha creado correctamente.</p>
-                      <p>Ya puedes acceder a la plataforma.</p>
-                      <p>Si no has creado esta cuenta, contacta con soporte.</p>
-                      """.formatted(nickname);
-            // Solo bienvenida PRELAUNCH lleva la imagen coming-soon
-            // (debajo del cuerpo, encima del pie del logo). OPEN no
-            // la lleva.
-            String wrapped = prelaunch
-                    ? wrapWithLogoAndImage(body, COMING_SOON_IMAGE_URL, "SharemeChat - próximamente")
-                    : wrapWithLogo(body);
-            return new EmailContent("Bienvenido a SharemeChat", wrapped);
+            if (prelaunch) {
+                // Variante COMING-SOON (PRELAUNCH): marco de marca con foto
+                // (hero) + copy role-aware. Cliente: bono de bienvenida (sin
+                // CTA). Modelo: invitacion a adelantar la verificacion, con
+                // CTA al login (la modelo allowlisted verifica ya; ver
+                // promo-100-primeros-clientes / gate PRELAUNCH).
+                String opening = "¡Gracias por registrarte! En las próximas semanas te enviaremos un email con información más precisa sobre la fecha de apertura de la plataforma.";
+                String body = isModel
+                        ? welcomeBody(
+                            "Bienvenida a SharemeChat",
+                            opening,
+                            verifBox("&#128737;&#65039; Adelanta tu verificación",
+                                     "Ya puedes completar tu verificación de identidad, un proceso rápido y seguro. Es el estándar que garantiza que todas las modelos de SharemeChat están verificadas, y te deja lista para empezar el día que abramos, sin esperas."),
+                            ctaButton(loginUrl, "Verificar mi identidad"),
+                            true)
+                        : welcomeBody(
+                            "Ya eres de los primeros, " + nickname,
+                            opening,
+                            bonusBox("&#127881; Regalo de bienvenida",
+                                     "Los <b>100 primeros clientes</b> reciben <b>10&euro; de bono</b>. Solo tienes que activar el modo premium y se sumarán a tu cuenta de forma automática."),
+                            "",
+                            true);
+                return new EmailContent("Bienvenido a SharemeChat",
+                        wrapRegistration(body, true, locale));
+            }
+            // Variante OPEN (estandar): copy original conservado (sin foto).
+            String bodyOpen = """
+                    <p>Hola %s,</p>
+                    <p>Tu cuenta en <b>SharemeChat</b> se ha creado correctamente.</p>
+                    <p>Ya puedes acceder a la plataforma.</p>
+                    <p>Si no has creado esta cuenta, contacta con soporte.</p>
+                    """.formatted(nickname);
+            return new EmailContent("Bienvenido a SharemeChat", wrapWithLogo(bodyOpen));
         }
 
-        String body = prelaunch
-                ? """
-                  <p>Hi %s,</p>
-                  <p>Welcome to <b>SharemeChat</b>! Thanks for registering with the app.</p>
-                  <p>We're finalizing the last details; we'll email you as soon as it's available.</p>
-                  <p>If you didn't sign up, contact support.</p>
-                  """.formatted(nickname)
-                : """
-                  <p>Hello %s,</p>
-                  <p>Your <b>SharemeChat</b> account has been created successfully.</p>
-                  <p>You can now access the platform.</p>
-                  <p>If you did not create this account, please contact support.</p>
-                  """.formatted(nickname);
-        String wrappedEn = prelaunch
-                ? wrapWithLogoAndImage(body, COMING_SOON_IMAGE_URL, "SharemeChat - coming soon")
-                : wrapWithLogo(body);
-        return new EmailContent("Welcome to SharemeChat", wrappedEn);
+        if (prelaunch) {
+            String opening = "Thanks for registering! Over the coming weeks we'll email you with more precise information about the platform's opening date.";
+            String body = isModel
+                    ? welcomeBody(
+                        "Welcome to SharemeChat",
+                        opening,
+                        verifBox("&#128737;&#65039; Get your verification done early",
+                                 "You can now complete your identity verification — a quick, secure process. It's the standard that guarantees every SharemeChat model is verified, and it leaves you ready to start the day we open, with no waiting."),
+                        ctaButton(loginUrl, "Verify my identity"),
+                        false)
+                    : welcomeBody(
+                        "You're one of the first, " + nickname,
+                        opening,
+                        bonusBox("&#127881; Welcome gift",
+                                 "The <b>first 100 clients</b> get a <b>&euro;10 bonus</b>. Just activate premium mode and it will be added to your account automatically."),
+                        "",
+                        false);
+            return new EmailContent("Welcome to SharemeChat",
+                    wrapRegistration(body, true, locale));
+        }
+        // OPEN (estandar): copy original conservado (sin foto).
+        String bodyOpenEn = """
+                <p>Hello %s,</p>
+                <p>Your <b>SharemeChat</b> account has been created successfully.</p>
+                <p>You can now access the platform.</p>
+                <p>If you did not create this account, please contact support.</p>
+                """.formatted(nickname);
+        return new EmailContent("Welcome to SharemeChat", wrapWithLogo(bodyOpenEn));
+    }
+
+    /**
+     * Cuerpo de un email de BIENVENIDA (coming-soon): titular + linea de
+     * apoyo + bloque destacado (bono cliente / verificacion modelo) + CTA
+     * opcional + aviso de seguridad. A diferencia de {@link #registrationBody}
+     * no lleva enlace-fallback ni caducidad: la bienvenida no verifica token.
+     * {@code headline}/{@code lead}/{@code block}/{@code cta} vienen ya como
+     * HTML (con el nickname ya escapado en el llamante).
+     */
+    private String welcomeBody(String headline, String lead, String block, String cta, boolean es) {
+        String safety = es
+                ? "Si no te has registrado en SharemeChat, puedes ignorar este mensaje."
+                : "If you didn't sign up for SharemeChat, you can safely ignore this message.";
+        StringBuilder sb = new StringBuilder();
+        sb.append("<h1 style=\"font-size:22px;font-weight:bold;margin:0 0 10px;color:#141820;line-height:1.25;\">").append(headline).append("</h1>");
+        sb.append("<p style=\"margin:0 0 22px;color:#42505f;font-size:15px;line-height:1.6;\">").append(lead).append("</p>");
+        if (block != null && !block.isBlank()) sb.append(block);
+        if (cta != null && !cta.isBlank()) sb.append(cta);
+        sb.append("<p style=\"margin:6px 0 0;font-size:12.5px;color:#8a95a3;line-height:1.55;\">").append(safety).append("</p>");
+        return sb.toString();
+    }
+
+    /** Caja destacada del bono de bienvenida (cliente). Email-safe (div + inline). */
+    private String bonusBox(String title, String textHtml) {
+        return "<div style=\"margin:4px 0 22px;background:#fff5f2;border:1px solid #f6d9cf;border-left:4px solid #ea1d1d;border-radius:10px;padding:16px 18px;\">"
+             + "<p style=\"margin:0 0 4px;font-weight:bold;color:#141820;font-size:15px;\">" + title + "</p>"
+             + "<p style=\"margin:0;color:#4b3a36;font-size:14px;line-height:1.55;\">" + textHtml + "</p>"
+             + "</div>";
+    }
+
+    /** Caja destacada de verificacion de identidad (modelo). Email-safe (div + inline). */
+    private String verifBox(String title, String textHtml) {
+        return "<div style=\"margin:4px 0 22px;background:#f6f7f9;border:1px solid #e6e9ee;border-left:4px solid #141820;border-radius:10px;padding:16px 18px;\">"
+             + "<p style=\"margin:0 0 4px;font-weight:bold;color:#141820;font-size:15px;\">" + title + "</p>"
+             + "<p style=\"margin:0;color:#42505f;font-size:14px;line-height:1.55;\">" + textHtml + "</p>"
+             + "</div>";
     }
 
     /**
@@ -441,16 +500,16 @@ public class EmailCopyRenderer {
                         "Hola " + displayName + ", te han dado de alta como modelo bajo una cuenta de estudio (Master). Elige tu contraseña personal para activar tu cuenta; después podrás completar tu perfil y la verificación de identidad de forma autónoma.",
                         "Activar mi cuenta", link, expiryText, true);
                 return new EmailContent("Has sido invitada a SharemeChat",
-                        wrapRegistration(body, true, locale));
+                        wrapRegistration(body, false, locale));
             }
 
             if (comingSoonCopy) {
                 String body = registrationBody(
                         "Confirma tu email",
-                        "Hola " + displayName + ", te has registrado en <b>SharemeChat</b>. Verifica tu correo para validar tu cuenta.",
+                        "Ya casi está. Verifica tu correo para activar tu cuenta de <b>SharemeChat</b>.",
                         "Confirmar mi email", link, "24 horas", true);
                 return new EmailContent("Confirma tu email en SharemeChat",
-                        wrapRegistration(body, true, locale));
+                        wrapRegistration(body, false, locale));
             }
 
             String subject = "Valida tu email en SharemeChat";
@@ -471,7 +530,7 @@ public class EmailCopyRenderer {
 
             return new EmailContent(
                     subject,
-                    wrapRegistration(registrationBody(headline, subline, cta, link, expiryText, true), true, locale));
+                    wrapRegistration(registrationBody(headline, subline, cta, link, expiryText, true), false, locale));
         }
 
         if (backoffice) {
@@ -493,16 +552,16 @@ public class EmailCopyRenderer {
                     "Hi " + displayName + ", you've been added as a model under a studio (Master) account. Choose your personal password to activate your account; then you can complete your profile and identity verification on your own.",
                     "Activate my account", link, expiryText, false);
             return new EmailContent("You have been invited to SharemeChat",
-                    wrapRegistration(body, true, locale));
+                    wrapRegistration(body, false, locale));
         }
 
         if (comingSoonCopy) {
             String body = registrationBody(
                     "Confirm your email",
-                    "Hi " + displayName + ", you've registered with <b>SharemeChat</b>. Verify your email to validate your account.",
+                    "Almost there. Verify your email to activate your <b>SharemeChat</b> account.",
                     "Confirm my email", link, "24 hours", false);
             return new EmailContent("Confirm your email on SharemeChat",
-                    wrapRegistration(body, true, locale));
+                    wrapRegistration(body, false, locale));
         }
 
         String subject = "Verify your email in SharemeChat";
@@ -523,7 +582,7 @@ public class EmailCopyRenderer {
 
         return new EmailContent(
                 subject,
-                wrapRegistration(registrationBody(headline, subline, cta, link, expiryText, false), true, locale));
+                wrapRegistration(registrationBody(headline, subline, cta, link, expiryText, false), false, locale));
     }
 
     /**

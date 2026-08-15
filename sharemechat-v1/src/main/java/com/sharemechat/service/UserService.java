@@ -682,7 +682,8 @@ public class UserService {
 
     //EMAIL
     private void sendWelcomeEmail(User user) {
-        EmailCopyRenderer.EmailContent content = emailCopyRenderer.renderWelcome(user);
+        String loginUrl = publicSiteProperties.getBaseUrl() + "/login";
+        EmailCopyRenderer.EmailContent content = emailCopyRenderer.renderWelcome(user, loginUrl);
 
         emailService.send(new EmailMessage(
                 user.getEmail(),
