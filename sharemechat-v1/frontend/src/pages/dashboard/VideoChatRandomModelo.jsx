@@ -82,7 +82,7 @@ import {
 import { useSession } from '../../components/SessionProvider';
 import { useTranslationSettings } from '../../hooks/useTranslationSettings';
 import { useMessageTranslations } from '../../hooks/useMessageTranslations';
-import GiftIcon, { resolveGiftSlug, isFaceGiftCode } from '../../components/gifts/GiftIcon';
+import GiftIcon, { resolveGiftSlug, isFaceGiftCode, OBJECT_CODE_TO_EMOJI } from '../../components/gifts/GiftIcon';
 import GiftIconDefs from '../../components/gifts/GiftIconDefs';
 import EmojiTextPicker from '../../components/EmojiTextPicker';
 import { isSingleEmoji } from '../../utils/emojiUtils';
@@ -647,13 +647,14 @@ export default function VideoChatRandomModelo(props) {
   const OVERLAY_RB_STYLE = { width: 32, height: 32, minWidth: 32, minHeight: 32, fontSize: 12 };
 
   // Regalos gratis del modelo -> emoji unicode (se envían por chat, no por el
-  // canal de regalos). Solo objetos; las caritas ya viven en el botón 😊.
-  const FREE_GIFT_EMOJI = { heart: '❤️', star: '⭐', fire: '🔥', sparkle: '✨', rosebud: '🌹', labios: '💋' };
+  // canal de regalos). Solo objetos; las caritas ya viven en el botón 😊. Se usa
+  // OBJECT_CODE_TO_EMOJI (fuente única compartida con GiftIcon) para que el
+  // objeto se vea IDÉNTICO al que pinta el cliente.
   const modelFreeGifts = Array.isArray(gifts)
     ? gifts.filter((g) => {
         const code = String(g?.code || '').toLowerCase();
         const isPremium = String(g?.tier || 'QUICK').toUpperCase() === 'PREMIUM';
-        return !isPremium && !isFaceGiftCode(code) && !!FREE_GIFT_EMOJI[code];
+        return !isPremium && !isFaceGiftCode(code) && !!OBJECT_CODE_TO_EMOJI[code];
       })
     : [];
   const renderModelFreeGiftBar = (surface) => {
@@ -671,7 +672,7 @@ export default function VideoChatRandomModelo(props) {
               type="button"
               title={g.name}
               aria-label={g.name}
-              onClick={() => { if (sendRandomGiftEmoji) sendRandomGiftEmoji(FREE_GIFT_EMOJI[String(g.code).toLowerCase()]); }}
+              onClick={() => { if (sendRandomGiftEmoji) sendRandomGiftEmoji(OBJECT_CODE_TO_EMOJI[String(g.code).toLowerCase()]); }}
             >
               <GiftIcon code={g.code} iconUrl={g.icon} alt={g.name || ''} size={24} />
             </StyledGiftChip>
