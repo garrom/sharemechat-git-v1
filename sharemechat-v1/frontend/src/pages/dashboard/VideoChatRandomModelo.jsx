@@ -85,6 +85,7 @@ import { useMessageTranslations } from '../../hooks/useMessageTranslations';
 import GiftIcon, { resolveGiftSlug, isFaceGiftCode, OBJECT_CODE_TO_EMOJI } from '../../components/gifts/GiftIcon';
 import GiftIconDefs from '../../components/gifts/GiftIconDefs';
 import EmojiTextPicker from '../../components/EmojiTextPicker';
+import SupportMessageBubble from '../../components/support/SupportMessageBubble';
 import { isSingleEmoji } from '../../utils/emojiUtils';
 
 // Keyframes de los efectos al recibir un regalo (portado de random cliente /
@@ -497,30 +498,51 @@ export default function VideoChatRandomModelo(props) {
         );
       }
 
+      // Regalo -> fila alineada.
+      if (giftData) {
+        return (
+          <StyledChatMessageRow key={msg.id || index} $side={variant}>
+            {renderGiftMessage(giftData)}
+          </StyledChatMessageRow>
+        );
+      }
+
+      // Texto en MÓVIL: misma burbuja con inicial de alias que favoritos
+      // (SupportMessageBubble; con transparent va todo a la izquierda con
+      // avatar-inicial). En desktop, la burbuja simple de siempre.
+      if (isMobile) {
+        return (
+          <SupportMessageBubble
+            key={msg.id || index}
+            message={{ id: msg.id, sender: isMe ? 'P2P_ME' : 'P2P_PEER', content: msg.text, createdAt: msg.createdAt }}
+            peerNickname={clientNickname || ''}
+            userNickname={sessionUser?.nickname || ''}
+            transparent
+            translation={isMe ? null : translation}
+          />
+        );
+      }
+
       return (
         <StyledChatMessageRow key={msg.id || index} $side={variant}>
-          {giftData ? (
-            renderGiftMessage(giftData)
-          ) : (
-            <StyledChatBubble $variant={variant}>
-              {msg.text}
-              {hasTranslation && (
-                <div style={{
-                  marginTop: 6,
-                  paddingTop: 6,
-                  borderTop: '1px dashed rgba(15, 23, 42, 0.15)',
-                  fontSize: '0.82rem',
-                  opacity: 0.75,
-                  display: 'flex',
-                  gap: 6,
-                  alignItems: 'flex-start',
-                }}>
-                  <span style={{ color: '#3b82f6', fontSize: '0.9rem', lineHeight: 1, flexShrink: 0, marginTop: 1 }}>↻</span>
-                  <span>{translation}</span>
-                </div>
-              )}
-            </StyledChatBubble>
-          )}
+          <StyledChatBubble $variant={variant}>
+            {msg.text}
+            {hasTranslation && (
+              <div style={{
+                marginTop: 6,
+                paddingTop: 6,
+                borderTop: '1px dashed rgba(15, 23, 42, 0.15)',
+                fontSize: '0.82rem',
+                opacity: 0.75,
+                display: 'flex',
+                gap: 6,
+                alignItems: 'flex-start',
+              }}>
+                <span style={{ color: '#3b82f6', fontSize: '0.9rem', lineHeight: 1, flexShrink: 0, marginTop: 1 }}>↻</span>
+                <span>{translation}</span>
+              </div>
+            )}
+          </StyledChatBubble>
         </StyledChatMessageRow>
       );
     })
