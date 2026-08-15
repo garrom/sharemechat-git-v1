@@ -1,9 +1,10 @@
 name: CI
 
-# Fase 0 de la estrategia de testing (ADR-059): red mínima que garantiza que la
-# suite se ejecuta en cada push/PR. Hoy el backend es unit/mock (no necesita BD),
-# el frontend aún no tiene tests (passWithNoTests). Las fases 1-4 (integración con
-# Testcontainers para dinero/matching/streaming + tests de frontend) se añaden aquí.
+# Estrategia de testing (ADR-059). Tres jobs en cada push/PR:
+#   - backend: unit + integración (Testcontainers MySQL sobre baseline determinista).
+#   - frontend: unit/component (Jest + React Testing Library).
+#   - e2e: Playwright (Chromium) sobre el frontend product con backend MOCKEADO
+#     por interceptación de red (el backend real ya está cubierto por integración).
 
 on:
   push:
@@ -52,3 +53,28 @@ jobs:
         env:
           CI: 'true'
         run: npx react-scripts test --watchAll=false --passWithNoTests
+
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sharemechat-v1/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: npm
+          cache-dependency-path: sharemechat-v1/frontend/package-lock.json
+      - name: Install deps
+        run: npm ci
+      - name: Install Playwright browser (chromium)
+        run: npx playwright install --with-deps chromium
+      - name: Run E2E
+        env:
+          CI: 'true'
+        # playwright.config.js arranca el dev server (react-scripts start, .env.product)
+        # en :3100 y corre los specs de e2e/ con el backend mockeado por red.
+        run: npx playwright test

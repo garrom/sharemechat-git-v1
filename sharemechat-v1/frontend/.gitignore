@@ -8,6 +8,12 @@
 # testing
 /coverage
 
+# E2E (Playwright) — artefactos generados, nunca se commitean
+/test-results
+/playwright-report
+/blob-report
+/playwright/.cache
+
 # production
 /build
 # builds por superficie/entorno generados para deploy manual a S3 (PRO-7)
