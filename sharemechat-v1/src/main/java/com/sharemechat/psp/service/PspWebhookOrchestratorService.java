@@ -71,21 +71,21 @@ public class PspWebhookOrchestratorService {
     );
 
     /**
-     * ADR-053 (2026-07-27): tolerancia para partially_paid cripto.
-     * Ratio minimo actually_paid/pay_amount en la moneda cripto del pago.
-     * 0.99 = admitimos hasta 1% de diferencia en la moneda cripto por
-     * fluctuacion EUR/cripto durante la ventana invoice-confirmacion.
+     * ADR-053 (revisado 2026-08-15): tolerancia para partially_paid cripto
+     * con criterio por rango de pack. El margen que la plataforma asume en
+     * un parcial es el MAYOR de:
+     *   - {@link #PARTIAL_TOLERANCE_PCT} del importe del pack (3%), y
+     *   - {@link #PARTIAL_MIN_ABS_EUR} (suelo 0,50 EUR, para que P10 no
+     *     quede demasiado justo: 3% de 10 EUR = 0,30 EUR),
+     * y NUNCA por encima de {@link #PARTIAL_MAX_ABS_EUR} (techo 5 EUR,
+     * guarda anti-fuga/anti-abuso; cubre packs futuros mayores). Se sube de
+     * 1% a 3% porque el fee cripto (~0,5-1%) deja margen holgado frente a un
+     * PSP tarjeta (~13%), reduciendo rechazos por micro-fluctuacion EUR/cripto.
+     * Margen maximo por pack actual: P10 0,50€ · P20 0,60€ · P40 1,20€ · P100 3,00€.
      */
-    private static final BigDecimal PARTIAL_MIN_RATIO = new BigDecimal("0.99");
-
-    /**
-     * ADR-053: tope absoluto de la diferencia en EUR para aceptar un
-     * parcial. 1 EUR. Evita que packs grandes (P100) absorban pérdidas
-     * mayores aunque el ratio se cumpla. Peor caso: P100 con ratio 99%
-     * → diff 1 EUR → SÍ acredita. P100 con ratio 98.5% → diff 1.5 EUR
-     * → NO acredita (aunque ratio<99% ya bloquea antes).
-     */
-    private static final BigDecimal PARTIAL_MAX_ABS_DIFF_EUR = new BigDecimal("1.00");
+    private static final BigDecimal PARTIAL_TOLERANCE_PCT = new BigDecimal("0.03");
+    private static final BigDecimal PARTIAL_MIN_ABS_EUR = new BigDecimal("0.50");
+    private static final BigDecimal PARTIAL_MAX_ABS_EUR = new BigDecimal("5.00");
 
     private final PaymentProviderRegistry providerRegistry;
     private final PspWebhookEventRepository webhookEventRepository;
@@ -207,14 +207,14 @@ public class PspWebhookOrchestratorService {
                 creditAndNotify(session, providerKey, pspTxId, "finished");
                 break;
             case FAILED:
-                // ADR-053 (2026-07-27): tolerancia para pagos parciales
-                // cripto por fluctuacion de tipo de cambio entre creacion
-                // de invoice y confirmacion del pago. Si el vendor marca
-                // "partially_paid" pero llego >= PARTIAL_MIN_RATIO del
-                // importe cripto pedido Y la diferencia en EUR es <=
-                // PARTIAL_MAX_ABS_DIFF_EUR, tratamos como SUCCESS y
-                // acreditamos el pack completo. La plataforma absorbe la
-                // pequenya diferencia como coste de volatilidad cripto.
+                // ADR-053 (revisado 2026-08-15): tolerancia para pagos
+                // parciales cripto por fluctuacion de tipo de cambio entre
+                // creacion de invoice y confirmacion del pago. Si el vendor
+                // marca "partially_paid" pero la diferencia en EUR entra en
+                // el margen de isPartialWithinTolerance (max(3% del pack,
+                // 0,50€), topado a 5€), tratamos como SUCCESS y acreditamos
+                // el pack completo. La plataforma absorbe la pequenya
+                // diferencia como coste de volatilidad cripto.
                 if ("partially_paid".equalsIgnoreCase(event.getRawPaymentStatus())
                         && isPartialWithinTolerance(session, event, providerKey, pspTxId)) {
                     creditAndNotify(session, providerKey, pspTxId, "partial_within_tolerance");
@@ -374,21 +374,19 @@ public class PspWebhookOrchestratorService {
     }
 
     /**
-     * ADR-053: decide si un pago con status "partially_paid" del vendor
-     * cumple los criterios de tolerancia para acreditar el pack completo.
-     * Dos condiciones AND:
-     *  1) Ratio actually_paid / pay_amount >= {@link #PARTIAL_MIN_RATIO}
-     *     (ambos en la moneda cripto del pago, sin conversion a EUR).
-     *  2) Diferencia EUR aproximada (price_amount_eur * (1 - ratio)) <=
-     *     {@link #PARTIAL_MAX_ABS_DIFF_EUR}.
+     * ADR-053 (revisado 2026-08-15): decide si un pago "partially_paid"
+     * del vendor cumple la tolerancia para acreditar el pack completo.
+     * Regla: la diferencia en EUR (aprox: price_eur * (1 - ratio_cripto))
+     * debe ser <= max(3% del pack, 0,50€), topado a 5€ — ver constantes
+     * {@link #PARTIAL_TOLERANCE_PCT}/{@link #PARTIAL_MIN_ABS_EUR}/{@link #PARTIAL_MAX_ABS_EUR}.
      *
      * <p>Si faltan los campos {@code payAmountCrypto} o
      * {@code actuallyPaidCrypto} en el evento (nulls), NO aplicamos
      * tolerancia por precaucion → el pago sigue como FAILED y requiere
      * intervencion manual.
      *
-     * <p>Log siempre a WARN con el ratio y la decision, para tener
-     * visibilidad operativa de cuanto se activa esta tolerancia.
+     * <p>Log siempre a WARN con el margen permitido y la decision, para
+     * tener visibilidad operativa de cuanto se activa esta tolerancia.
      */
     private boolean isPartialWithinTolerance(PaymentSession session, WebhookEvent event,
                                               String providerKey, String pspTxId) {
@@ -407,15 +405,20 @@ public class PspWebhookOrchestratorService {
         BigDecimal diffEur = priceEur
                 .multiply(BigDecimal.ONE.subtract(ratio))
                 .setScale(2, java.math.RoundingMode.HALF_UP);
-        boolean ratioOk = ratio.compareTo(PARTIAL_MIN_RATIO) >= 0;
-        boolean diffOk = diffEur.compareTo(PARTIAL_MAX_ABS_DIFF_EUR) <= 0;
-        boolean accept = ratioOk && diffOk;
+        // Margen permitido = max(3% del pack, suelo 0,50€), topado a 5€.
+        BigDecimal allowedAbsEur = priceEur.multiply(PARTIAL_TOLERANCE_PCT)
+                .max(PARTIAL_MIN_ABS_EUR)
+                .min(PARTIAL_MAX_ABS_EUR)
+                .setScale(2, java.math.RoundingMode.HALF_UP);
+        // Aceptamos si lo que falta en EUR no supera ese margen. diffEur<=0
+        // (pago exacto o de mas) tambien entra por este <= y se acredita.
+        boolean accept = diffEur.compareTo(allowedAbsEur) <= 0;
         log.warn("[PSP-WEBHOOK] partial_paid analisis tolerancia provider={} pspTx={} orderId={} " +
-                        "pack={} payCrypto={} actuallyCrypto={} ratio={} diffEur={} " +
-                        "ratioOk={} diffOk={} decision={}",
+                        "pack={} priceEur={} payCrypto={} actuallyCrypto={} ratio={} diffEur={} " +
+                        "allowedAbsEur={} decision={}",
                 providerKey, pspTxId, session.getOrderId(), session.getPackId(),
-                payCrypto, actuallyCrypto, ratio, diffEur,
-                ratioOk, diffOk, accept ? "ACCEPT_AS_SUCCESS" : "STAY_FAILED");
+                priceEur, payCrypto, actuallyCrypto, ratio, diffEur,
+                allowedAbsEur, accept ? "ACCEPT_AS_SUCCESS" : "STAY_FAILED");
         return accept;
     }
 }
