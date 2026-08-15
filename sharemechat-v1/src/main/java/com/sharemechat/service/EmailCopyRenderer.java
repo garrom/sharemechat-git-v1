@@ -35,6 +35,16 @@ public class EmailCopyRenderer {
     private static final String COMING_SOON_IMAGE_URL =
             "https://assets.sharemechat.com/email/coming-soon_v1.jpg";
 
+    /**
+     * Hero apaisado (1200x600 JPEG, tono de piel corregido) para el email de
+     * REGISTRO con el marco de marca nuevo (cabecera logo + hero + boton CTA).
+     * Alojado en assets-sharemechat-prod/email/ (path durable, servido por el
+     * CDN publico assets.sharemechat.com para TEST/AUDIT/PROD). Solo se usa en
+     * las plantillas de registro (verificacion), no en el resto de emails.
+     */
+    private static final String REGISTER_HERO_URL =
+            "https://assets.sharemechat.com/email/register-hero_v1.jpg";
+
     private final EmailLocaleResolver localeResolver;
     private final AssetRejectionReasonCopy assetRejectionReasonCopy;
     private final ProductOperationalModeService operationalMode;
@@ -103,6 +113,103 @@ public class EmailCopyRenderer {
                   </tr>
                 </table>
                 """.formatted(innerHtml, imageBlock, BRAND_LOGO_URL);
+    }
+
+    // ------------------------------------------------------------------
+    // Marco de marca para emails de REGISTRO (verificacion). Cabecera con
+    // logo + filo rojo, hero opcional, boton CTA rojo "bulletproof" y pie
+    // con identidad. Email-safe (tablas + estilos inline, sin CSS externo).
+    // De momento SOLO lo usa renderVerification; el resto de emails siguen
+    // con wrapWithLogo. Se construye con .replace() (no printf) para no
+    // pelearse con los '%' de los estilos y del VML de Outlook.
+    // ------------------------------------------------------------------
+
+    /**
+     * Boton CTA "bulletproof": VML (v:roundrect) para Outlook desktop/365 y
+     * un &lt;a&gt; estilado para el resto. Rojo de marca. La URL y el label se
+     * escapan HTML (la URL se usa como atributo href).
+     */
+    private String ctaButton(String url, String label) {
+        String u = htmlEscape(url);
+        String l = htmlEscape(label);
+        String tpl = """
+                <div style="margin:6px 0 26px;">
+                  <!--[if mso]>
+                  <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="__URL__" style="height:48px;v-text-anchor:middle;width:270px;" arcsize="18%" strokecolor="#ea1d1d" fillcolor="#ea1d1d">
+                  <w:anchorlock/>
+                  <center style="color:#ffffff;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">__LABEL__</center>
+                  </v:roundrect>
+                  <![endif]-->
+                  <!--[if !mso]><!-->
+                  <a href="__URL__" style="display:inline-block;background:#ea1d1d;color:#ffffff;text-decoration:none;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;line-height:1;padding:15px 32px;border-radius:9px;">__LABEL__</a>
+                  <!--<![endif]-->
+                </div>
+                """;
+        return tpl.replace("__URL__", u).replace("__LABEL__", l);
+    }
+
+    /**
+     * Cuerpo estandar de un email de registro: titular + linea de apoyo +
+     * boton CTA + enlace crudo como fallback + caducidad y aviso de seguridad.
+     * {@code headline}/{@code subline} vienen ya como HTML (con el nickname ya
+     * escapado). {@code link} se escapa aqui para el fallback y dentro de
+     * {@link #ctaButton} para el href.
+     */
+    private String registrationBody(String headline, String subline, String ctaLabel,
+                                    String link, String expiryText, boolean es) {
+        String fbLabel = es ? "&iquest;El bot&oacute;n no funciona? Copia y pega este enlace:"
+                            : "Button not working? Copy and paste this link:";
+        String expiry  = es ? ("El enlace caduca en " + expiryText + ".")
+                            : ("This link expires in " + expiryText + ".");
+        String safety  = es ? " Si no te has registrado en SharemeChat, puedes ignorar este mensaje."
+                            : " If you didn't sign up for SharemeChat, you can safely ignore this message.";
+        String safeLink = htmlEscape(link);
+        return "<h1 style=\"font-size:22px;font-weight:bold;margin:0 0 10px;color:#141820;line-height:1.25;\">" + headline + "</h1>"
+             + "<p style=\"margin:0 0 24px;color:#42505f;font-size:15px;line-height:1.6;\">" + subline + "</p>"
+             + ctaButton(link, ctaLabel)
+             + "<p style=\"margin:0 0 8px;font-size:12.5px;color:#7a8798;\">" + fbLabel + "</p>"
+             + "<p style=\"margin:0;font-size:12.5px;color:#5b6b7d;word-break:break-all;background:#f6f7f9;border:1px solid #eceef1;border-radius:8px;padding:10px 12px;font-family:Arial,Helvetica,sans-serif;\">" + safeLink + "</p>"
+             + "<p style=\"margin:18px 0 0;font-size:12.5px;color:#8a95a3;line-height:1.55;\">" + expiry + safety + "</p>";
+    }
+
+    /**
+     * Envuelve el cuerpo de un email de registro con el marco de marca:
+     * caja centrada de 600px, cabecera (logo + filo rojo), hero opcional,
+     * cuerpo y pie con identidad (empresa + soporte). {@code locale} solo
+     * cambia el "Necesitas ayuda / Need help" del pie.
+     */
+    private String wrapRegistration(String bodyInner, boolean withHero, String locale) {
+        boolean es = "es".equals(locale);
+        String hero = withHero
+                ? "<tr><td style=\"padding:0;font-size:0;line-height:0;\">"
+                  + "<img src=\"" + REGISTER_HERO_URL + "\" width=\"600\" alt=\"SharemeChat\" style=\"display:block;width:100%;max-width:600px;height:auto;border:0;outline:none;text-decoration:none;\" />"
+                  + "</td></tr>"
+                : "";
+        String help = es ? "&iquest;Necesitas ayuda?" : "Need help?";
+        String tpl = """
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f2eeee;">
+                  <tr><td align="center" style="padding:24px 12px;">
+                    <table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" width="600" style="width:100%;max-width:600px;background:#ffffff;border-radius:14px;overflow:hidden;">
+                      <tr><td style="background:#ffffff;padding:20px 32px;border-bottom:3px solid #ea1d1d;">
+                        <img src="__LOGO__" width="172" height="18" alt="SharemeChat" style="display:block;max-width:172px;height:auto;border:0;outline:none;text-decoration:none;" />
+                      </td></tr>
+                      __HERO__
+                      <tr><td style="padding:32px 34px 8px;color:#1f2430;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.62;">
+                        __BODY__
+                      </td></tr>
+                      <tr><td style="padding:22px 34px 28px;border-top:1px solid #eef0f2;background:#fbfbfc;font-family:Arial,Helvetica,sans-serif;">
+                        <img src="__LOGO__" width="140" height="15" alt="SharemeChat" style="display:block;max-width:140px;height:auto;border:0;margin-bottom:8px;" />
+                        <p style="margin:2px 0;font-size:12px;color:#8a95a3;">Shareme Technologies O&Uuml;</p>
+                        <p style="margin:2px 0;font-size:12px;color:#8a95a3;">__HELP__ <a href="mailto:soporte@sharemechat.com" style="color:#6b7684;">soporte@sharemechat.com</a></p>
+                      </td></tr>
+                    </table>
+                  </td></tr>
+                </table>
+                """;
+        return tpl.replace("__LOGO__", BRAND_LOGO_URL)
+                  .replace("__HERO__", hero)
+                  .replace("__BODY__", bodyInner)
+                  .replace("__HELP__", help);
     }
 
     /**
@@ -329,58 +436,42 @@ public class EmailCopyRenderer {
             }
 
             if (masterInvite) {
-                return new EmailContent(
+                String body = registrationBody(
                         "Has sido invitada a SharemeChat",
-                        wrapWithLogo("""
-                                <p>Hola %s,</p>
-                                <p>Has sido invitada a formar parte de <b>SharemeChat</b> como modelo bajo una cuenta Master (estudio).</p>
-                                <p>Para activar tu cuenta, elige tu contraseña personal en este enlace:</p>
-                                <p><a href="%s">%s</a></p>
-                                <p>Una vez activada podras completar tu perfil y la verificacion de identidad de forma autonoma.</p>
-                                <p>El enlace caduca en %s.</p>
-                                """.formatted(displayName, link, link, expiryText))
-                );
+                        "Hola " + displayName + ", te han dado de alta como modelo bajo una cuenta de estudio (Master). Elige tu contraseña personal para activar tu cuenta; después podrás completar tu perfil y la verificación de identidad de forma autónoma.",
+                        "Activar mi cuenta", link, expiryText, true);
+                return new EmailContent("Has sido invitada a SharemeChat",
+                        wrapRegistration(body, true, locale));
             }
 
             if (comingSoonCopy) {
-                // Coming-soon ES (maqueta v2 2026-06-06): subject
-                // simple, cuerpo simplificado en 4 parrafos cortos.
-                // Saludo / instruccion / enlace / caducidad. Sin "gracias
-                // por registrarte / disponible en breve / te avisaremos":
-                // ese mensaje queda solo en la bienvenida para no
-                // duplicar y mantener cada email enfocado.
-                return new EmailContent(
-                        "Confirma tu email en SharemeChat",
-                        wrapWithLogo("""
-                                <p>Hola %s,</p>
-                                <p>Te has registrado en SharemeChat. Para validar tu cuenta, haz clic en este enlace:</p>
-                                <p><a href="%s">%s</a></p>
-                                <p>El enlace caduca en 24 horas.</p>
-                                """.formatted(displayName, link, link))
-                );
+                String body = registrationBody(
+                        "Confirma tu email",
+                        "Hola " + displayName + ", te has registrado en <b>SharemeChat</b>. Verifica tu correo para validar tu cuenta.",
+                        "Confirmar mi email", link, "24 horas", true);
+                return new EmailContent("Confirma tu email en SharemeChat",
+                        wrapRegistration(body, true, locale));
             }
 
             String subject = "Valida tu email en SharemeChat";
-            String reason = "Despues de validarlo podras seguir con tu cuenta.";
-
+            String headline = "Confirma tu email";
+            String subline = "Hola " + displayName + ", verifica tu correo para activar tu cuenta en <b>SharemeChat</b>.";
+            String cta = "Confirmar mi email";
             if ("FORM_MODEL".equalsIgnoreCase(userType)) {
                 subject = "Valida tu email para continuar el onboarding de modelo";
-                reason = "Despues de validarlo podras continuar con el onboarding de modelo.";
+                headline = "Confirma tu email para continuar";
+                subline = "Hola " + displayName + ", verifica tu correo y sigue con el onboarding de modelo: tu perfil y la verificación de identidad.";
+                cta = "Confirmar y continuar";
             } else if ("FORM_CLIENT".equalsIgnoreCase(userType)) {
                 subject = "Valida tu email para activar funciones premium";
-                reason = "Despues de validarlo podras activar la cuenta premium y completar el primer pago.";
+                headline = "Confirma tu email";
+                subline = "Hola " + displayName + ", ya casi está. Verifica tu correo para activar tu cuenta y desbloquear las funciones premium de <b>SharemeChat</b>.";
+                cta = "Confirmar mi email";
             }
 
             return new EmailContent(
                     subject,
-                    wrapWithLogo("""
-                            <p>Hola %s,</p>
-                            <p>Tu cuenta en <b>SharemeChat</b> necesita validar el email para continuar.</p>
-                            <p>%s</p>
-                            <p><a href="%s">%s</a></p>
-                            <p>Este enlace caduca en %s.</p>
-                            """.formatted(displayName, reason, link, link, expiryText))
-            );
+                    wrapRegistration(registrationBody(headline, subline, cta, link, expiryText, true), true, locale));
         }
 
         if (backoffice) {
@@ -397,54 +488,42 @@ public class EmailCopyRenderer {
         }
 
         if (masterInvite) {
-            return new EmailContent(
-                    "You have been invited to SharemeChat",
-                    wrapWithLogo("""
-                            <p>Hi %s,</p>
-                            <p>You have been invited to join <b>SharemeChat</b> as a model under a Master account (studio).</p>
-                            <p>To activate your account, choose your personal password using this link:</p>
-                            <p><a href="%s">%s</a></p>
-                            <p>Once activated, you can complete your profile and identity verification on your own.</p>
-                            <p>This link expires in %s.</p>
-                            """.formatted(displayName, link, link, expiryText))
-            );
+            String body = registrationBody(
+                    "You've been invited to SharemeChat",
+                    "Hi " + displayName + ", you've been added as a model under a studio (Master) account. Choose your personal password to activate your account; then you can complete your profile and identity verification on your own.",
+                    "Activate my account", link, expiryText, false);
+            return new EmailContent("You have been invited to SharemeChat",
+                    wrapRegistration(body, true, locale));
         }
 
         if (comingSoonCopy) {
-            // Coming-soon EN (maqueta v2 2026-06-06): subject simple,
-            // cuerpo simplificado en 4 parrafos.
-            return new EmailContent(
-                    "Confirm your email on SharemeChat",
-                    wrapWithLogo("""
-                            <p>Hi %s,</p>
-                            <p>You've registered with SharemeChat. To validate your account, click this link:</p>
-                            <p><a href="%s">%s</a></p>
-                            <p>This link expires in 24 hours.</p>
-                            """.formatted(displayName, link, link))
-            );
+            String body = registrationBody(
+                    "Confirm your email",
+                    "Hi " + displayName + ", you've registered with <b>SharemeChat</b>. Verify your email to validate your account.",
+                    "Confirm my email", link, "24 hours", false);
+            return new EmailContent("Confirm your email on SharemeChat",
+                    wrapRegistration(body, true, locale));
         }
 
         String subject = "Verify your email in SharemeChat";
-        String reason = "After verifying it, you will be able to continue using your account.";
-
+        String headline = "Confirm your email";
+        String subline = "Hi " + displayName + ", verify your email to activate your <b>SharemeChat</b> account.";
+        String cta = "Confirm my email";
         if ("FORM_MODEL".equalsIgnoreCase(userType)) {
             subject = "Verify your email to continue model onboarding";
-            reason = "After verifying it, you will be able to continue with the model onboarding flow.";
+            headline = "Confirm your email to continue";
+            subline = "Hi " + displayName + ", verify your email and continue your model onboarding: your profile and identity verification.";
+            cta = "Confirm and continue";
         } else if ("FORM_CLIENT".equalsIgnoreCase(userType)) {
             subject = "Verify your email to activate premium features";
-            reason = "After verifying it, you will be able to activate the premium account and complete the first payment.";
+            headline = "Confirm your email";
+            subline = "Hi " + displayName + ", you're almost there. Verify your email to activate your account and unlock <b>SharemeChat</b> premium features.";
+            cta = "Confirm my email";
         }
 
         return new EmailContent(
                 subject,
-                wrapWithLogo("""
-                        <p>Hello %s,</p>
-                        <p>Your <b>SharemeChat</b> account needs email verification to continue.</p>
-                        <p>%s</p>
-                        <p><a href="%s">%s</a></p>
-                        <p>This link expires in %s.</p>
-                        """.formatted(displayName, reason, link, link, expiryText))
-        );
+                wrapRegistration(registrationBody(headline, subline, cta, link, expiryText, false), true, locale));
     }
 
     /**
