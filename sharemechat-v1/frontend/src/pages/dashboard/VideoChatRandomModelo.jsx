@@ -445,7 +445,7 @@ export default function VideoChatRandomModelo(props) {
 
     return (
       <StyledGiftMessage $premium={renderData.isPremium} style={{ minWidth: 0 }}>
-        <GiftIcon code={code} iconUrl={src} alt={renderData.name || ''} size={renderData.isPremium ? 36 : 34} />
+        <GiftIcon code={code} iconUrl={src} alt={renderData.name || ''} size={42} />
       </StyledGiftMessage>
     );
   };
