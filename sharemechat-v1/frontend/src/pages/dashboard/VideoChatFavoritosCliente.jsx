@@ -227,10 +227,16 @@ export default function VideoChatFavoritosCliente(props){
     </StyledGiftsPanel>
   );
 
+  // Envío de regalos/emoji habilitado: favorito aceptado (allowChat) O llamada
+  // activa. Durante la llamada el backend ya autoriza por el stream, así que
+  // gatear solo por allowChat deshabilitaba de más cuando llama la MODELO
+  // (allowChat=false en ese contexto). Simétrico al fix del lado modelo.
+  const giftSendEnabled = allowChat || callStatus === 'in-call';
+
   // Barra de regalos siempre visible (Fase 1). Gratis -> envio directo;
   // pago -> abre modal de confirmacion.
   const handleGiftChipClick = (g) => {
-    if (!allowChat) return;
+    if (!giftSendEnabled) return;
     if (normalizeGiftTier(g) === 'PREMIUM') setConfirmGift(g);
     else sendGiftMsg(g.id);
   };
@@ -243,7 +249,7 @@ export default function VideoChatFavoritosCliente(props){
     <StyledGiftChip
       key={g.id}
       type="button"
-      disabled={!allowChat}
+      disabled={!giftSendEnabled}
       title={g.name}
       aria-label={g.name}
       onClick={() => handleGiftChipClick(g)}
@@ -748,7 +754,7 @@ export default function VideoChatFavoritosCliente(props){
                                 El botón de regalo ya no vive aquí: los regalos
                                 están en la barra inferior sobre el vídeo. */}
                             <StyledCallComposer>
-                              <EmojiTextPicker onInsert={(e) => setCenterInput((v) => (v || '') + e)} disabled={!allowChat} />
+                              <EmojiTextPicker onInsert={(e) => setCenterInput((v) => (v || '') + e)} disabled={!giftSendEnabled} />
                               <StyledChatInput
                                 type="text"
                                 value={centerInput}
@@ -951,7 +957,7 @@ export default function VideoChatFavoritosCliente(props){
                     paridad con desktop y con el chat móvil sin llamada. */}
                 {callStatus==='in-call' && renderGiftBar()}
                 <StyledChatDock data-surface="call-dark" style={{display:callStatus==='in-call'?'flex':'none'}}>
-                  <EmojiTextPicker onInsert={(e) => setCenterInput((v) => (v || '') + e)} disabled={!allowChat} />
+                  <EmojiTextPicker onInsert={(e) => setCenterInput((v) => (v || '') + e)} disabled={!giftSendEnabled} />
                   <StyledChatInput
                     type="text"
                     value={centerInput}
