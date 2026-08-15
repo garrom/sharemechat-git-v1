@@ -1,29 +1,34 @@
 // src/styles/public-styles/PreLaunchStyles.js
 //
-// Estilos de la pantalla pre-launch (ADR-009). Reutiliza la convencion
-// de assets de la home (ASSETS_BASE -> CDN por entorno) y los tokens
-// del hero (overlay, content layout, tipografia clara sobre oscuro).
+// Estilos de la pantalla pre-launch (ADR-009). Rediseño 2026-08-16:
+// se abandona el hero OSCURO con imagen pequeña a la derecha y se pasa a
+// un "split hero" CLARO y cálido, alineado con el lenguaje de marca de los
+// emails de registro (rojo #ea1d1d, aire editorial): texto a la izquierda,
+// foto a la derecha (cover), tarjeta de verificación de email integrada.
 //
-// Convencion de imagen (igual que home/hero):
-//   ${ASSETS_BASE}/prelaunch/hero/prelaunch_desktop_v1.webp   (desktop)
-//   ${ASSETS_BASE}/prelaunch/hero/prelaunch_mobile_v1.webp    (mobile)
+// La imagen se sirve desde el CDN de assets por entorno (ASSETS_BASE):
+//   ${ASSETS_BASE}/prelaunch/hero/coming_hero_v1.jpg
+// El operador sube ese JPEG a los buckets de assets de cada entorno
+// (assets-sharemechat-{test,audit,prod}). Si el fichero no existe, el panel
+// cae a su color de fondo (rosa suave), presentable igualmente.
 //
-// El operador debe subir los dos webp a los buckets de assets de cada
-// entorno (assets-sharemechat-test, assets-sharemechat-audit, etc.).
-// Mientras no exista el fichero, el contenedor cae al color de fondo
-// negro del HeroContainer (#0b0f14), que sigue siendo presentable.
+// El cierre real vive en el backend (ProductOperationalModeFilter +
+// ProductOperationalModeWsInterceptor): aunque alguien fuerce el URL del
+// dashboard, los endpoints sensibles responden 503 para no-allowlisted.
+// Esta pantalla es solo la experiencia visible.
 
 import styled from 'styled-components';
 import { ASSETS_BASE } from '../../config/runtimeEnv';
 
-// Seccion equivalente a HomeHeroSection pero sin restar bottom-nav: en
-// pre-launch no hay bottom nav del producto, asi que ocupamos altura
-// completa (descontando solo la navbar superior).
+export const COMING_HERO_URL = `${ASSETS_BASE}/prelaunch/hero/coming_hero_v1.jpg`;
+
+// Sección a altura completa (descontando solo la navbar superior; en
+// pre-launch no hay bottom-nav del producto).
 export const PreLaunchSection = styled.section`
   position: relative;
   min-height: calc(100vh - var(--navbar-height-desktop));
   display: flex;
-  flex-direction: column;
+  background: #ffffff;
 
   @supports (min-height: 100dvh) {
     min-height: calc(100dvh - var(--navbar-height-desktop));
@@ -38,96 +43,139 @@ export const PreLaunchSection = styled.section`
   }
 `;
 
-// Imagen de fondo reducida para que el "COMING SOON" no domine la
-// pantalla ni se solape con HeroCopy (texto + tarjeta verifica-email,
-// ambos en HeroContent, columna izquierda padding 52px/56px). En lugar
-// de cubrir todo (cover) la imagen se sirve a tamaño parcial,
-// centrada a la derecha; el resto del hero es un fondo solido oscuro
-// con viñeta lateral suave para integrar el borde derecho sin que
-// quede rectangular.
-//
-// AJUSTAR AQUI tamaños / posición de la imagen de fondo:
-const PL_BG_FILL_COLOR        = '#0b0f14';        // mismo tono que HeroContainer; rellena lo que la imagen ya no cubre
-const PL_BG_SIZE_DESKTOP      = 'auto 72%';       // alto = 72% del hero, ancho = proporcional (imagen pequeña)
-const PL_BG_POSITION_DESKTOP  = '88% 50%';        // empujada a la derecha, centrada vertical
-const PL_BG_SIZE_TABLET       = 'auto 60%';       // <= 1024 px: aún más pequeña
-const PL_BG_POSITION_TABLET   = '92% 50%';
-const PL_BG_SIZE_MOBILE       = 'auto 48%';       // <= 780 px: imagen pequeña arriba-derecha
-const PL_BG_POSITION_MOBILE   = '50% 18%';        // mobile: arriba centro
-/* ================================================================ */
+// Split hero: texto | foto. En móvil se apila (foto arriba).
+export const PreLaunchHero = styled.div`
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  align-items: stretch;
 
-export const PreLaunchBackground = styled.div`
-  position: absolute;
-  inset: 0;
-  background-color: ${PL_BG_FILL_COLOR};
-  background-image:
-    radial-gradient(ellipse at 88% 50%, rgba(11,15,20,0) 0%, rgba(11,15,20,0.35) 60%, rgba(11,15,20,0.85) 100%),
-    url('${ASSETS_BASE}/prelaunch/hero/prelaunch_desktop_v1.webp');
-  background-size: 100% 100%, ${PL_BG_SIZE_DESKTOP};
-  background-position: center center, ${PL_BG_POSITION_DESKTOP};
-  background-repeat: no-repeat, no-repeat;
-  filter: brightness(0.92) contrast(1.04) saturate(1.0);
-
-  @media (max-width: 1024px) {
-    background-size: 100% 100%, ${PL_BG_SIZE_TABLET};
-    background-position: center center, ${PL_BG_POSITION_TABLET};
-  }
-
-  @media (max-width: 780px) {
-    background-image:
-      linear-gradient(180deg, rgba(11,15,20,0.0) 0%, rgba(11,15,20,0.0) 40%, rgba(11,15,20,0.55) 100%),
-      url('${ASSETS_BASE}/prelaunch/hero/prelaunch_mobile_v1.webp');
-    background-size: 100% 100%, ${PL_BG_SIZE_MOBILE};
-    background-position: center center, ${PL_BG_POSITION_MOBILE};
+  @media (max-width: 860px) {
+    grid-template-columns: 1fr;
   }
 `;
 
-// Card de "verifica tu email", presentada como bloque oscuro translucido
-// sobre el hero. Tokens alineados con HeroSecondaryCta / HeroEyebrow
-// (mismo tono blanco transparente).
-export const PreLaunchVerifyCard = styled.aside`
-  margin-top: 26px;
-  padding: 18px 20px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  color: rgba(255, 255, 255, 0.86);
+export const PreLaunchCopy = styled.div`
+  padding: 56px 52px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  max-width: 520px;
+  justify-content: center;
+  background: linear-gradient(180deg, #fffefe 0%, #fbf6f4 100%);
+
+  @media (max-width: 860px) {
+    padding: 40px 26px;
+  }
+`;
+
+export const PreLaunchEyebrow = styled.p`
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 16px;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #ea1d1d;
+
+  &::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #ea1d1d;
+    box-shadow: 0 0 0 4px rgba(234, 29, 29, 0.14);
+  }
+`;
+
+export const PreLaunchTitle = styled.h1`
+  margin: 0 0 16px;
+  font-size: 40px;
+  line-height: 1.08;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #141820;
+
+  @media (max-width: 860px) {
+    font-size: 32px;
+  }
+`;
+
+export const PreLaunchSubtitle = styled.p`
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #4b5563;
+  max-width: 44ch;
+`;
+
+// Panel derecho con la foto (cover). El color de fondo rosa suave cubre
+// el hueco si la imagen aún no está en el CDN.
+export const PreLaunchPic = styled.div`
+  position: relative;
+  background: #f4d9e4;
+  min-height: 320px;
+
+  & img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 42%;
+    display: block;
+  }
+
+  @media (max-width: 860px) {
+    order: -1;
+    min-height: 280px;
+  }
+`;
+
+// Card de "verifica tu email", en clave clara (blanco + filo rojo + botón
+// rojo de marca), integrada bajo el subtítulo.
+export const PreLaunchVerifyCard = styled.aside`
+  margin-top: 30px;
+  max-width: 440px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #efe1dd;
+  border-left: 4px solid #ea1d1d;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
 `;
 
 export const PreLaunchVerifyTitle = styled.div`
-  font-size: 0.86rem;
+  font-size: 11.5px;
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.92);
+  color: #141820;
 `;
 
 export const PreLaunchVerifyBody = styled.p`
   margin: 0;
-  font-size: 0.92rem;
+  font-size: 13.5px;
   line-height: 1.55;
-  color: rgba(255, 255, 255, 0.72);
+  color: #5b6470;
 `;
 
 export const PreLaunchVerifyButton = styled.button`
   align-self: flex-start;
   min-height: 42px;
-  padding: 0 18px;
+  padding: 0 20px;
   border-radius: 999px;
-  font-weight: 800;
-  font-size: 14px;
+  font-weight: 700;
+  font-size: 13.5px;
   color: #ffffff;
-  background: rgba(255, 255, 255, 0.10);
-  border: 1px solid rgba(255, 255, 255, 0.20);
+  background: #ea1d1d;
+  border: none;
   cursor: pointer;
-  transition: transform 0.2s ease, background 0.15s ease;
+  box-shadow: 0 8px 18px rgba(234, 29, 29, 0.24);
+  transition: transform 0.15s ease, background 0.15s ease;
 
   &:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.16);
+    background: #cf1717;
     transform: translateY(-1px);
   }
 
@@ -140,5 +188,5 @@ export const PreLaunchVerifyButton = styled.button`
 export const PreLaunchVerifyFeedback = styled.div`
   font-size: 0.85rem;
   line-height: 1.5;
-  color: ${(p) => (p.$kind === 'err' ? '#fca5a5' : '#86efac')};
+  color: ${(p) => (p.$kind === 'err' ? '#b42318' : '#166534')};
 `;

@@ -32,18 +32,17 @@ import Roles from '../constants/Roles';
 import UserTypes from '../constants/UserTypes';
 import {
   GlobalBlack,
-  HeroBackground,
-  HeroContainer,
-  HeroContent,
-  HeroCopy,
-  HeroOverlay,
-  HeroSubtitle,
-  HeroTitle,
   HomePageStack,
 } from '../styles/public-styles/HomeStyles';
 import {
-  PreLaunchBackground,
+  COMING_HERO_URL,
+  PreLaunchCopy,
+  PreLaunchEyebrow,
+  PreLaunchHero,
+  PreLaunchPic,
   PreLaunchSection,
+  PreLaunchSubtitle,
+  PreLaunchTitle,
   PreLaunchVerifyBody,
   PreLaunchVerifyButton,
   PreLaunchVerifyCard,
@@ -61,12 +60,6 @@ const resolveRoleSlot = (user) => {
   if (role === Roles.USER && userType === UserTypes.FORM_MODEL) return 'model';
   return 'client';
 };
-
-// Marcador silencioso para evitar warning de import no usado del
-// HeroBackground. El styled component oficial de la home se mantiene en
-// el bundle por reutilizacion documental, aunque aqui usamos el
-// PreLaunchBackground con la imagen propia.
-void HeroBackground;
 
 const PreLaunchScreen = () => {
   const history = useHistory();
@@ -156,14 +149,11 @@ const PreLaunchScreen = () => {
 
       <HomePageStack>
         <PreLaunchSection>
-          <HeroContainer>
-            <PreLaunchBackground />
-            <HeroOverlay />
-
-            <HeroContent>
-              <HeroCopy>
-                <HeroTitle>{t(titleKey, { name })}</HeroTitle>
-                <HeroSubtitle>{t(bodyKey)}</HeroSubtitle>
+          <PreLaunchHero>
+            <PreLaunchCopy>
+              <PreLaunchEyebrow>{t('modals.preLaunch.common.eyebrow')}</PreLaunchEyebrow>
+              <PreLaunchTitle>{t(titleKey, { name })}</PreLaunchTitle>
+              <PreLaunchSubtitle>{t(bodyKey)}</PreLaunchSubtitle>
 
                 {emailUnverified && (
                   <PreLaunchVerifyCard>
@@ -190,9 +180,12 @@ const PreLaunchScreen = () => {
                     )}
                   </PreLaunchVerifyCard>
                 )}
-              </HeroCopy>
-            </HeroContent>
-          </HeroContainer>
+            </PreLaunchCopy>
+
+            <PreLaunchPic>
+              <img src={COMING_HERO_URL} alt="SharemeChat" />
+            </PreLaunchPic>
+          </PreLaunchHero>
         </PreLaunchSection>
       </HomePageStack>
     </>
