@@ -8,6 +8,19 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-08-15 — ADR-059: expansión de cobertura frontend (Jest 91 → 229) — utils puros críticos + componentes de seguridad/infra
+
+Tras cerrar los 4 happy-paths E2E (entrada siguiente), tanda de tests **unit/component de frontend** el mismo día para tapar el hueco de **utils puros críticos y componentes de seguridad/infra** que estaban sin cubrir pese a su peso (routing de sesión, control de acceso, gate PRELAUNCH, failover de mantenimiento, consent GDPR). Frontend Jest **91 → 229** (32 suites verdes); total unit/component **≈336** (backend 107 + frontend 229) + 4 specs E2E. Método: encadenado por batches (rama basada en `origin/main` → verde en local → CI 3 jobs → merge verificado con `merge-base`/`cat-file`), 8 merges independientes.
+
+**Qué se cubrió (todo de valor real, cero relleno):**
+- **Utils de routing/acceso** — `runtimeSurface` (`resolveHomeUrl` por rol, `navigateToUrl` history-vs-`window.location`, flags product/admin), `backofficeAccess` (permisos/roles), `clientKycGate` (gate de pago + defensa open-redirect).
+- **Utils de media/cámara** — `mediaState` (salud del track de video), `virtualCameraGuard` (anti-fraude Nivel 1: blacklist virtual cameras + fallback `enumerateDevices`), `apiErrors`, `emojiUtils`.
+- **Componentes seguridad/infra/UX** — `RequireRole` (gate PRELAUNCH ADR-009 + rol/userType/backoffice), `MaintenanceProvider` (overlay failover + auto-recuperación por poll con fake timers), `CookieBanner` (consent GDPR + first-touch), `TrialCooldownModal` (`formatRemaining`, 10 ramas), `LocaleSwitcher` (basename `/en` ADR-022 + alternates blog ADR-025), `ModalProvider` (API promise-based + alert/confirm/selectOptions).
+
+**Aprendizaje técnico (jsdom):** mockear `window.location` de forma fiable a través de reads asíncronos requiere `delete window.location; window.location = mock` — `Object.defineProperty(...,{value})` NO engancha entre re-definiciones; y CRA resetea las implementaciones de los mocks entre tests (re-setear en `beforeEach`). Detalle en ADR-059 (subsección "Actualización 2026-08-15 (cont.)").
+
+Frente 100% tests + docs: cero cambios de runtime de producción, no requiere despliegue.
+
 ## 2026-08-15 — ADR-059: completados los E2E de los happy-paths críticos (login + registro→pago/checkout); 4 specs Playwright en verde
 
 Continuación del frente E2E arrancado la entrada anterior. Se añaden las dos specs que quedaban pendientes y con ellas quedan cubiertos los **4 happy-paths críticos** del producto (arranque, registro, login, primer pago). Ambas siguen el patrón acordado (**backend MOCKEADO** por `page.route('**/api/**')`, cero Spring+MySQL) y están mapeadas sobre el código real, no sobre supuestos:
