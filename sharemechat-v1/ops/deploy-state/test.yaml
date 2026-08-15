@@ -7,21 +7,21 @@
 #
 schema_version: 1
 frontend_product:
-  cloudfront_invalidation_id: I2IZIVDIRK7KSWMEDAEDUTN11F
+  cloudfront_invalidation_id: IE1CZ6M62EMB5MOLXGER55CH09
   verification:
-    method: deploy-frontend.ps1-live-build_2026-08-15T02:07:55Z
-    git_commit_provenance: recorded_by_deploy_script
-    notes: Actualizado automaticamente por deploy-frontend.ps1 (Fase 1 paso 2a) tras smoke OK del propio script.
-  deployed_at: 2026-08-15T02:07:55Z
-  built_at: 2026-08-15T02:07:55Z
-  bundle_sha256: 9b88c62f9830be5b6012792a85af23206c86aab5b880cbc3343fb4e470d02c1c
-  git_commit_short: b840beae
-  git_commit: b840beae056e83867a1104e52a7a06d07d713fe3
+    method: deploy-frontend.ps1-live-build_2026-08-15T14:37:32Z
+    git_commit_provenance: corrected_by_operator
+    notes: 'El script registro a2ae5941 (HEAD del worktree/cwd de la rama de atribucion) por el gotcha worktree!=checkout: el build usa repoRoot ($PSScriptRoot del checkout principal) pero git rev-parse corre en el cwd. Corregido a mano a acbebc86 (origin/main), que es el contenido realmente construido y desplegado (bundle main.a67f764d.js).'
+  deployed_at: 2026-08-15T14:37:32Z
+  built_at: 2026-08-15T14:37:32Z
+  bundle_sha256: 0ec1fb48700e207c9a8f81c199c2d63f395e6ed4043147995c516304c8797bfe
+  git_commit_short: acbebc86
+  git_commit: acbebc86eca3ab5ba33f858b1bb008c9a8a6b259
   cloudfront_distribution: E2Q4VNDDWD5QBU
   deployed_by: alain@LAPTOP-8UEIKVUT
   working_tree_clean: true
   bucket: sharemechat-frontend-test
-  bundle: main.0751768b.js
+  bundle: main.a67f764d.js
 last_update_source: deploy-frontend.ps1-fase1-paso2a
 last_update_by: alain@LAPTOP-8UEIKVUT
 environment: test
@@ -40,7 +40,7 @@ backend:
   systemd_unit: sharemechat-test.service
   git_commit: c04058d2972b6a920d1d201ff7aadc5dc177c602
   git_commit_short: c04058d2
-last_updated_at: 2026-08-15T02:07:55Z
+last_updated_at: 2026-08-15T14:37:32Z
 frontend_admin:
   cloudfront_invalidation_id: I2ASBAD3709HXZU7KSBDNIVKQL
   verification:
