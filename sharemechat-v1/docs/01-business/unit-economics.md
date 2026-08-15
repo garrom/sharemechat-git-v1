@@ -122,6 +122,10 @@ Asumiendo consumo de un pack tipo con reparto aplicado al minuto 2 en adelante:
 
 El reparto de gifts (**90% modelo / 10% plataforma**, sobre el bruto pagado por el cliente por el gift) NO cambia con [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md); sigue el régimen de [ADR-043](../06-decisions/adr-043-pricing-formalization-current-state.md) §5 (`gift.model-share=0.90` en `application.properties`). Los gifts **no cuentan** hacia los umbrales de tramo o Estatus Pro; son un canal económico separado con reparto propio.
 
+## Promociones de adquisición
+
+Los bonos promocionales financiados por la plataforma se modelan como BFPM ([ADR-012](../06-decisions/adr-012-bfpm-platform-funded-bonus.md)) y su coste no se imputa por transacción sino como coste de adquisición del período. La promoción de lanzamiento vigente (bono 10 € a los 100 primeros clientes, con su impacto económico y amplificadores de coste) está en [promo-100-primeros-clientes.md](promo-100-primeros-clientes.md).
+
 ## Programa de afiliados (retirado)
 
 El programa de afiliadas modelos (30% revshare por cliente atribuido) queda **retirado** por [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) §D11. Aunque el reparto pasó de 75-79% a 50-60% con [ADR-056](../06-decisions/adr-056-sistema-master-studio.md), el %reparto sigue siendo competitivo frente al sector (LiveJasmin L1 30%, BongaCams ~35%) y no se justifica reintroducir el revshare de afiliadas. Ya no hay coste adicional de revshare a afiliados que restar del margen empresa. Ver [affiliate-program.md](affiliate-program.md) (stub de retirada) y [`../_deprecated/registro.md`](../_deprecated/registro.md) para el contenido histórico.
