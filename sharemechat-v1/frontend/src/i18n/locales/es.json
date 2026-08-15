@@ -527,11 +527,11 @@
     "success": {
       "title": "Confirmando tu pago",
       "verifying": "Estamos verificando el pago con la pasarela...",
-      "verifyingHint": "Esto suele tardar entre 10 y 30 segundos. No cierres esta ventana.",
+      "verifyingHint": "El pago en cripto puede tardar unos minutos en confirmarse en la red. Tu saldo se actualizará solo en cuanto se confirme; puedes cerrar esta ventana con tranquilidad.",
       "confirmed": "¡Pago confirmado! Tus {{minutes}} minutos ya están disponibles.",
       "failed": "El pago no se ha completado. Puedes volver a intentarlo desde tu cuenta.",
       "expired": "La sesión de pago ha caducado. Vuelve a iniciar una nueva compra.",
-      "timeout": "Estamos procesando tu pago. Si no ves el saldo en unos minutos, revisa el histórico o contáctanos.",
+      "timeout": "Tu pago sigue confirmándose en la red. En cuanto se confirme, tu saldo se actualizará automáticamente, aunque cierres esta página. Si en un rato no lo ves, revisa el histórico o contáctanos.",
       "notFound": "No encontramos esta sesión de pago. Si acabas de pagar, espera unos segundos y vuelve a intentarlo.",
       "backToAccount": "Volver a mi cuenta"
     },
