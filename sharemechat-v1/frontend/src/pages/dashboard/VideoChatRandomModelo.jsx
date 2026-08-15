@@ -51,6 +51,9 @@ import {
   StyledCallOverlayRb,
   StyledCallComposer,
   StyledGiftFxLayer,
+  StyledGiftBar,
+  StyledGiftTrack,
+  StyledGiftChip,
   StyledStatsPrecallCard,
   StyledStatsInline,
   StyledTierProgressCard,
@@ -79,9 +82,10 @@ import {
 import { useSession } from '../../components/SessionProvider';
 import { useTranslationSettings } from '../../hooks/useTranslationSettings';
 import { useMessageTranslations } from '../../hooks/useMessageTranslations';
-import GiftIcon, { resolveGiftSlug } from '../../components/gifts/GiftIcon';
+import GiftIcon, { resolveGiftSlug, isFaceGiftCode, OBJECT_CODE_TO_EMOJI } from '../../components/gifts/GiftIcon';
 import GiftIconDefs from '../../components/gifts/GiftIconDefs';
 import EmojiTextPicker from '../../components/EmojiTextPicker';
+import SupportMessageBubble from '../../components/support/SupportMessageBubble';
 import { isSingleEmoji } from '../../utils/emojiUtils';
 
 // Keyframes de los efectos al recibir un regalo (portado de random cliente /
@@ -125,6 +129,7 @@ export default function VideoChatRandomModelo(props) {
     chatInput,
     setChatInput,
     sendChatMessage,
+    sendRandomGiftEmoji,
     handleBlockPeer,
     handleReportPeer,
     error,
@@ -440,8 +445,8 @@ export default function VideoChatRandomModelo(props) {
     if (!code && !src) return null;
 
     return (
-      <StyledGiftMessage $premium={renderData.isPremium}>
-        <GiftIcon code={code} iconUrl={src} alt={renderData.name || ''} size={renderData.isPremium ? 88 : 48} />
+      <StyledGiftMessage $premium={renderData.isPremium} style={{ minWidth: 0 }}>
+        <GiftIcon code={code} iconUrl={src} alt={renderData.name || ''} size={42} />
       </StyledGiftMessage>
     );
   };
@@ -486,37 +491,58 @@ export default function VideoChatRandomModelo(props) {
       if (!giftData && !hasTranslation && isSingleEmoji(msg.text)) {
         return (
           <StyledChatMessageRow key={msg.id || index} $side={variant}>
-            <span role="img" aria-label={(msg.text || '').trim()} style={{ fontSize: 40, lineHeight: 1 }}>
+            <span role="img" aria-label={(msg.text || '').trim()} style={{ fontSize: 34, lineHeight: 1 }}>
               {(msg.text || '').trim()}
             </span>
           </StyledChatMessageRow>
         );
       }
 
+      // Regalo -> fila alineada.
+      if (giftData) {
+        return (
+          <StyledChatMessageRow key={msg.id || index} $side={variant}>
+            {renderGiftMessage(giftData)}
+          </StyledChatMessageRow>
+        );
+      }
+
+      // Texto en MÓVIL: misma burbuja con inicial de alias que favoritos
+      // (SupportMessageBubble; con transparent va todo a la izquierda con
+      // avatar-inicial). En desktop, la burbuja simple de siempre.
+      if (isMobile) {
+        return (
+          <SupportMessageBubble
+            key={msg.id || index}
+            message={{ id: msg.id, sender: isMe ? 'P2P_ME' : 'P2P_PEER', content: msg.text, createdAt: msg.createdAt }}
+            peerNickname={clientNickname || ''}
+            userNickname={sessionUser?.nickname || ''}
+            transparent
+            translation={isMe ? null : translation}
+          />
+        );
+      }
+
       return (
         <StyledChatMessageRow key={msg.id || index} $side={variant}>
-          {giftData ? (
-            renderGiftMessage(giftData)
-          ) : (
-            <StyledChatBubble $variant={variant}>
-              {msg.text}
-              {hasTranslation && (
-                <div style={{
-                  marginTop: 6,
-                  paddingTop: 6,
-                  borderTop: '1px dashed rgba(15, 23, 42, 0.15)',
-                  fontSize: '0.82rem',
-                  opacity: 0.75,
-                  display: 'flex',
-                  gap: 6,
-                  alignItems: 'flex-start',
-                }}>
-                  <span style={{ color: '#3b82f6', fontSize: '0.9rem', lineHeight: 1, flexShrink: 0, marginTop: 1 }}>↻</span>
-                  <span>{translation}</span>
-                </div>
-              )}
-            </StyledChatBubble>
-          )}
+          <StyledChatBubble $variant={variant}>
+            {msg.text}
+            {hasTranslation && (
+              <div style={{
+                marginTop: 6,
+                paddingTop: 6,
+                borderTop: '1px dashed rgba(15, 23, 42, 0.15)',
+                fontSize: '0.82rem',
+                opacity: 0.75,
+                display: 'flex',
+                gap: 6,
+                alignItems: 'flex-start',
+              }}>
+                <span style={{ color: '#3b82f6', fontSize: '0.9rem', lineHeight: 1, flexShrink: 0, marginTop: 1 }}>↻</span>
+                <span>{translation}</span>
+              </div>
+            )}
+          </StyledChatBubble>
         </StyledChatMessageRow>
       );
     })
@@ -538,9 +564,10 @@ export default function VideoChatRandomModelo(props) {
       style={{
         ...(floating ? {
           position: 'absolute',
-          top: 12,
+          bottom: 12,
           left: 12,
-          zIndex: 100,
+          zIndex: 30,
+          pointerEvents: 'auto',
         } : {}),
         background: showOriginal ? '#fff' : '#dbeafe',
         color: '#1e3a8a',
@@ -630,17 +657,52 @@ export default function VideoChatRandomModelo(props) {
     </StyledCallBottomBar>
   );
 
-  // Barra inferior única sobre el vídeo (desktop): [controles izq] + [centro
-  // spacer] + [reportar/bloquear der] en una sola fila. IMPORTANTE: en el flujo
-  // random el modelo es RECEPTOR de regalos; el backend
-  // (MatchingHandlerSupport.handleGiftInMatch) solo permite CLIENT -> MODEL, por
-  // lo que el modelo NO dispone de barra selectora de regalos aqui (a diferencia
-  // del cliente). El envio de emojis del modelo va por el composer (EmojiTextPicker
-  // -> mensaje de chat). El centro queda como spacer para conservar el layout de
-  // 3 zonas. Los botones van mas pequeños que el tamaño global (44px) via style
-  // inline, para NO tocar BtnCall* que tambien usan las llamadas de favoritos.
+  // Barra inferior única sobre el vídeo (desktop): [controles izq] + [barra de
+  // regalos GRATIS del modelo, centro] + [reportar/bloquear der].
+  // IMPORTANTE: en random el canal de REGALO real (SVG, con transacción) es solo
+  // CLIENT -> MODEL a nivel backend (MatchingHandlerSupport.handleGiftInMatch).
+  // Por eso los gratis del modelo NO van por ese canal, sino por CHAT: al pulsar
+  // un chip se envía su emoji unicode como mensaje (mismo canal que el botón 😊),
+  // sin tocar backend; se renderiza como emoji grande en el chat del cliente.
+  // Los botones de control van más pequeños que el global (44px) via style inline.
   const OVERLAY_CTRL_STYLE = { width: 34, height: 34, minWidth: 34, minHeight: 34, fontSize: 13 };
   const OVERLAY_RB_STYLE = { width: 32, height: 32, minWidth: 32, minHeight: 32, fontSize: 12 };
+
+  // Regalos gratis del modelo -> emoji unicode (se envían por chat, no por el
+  // canal de regalos). Solo objetos; las caritas ya viven en el botón 😊. Se usa
+  // OBJECT_CODE_TO_EMOJI (fuente única compartida con GiftIcon) para que el
+  // objeto se vea IDÉNTICO al que pinta el cliente.
+  const modelFreeGifts = Array.isArray(gifts)
+    ? gifts.filter((g) => {
+        const code = String(g?.code || '').toLowerCase();
+        const isPremium = String(g?.tier || 'QUICK').toUpperCase() === 'PREMIUM';
+        return !isPremium && !isFaceGiftCode(code) && !!OBJECT_CODE_TO_EMOJI[code];
+      })
+    : [];
+  const renderModelFreeGiftBar = (surface) => {
+    if (modelFreeGifts.length === 0) return null;
+    const isOverlay = surface === 'video-overlay';
+    return (
+      <StyledGiftBar
+        data-kind="random-gift-bar"
+        {...(isOverlay ? { 'data-surface': 'video-overlay' } : {})}
+      >
+        <StyledGiftTrack {...(isOverlay ? { 'data-row': 'all' } : {})}>
+          {modelFreeGifts.map((g) => (
+            <StyledGiftChip
+              key={g.id}
+              type="button"
+              title={g.name}
+              aria-label={g.name}
+              onClick={() => { if (sendRandomGiftEmoji) sendRandomGiftEmoji(OBJECT_CODE_TO_EMOJI[String(g.code).toLowerCase()]); }}
+            >
+              <GiftIcon code={g.code} iconUrl={g.icon} alt={g.name || ''} size={24} />
+            </StyledGiftChip>
+          ))}
+        </StyledGiftTrack>
+      </StyledGiftBar>
+    );
+  };
   const renderCallOverlayBar = () => (
     <StyledCallOverlayBar>
       <StyledCallOverlayControls>
@@ -676,10 +738,11 @@ export default function VideoChatRandomModelo(props) {
         )}
       </StyledCallOverlayControls>
 
-      {/* Centro: spacer (el modelo no envia regalos en random; ver comentario
-          arriba). Se mantiene para empujar controles a la izq y reportar/bloquear
-          a la der, igual layout que el cliente. */}
-      <StyledCallOverlayGifts />
+      {/* Centro: barra de regalos GRATIS del modelo (envío por chat/emoji, no
+          por el canal de regalos). Mismo layout de 3 zonas que el cliente. */}
+      <StyledCallOverlayGifts>
+        {renderModelFreeGiftBar('video-overlay')}
+      </StyledCallOverlayGifts>
 
       <StyledCallOverlayRb>
         <BtnCallAlert
@@ -1108,25 +1171,28 @@ export default function VideoChatRandomModelo(props) {
       </StyledSplit2>
 
       {remoteStream && isMobile && (
-        <StyledChatDock data-surface="call-dark">
-          <EmojiTextPicker onInsert={(e) => setChatInput((v) => (v || '') + e)} />
-          <StyledChatInput
-            type="text"
-            value={chatInput}
-            onChange={(e) => setChatInput(e.target.value)}
-            placeholder={t('dashboardModel.videoChatRandomModelo.placeholders.message')}
-            autoComplete="off"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendChatMessage();
-              }
-            }}
-          />
-          <BtnSend data-send-button="true" type="button" onClick={sendChatMessage} aria-label={t('common.sendMessage')} title={t('common.sendMessage')}>
-            <FontAwesomeIcon icon={faPaperPlane} />
-          </BtnSend>
-        </StyledChatDock>
+        <>
+          {renderModelFreeGiftBar()}
+          <StyledChatDock data-surface="call-dark">
+            <EmojiTextPicker onInsert={(e) => setChatInput((v) => (v || '') + e)} />
+            <StyledChatInput
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              placeholder={t('dashboardModel.videoChatRandomModelo.placeholders.message')}
+              autoComplete="off"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  sendChatMessage();
+                }
+              }}
+            />
+            <BtnSend data-send-button="true" type="button" onClick={sendChatMessage} aria-label={t('common.sendMessage')} title={t('common.sendMessage')}>
+              <FontAwesomeIcon icon={faPaperPlane} />
+            </BtnSend>
+          </StyledChatDock>
+        </>
       )}
 
       {error && <p style={{color:'red',marginTop:'10px'}}>{error}</p>}

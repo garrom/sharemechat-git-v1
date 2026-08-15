@@ -2,7 +2,7 @@
 import React,{useEffect,useRef,useState,useMemo} from 'react';
 import i18n from '../../i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faPhoneSlash, faVideo, faPaperPlane, faGift, faExpand } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faPhoneSlash, faVideo, faPaperPlane, faExpand } from '@fortawesome/free-solid-svg-icons';
 import FavoritesClientList from '../favorites/FavoritesClientList';
 import SupportMessageBubble from '../../components/support/SupportMessageBubble';
 import SessionHUD from '../../components/SessionHUD';
@@ -25,7 +25,7 @@ import GiftIcon, { resolveGiftSlug, isFaceGiftCode } from '../../components/gift
 import GiftIconDefs from '../../components/gifts/GiftIconDefs';
 import EmojiTextPicker from '../../components/EmojiTextPicker';
 import { isSingleEmoji } from '../../utils/emojiUtils';
-import { ButtonLlamar,ButtonColgar,ButtonAceptar,ButtonRechazar,ButtonEnviar,ButtonRegalo,ButtonActivarCam,
+import { ButtonLlamar,ButtonColgar,ButtonAceptar,ButtonRechazar,ButtonEnviar,ButtonActivarCam,
     ButtonActivarCamMobile,ButtonVolver,ActionButton,BtnRoundVideo,BtnHangup,BtnCallDanger,BtnCallGhost,BtnSend
 } from '../../styles/ButtonStyles';
 
@@ -45,7 +45,7 @@ export default function VideoChatFavoritosCliente(props){
       isMobile,handleOpenChatFromFavorites,favReload,selectedContactId,hasActiveDetail,hasCallTarget,setCtxUser,setCtxPos,centerChatPeerId,peerPresence,
       centerChatPeerName,centerMessages,centerLoading,centerListRef,chatEndRef,centerInput,setCenterInput,
       sendCenterMessage,allowChat,isPendingPanel,isSentPanel,acceptInvitation,rejectInvitation,gifts,giftRenderReady,
-      fmtEUR,showCenterGifts,setShowCenterGifts,sendGiftMsg,contactMode,enterCallMode,callStatus,callCameraActive,
+      fmtEUR,showCenterGifts,sendGiftMsg,contactMode,enterCallMode,callStatus,callCameraActive,
       callPeerId,callPeerName,callPeerAvatar,callRemoteVideoRef,callLocalVideoRef,callRemoteWrapRef,callListRef,
       handleCallActivateCamera,handleCallInvite,handleCallAccept,handleCallReject,handleCallEnd,toggleFullscreen,
       callError,backToList,user,
@@ -227,10 +227,16 @@ export default function VideoChatFavoritosCliente(props){
     </StyledGiftsPanel>
   );
 
+  // Envío de regalos/emoji habilitado: favorito aceptado (allowChat) O llamada
+  // activa. Durante la llamada el backend ya autoriza por el stream, así que
+  // gatear solo por allowChat deshabilitaba de más cuando llama la MODELO
+  // (allowChat=false en ese contexto). Simétrico al fix del lado modelo.
+  const giftSendEnabled = allowChat || callStatus === 'in-call';
+
   // Barra de regalos siempre visible (Fase 1). Gratis -> envio directo;
   // pago -> abre modal de confirmacion.
   const handleGiftChipClick = (g) => {
-    if (!allowChat) return;
+    if (!giftSendEnabled) return;
     if (normalizeGiftTier(g) === 'PREMIUM') setConfirmGift(g);
     else sendGiftMsg(g.id);
   };
@@ -243,7 +249,7 @@ export default function VideoChatFavoritosCliente(props){
     <StyledGiftChip
       key={g.id}
       type="button"
-      disabled={!allowChat}
+      disabled={!giftSendEnabled}
       title={g.name}
       aria-label={g.name}
       onClick={() => handleGiftChipClick(g)}
@@ -431,7 +437,7 @@ export default function VideoChatFavoritosCliente(props){
 
     return (
       <StyledGiftMessage $premium={isPremium} style={{ minWidth: 0 }}>
-        <GiftIcon code={code} iconUrl={src} alt={giftData.name || ''} size={31} />
+        <GiftIcon code={code} iconUrl={src} alt={giftData.name || ''} size={42} />
       </StyledGiftMessage>
     );
   };
@@ -748,7 +754,7 @@ export default function VideoChatFavoritosCliente(props){
                                 El botón de regalo ya no vive aquí: los regalos
                                 están en la barra inferior sobre el vídeo. */}
                             <StyledCallComposer>
-                              <EmojiTextPicker onInsert={(e) => setCenterInput((v) => (v || '') + e)} disabled={!allowChat} />
+                              <EmojiTextPicker onInsert={(e) => setCenterInput((v) => (v || '') + e)} disabled={!giftSendEnabled} />
                               <StyledChatInput
                                 type="text"
                                 value={centerInput}
@@ -942,12 +948,16 @@ export default function VideoChatFavoritosCliente(props){
 
                   <StyledChatContainer data-wide="true" style={{display:'flex',flexDirection:'column',justifyContent:'flex-end',zIndex:5}}>
                     <StyledChatList ref={callListRef} style={{width:'100%'}}>
-                      {centerMessages.map((m) => renderChatMessage(m, { transparent: true }))}
+                      {callMessages.map((m) => renderChatMessage(m, { transparent: true }))}
                     </StyledChatList>
                   </StyledChatContainer>
                 </StyledVideoArea>
 
+                {/* Móvil in-call: sistema nuevo de regalos (barra) + 😊,
+                    paridad con desktop y con el chat móvil sin llamada. */}
+                {callStatus==='in-call' && renderGiftBar()}
                 <StyledChatDock data-surface="call-dark" style={{display:callStatus==='in-call'?'flex':'none'}}>
+                  <EmojiTextPicker onInsert={(e) => setCenterInput((v) => (v || '') + e)} disabled={!giftSendEnabled} />
                   <StyledChatInput
                     type="text"
                     value={centerInput}
@@ -957,16 +967,6 @@ export default function VideoChatFavoritosCliente(props){
                     onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendCenterMessage();}}}
                     onFocus={()=>setTimeout(()=>chatEndRef.current?.scrollIntoView({block:'end'}),50)}
                   />
-                  <ButtonRegalo
-                    data-gift-button="true"
-                    title={t('dashboardClient.videoChatFavoritosCliente.actions.sendGift')}
-                    onClick={()=>setShowCenterGifts(s=>!s)}
-                    aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.sendGift')}
-                  >
-                    <FontAwesomeIcon icon={faGift}/>
-                  </ButtonRegalo>
-
-                  {showCenterGifts&&renderGiftPicker()}
                 </StyledChatDock>
 
                 {(callStatus==='connecting'||callStatus==='ringing'||callStatus==='incoming')&&(

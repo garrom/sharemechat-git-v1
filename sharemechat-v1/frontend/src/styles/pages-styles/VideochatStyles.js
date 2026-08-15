@@ -745,6 +745,17 @@ export const StyledChatMessageRow = styled.div`
   display: flex;
   justify-content: ${p => (p.$side === 'me' ? 'flex-end' : p.$side === 'peer' ? 'flex-start' : 'flex-start')};
   margin: 10px 0;
+
+  /* Móvil: en el chat-overlay sobre el vídeo (random y 1a1, cliente y modelo)
+     pegamos TODA la conversación a la IZQUIERDA. En pantalla estrecha, partir
+     los mensajes izq/der desaprovecha el ancho; una sola columna a la izquierda
+     se lee mejor y deja ver el vídeo. Solo aplica al overlay (dentro de
+     StyledChatContainer) y solo en móvil; desktop y chat puro sin cambios. */
+  @media (max-width: 768px) {
+    ${StyledChatContainer} & {
+      justify-content: flex-start;
+    }
+  }
 `;
 
 export const StyledChatBubble = styled.span`
