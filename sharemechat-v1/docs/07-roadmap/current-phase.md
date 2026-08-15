@@ -5,9 +5,14 @@
 > [`backlog-priorizado.md`](backlog-priorizado.md), verificados contra código
 > (ver `documentation-governance.md` → "Regla de ESTADO y PRIORIDAD").
 > Lo que aquí ponga como "pendiente/hecho" **puede estar desfasado** — manda el backlog.
-> _Reconciliación de estado conocida al 2026-08-12: varios frentes que este doc lista
-> pendientes (Tickets, KYC modelo, Operational Mode, anti-fraude, replicación PROD) están
-> HECHOS — ver el backlog._
+> _Reconciliación de estado 2026-08-15 (verificada contra código: migraciones + paquetes Java):
+> varios frentes que las secciones de abajo aún narran como "pendientes" o "cero implementación"
+> están **HECHOS** — Tickets (ADR-054, V41), KYC modelo, Operational Mode, anti-fraude,
+> replicación PROD (nivelado a main `fed5e01`, V47-V51, 2026-08-11), **Sistema Master/Studio
+> (ADR-056, V42-V46, activo en TEST+AUDIT+PROD desde 2026-08-04, solo falta el rail Paxum real)**,
+> y **ADR-052 técnico** (purga afiliadas V38 + reparto nuevo `model_pricing_tiers` V39, ya
+> extendido por ADR-056). Las cabeceras "Estado" de los Frentes 3, 4 y 5 y sus sub-fases se
+> han anotado en consecuencia más abajo. Manda el backlog._
 
 ## Fase activa general
 
@@ -30,7 +35,7 @@ Cinco frentes en curso en paralelo. El Frente 1 (Chat Soporte LLM · Panel human
 
 ## Frente 1: Chat Soporte LLM — Panel humano (ADR-046)
 
-Estado: **CERRADO en TEST y AUDIT** al 2026-07-09. Propagación a PROD pendiente y ligada a la decisión de corte del pivote soft launch (ADR-047).
+Estado: **CERRADO en TEST, AUDIT y PROD** (PROD vía el nivelado general a main `fed5e01`, 2026-08-11; ver punto 7).
 
 Objetivo:
 cerrar la superficie humana del Agente IA para que las conversaciones escaladas por el bot puedan atenderse por el equipo desde el backoffice admin, sin bloquear al bot en el resto de casos.
@@ -78,9 +83,8 @@ Secuencia actual:
    - Manifest `ops/deploy-state/audit.yaml` regularizado (backend a mano por decoupling entre HEAD del repo y commit del JAR; frontends por el script en su paso `[5.5/N]`).
    - Detalle completo en `docs/project-log.md` entrada 2026-07-09 "Nivelación AUDIT completa" y en snapshot `docs/_snapshots/state-audit-2026-07-09.yaml`.
 
-7. **Replicación de la Fase B.3 a PROD** — PENDIENTE
-   - Requiere aplicar V15 al RDS PROD vía túnel bastion + `mysqlsh`, desplegar el JAR `05d52c29…` (commit `c4f58ce`) + bundles admin (`main.e497623e.js`) y product (`main.7ef36d6c.js`), y comprobar/populan `CLAUDE_API_KEY` en `/opt/sharemechat/secrets.env` de PROD (probablemente ausente por el mismo gap que aparece en AUDIT).
-   - Coordinar con el estado del pivote soft launch (ADR-047) y con el hardening PROD coming-soon vigente: los overrides `kyc.didit.enabled=false` y `moderation.sightengine.enabled=false` de `application-prod.properties` no se retiran en esta replicación; solo se propaga el frente B.3 + Fases 1/1.1/2/avatar.
+7. **Replicación de la Fase B.3 a PROD** — HECHO (vía el nivelado general de PROD a main `fed5e01`, V47-V51, 2026-08-11)
+   - El Chat Soporte LLM + panel humano (ADR-046) y las Fases 1/1.1/2/avatar llegaron a PROD dentro del nivelado global (no como replicación aislada). PROD quedó a la altura de `main`. Verificar `CLAUDE_API_KEY` en `/opt/sharemechat/secrets.env` de PROD sigue en el backlog como gap de credenciales (ver P1 "Verificar gaps PROD post-nivelado"); el código y el schema ya están.
 
 Deudas registradas del frente (todas en `docs/04-operations/known-debt.md`): #D-13 job expiración `ESCALATED > 48h`, #D-14 Browser Notification API para agents, #D-15 playbook DPO GDPR art. 15 sobre conversaciones humanas (obligatorio pre-go-live PROD).
 
@@ -89,7 +93,7 @@ Deudas registradas del frente (todas en `docs/04-operations/known-debt.md`): #D-
 ## Frente 2: Gobierno económico pre-PSP
 
 Objetivo:
-cerrar la base económica interna antes de integrar CCBill real y antes de cualquier circulación de dinero real.
+cerrar la base económica interna antes de integrar el PSP real y antes de cualquier circulación de dinero real. _(Objetivo original del frente; el PSP cripto NOWPayments ya está en PROD — ver punto 7.)_
 
 Secuencia actual:
 
@@ -146,18 +150,18 @@ Secuencia actual:
 6. **BFPM Fase 4B-b — reporting backoffice y política de refund** — SIGUIENTE
    - Endpoint admin con resumen BFPM (bonus emitido, financiado, número de pares, invariante actual).
    - Política documental y técnica de refund cuando el saldo cliente incluye bonus consumido o pendiente.
-   - No mezclar con integración CCBill real.
+   - No mezclar con la integración del PSP real.
 
-7. **Integración CCBill real y firma webhook** — BLOQUEADO
-   - Pendiente de recibir manual oficial de integración de CCBill.
-   - No implementar firma, contrato definitivo ni validación final por inferencia.
-   - Cuando llegue el manual, se abrirá el frente PSP real.
+7. **Integración PSP real** — REPLANTEADO (la referencia a CCBill quedó obsoleta)
+   - **Cripto (NOWPayments)**: implementado y **en PROD** (webhook con firma HMAC-512 + idempotencia + lock; `/api/billing/nowpayments/checkout`). Frente vivo del backlog = mejoras UX de pago (lidera operador).
+   - **Tarjeta**: el proveedor pasó a **CardBilling (grupo Verotel)**, ya negociado → NO bloqueado por terceros; falta construir el adapter (registry `PaymentProvider` extensible listo). Prioridad y fecha las fija el operador (ver backlog "Gated por decisión de lanzamiento").
+   - CCBill quedó descartado como proveedor (pivote ADR-047 y posterior); las menciones a "CcbillService"/"/billing/ccbill" en las fases de arriba son históricas.
 
 ---
 
 ## Frente 3: Materialización ADR-052 — rediseño reparto + retirada afiliadas
 
-Estado: **Fase B documental CERRADA el 2026-07-24**. Fases técnicas subsiguientes pendientes.
+Estado: **Técnicamente MATERIALIZADO** (verificado contra código 2026-08-15). La purga de afiliadas (V38) y el reparto nuevo `model_pricing_tiers` (V39) están en código y desplegados; el sistema de tramos fue además **extendido por ADR-056** (régimen dual INDIVIDUAL/MASTER, V42+). Único sub-frente vivo: el **T&C/contrato de modelo v5** (sub-frente 4, legal). Las marcas "PENDIENTE" de los sub-frentes 2 y 3 de abajo quedan obsoletas.
 
 Objetivo:
 materializar el rediseño estructural del reparto modelo/plataforma (75-79% escalonado por facturación) y del rango de precio autoservicio decidido en [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md), y retirar el programa de afiliadas (código + schema + docs) que quedó superseded por ese mismo ADR.
@@ -176,13 +180,13 @@ Secuencia planificada (4 sub-frentes, orden 1→2→3, 4 en paralelo a 3):
    - Actualización de [`../04-operations/known-risks.md`](../04-operations/known-risks.md) con nuevo riesgo "margen tarjeta delgado sensible a chargebacks".
    - Recalibración del [`../01-business/financiero/modelo-financiero.md`](../01-business/financiero/modelo-financiero.md) marcada como deuda declarada (xlsx binario no se toca en esta iteración).
 
-2. **Sub-frente 2: Purga técnica afiliadas** — PENDIENTE
+2. **Sub-frente 2: Purga técnica afiliadas** — HECHO (`V38__drop_affiliate_program.sql` en código; sin paquete `affiliate` vivo en el backend)
    - Migration `V38__drop_affiliate_program.sql`: drop tablas `affiliate_codes`, `affiliate_commissions`, `affiliate_click_events`, `affiliate_link_tokens`; drop columnas `clients.referrer_model_user_id`, `users.referral_code_owner`, `users.first_stream_charge_at`.
    - Purga de código: `AffiliateCommissionService`, `AffiliateAttributionService`, `AffiliateBonusService`, `AffiliateCodeService`, `AffiliateHashService`, `AffiliateLinkTokenService`, entidades, controllers, endpoints REST, DTOs, tests unitarios.
    - Frontend product: retirada de `/model/affiliate`, landing `/i/:token`, banner referral en registro cliente.
    - Aislado y autoncontenido; no depende del sistema nuevo. Deja el repo limpio antes del refactor grande.
 
-3. **Sub-frente 3: Implementación técnica del reparto nuevo** — PENDIENTE
+3. **Sub-frente 3: Implementación técnica del reparto nuevo** — HECHO (`V39__model_pricing_tiers_v1.sql` + `ModelTierService`/`ModelPricingTier` en código; tramos T1-T4, `chosen_rate_eur_per_min`, Estatus Pro y recorte de tarifa cubiertos por tests de integración — ADR-059). Extendido después por ADR-056 (régimen dual, V42+).
    - Migration `V39__model_pricing_tiers_v1.sql`: crea `model_pricing_tiers` con 4 filas (T1/T2/T3/T4), añade columnas al snapshot diario, añade `users.chosen_rate_eur_per_min` y `users.pro_accepts_trial`.
    - Refactor `ModelTierService` + `ModelTierSnapshotJob` a operar sobre facturación bruta rolling 30d y `model_pricing_tiers` en vez de sobre minutos facturados.
    - Nuevo `PricingService` que expone tramo, %reparto, rango, tarifa vigente por modelo.
@@ -209,7 +213,7 @@ Deudas registradas del frente:
 
 ## Frente 4: Sistema de Tickets de Incidencias (ADR-054)
 
-Estado: **ADR-054 aceptado el 2026-07-27**. Cero implementación técnica todavía.
+Estado: **IMPLEMENTADO y en los 3 entornos** (verificado 2026-08-15: `V41__add_support_tickets.sql` + `SupportTicket`/`TicketService` en código; `manualRefundToClient` con `transactions.ticket_id` cubierto por tests de integración — ADR-059). El sistema fue además rediseñado (as-built 2026-08-07): canales chat casual (bot) / ticket (solo humanos) separados, endpoint scoped `POST /conversations/{id}/message` sin bot, 10 categorías, `AUTO_INCREMENT` de tickets con offset 10001, prompt del bot editable en BD. Las marcas "PENDIENTE" de las fases T1-T6 de abajo quedan obsoletas (describen el plan, ya realizado).
 
 Objetivo:
 separar la gestión de **incidencias** (problemas reales con posible compensación económica) de las **consultas** (dudas resueltas por el bot LLM), y construir el sistema de trazabilidad + verificación + compensación antes de que el frente PSP tarjeta traiga reclamaciones masivas inevitables.
@@ -266,7 +270,7 @@ Deudas registradas del frente (todas en `docs/04-operations/known-debt.md` cuand
 
 ## Frente 5: Sistema Master/Studio (ADR-056)
 
-Estado: **ADR-056 aceptado el 2026-07-29**. Cero implementación técnica todavía.
+Estado: **ACTIVO en TEST + AUDIT + PROD desde 2026-08-04** (verificado 2026-08-15: `V42`-`V46` en código; endpoints `/api/masters/**`). Registro, dashboard (tabs), reparto dual INDIVIDUAL/MASTER, invitación de modelos, splits, payout Master y suspensión: HECHOS y cubiertos por tests de integración (ADR-059). **Único pendiente real: el rail de payout Paxum real** (hoy `NoopPayoutAdapter` manual, despriorizado por el operador — ver backlog P5). Las marcas "PENDIENTE" de las fases S6-S8 de abajo se actualizan en cada una; el "Cero implementación técnica todavía" original era el estado del día de aceptación del ADR, ya superado por el propio cuerpo de este frente.
 
 Objetivo:
 introducir rol MASTER (estudios de webcam) como entidad de dominio propia, con reparto económico dual (INDIVIDUAL vs MASTER) y payouts multi-rail (Paxum → Yoursafe → cripto). Pivote estratégico tras 6 meses de captación fallida de modelos individuales — el problema no es económico (SharemeChat ofrece 2× lo que da LiveJasmin al broadcaster individual) sino de acceso (llegar a modelos independientes genera desconfianza). Los estudios colombianos aportan 5-15 modelos ya entrenadas por captación, resolviendo el problema.
@@ -327,18 +331,16 @@ Secuencia técnica planificada (8 fases, cada una desplegable):
      - **S5.b.7 rediseño alineado con sector opaco** (2026-07-29): tras análisis crítico se retiró tabla T1-T4 con % + umbrales EUR, comparativa nominal vs LiveJasmin y FAQ sensibles (PII, suspensión). Sustituido por bullets cualitativos y FAQ neutra. Alineado con LiveJasmin/Stripchat/BongaCams (ninguno publica cifras en su landing pública).
      - **S5.b.8 pulido texto por texto + navbar fix** (2026-07-30): rewrite completo de los 11 textos de la landing (hero.title/subtitle, howItWorks 3 pasos, benefits reducido a 3 items sin duplicar step 3, FAQ 3 preguntas, ctaFinal.title/subtitle). Aplicado feedback estable: tono no-posesivo con modelos ("administra modelos bajo cuenta Master" en vez de "trae tus modelos"), voz institucional B2B ("la plataforma X" > "tú haces X"), conceptual no procedimental, evitar anglicismos en ES (retiro/comisiones/cumplimiento normativo/canales en vez de payout/fees/compliance/rails). `MasterLanding.jsx` navbar fix: props `onGoVideochat/onGoFavorites/onLogin/onBuy` cableados a `openLoginModal` (visitante no logado); `onGoBlog` navega a `/blog`; brand click a `/`.
 
-6. **Fase S6 — payouts multi-rail** — PENDIENTE
-   - Nueva tabla `payout_methods` + endpoints CRUD.
-   - Adapter `PaxumPayoutAdapter` primero (con credenciales sandbox).
-   - Refactor `TransactionService.requestPayout` + `adminReviewPayoutRequest` para aceptar `payout_method_id`.
+6. **Fase S6 — payouts multi-rail** — PARCIAL (infra HECHA; rail real diferido)
+   - Tabla `payout_methods` (`V45__add_payout_methods.sql`) + CRUD + `payout_method_id` en el flujo de payout: HECHO.
+   - `PaxumPayoutAdapter` real: **diferido** — hoy `NoopPayoutAdapter` (transferencia manual). Despriorizado por el operador (backlog P5).
    - Yoursafe + cripto payouts diferidos (deudas #D-52, #D-53).
 
-7. **Fase S7 — frontend admin Masters + suspensión** — PENDIENTE
-   - Nueva sub-sección admin para Masters (listado + drill-down + suspensión D11).
-   - Extensión `AdminSupportPanel` o nuevo `AdminMastersPanel`.
+7. **Fase S7 — frontend admin Masters + suspensión** — HECHO
+   - `AdminMastersPanel` (listado + drill-down) + suspensión de Master (D11, `V46__add_master_suspension.sql`, `MasterSuspensionService` cubierto por tests de integración): en código y desplegado.
 
-8. **Fase S8 — nivelación TEST → AUDIT → PROD** — PENDIENTE
-   - Patrón habitual (JAR + V42 aplicada Flyway + bundles frontend).
+8. **Fase S8 — nivelación TEST → AUDIT → PROD** — HECHO (2026-08-04)
+   - TEST + AUDIT + PROD nivelados (migraciones V42-V46 aplicadas en PROD, endpoints `/api/masters/**` respondiendo). Modo operativo de PROD sigue `PRELAUNCH`.
 
 Deudas registradas del frente (todas en `docs/04-operations/known-debt.md` cuando se abra la fase S1):
 - #D-52 adapter `YoursafePayoutAdapter` (S6 diferido).
@@ -373,7 +375,7 @@ Estos puntos siguen pendientes, pero **no son el siguiente paso inmediato** salv
 - Validar modos restrictivos completos de Product Operational Mode: `PRELAUNCH`, `MAINTENANCE`, `CLOSED`.
 - Tratamiento frontend de códigos `PRODUCT_UNAVAILABLE`, `PRODUCT_MAINTENANCE`, `REGISTRATION_CLOSED`, `SIMULATION_DISABLED`.
 - Parametrización real de PROD.
-- PSP CCBill real, bloqueado hasta recibir manual oficial.
+- PSP tarjeta real (CardBilling/Verotel): pendiente de decisión de lanzamiento del operador, no bloqueado por terceros (CCBill descartado). Cripto NOWPayments ya en PROD.
 - KYC externo end-to-end.
 - Compliance entre REST y WebSocket.
 - i18n producto/backoffice.
