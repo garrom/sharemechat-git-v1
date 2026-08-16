@@ -565,6 +565,7 @@
         "logout": "Cerrar sesión",
         "menuLabel": "Abrir menú",
         "menuTitle": "Menú",
+        "eyebrow": "Muy pronto",
         "verifyTitle": "Verifica tu email",
         "verifyBody": "Te enviamos un enlace de verificación al registrarte. Si no lo recibiste, puedes pedir uno nuevo.",
         "verifyResend": "Reenviar email de verificación",

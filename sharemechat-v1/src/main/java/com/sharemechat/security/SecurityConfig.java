@@ -457,7 +457,7 @@ public class SecurityConfig {
                         UsernamePasswordAuthenticationFilter.class
                 )
                 .addFilterAfter(
-                        new ProductOperationalModeFilter(productOperationalModeService, jwtUtil, cookieDomain, secureCookies),
+                        new ProductOperationalModeFilter(productOperationalModeService, jwtUtil, cookieDomain, secureCookies, userRepository),
                         CookieJwtAuthenticationFilter.class
                 )
                 // Email verification gate total (2026-06-15): bloquea con

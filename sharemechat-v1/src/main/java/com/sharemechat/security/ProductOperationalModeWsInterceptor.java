@@ -1,9 +1,12 @@
 package com.sharemechat.security;
 
 import com.sharemechat.config.ProductOperationalProperties.Mode;
+import com.sharemechat.constants.Constants;
 import com.sharemechat.constants.ProductOperationalConstants;
+import com.sharemechat.entity.User;
 import com.sharemechat.service.ProductOperationalModeService;
 import com.sharemechat.service.ProductOperationalModeService.Decision;
+import com.sharemechat.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -43,10 +46,14 @@ public class ProductOperationalModeWsInterceptor implements HandshakeInterceptor
 
     private final ProductOperationalModeService service;
     private final JwtUtil jwtUtil;
+    private final UserService userService;
 
-    public ProductOperationalModeWsInterceptor(ProductOperationalModeService service, JwtUtil jwtUtil) {
+    public ProductOperationalModeWsInterceptor(ProductOperationalModeService service,
+                                               JwtUtil jwtUtil,
+                                               UserService userService) {
         this.service = service;
         this.jwtUtil = jwtUtil;
+        this.userService = userService;
     }
 
     @Override
@@ -60,13 +67,16 @@ public class ProductOperationalModeWsInterceptor implements HandshakeInterceptor
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
-        // Optimización: solo extraer userId si la decisión puede depender de él.
+        // Extraemos userId (para allowlist y para resolver isModel) solo si el
+        // modo puede diferir por rol; en OPEN total no aporta nada.
         Long userId = null;
-        if (service.currentMode() != Mode.OPEN && service.hasAllowlist()) {
+        boolean isModel = false;
+        if (service.currentMode() != Mode.OPEN || service.modelMode() != Mode.OPEN) {
             userId = extractUserIdSafe(request);
+            isModel = resolveIsModel(userId);
         }
 
-        Decision decision = service.decideForWsHandshake(auth, endpoint, userId);
+        Decision decision = service.decideForWsHandshake(auth, endpoint, userId, isModel);
 
         if (decision.isAllow()) {
             return true;
@@ -93,6 +103,25 @@ public class ProductOperationalModeWsInterceptor implements HandshakeInterceptor
                                WebSocketHandler wsHandler,
                                Exception exception) {
         // no-op
+    }
+
+    /**
+     * Determina si el usuario es MODELO (rol MODEL o candidata USER+FORM_MODEL)
+     * cargando el User por id, mismo patron que ModelContractWsInterceptor.
+     * Fail-closed: ante cualquier duda devuelve false (modo global).
+     */
+    private boolean resolveIsModel(Long userId) {
+        if (userId == null) return false;
+        try {
+            User u = userService.findById(userId);
+            if (u == null) return false;
+            String role = u.getRole();
+            String userType = u.getUserType();
+            return Constants.Roles.MODEL.equals(role)
+                    || (Constants.Roles.USER.equals(role) && Constants.UserTypes.FORM_MODEL.equals(userType));
+        } catch (Exception ex) {
+            return false;
+        }
     }
 
     private Long extractUserIdSafe(ServerHttpRequest request) {

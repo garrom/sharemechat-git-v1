@@ -282,7 +282,15 @@ public class UserController {
         // permanece intacto en el backend: aunque el frontend rendere mal,
         // los endpoints sensibles siguen rechazandose para no-allowlisted en
         // modo restrictivo.
-        userDTO.setProductAccessMode(productOperationalModeService.currentMode().name());
+        // Modo efectivo por rol (modo-por-rol): la modelo (rol MODEL o
+        // candidata USER+FORM_MODEL) se rige por product.access.mode-model si
+        // esta configurado; el cliente/otros por el modo global. Asi la SPA
+        // (RequireRole) renderiza PreLaunchScreen o producto por rol sin
+        // cambios en el frontend.
+        boolean isModel = Constants.Roles.MODEL.equals(user.getRole())
+                || (Constants.Roles.USER.equals(user.getRole())
+                    && Constants.UserTypes.FORM_MODEL.equals(user.getUserType()));
+        userDTO.setProductAccessMode(productOperationalModeService.effectiveModeForUser(isModel).name());
         userDTO.setAllowlisted(productOperationalModeService.isUserAllowlisted(user.getId()));
 
         return ResponseEntity.ok(userDTO);
