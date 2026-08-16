@@ -8,6 +8,27 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-08-16 — Nivelación del Model Collaboration Agreement a v4.2 en AUDIT y PROD (cierre de drift legal + fix de caché)
+
+**Qué:** AUDIT y PROD servían el contrato de modelo v4.1 (`model_contract_v4_2026-03-23`, sha `783A747…`, poblado en PRO-3) mientras TEST ya corría v4.2 (`model_contract_v42_2026-07-31`, sha `3E1CBFAC…DA3`) desde 2026-07-31. Se nivelaron AUDIT+PROD a v4.2; los tres entornos quedan idénticos.
+
+**Por qué:** además del desfase de versión, el v4.1 describía el servicio en §2 como *"1-to-1 video and chat interactions for social/dating purposes / live interaction services"* (marco no-adulto), mientras el v4.2 lo declara correctamente *"between identity-verified adults / live adult-oriented interaction services"*. Servir en PROD un contrato que enmascara la naturaleza real del servicio era incorrecto (coherencia legal + requisitos PSP). Esqueleto idéntico en ambas versiones (16 secciones Parties→Digital Acceptance); el cambio material es §2, más el rediseño estético (v4.2: Title Case, 3 pág, cabecera/pie de marca; v4.1: MAYÚSCULAS, 5 pág).
+
+**Materializado (solo datos S3, sin código ni restart backend):**
+- PDF v4.2 (fuente autoritativa = `ops/legal-history/model_contract/model_contract_v42_2026-07-31.pdf`, ya commiteado en el histórico inmutable) subido a `s3://assets-sharemechat-{audit,prod}/legal/model_contract.pdf`; manifest actualizado con `{version: model_contract_v42_2026-07-31, sha256: 3E1CBFAC…DA3, url: <base-del-entorno>/legal/model_contract.pdf}` (sha256 en MAYÚSCULAS por el `SHA256_PATTERN` del backend).
+- Invalidación CloudFront: AUDIT `E2NC4TEJAWOI3L`, PROD `E3UAOU6AUNI0CM`, paths `/legal/model_contract.pdf` + `/legal/model_contract.manifest.json`.
+- Verificación end-to-end por entorno: manifest vía CloudFront = v4.2; PDF vía CloudFront sha `3E1CBFAC…DA3` / 6798 B; backend `/api/consent/model-contract/current` revalidó el sha256 server-side (fail-secure de `ModelContractManifestService.ensureManifestMatchesPdf`) y sirve v4.2 (AUDIT y PROD, HTTP 200).
+
+**Fix de caché (root cause de "sigo viendo el 4.1"):** el frontend abre el contrato con `<a href={contractCurrent.url}>` (URL fija `…/legal/model_contract.pdf`) y esos objetos legales **no llevaban `Cache-Control`** desde PRO-3 → el navegador aplicaba caché heurística sobre el `Last-Modified` viejo y servía la copia 4.1 sin revalidar (el servidor sí servía v4.2; `curl` sin caché lo confirmó). Arreglado poniendo **`Cache-Control: no-cache`** en `legal/model_contract.pdf` + `.manifest.json` de los **tres** entornos (test1/audit/prod) + reinvalidación; ETag estable → 304 si no cambió, bytes frescos cuando cambie. Los usuarios con la copia vieja ya cacheada necesitan un hard-refresh una vez; los nuevos ya no.
+
+**Trazabilidad y rollback:** el v4.1 permanece archivado en el propio bucket (`legal/history/model_contract_v4_2026-03-23.pdf`, 159368 B, presente en audit y prod desde PRO-3), así que el reemplazo no destruye el texto anterior pese a que los buckets no tienen versionado S3 activado. Rollback = re-subir ese objeto a `legal/model_contract.pdf` + manifest v4.1 + invalidar.
+
+**Consecuencia esperada (por diseño):** quien hubiera aceptado v4.1 pasa a `needsReaccept=true` (gate de `ModelContractController.status`); es el comportamiento correcto al cambiar el texto materialmente. El conteo exacto de aceptaciones en AUDIT/PROD no se pudo leer (la `RDS_PASSWORD` local es solo la de TEST; AUDIT y PROD devuelven `Access denied`) — no bloqueante en PRELAUNCH y con el v4.1 ya archivado.
+
+**Deuda anotada (no abordada aquí):** no existe generador reproducible del contrato de modelo en `ops/legal-pdfs/` (a diferencia del Master, con `generate_master_contract_v*.py`); el v4.2 solo existe como PDF final archivado. Registrar si se quiere reproducibilidad de texto a futuro.
+
+---
+
 ## 2026-08-16 — Contador de la promo "100 primeros clientes" desplegado a PROD (V52, apagado)
 
 Materializado el contador de la promo de bienvenida (bono BFPM +10€ en el primer pago de los 100 primeros clientes), implementado/validado en sesiones previas. Desplegado a PROD (backend `f2af009b`, JAR `2d3dc3cb`):
