@@ -4,7 +4,7 @@
 
 Aceptada.
 
-**Parcialmente superseded por [ADR-052](adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) (2026-07-24)**: §1 (tarifa cliente `€1/min` plana) y §4 (sistema de 3 tiers `5-15 / 7-20 / 9-40` en `model_earning_tiers`) quedan superseded. §2 (umbral corte `€1,00`), §3 (packs `10 / 20 / 40`) y §5 (reparto de gifts 90/10) se mantienen vigentes.
+**Parcialmente superseded por [ADR-052](adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) (2026-07-24)**: §1 (tarifa cliente `€1/min` plana) y §4 (sistema de 3 tiers `5-15 / 7-20 / 9-40` en `model_earning_tiers`) quedan superseded. §2 (umbral corte `€1,00`) y §3 (packs `10 / 20 / 40`) se mantienen vigentes. **§5 (reparto de gifts 90/10) quedó posteriormente SUPERSEDED por [ADR-056](adr-056-sistema-master-studio.md) revisión 2026-08-01**: los gifts pasan a repartir por el **tramo vigente de la modelo** (INDIVIDUAL/MASTER T1-T4, 50-70%, mismo motor que los streams), y el share fijo `gift.model-share=0.90` se retiró del código y de `application.properties`.
 
 Decisión **declarativa**: no introduce cambios de código, schema ni configuración. Cierra formalmente el estado real vigente del pricing en SharemeChat tras un ciclo previo de auditoría que confirmó, mediante cuatro verificaciones independientes (grep del repo, `git log --all -S`, `INFORMATION_SCHEMA.TABLES` en BD TEST, listado del árbol de ficheros), que artefactos referenciados en sesiones anteriores como `platform_pricing`, `PricingBrackets`, `PricingHistory`, `AdminPricingController`, `AdminPricingService`, `AdminPricingPanel.jsx` y `AdminBillingPanel.jsx` **nunca existieron en el repo**. Ver entrada de bitácora del 2026-07-02 en `docs/project-log.md` para la trazabilidad del hilo de esa alucinación y su cierre.
 
@@ -74,8 +74,10 @@ Se formaliza el estado actual del pricing de SharemeChat con las siguientes fuen
 
 ### 5. Reparto de gifts entre modelo y plataforma
 
-- **Valor**: 90 % modelo / 10 % plataforma.
-- **Fuente de verdad**: `application.properties`, propiedad `gift.model-share=0.90`.
+> **SUPERSEDED por [ADR-056](adr-056-sistema-master-studio.md) revisión 2026-08-01.** Los valores de abajo son el estado HISTÓRICO (2026). **Estado vigente:** los gifts reparten por el **tramo vigente de la modelo** (INDIVIDUAL/MASTER T1-T4, 50-70%, `ModelTierService`, mismo motor que los streams); el share fijo se retiró del código y de `application.properties`. Los gifts consumen el tramo pero NO cuentan para subirlo.
+
+- **Valor (histórico)**: 90 % modelo / 10 % plataforma.
+- **Fuente de verdad (histórica, retirada)**: `application.properties`, propiedad `gift.model-share=0.90` (eliminada).
 - **Alcance**: aplica a todos los gifts del catálogo, sin excepción por tipo, tier o país.
 
 ### 6. No existencia de sistemas alternativos

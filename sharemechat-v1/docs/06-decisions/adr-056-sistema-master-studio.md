@@ -41,7 +41,7 @@ Al cierre de este ADR el proyecto ha completado el rediseño estructural del rep
 
 - Modelo individual: 75 % → 79 % escalonado por facturación bruta rolling 30d (umbrales 0/3500/5000/6500 €). SharemeChat retiene 21-25 %.
 - Trial primer minuto: 0,07 €/min plano (plataforma absorbe coste).
-- Gifts P2P: 90 % modelo (fijo, independiente tramo).
+- Gifts P2P: **reparto por el tramo vigente de la modelo** (revisión 2026-08-01; `ModelTierService`, mismo motor que los streams). El texto original de este ADR decía "90% fijo independiente de tramo" — **corregido**: los gifts aplican el tramo INDIVIDUAL/MASTER T1-T4, aunque NO cuentan para subir de tramo (solo lo consumen).
 
 La captación de modelos individuales **no ha funcionado** en 6 meses de esfuerzo comercial. El motivo NO es económico (el 75-79 % ya es 2× lo que ofrece LiveJasmin al broadcaster de tier top). El motivo es **de acceso**: llegar a modelos individuales requiere navegación por canales adult adyacentes (r/adultwork, plataformas competencia, agregadores talent) donde el mensaje comercial se percibe como sospechoso ("¿es un moderador de otra plataforma haciendo trampa? ¿un scam?"). Prueba directa del operador: registro como cliente en Coomeet + oferta directa a modelos → 0 conversiones, patrón "desconfían, cierran chat".
 

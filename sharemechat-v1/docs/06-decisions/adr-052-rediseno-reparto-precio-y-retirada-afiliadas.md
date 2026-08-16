@@ -122,7 +122,7 @@ Todos los umbrales de tramo (D1) y de Estatus Pro (D3) se calculan sobre la **fa
 
 - **Ventana rolling 30d con snapshot diario**: mismo mecanismo que el sistema vigente. `ModelTierSnapshotJob` calcula el acumulado y lo escribe en `model_tier_daily_snapshots.billed_gross_eur_30d`.
 - **Primer minuto trial cuenta hacia el umbral** aunque el cliente no pague (lo asume la empresa). Es facturación real generada por la modelo, aunque la empresa absorba el coste. Sin esto, una modelo con muchos trials pero pocas sesiones "queda anclada" en T1.
-- Los gifts **NO cuentan** hacia los umbrales de este ADR: los gifts tienen su propio reparto (ADR-043 §5, 90/10) que no se toca en este rediseño.
+- Los gifts **NO cuentan** hacia los umbrales de este ADR: en el momento de ADR-052 tenían reparto propio fijo (ADR-043 §5, 90/10), que este rediseño no tocó. *(Posteriormente [ADR-056](adr-056-sistema-master-studio.md) revisión 2026-08-01 cambió los gifts a **reparto por tramo** — ver ADR-043 §5, superseded.)*
 
 ### D7 — Responsabilidad económica de la modelo
 
@@ -218,7 +218,7 @@ El sistema de tiers previo (ADR-043 §4) queda superseded por D1+D2 de este ADR.
 
 - El invariante contable del ledger (Σ CHARGE + Σ EARNING + Σ MARGIN = 0 por sesión) se preserva. Solo cambian los ratios.
 - Los packs BFPM (ADR-012) siguen aplicando sin cambio: bonus de minutos servidos independiente del %reparto.
-- El sistema de gifts (ADR-043 §5, 90/10) no se toca.
+- El sistema de gifts (ADR-043 §5, 90/10) no se toca en este ADR. *(Cambiado después por [ADR-056](adr-056-sistema-master-studio.md) revisión 2026-08-01: reparto por tramo, no 90/10 fijo.)*
 
 ## Alternativas consideradas
 

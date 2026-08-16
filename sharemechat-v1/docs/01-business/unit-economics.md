@@ -120,7 +120,7 @@ Asumiendo consumo de un pack tipo con reparto aplicado al minuto 2 en adelante:
 
 ## Gifts
 
-El reparto de gifts (**90% modelo / 10% plataforma**, sobre el bruto pagado por el cliente por el gift) NO cambia con [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md); sigue el régimen de [ADR-043](../06-decisions/adr-043-pricing-formalization-current-state.md) §5 (`gift.model-share=0.90` en `application.properties`). Los gifts **no cuentan** hacia los umbrales de tramo o Estatus Pro; son un canal económico separado con reparto propio.
+El reparto de gifts sigue el **mismo motor de tramos que los streams** (`ModelTierService`): la modelo se lleva el **% de su tramo vigente** (INDIVIDUAL/MASTER T1-T4, **50-70%**), no un share fijo. Cambio de [ADR-056 revisión 2026-08-01](../06-decisions/adr-056-sistema-master-studio.md): el share fijo previo **`gift.model-share=0.90` (ADR-043 §5) se RETIRÓ** del código y de `application.properties`. Los gifts **no cuentan** hacia los umbrales de tramo ni Estatus Pro (son *level-independent income*: los consumen pero no los suben); no son un canal con reparto propio, sino con el reparto por tramo.
 
 ## Promociones de adquisición
 

@@ -103,7 +103,7 @@ La tabla vigente es la fuente única de referencia; el Master declara haberla co
 
 5.4. **Primer minuto trial**: cuando una modelo bajo umbrella del Master atiende a un cliente en su primer minuto de prueba, se devenga una tarifa plana de 0,07 EUR/min (según property `billing.trial.first-minute-earning-eur-per-min` vigente). SharemeChat absorbe íntegramente este coste. El importe se acredita a la cuenta del Master con el mismo criterio de atribución que 5.1, y el Master lo reparte internamente con la modelo según lo pactado (5.2).
 
-5.5. **Regalos (gifts)**: cuando un cliente envía un regalo de pago a una modelo bajo umbrella del Master, el 90 % del importe del regalo se acredita al Master en su ledger (el % se define por property `gift.model-share` vigente, actualmente 90 %). El 10 % restante queda como margen SharemeChat. El reparto interno Master ↔ modelo sobre los regalos sigue el mismo acuerdo privado (5.2).
+5.5. **Regalos (gifts)**: cuando un cliente envía un regalo de pago a una modelo bajo umbrella del Master, el porcentaje del importe del regalo que se acredita al Master en su ledger es el **del tramo vigente de la modelo** (mismo régimen económico que los minutos de videochat, según el sistema de tramos de SharemeChat). El resto queda como margen SharemeChat. El reparto interno Master ↔ modelo sobre los regalos sigue el mismo acuerdo privado (5.2).
 
 ---
 
