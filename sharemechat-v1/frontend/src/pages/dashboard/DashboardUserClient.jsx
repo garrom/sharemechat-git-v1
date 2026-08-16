@@ -36,76 +36,6 @@ const DashboardContentShell = styled.div`
   display: flex;
 `;
 
-const EmailVerificationBanner = styled.aside`
-  width: 100%;
-  max-width: 430px;
-  margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(214, 174, 92, 0.34);
-  background: rgba(255, 248, 232, 0.97);
-  box-shadow: 0 10px 24px rgba(18, 24, 38, 0.08);
-  backdrop-filter: blur(10px);
-
-  @media (max-width: 768px) {
-    padding: 9px 10px;
-    border-radius: 12px;
-    gap: 10px;
-    align-items: stretch;
-    flex-direction: column;
-  }
-`;
-
-const EmailVerificationBannerText = styled.div`
-  min-width: 0;
-  display: grid;
-  gap: 2px;
-`;
-
-const EmailVerificationBannerTitle = styled.div`
-  font-size: 12px;
-  line-height: 1.3;
-  font-weight: 700;
-  color: #7a4b00;
-`;
-
-const EmailVerificationBannerBody = styled.div`
-  font-size: 11px;
-  line-height: 1.4;
-  color: rgba(122, 75, 0, 0.86);
-`;
-
-// Reenvío de verificación: enlace de texto plano (NO botón). Sin pill, sin
-// borde ni fondo — link discreto para no incitar a pulsarlo (operador 2026-08-16).
-const EmailVerificationBannerButton = styled.button`
-  align-self: flex-start;
-  padding: 0;
-  background: none;
-  border: 0;
-  color: #7a4b00;
-  font-size: 12px;
-  line-height: 1.3;
-  font-weight: 400;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  cursor: pointer;
-  transition: color 0.15s ease;
-
-  &:hover:not(:disabled) {
-    color: #4d2f00;
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: default;
-    text-decoration: none;
-  }
-`;
-
 const DashboardUserClient = () => {
   const history = useHistory();
   const { alert, openPurchaseModal, openReportAbuseModal } = useAppModals();
@@ -877,13 +807,6 @@ const DashboardUserClient = () => {
       {/* ========= FIN NAVBAR  ======== */}
 
       <DashboardContentShell>
-        {/* ADR-049 Subpasada 2F: widget de onboarding para guiar al
-            cliente por los 2 pasos que faltan (KYC edad + primer pago)
-            hasta acceso pleno. Se auto-oculta cuando ambos pasos estan
-            completos o cuando el usuario lo dismissa. Solo vive aqui
-            (DashboardUserClient); al promocionar a role=CLIENT el
-            usuario pasa a DashboardClient donde el widget no existe. */}
-        <OnboardingChecklist onLoadBalance={handleFirstPayment} />
         <StyledMainContent data-tab={activeTab}>
           {activeTab === 'videochat' && (
             <VideoChatRandomUser
@@ -904,30 +827,12 @@ const DashboardUserClient = () => {
               openPurchaseModal={openPurchaseModal}
               onGoPremium={handleFirstPayment}
               handleReportPeer={handleReportPeer}
-              emailNoticeSlot={!user?.emailVerifiedAt ? (
-                <EmailVerificationBanner aria-live="polite" role="status">
-                  <EmailVerificationBannerText>
-                    <EmailVerificationBannerTitle>
-                      {t('dashboardUserClient.emailVerification.noticeTitle')}
-                    </EmailVerificationBannerTitle>
-                    <EmailVerificationBannerBody>
-                      {t('dashboardUserClient.emailVerification.noticeBody')}
-                    </EmailVerificationBannerBody>
-                  </EmailVerificationBannerText>
-                  <EmailVerificationBannerBody>
-                    {t('dashboardUserClient.emailVerification.notReceived')}
-                  </EmailVerificationBannerBody>
-                  <EmailVerificationBannerButton
-                    type="button"
-                    onClick={handleResendEmailVerification}
-                    disabled={resendingVerification}
-                  >
-                    {resendingVerification
-                      ? t('dashboardUserClient.emailVerification.resending')
-                      : t('dashboardUserClient.emailVerification.resend')}
-                  </EmailVerificationBannerButton>
-                </EmailVerificationBanner>
-              ) : null}
+              onboardingSlot={(
+                <OnboardingChecklist
+                  onResendEmail={handleResendEmailVerification}
+                  resending={resendingVerification}
+                />
+              )}
             />
           )}
 
