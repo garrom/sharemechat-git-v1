@@ -8,6 +8,20 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-08-16 — Frente registro a marca: emails + modo-por-rol + coming-soon, todo a PROD
+
+Frente que empezó como "mejorar el copy del email de bienvenida" y cerró como paquete completo desplegado a PROD (backend `8a860d1c` + frontend `main.7c4dffa0.js`, drift-check OK).
+
+**Emails de registro nivelados a marca** (`EmailCopyRenderer`, marco `wrapRegistration` email-safe, rojo #ea1d1d, hero JPEG 2:1): bienvenida **role-aware** (cliente "Ya eres de los primeros" + bloque bono 🎉; modelo "Bienvenida" + bloque verificación 🛡️ + CTA), validación **limpia sin foto** (reversión respecto al primer diseño: la foto pasó a la bienvenida), email de **aprobación de modelo** con hero propio (`APPROVE_HERO_URL`, chica europea) mode-aware + REPEAT/REJECT nivelados. `renderWelcome`/`renderModelReviewDecision` reciben `loginUrl`.
+
+**Modo operacional por rol** (extiende [ADR-009]): nuevo `PRODUCT_ACCESS_MODE_MODEL` — permite **cliente PRELAUNCH + modelo OPEN** a la vez. Objetivo: la modelo se verifica (Didit) durante el coming-soon del cliente; seguro porque el acceso real lo abre el **escalado admin USER→MODEL** (segundo cerrojo). Implementación fiel al patrón existente: `ProductOperationalModeService` sigue puro (`isModel` como input); el **filtro carga el User** (patrón `EmailVerifiedFilter`) y el interceptor WS vía `UserService` (patrón `ModelContractWsInterceptor`); `isModel = role==MODEL || (role==USER && userType==FORM_MODEL)`, fail-closed. **No se tocó el JWT** (solo lleva role+userId; evita estado stale). `/api/users/me` devuelve el modo efectivo por rol → **frontend sin cambios** (`RequireRole` ya lo consume). PROD y TEST: `PRODUCT_ACCESS_MODE_MODEL=OPEN` en config.env; la property no se declara en application.properties (un vacío no castea a enum, binding relajado por env).
+
+**Coming-soon rediseñado** (`PreLaunchScreen` + `PreLaunchStyles`): abandonado el hero oscuro con imagen pequeña a la derecha; ahora split hero claro (texto izq + foto der `chica_latina_corazon`), role-aware, tarjeta verifica-email en clave clara. Imagen CDN por entorno `${ASSETS_BASE}/prelaunch/hero/coming_hero_v1.jpg`. i18n key `modals.preLaunch.common.eyebrow`.
+
+**Promo 100 primeros clientes** registrada en [`docs/01-business/promo-100-primeros-clientes.md`](01-business/promo-100-primeros-clientes.md) (impacto caja-neutral; ver entrada previa). El contador/tope técnico de los 100 queda **pendiente** (hoy el bono es copy; la mecánica BFPM está documentada como no implementada).
+
+Despliegue por el runbook: **backend PROD primero** (evita el CRITICAL del drift-check, que dispararían los ficheros de contrato `ProductOperationalModeService`/`UserController`), luego frontend; smoke PRELAUNCH verde; manifests commiteados. Efecto colateral resuelto: el `sync --delete` del deploy frontend borró los prerenders del blog y el paso 4.5 falló la 1ª vez (npm install de puppeteer en el worktree sin node_modules); reintento standalone de `prerender-blog-prod.ps1` **16/16 OK** + invalidación `/blog/*`. Memorias del agente `project_modo_por_rol_prelaunch` y `project_emails_registro_marca`.
+
 ## 2026-08-15 — ADR-059: expansión de cobertura frontend (Jest 91 → 229) — utils puros críticos + componentes de seguridad/infra
 
 Tras cerrar los 4 happy-paths E2E (ver la entrada de los 4 specs Playwright, más abajo), tanda de tests **unit/component de frontend** el mismo día para tapar el hueco de **utils puros críticos y componentes de seguridad/infra** que estaban sin cubrir pese a su peso (routing de sesión, control de acceso, gate PRELAUNCH, failover de mantenimiento, consent GDPR). Frontend Jest **91 → 229** (32 suites verdes); total unit/component **≈336** (backend 107 + frontend 229) + 4 specs E2E. Método: encadenado por batches (rama basada en `origin/main` → verde en local → CI 3 jobs → merge verificado con `merge-base`/`cat-file`), 8 merges independientes.
