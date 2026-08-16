@@ -30,6 +30,7 @@ import {
   DashboardMessage,
   DashboardInlineNotice,
   DashboardInlineNoticeText,
+  DashboardInlineNoticeLink,
   DashboardLinkBox,
   DashboardCheckboxRow,
   DashboardActions,
@@ -432,7 +433,7 @@ const DashboardUserModel = () => {
                     <DashboardInlineNoticeText>
                       {t('dashboardUserModel.emailVerification.notice')}
                     </DashboardInlineNoticeText>
-                    <DashboardSecondaryButton
+                    <DashboardInlineNoticeLink
                       type="button"
                       onClick={handleResendVerification}
                       disabled={resendingVerification}
@@ -440,7 +441,7 @@ const DashboardUserModel = () => {
                       {resendingVerification
                         ? t('dashboardUserModel.emailVerification.resending')
                         : t('dashboardUserModel.emailVerification.resend')}
-                    </DashboardSecondaryButton>
+                    </DashboardInlineNoticeLink>
                   </DashboardInlineNotice>
                 )}
                 {verificationMessage && (

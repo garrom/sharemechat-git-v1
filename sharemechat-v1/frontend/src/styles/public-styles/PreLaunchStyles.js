@@ -160,28 +160,31 @@ export const PreLaunchVerifyBody = styled.p`
   color: #5b6470;
 `;
 
+// Reenvío de verificación: enlace de texto plano (NO botón). Sin rojo, sin
+// fondo ni pill — se lee como un simple link discreto, para no incitar a
+// pulsarlo cuando el correo ya llegó (feedback operador 2026-08-16).
 export const PreLaunchVerifyButton = styled.button`
   align-self: flex-start;
-  min-height: 42px;
-  padding: 0 20px;
-  border-radius: 999px;
-  font-weight: 700;
-  font-size: 13.5px;
-  color: #ffffff;
-  background: #ea1d1d;
-  border: none;
+  margin-top: 2px;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: #5b6470;
+  font-size: 13px;
+  font-weight: 400;
+  text-decoration: underline;
+  text-underline-offset: 2px;
   cursor: pointer;
-  box-shadow: 0 8px 18px rgba(234, 29, 29, 0.24);
-  transition: transform 0.15s ease, background 0.15s ease;
+  transition: color 0.15s ease;
 
   &:hover:not(:disabled) {
-    background: #cf1717;
-    transform: translateY(-1px);
+    color: #141820;
   }
 
   &:disabled {
-    opacity: 0.65;
+    opacity: 0.6;
     cursor: default;
+    text-decoration: none;
   }
 `;
 

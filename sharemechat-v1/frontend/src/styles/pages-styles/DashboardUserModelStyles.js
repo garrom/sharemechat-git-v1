@@ -216,28 +216,48 @@ export const DashboardMessage = styled.div`
 
 export const DashboardInlineNotice = styled.div`
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
   padding: 14px 16px;
   border-radius: 18px;
   border: 1px solid #ead7a6;
   background: linear-gradient(180deg, #fff7dd 0%, #fff2c4 100%);
   color: #6f5410;
-
-  @media (max-width: 720px) {
-    flex-direction: column;
-    align-items: stretch;
-  }
 `;
 
 export const DashboardInlineNoticeText = styled.p`
   margin: 0;
-  flex: 1;
   min-width: 0;
   font-size: 0.92rem;
   line-height: 1.55;
   color: inherit;
+`;
+
+// Reenvío de verificación: enlace de texto plano (NO botón). Discreto, para
+// no incitar a pulsarlo cuando el correo ya llegó (operador 2026-08-16).
+export const DashboardInlineNoticeLink = styled.button`
+  align-self: flex-start;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: #6f5410;
+  font-size: 0.82rem;
+  font-weight: 400;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  transition: color 0.15s ease;
+
+  &:hover:not(:disabled) {
+    color: #4a3708;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+    text-decoration: none;
+  }
 `;
 
 export const DashboardLinkBox = styled.div`
