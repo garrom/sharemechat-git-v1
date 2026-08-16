@@ -1,7 +1,7 @@
 package com.sharemechat.security;
 
 import com.sharemechat.config.ProductOperationalProperties.Mode;
-import com.sharemechat.constants.Constants;
+import com.sharemechat.util.UserRoleUtils;
 import com.sharemechat.constants.ProductOperationalConstants;
 import com.sharemechat.entity.User;
 import com.sharemechat.service.ProductOperationalModeService;
@@ -114,11 +114,7 @@ public class ProductOperationalModeWsInterceptor implements HandshakeInterceptor
         if (userId == null) return false;
         try {
             User u = userService.findById(userId);
-            if (u == null) return false;
-            String role = u.getRole();
-            String userType = u.getUserType();
-            return Constants.Roles.MODEL.equals(role)
-                    || (Constants.Roles.USER.equals(role) && Constants.UserTypes.FORM_MODEL.equals(userType));
+            return UserRoleUtils.isModelOrCandidate(u);
         } catch (Exception ex) {
             return false;
         }

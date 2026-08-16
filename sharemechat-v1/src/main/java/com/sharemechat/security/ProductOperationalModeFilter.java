@@ -1,7 +1,7 @@
 package com.sharemechat.security;
 
 import com.sharemechat.config.ProductOperationalProperties.Mode;
-import com.sharemechat.constants.Constants;
+import com.sharemechat.util.UserRoleUtils;
 import com.sharemechat.constants.ProductOperationalConstants;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.UserRepository;
@@ -237,11 +237,7 @@ public class ProductOperationalModeFilter extends OncePerRequestFilter {
         if (email == null || email.isBlank() || "anonymousUser".equals(email)) return false;
         try {
             User u = userRepository.findByEmail(email).orElse(null);
-            if (u == null) return false;
-            String role = u.getRole();
-            String userType = u.getUserType();
-            return Constants.Roles.MODEL.equals(role)
-                    || (Constants.Roles.USER.equals(role) && Constants.UserTypes.FORM_MODEL.equals(userType));
+            return UserRoleUtils.isModelOrCandidate(u);
         } catch (Exception ex) {
             return false;
         }

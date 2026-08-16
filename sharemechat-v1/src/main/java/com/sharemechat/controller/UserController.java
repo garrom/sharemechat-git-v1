@@ -2,6 +2,7 @@ package com.sharemechat.controller;
 
 import com.sharemechat.config.IpConfig;
 import com.sharemechat.constants.Constants;
+import com.sharemechat.util.UserRoleUtils;
 import com.sharemechat.consent.ConsentState;
 import com.sharemechat.dto.*;
 import com.sharemechat.entity.ClientDocument;
@@ -287,9 +288,7 @@ public class UserController {
         // esta configurado; el cliente/otros por el modo global. Asi la SPA
         // (RequireRole) renderiza PreLaunchScreen o producto por rol sin
         // cambios en el frontend.
-        boolean isModel = Constants.Roles.MODEL.equals(user.getRole())
-                || (Constants.Roles.USER.equals(user.getRole())
-                    && Constants.UserTypes.FORM_MODEL.equals(user.getUserType()));
+        boolean isModel = UserRoleUtils.isModelOrCandidate(user);
         userDTO.setProductAccessMode(productOperationalModeService.effectiveModeForUser(isModel).name());
         userDTO.setAllowlisted(productOperationalModeService.isUserAllowlisted(user.getId()));
 
