@@ -8,6 +8,15 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-08-16 — Contador de la promo "100 primeros clientes" desplegado a PROD (V52, apagado)
+
+Materializado el contador de la promo de bienvenida (bono BFPM +10€ en el primer pago de los 100 primeros clientes), implementado/validado en sesiones previas. Desplegado a PROD (backend `f2af009b`, JAR `2d3dc3cb`):
+
+- **Migración V52** `promo_grant_counter` (**aditiva**: tabla nueva, cero cambios a tablas existentes → datos reales intactos) aplicada por Flyway al arrancar (`flyway_schema_history` version=52, success=1; fila semilla `WELCOME_100`/granted=0). **Backup lógico previo** (mysqldump en la EC2 prod-backend) porque el IAM `sharemechat-deployer` NO tiene `rds:CreateDBSnapshot` (AccessDenied).
+- **Mecánica** en `TransactionService.creditPackWithBonus`: en `firstPayment` y con cupo libre, UPDATE condicional atómico `granted<cap` (race-safe) + `BONUS_GRANT`/`BONUS_FUNDING` (BFPM ADR-012, descripción `promo=welcome100`), misma `@Transactional`; `total_pagos` sin el bono. Config `product.promo.welcome.*` (enabled/cap/amount).
+- **APAGADA en PROD** (`PRODUCT_PROMO_WELCOME_ENABLED` sin definir → default false). Se enciende con la env a `true` + restart cuando se abran recargas.
+- **Sin frontend** (cero cambio). **Sin regresión**: `f2af009b` es descendiente de lo desplegado por la sesión paralela (`3f382b94`, recuperación cripto); el diff backend es exactamente el contador. No hubo colisión de nº de migración. Pendiente aparte: email de anuncio a clientes existentes + caducidad/refund del bono. Doc: [`01-business/promo-100-primeros-clientes.md`](01-business/promo-100-primeros-clientes.md).
+
 ## 2026-08-16 — Cobertura del gate modo-por-rol (ADR-009) + cazado y arreglado un backend rojo pre-existente en main
 
 Al añadir tests aditivos para el **modo operacional por rol** (`PRODUCT_ACCESS_MODE_MODEL`, feat `6af36bf1`: cliente PRELAUNCH y modelo OPEN a la vez, para que la candidata USER+FORM_MODEL acceda a la verificación Didit mientras el cerrojo de promoción admin USER→MODEL sigue vigente), se descubrió que **el job Backend de CI llevaba rojo en `main`** desde el merge de ese cambio. Diagnóstico vía el log de Actions (sesión GitHub del operador; los logs anónimos dan 403): de 832 tests, **1 error** — `UserControllerConsentMockMvcTest.getCurrentUserExposesConsentState` con `NullPointerException` porque `/api/users/me` pasó a llamar `effectiveModeForUser(isModel)` en vez de `currentMode()`, y el `@mock` del test no stubeaba el método nuevo (mock sin stubear → `null` → `.name()`). Fix: una línea (stubear `effectiveModeForUser(anyBoolean())`).

@@ -55,4 +55,4 @@ Clientes ya registrados sin recargar: lo cogen automáticamente en su primera re
 
 - **Negocio:** aprobada por el operador (2026-08-15) con los números de este documento.
 - **Comunicación:** lista — el bono se anuncia en el email de bienvenida (variante cliente).
-- **Técnica:** implementada en rama (contador V52 + trigger BFPM + config), tests de integración en CI. **Arranca APAGADA** (`PRODUCT_PROMO_WELCOME_ENABLED=false`); se enciende cuando se abran recargas. Pendiente: caducidad/refund del bono + email de anuncio a clientes existentes.
+- **Técnica:** **desplegada en PROD** (2026-08-16, backend `f2af009b`; V52 aplicada, `promo_grant_counter` sembrada granted=0), CI verde. **APAGADA** en PROD (`PRODUCT_PROMO_WELCOME_ENABLED` sin definir → default false); se enciende poniendo la env a `true` + restart, cuando se abran recargas. Pendiente: caducidad/refund del bono + email de anuncio a clientes existentes.
