@@ -41,16 +41,18 @@ Se comunica en el **email de bienvenida**, y **solo a clientes**: la variante de
 
 ## 6. Requisitos de implementación (BFPM)
 
-La promo **no está implementada**. Si se implementa, el bono debe seguir el **contrato contable BFPM** ([ADR-012](../06-decisions/adr-012-bfpm-platform-funded-bonus.md)):
+La promo está **implementada** (2026-08-16, rama `claude/promo-welcome-counter`) siguiendo el **contrato contable BFPM** ([ADR-012](../06-decisions/adr-012-bfpm-platform-funded-bonus.md)):
 
-- Asientos **atómicos** `BONUS_GRANT` (cliente +10 €) ↔ `BONUS_FUNDING` (plataforma −10 €), con la invariante `Σ BONUS_GRANT + Σ BONUS_FUNDING = 0` y trazabilidad por evento.
-- `clients.total_pagos` suma **solo la recarga real** (10 €), no el bono.
-- La mecánica BFPM vigente está ligada a **packs** (P20 = +2 €, P40 = +4 €); este bono es un **disparador nuevo** (activación del premium / primera recarga), que **hoy no existe** en el código.
+- **Trigger:** primer pago (`firstPayment` en `TransactionService.creditPackWithBonus`, USER→CLIENT = "activar premium"), vía el PSP real. Cliente-only por construcción. No retroactivo.
+- **Cupo race-safe:** tabla `promo_grant_counter` (migración **V52**, aditiva) + UPDATE condicional atómico `SET granted=granted+1 WHERE promo_key=… AND granted < :cap`; 1 fila afectada = concede, 0 = cupo lleno. En la misma `@Transactional` que la recarga.
+- **Asientos atómicos** `BONUS_GRANT` (cliente +10 €) ↔ `BONUS_FUNDING` (plataforma −10 €), invariante `Σ=0`, descripción `promo=welcome100` (la auditoría los empareja; convive con el pack-bonus).
+- `clients.total_pagos` suma **solo la recarga real**, no el bono.
+- **Config** (env): `PRODUCT_PROMO_WELCOME_ENABLED` (default **false**), `_CAP` (100), `_AMOUNT_EUR` (10.00). Se enciende al abrir recargas.
 
-Decisiones abiertas antes de activar en PROD: trigger técnico del bono; **contador/tope de 100** (cómo se cierra la promo al llegar al cliente 100); **política de caducidad** del bono no consumido; y **política de refund con bono** (abierta en [ADR-012 Fase 4B-b](../06-decisions/adr-012-bfpm-platform-funded-bonus.md)).
+Clientes ya registrados sin recargar: lo cogen automáticamente en su primera recarga (no hace falta backfill; no hay clientes reales ya-recargados). Pendiente aún: **caducidad** del bono no consumido y **política de refund con bono** (abierta en [ADR-012 Fase 4B-b](../06-decisions/adr-012-bfpm-platform-funded-bonus.md)); y el **email de anuncio** a clientes existentes cuando se abran recargas.
 
 ## 7. Estado
 
 - **Negocio:** aprobada por el operador (2026-08-15) con los números de este documento.
 - **Comunicación:** lista — el bono se anuncia en el email de bienvenida (variante cliente).
-- **Técnica:** pendiente (trigger BFPM nuevo + contador de 100 + caducidad/refund). **No activar en PROD** hasta implementación validada en TEST/AUDIT.
+- **Técnica:** implementada en rama (contador V52 + trigger BFPM + config), tests de integración en CI. **Arranca APAGADA** (`PRODUCT_PROMO_WELCOME_ENABLED=false`); se enciende cuando se abran recargas. Pendiente: caducidad/refund del bono + email de anuncio a clientes existentes.

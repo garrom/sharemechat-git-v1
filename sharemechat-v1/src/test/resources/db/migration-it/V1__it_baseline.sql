@@ -2153,6 +2153,22 @@ LOCK TABLES `users` WRITE;
 INSERT INTO `users` VALUES (27,'Soporte SharemeChat','bot+support@sharemechat.com','__NO_LOGIN__','SUPPORT_BOT','es',NULL,NULL,'BOT',NULL,NULL,NULL,1,NULL,NULL,NULL,NULL,NULL,1,0,'2026-08-12 00:22:23',NULL,'2026-08-12 00:22:23','ACTIVE',NULL,NULL,'2026-08-12 00:22:23',NULL,NULL,NULL,NULL,NULL,NULL,NULL,1.00,1,0,NULL);
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
+
+--
+-- Table structure for table `promo_grant_counter` (promo "100 primeros
+-- clientes", migración V52; añadida al baseline IT para ddl-auto=validate).
+--
+DROP TABLE IF EXISTS `promo_grant_counter`;
+CREATE TABLE `promo_grant_counter` (
+  `promo_key` varchar(64) NOT NULL,
+  `granted` int NOT NULL DEFAULT '0',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`promo_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+LOCK TABLES `promo_grant_counter` WRITE;
+INSERT INTO `promo_grant_counter` VALUES ('WELCOME_100',0,'2026-08-16 00:00:00');
+UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;

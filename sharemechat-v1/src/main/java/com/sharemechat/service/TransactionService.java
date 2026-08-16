@@ -1,6 +1,7 @@
 package com.sharemechat.service;
 
 import com.sharemechat.config.BillingProperties;
+import com.sharemechat.config.PromoProperties;
 import com.sharemechat.constants.Constants;
 import com.sharemechat.dto.TransactionRequestDTO;
 import com.sharemechat.entity.*;
@@ -52,6 +53,11 @@ public class TransactionService {
     private final EmailVerificationService emailVerificationService;
     private final ClientKycGate clientKycGate;
 
+    // Promo de bienvenida "100 primeros clientes" (BFPM ADR-012). Cupo
+    // atómico via promoGrantCounterRepository; config via promoProperties.
+    private final PromoProperties promoProperties;
+    private final PromoGrantCounterRepository promoGrantCounterRepository;
+
     public TransactionService(
             TransactionRepository transactionRepository,
             BalanceRepository balanceRepository,
@@ -67,7 +73,9 @@ public class TransactionService {
             BillingProperties billing,
             ModelTierService modelTierService,
             EmailVerificationService emailVerificationService,
-            ClientKycGate clientKycGate
+            ClientKycGate clientKycGate,
+            PromoProperties promoProperties,
+            PromoGrantCounterRepository promoGrantCounterRepository
     ) {
         this.transactionRepository = transactionRepository;
         this.balanceRepository = balanceRepository;
@@ -84,6 +92,8 @@ public class TransactionService {
         this.modelTierService = modelTierService;
         this.emailVerificationService = emailVerificationService;
         this.clientKycGate = clientKycGate;
+        this.promoProperties = promoProperties;
+        this.promoGrantCounterRepository = promoGrantCounterRepository;
     }
 
     /**
@@ -368,6 +378,57 @@ public class TransactionService {
         } else {
             log.info("[BFPM] no_bonus userId={} pack={} order={} priceEur={}",
                     userId, safePackId, safeOrderId, priceEurScaled);
+        }
+
+        // 3-bis) Bono promo "100 primeros clientes" (welcome), BFPM ADR-012.
+        // Solo en primer pago y mientras quede cupo global (< cap). El cupo es
+        // race-safe: UPDATE condicional atómico (1 fila = hueco reservado).
+        // Va en esta misma @Transactional, así que revierte con la recarga.
+        // total_pagos NO incluye este bono (igual que el pack-bonus).
+        if (firstPayment
+                && promoProperties.isEnabled()
+                && promoProperties.getAmountEur() != null
+                && promoProperties.getAmountEur().compareTo(BigDecimal.ZERO) > 0) {
+            int reserved = promoGrantCounterRepository.tryIncrement(
+                    promoProperties.getPromoKey(), promoProperties.getCap());
+            if (reserved == 1) {
+                BigDecimal promoAmount = promoProperties.getAmountEur().setScale(2, RoundingMode.HALF_UP);
+                String descPromoGrant = "BFPM bonus_grant promo=welcome100 order=" + safeOrderId;
+                String descPromoFunding = "BFPM bonus_funding promo=welcome100 order=" + safeOrderId;
+                BigDecimal balanceAfterPromo = finalClientBalance.add(promoAmount);
+
+                Transaction txPromo = new Transaction();
+                txPromo.setUser(user);
+                txPromo.setAmount(promoAmount);
+                txPromo.setOperationType(Constants.OperationTypes.BONUS_GRANT);
+                txPromo.setDescription(descPromoGrant);
+                Transaction savedTxPromo = transactionRepository.save(txPromo);
+
+                Balance balPromo = new Balance();
+                balPromo.setUserId(userId);
+                balPromo.setTransactionId(savedTxPromo.getId());
+                balPromo.setOperationType(Constants.OperationTypes.BONUS_GRANT);
+                balPromo.setAmount(promoAmount);
+                balPromo.setBalance(balanceAfterPromo);
+                balPromo.setDescription(descPromoGrant);
+                balanceRepository.save(balPromo);
+
+                finalClientBalance = balanceAfterPromo;
+
+                BigDecimal promoNegated = promoAmount.negate();
+                PlatformTransaction ptxPromo = new PlatformTransaction();
+                ptxPromo.setAmount(promoNegated);
+                ptxPromo.setOperationType(Constants.OperationTypes.BONUS_FUNDING);
+                ptxPromo.setDescription(descPromoFunding);
+                PlatformTransaction savedPtxPromo = platformTransactionRepository.save(ptxPromo);
+                appendPlatformBalance(savedPtxPromo.getId(), promoNegated, descPromoFunding);
+
+                log.info("[PROMO-WELCOME] grant userId={} order={} amountEur={} bonusGrantTxId={} bonusFundingPtxId={}",
+                        userId, safeOrderId, promoAmount, savedTxPromo.getId(), savedPtxPromo.getId());
+            } else {
+                log.info("[PROMO-WELCOME] cap_reached userId={} order={} cap={}",
+                        userId, safeOrderId, promoProperties.getCap());
+            }
         }
 
         // 4) clients.saldo_actual y 5) clients.total_pagos += priceEur (NO bonus)
