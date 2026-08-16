@@ -40,6 +40,11 @@ class UserControllerConsentMockMvcTest {
         UserAcquisitionService userAcquisitionService = mock(UserAcquisitionService.class);
         when(productOperationalModeService.currentMode())
                 .thenReturn(com.sharemechat.config.ProductOperationalProperties.Mode.OPEN);
+        // Modo por rol (feat 6af36bf1): /me pasó a usar effectiveModeForUser(isModel)
+        // en vez de currentMode(). Sin este stub el @mock devuelve null y /me
+        // revienta con NPE en .name(). (Rotura pre-existente en main tras el gate.)
+        when(productOperationalModeService.effectiveModeForUser(anyBoolean()))
+                .thenReturn(com.sharemechat.config.ProductOperationalProperties.Mode.OPEN);
         when(productOperationalModeService.isUserAllowlisted(anyLong())).thenReturn(false);
 
         User user = new User();
