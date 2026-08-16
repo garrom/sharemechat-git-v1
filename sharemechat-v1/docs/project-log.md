@@ -8,6 +8,16 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-08-16 — Cobertura del gate modo-por-rol (ADR-009) + cazado y arreglado un backend rojo pre-existente en main
+
+Al añadir tests aditivos para el **modo operacional por rol** (`PRODUCT_ACCESS_MODE_MODEL`, feat `6af36bf1`: cliente PRELAUNCH y modelo OPEN a la vez, para que la candidata USER+FORM_MODEL acceda a la verificación Didit mientras el cerrojo de promoción admin USER→MODEL sigue vigente), se descubrió que **el job Backend de CI llevaba rojo en `main`** desde el merge de ese cambio. Diagnóstico vía el log de Actions (sesión GitHub del operador; los logs anónimos dan 403): de 832 tests, **1 error** — `UserControllerConsentMockMvcTest.getCurrentUserExposesConsentState` con `NullPointerException` porque `/api/users/me` pasó a llamar `effectiveModeForUser(isModel)` en vez de `currentMode()`, y el `@mock` del test no stubeaba el método nuevo (mock sin stubear → `null` → `.name()`). Fix: una línea (stubear `effectiveModeForUser(anyBoolean())`).
+
+**Cobertura nueva (backend 107 → 121, todo unit puro sin Docker → corre en local):**
+- `ProductOperationalModeServiceTest` (10) — la lógica pura del gate, sin cobertura hasta ahora: `modelMode()`/`effectiveModeForUser()` + `decideForRequest`/`decideForWsHandshake` con la matriz {global PRELAUNCH × modeModel OPEN/null} × {isModel}. Prueba el caso real: cliente bloqueado / modelo permitido, fallback sin override, bypass allowlist.
+- `ProductOperationalModeFilterTest` (4) — la capa REST: `resolveIsModel` **fail-closed** (MODEL/candidata→pasan, cliente/desconocido→503). Aquí vivía el riesgo (que un cliente se colara al modo OPEN del modelo).
+
+**Aprendizaje operativo:** un cambio que altera la firma de un método consumido por un controller debe actualizar los `@mock` de sus tests MockMvc; un mock sin stubear devuelve `null` y revienta en runtime, no en compilación. Y el subsistema del gate (ADR-009, security-crítico) estaba **sin test dedicado** hasta ahora — el único que lo rozaba era este de consent, que fue justo el que cazó la regresión. Frente 100% tests (+ el fix de un test): cero cambios de runtime, no requiere despliegue.
+
 ## 2026-08-16 — Frente registro a marca: emails + modo-por-rol + coming-soon, todo a PROD
 
 Frente que empezó como "mejorar el copy del email de bienvenida" y cerró como paquete completo desplegado a PROD (backend `8a860d1c` + frontend `main.7c4dffa0.js`, drift-check OK).
