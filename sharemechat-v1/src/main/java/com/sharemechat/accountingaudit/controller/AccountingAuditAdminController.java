@@ -4,6 +4,11 @@ package com.sharemechat.accountingaudit.controller;
 import com.sharemechat.accountingaudit.dto.AuditJobRequest;
 import com.sharemechat.accountingaudit.dto.AuditJobResult;
 import com.sharemechat.accountingaudit.job.AccountingAuditJob;
+import com.sharemechat.accountingaudit.repository.BalanceLedgerAuditRepository;
+import com.sharemechat.accountingaudit.repository.BalanceLedgerAuditRepository.BfpmBonusFundingOrphanRow;
+import com.sharemechat.accountingaudit.repository.BalanceLedgerAuditRepository.BfpmBonusGrantOrphanRow;
+import com.sharemechat.accountingaudit.repository.BalanceLedgerAuditRepository.BfpmInvariantRow;
+import com.sharemechat.accountingaudit.repository.BalanceLedgerAuditRepository.TotalPagosMismatchRow;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -22,13 +28,18 @@ import java.util.Map;
 @RequestMapping("/api/admin/audit")
 public class AccountingAuditAdminController {
 
+    /** Mismo epsilon que el resto de invariantes contables (AccountingAuditJobImpl). */
+    private static final BigDecimal BFPM_EPSILON = new BigDecimal("0.01");
+
     private final AccountingAuditJob job;
+    private final BalanceLedgerAuditRepository bfpmRepo;
 
     @PersistenceContext
     private EntityManager em;
 
-    public AccountingAuditAdminController(AccountingAuditJob job) {
+    public AccountingAuditAdminController(AccountingAuditJob job, BalanceLedgerAuditRepository bfpmRepo) {
         this.job = job;
+        this.bfpmRepo = bfpmRepo;
     }
 
     @PostMapping("/run")
@@ -106,6 +117,61 @@ public class AccountingAuditAdminController {
             out.add(m);
         }
 
+        return out;
+    }
+
+    /**
+     * BFPM Fase 4B-b — resumen backoffice del bonus financiado por plataforma (ADR-012).
+     * Read-only: NO crea AuditRun ni persiste anomalías; reutiliza las queries validadas en
+     * Fase 4B-a. Devuelve la invariante actual (Σ BONUS_GRANT + Σ BONUS_FUNDING ≈ 0), el número
+     * de pares emitidos, y las anomalías vivas (huérfanos + mismatch total_pagos) hasta {@code limit}.
+     */
+    @GetMapping("/bfpm-summary")
+    public Map<String, Object> bfpmSummary(@RequestParam(defaultValue = "20") int limit) {
+        int safeLimit = Math.max(1, Math.min(limit, 200));
+
+        BfpmInvariantRow inv = bfpmRepo.getBfpmInvariantSummary();
+        BigDecimal delta = inv.getDelta() != null ? inv.getDelta() : BigDecimal.ZERO;
+        boolean invariantOk = delta.abs().compareTo(BFPM_EPSILON) <= 0;
+
+        List<Map<String, Object>> grantsWithoutFunding = new ArrayList<>();
+        for (BfpmBonusGrantOrphanRow r : bfpmRepo.findBonusGrantsWithoutFunding(safeLimit)) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("transactionId", r.getTransactionId());
+            m.put("userId", r.getUserId());
+            m.put("amount", r.getAmount());
+            m.put("description", r.getDescription());
+            grantsWithoutFunding.add(m);
+        }
+
+        List<Map<String, Object>> fundingsWithoutGrant = new ArrayList<>();
+        for (BfpmBonusFundingOrphanRow r : bfpmRepo.findBonusFundingsWithoutGrant(safeLimit)) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("platformTransactionId", r.getPlatformTransactionId());
+            m.put("amount", r.getAmount());
+            m.put("description", r.getDescription());
+            fundingsWithoutGrant.add(m);
+        }
+
+        List<Map<String, Object>> totalPagosMismatch = new ArrayList<>();
+        for (TotalPagosMismatchRow r : bfpmRepo.findClientsTotalPagosVsIngresoMismatch(safeLimit)) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("userId", r.getUserId());
+            m.put("totalPagos", r.getTotalPagos());
+            m.put("sumIngreso", r.getSumIngreso());
+            m.put("delta", r.getDelta());
+            totalPagosMismatch.add(m);
+        }
+
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("sumBonusGrant", inv.getSumBonusGrant());
+        out.put("sumBonusFunding", inv.getSumBonusFunding());
+        out.put("invariantDelta", delta);
+        out.put("invariantOk", invariantOk);
+        out.put("bonusPairCount", bfpmRepo.countBonusPairs());
+        out.put("grantsWithoutFunding", grantsWithoutFunding);
+        out.put("fundingsWithoutGrant", fundingsWithoutGrant);
+        out.put("totalPagosMismatch", totalPagosMismatch);
         return out;
     }
 

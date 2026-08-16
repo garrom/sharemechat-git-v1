@@ -797,6 +797,18 @@ public class BalanceLedgerAuditRepository {
     }
 
     /**
+     * Número de asientos BONUS_GRANT (cliente) emitidos. Cada uno debería tener
+     * su BONUS_FUNDING (plataforma) emparejado; sirve como "número de pares BFPM"
+     * para el reporting backoffice (Fase 4B-b). Read-only.
+     */
+    public long countBonusPairs() {
+        Object r = em.createNativeQuery(
+                "SELECT COUNT(*) FROM transactions WHERE operation_type = 'BONUS_GRANT'"
+        ).getSingleResult();
+        return r != null ? ((Number) r).longValue() : 0L;
+    }
+
+    /**
      * BONUS_GRANT (cliente) sin BONUS_FUNDING (plataforma) emparejado por descripción.
      * Mecánica de pareja según Fase 4A: la descripción del BONUS_FUNDING coincide con la del
      * BONUS_GRANT sustituyendo "bonus_grant" por "bonus_funding".

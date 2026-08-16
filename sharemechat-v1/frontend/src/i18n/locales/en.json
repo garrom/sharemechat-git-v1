@@ -2169,7 +2169,8 @@
         "accounting": "Accounting",
         "sessionIntegrity": "Session Integrity",
         "runtimeHealth": "Runtime Health",
-        "incidents": "Incidents"
+        "incidents": "Incidents",
+        "bfpm": "BFPM (bonus)"
       }
     },
     "assetModeration": {

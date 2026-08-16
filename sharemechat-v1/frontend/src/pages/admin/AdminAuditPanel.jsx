@@ -7,6 +7,7 @@ import AuditAccountingPanel from './audit/AuditAccountingPanel';
 import AuditSessionIntegrityPanel from './audit/AuditSessionIntegrityPanel';
 import AuditRuntimeHealthPanel from './audit/AuditRuntimeHealthPanel';
 import AuditIncidentPanel from './audit/AuditIncidentPanel';
+import AuditBfpmPanel from './audit/AuditBfpmPanel';
 
 const PanelTabButton = styled(SmallBtn)`
   padding: 6px 10px;
@@ -64,12 +65,21 @@ const AdminAuditPanel = () => {
         >
           {t('admin.audit.tabs.incidents')}
         </PanelTabButton>
+
+        <PanelTabButton
+          type="button"
+          onClick={() => setActiveAuditTab('bfpm')}
+          $active={activeAuditTab === 'bfpm'}
+        >
+          {t('admin.audit.tabs.bfpm')}
+        </PanelTabButton>
       </TabsBar>
 
       {activeAuditTab === 'accounting' && <AuditAccountingPanel />}
       {activeAuditTab === 'session-integrity' && <AuditSessionIntegrityPanel />}
       {activeAuditTab === 'runtime-health' && <AuditRuntimeHealthPanel />}
       {activeAuditTab === 'incidents' && <AuditIncidentPanel />}
+      {activeAuditTab === 'bfpm' && <AuditBfpmPanel />}
     </div>
   );
 };
