@@ -163,6 +163,9 @@ const PreLaunchScreen = () => {
                     <PreLaunchVerifyBody>
                       {t('modals.preLaunch.common.verifyBody')}
                     </PreLaunchVerifyBody>
+                    <PreLaunchVerifyBody>
+                      {t('modals.preLaunch.common.verifyNotReceived')}
+                    </PreLaunchVerifyBody>
                     <PreLaunchVerifyButton
                       type="button"
                       onClick={handleResend}

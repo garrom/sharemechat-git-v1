@@ -433,6 +433,9 @@ const DashboardUserModel = () => {
                     <DashboardInlineNoticeText>
                       {t('dashboardUserModel.emailVerification.notice')}
                     </DashboardInlineNoticeText>
+                    <DashboardInlineNoticeText>
+                      {t('dashboardUserModel.emailVerification.notReceived')}
+                    </DashboardInlineNoticeText>
                     <DashboardInlineNoticeLink
                       type="button"
                       onClick={handleResendVerification}

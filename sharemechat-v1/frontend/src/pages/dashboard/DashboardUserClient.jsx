@@ -914,6 +914,9 @@ const DashboardUserClient = () => {
                       {t('dashboardUserClient.emailVerification.noticeBody')}
                     </EmailVerificationBannerBody>
                   </EmailVerificationBannerText>
+                  <EmailVerificationBannerBody>
+                    {t('dashboardUserClient.emailVerification.notReceived')}
+                  </EmailVerificationBannerBody>
                   <EmailVerificationBannerButton
                     type="button"
                     onClick={handleResendEmailVerification}

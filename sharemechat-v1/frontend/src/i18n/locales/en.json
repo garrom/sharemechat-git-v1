@@ -566,9 +566,10 @@
         "menuLabel": "Open menu",
         "menuTitle": "Menu",
         "eyebrow": "Coming soon",
-        "verifyTitle": "Verify your email",
-        "verifyBody": "We sent you a verification link when you registered. If you didn't receive it, you can request a new one.",
-        "verifyResend": "Resend verification email",
+        "verifyTitle": "Your email is pending verification.",
+        "verifyBody": "Please go to your inbox and verify your email.",
+        "verifyNotReceived": "Didn't receive the email?",
+        "verifyResend": "Resend email",
         "verifyResending": "Sending...",
         "verifyResentOk": "Verification email sent. Check your inbox.",
         "verifyResentError": "We couldn't send the email. Please try again in a few minutes."
@@ -1688,8 +1689,9 @@
       "errorTitle": "Error"
     },
     "emailVerification": {
-      "noticeTitle": "Email verification pending",
-      "noticeBody": "You can keep using the trial, but you will not be able to activate the premium account until you verify your email.",
+      "noticeTitle": "Your email is pending verification.",
+      "noticeBody": "Please go to your inbox and verify your email.",
+      "notReceived": "Didn't receive the email?",
       "resend": "Resend email",
       "resending": "Resending...",
       "resendSuccess": "We have resent the verification email.",
@@ -1771,7 +1773,8 @@
       "session": "Loading session…"
     },
     "emailVerification": {
-      "notice": "You must verify your email before continuing the model onboarding.",
+      "notice": "Your email is pending verification. Please go to your inbox and verify your email.",
+      "notReceived": "Didn't receive the email?",
       "resend": "Resend email",
       "resending": "Resending...",
       "resendSuccess": "We have resent the verification email.",
@@ -3991,8 +3994,9 @@
     "banners": {
       "kycPending": "Identity verification pending. Complete KYC to fully activate your Master account.",
       "contractPending": "Master contract pending signature. Sign it from your profile to operate without restrictions.",
-      "emailNotVerified": "Verify your email to operate. You can view the panel but cannot invite models or request payouts until verified. Check your inbox (and spam folder).",
-      "emailResendCta": "Resend verification email",
+      "emailNotVerified": "Your email is pending verification. Please go to your inbox and verify your email.",
+      "emailNotReceived": "Didn't receive the email?",
+      "emailResendCta": "Resend email",
       "emailResendLoading": "Sending…",
       "emailResendOk": "Email resent. Check your inbox.",
       "emailResendErr": "Could not resend. Please try again.",

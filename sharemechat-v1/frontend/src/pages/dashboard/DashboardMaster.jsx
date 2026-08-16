@@ -193,7 +193,8 @@ export default function DashboardMaster() {
       banners.push(
         <div key="email" style={BannerWarn} role="status">
           <div>{i18n.t('masterDashboard.banners.emailNotVerified')}</div>
-          <div style={{ marginTop: 6, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ marginTop: 6, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.82rem' }}>{i18n.t('masterDashboard.banners.emailNotReceived')}</span>
             {/* Reenvío de verificación: enlace de texto plano (NO botón), para no
                 incitar a pulsarlo cuando el correo ya llegó (operador 2026-08-16). */}
             <button
