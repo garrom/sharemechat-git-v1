@@ -283,3 +283,53 @@ Validación realizada con tráfico real en TEST:
 - preview privada admin disponible en cualquier estado, sin alterar el artículo
 - bloqueo de edición tras `PUBLISHED` confirmado a nivel UI (inputs y botones deshabilitados) y backend (`PUT/PATCH` devuelve 409 incluso para ADMIN)
 - consistencia BD↔S3 verificada: `body_s3_key` de cada versión apunta a un objeto existente y descargable vía `GET /versions/{n}/body`
+
+---
+
+## Docker Desktop y Testcontainers en local
+
+> **Ruta de acceso:** raíz `CLAUDE.md` → tabla *"Arranque: qué leer según la tarea"* → fila *"Correr tests en local / Docker"* → aquí.
+
+**LA REGLA (léela antes de pelearte con Docker):** los tests de **integración** (`@SpringBootTest` de contexto y/o `@Testcontainers`, que levantan MySQL/Redis reales) **NO corren en local en Windows con la Docker Desktop actual**. **La CI Linux (GitHub Actions) es el juez.** No inviertas tiempo en hacer que Testcontainers vea Docker en local: es un callejón sin salida conocido (ver abajo). Para verificar un test de integración: `git push` y deja que corra el job Backend de CI.
+
+### Qué SÍ corre en local (sin Docker)
+
+Los tests **unit puros** — Mockito, POJO, o **MockMvc standalone** (`MockMvcBuilders.standaloneSetup(controller)`) — no tocan BD ni contenedores y corren en local:
+
+```bash
+cd sharemechat-v1 && ./mvnw test -Dtest=NombreDeLaClaseTest
+# varias: -Dtest=ClaseA,ClaseB
+```
+
+**Cómo saber si un test necesita Docker** (mira las anotaciones del fichero): si tiene `@Testcontainers`, `@Container`, `@DataJpaTest`, o `@SpringBootTest` (arranque de contexto) → necesita Docker → **solo CI**. Si no tiene ninguna de esas (unit Mockito / MockMvc standalone) → corre en local.
+
+### Por qué Testcontainers NO conecta en local (callejón sin salida, 2026-08-13)
+
+`docker-java` (el cliente que usa Testcontainers) **no conecta** con la Docker Desktop de esta máquina:
+- ni por **named pipe** (`npipe:////./pipe/dockerDesktopLinuxEngine`),
+- ni por **TCP 2375**: se probó exponerlo (`settings-store.json` → `ExposeDockerAPIOnTCP2375:true`); el **CLI de docker conecta, pero Testcontainers no** (el proxy de Docker Desktop devuelve HTTP 400).
+
+Síntoma típico en el log: `Could not find a valid Docker environment` (pese a `DOCKER_HOST=npipe:////./pipe/dockerDesktopLinuxEngine`). Conclusión operativa: **no se intenta correr integración en local; se verifica en CI.** Docker quedó restaurado (2375 cerrado) tras las pruebas.
+
+### Si Docker Desktop NO ARRANCA (problema distinto, tiene fix — 2026-08-12)
+
+Otra cosa es que la propia Docker Desktop no levante el engine. Síntoma: **"The file cannot be accessed by the system"**, por sockets AF_UNIX huérfanos (`userAnalyticsOtlpHttp.sock`, `docker-secrets-engine/engine.sock`). Fix **sin admin y sin reiniciar Windows**:
+
+```powershell
+# 1) matar procesos docker
+Get-Process *docker* -ErrorAction SilentlyContinue | Stop-Process -Force
+# 2) apagar el backend WSL
+wsl --shutdown
+# 3) RENOMBRAR (no borrar; Rename-Item funciona donde Remove-Item falla) las carpetas con sockets huerfanos
+Rename-Item "$env:LOCALAPPDATA\Docker\run" "run.bak"
+Rename-Item "$env:LOCALAPPDATA\docker-secrets-engine" "docker-secrets-engine.bak"
+# 4) relanzar Docker Desktop -> recrea sockets limpios
+```
+
+Contexto activo esperado tras arrancar: `desktop-linux` (pipe `dockerDesktopLinuxEngine`). Esto arregla el **arranque**; NO cambia el hecho de que Testcontainers no conecte (sección anterior).
+
+### Cómo verifica de verdad la CI (el juez)
+
+`.github/workflows/ci.yml` (en la **raíz** del repo git, no en `sharemechat-v1/`), `on: push`/`pull_request`, runner `ubuntu-latest` (Docker nativo → Testcontainers funciona). Job Backend = `./mvnw -B -ntp test`. La suite de integración usa un **baseline de esquema determinista** (`src/test/resources/db/migration-it/V1__it_baseline.sql`) y el perfil `application-ci.properties`; detalle en [ADR-059](../06-decisions/adr-059-estrategia-de-testing.md).
+
+**Diagnóstico de un fallo de CI sin poder correrlo en local:** la API pública `commits/<sha>/check-runs` da el veredicto por job (sin auth); para leer el LOG del job (qué test exacto falló) hay que abrirlo en el **navegador con la sesión GitHub del operador** — los logs de Actions dan 403 al anónimo aunque el repo sea público. (GOTCHA Git Bash: `git show 'origin/main:path'` con `:` → usar `MSYS_NO_PATHCONV=1`.)
