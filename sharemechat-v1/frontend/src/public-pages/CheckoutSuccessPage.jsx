@@ -15,7 +15,7 @@ import { useSession } from '../components/SessionProvider';
 import { getSessionStatus } from '../api/billingApi';
 
 const POLL_INTERVAL_MS = 3000;
-const MAX_ATTEMPTS = 10; // 10 * 3s = 30s
+const MAX_ATTEMPTS = 100; // 100 * 3s = 5 min (ADR-051 D10: cripto confirma en minutos, no en 30s)
 
 const wrapStyle = {
   minHeight: '80vh',

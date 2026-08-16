@@ -527,11 +527,11 @@
     "success": {
       "title": "Confirming your payment",
       "verifying": "We're verifying your payment with the provider...",
-      "verifyingHint": "This usually takes between 10 and 30 seconds. Please don't close this window.",
+      "verifyingHint": "Crypto payments can take a few minutes to confirm on the network. Your balance updates automatically once it's confirmed; you can safely close this window.",
       "confirmed": "Payment confirmed! Your {{minutes}} minutes are now available.",
       "failed": "The payment was not completed. You can try again from your account.",
       "expired": "The payment session has expired. Please start a new purchase.",
-      "timeout": "We're still processing your payment. If your balance doesn't appear in a few minutes, check your history or contact us.",
+      "timeout": "Your payment is still confirming on the network. Once it's confirmed, your balance updates automatically, even if you close this page. If you don't see it after a while, check your history or contact us.",
       "notFound": "We couldn't find this payment session. If you just paid, wait a few seconds and try again.",
       "backToAccount": "Back to my account"
     },
