@@ -191,18 +191,21 @@ export default function DashboardMaster() {
     }
     if (overview.emailVerified === false) {
       banners.push(
-        <div key="email" style={BannerAlert} role="alert">
+        <div key="email" style={BannerWarn} role="status">
           <div>{i18n.t('masterDashboard.banners.emailNotVerified')}</div>
-          <div style={{ marginTop: 8, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ marginTop: 6, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.82rem' }}>{i18n.t('masterDashboard.banners.emailNotReceived')}</span>
+            {/* Reenvío de verificación: enlace de texto plano (NO botón), para no
+                incitar a pulsarlo cuando el correo ya llegó (operador 2026-08-16). */}
             <button
               type="button"
               onClick={handleResendVerification}
               disabled={resendState.loading}
               style={{
-                appearance: 'none', border: '1px solid #991b1b', background: '#fff',
-                color: '#991b1b', padding: '6px 14px', borderRadius: 8,
+                appearance: 'none', border: 0, background: 'none', padding: 0,
+                color: '#7a4b00', fontSize: '0.82rem', fontWeight: 400,
+                textDecoration: 'underline', textUnderlineOffset: 2,
                 cursor: resendState.loading ? 'wait' : 'pointer',
-                fontSize: '0.85rem', fontWeight: 600,
               }}
             >
               {resendState.loading

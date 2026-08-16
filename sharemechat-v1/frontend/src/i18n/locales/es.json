@@ -566,9 +566,10 @@
         "menuLabel": "Abrir menú",
         "menuTitle": "Menú",
         "eyebrow": "Muy pronto",
-        "verifyTitle": "Verifica tu email",
-        "verifyBody": "Te enviamos un enlace de verificación al registrarte. Si no lo recibiste, puedes pedir uno nuevo.",
-        "verifyResend": "Reenviar email de verificación",
+        "verifyTitle": "Tu email está pendiente de validación.",
+        "verifyBody": "Por favor, accede a tu correo y valida el email.",
+        "verifyNotReceived": "¿No has recibido el email?",
+        "verifyResend": "reenviar email",
         "verifyResending": "Enviando...",
         "verifyResentOk": "Email de verificación enviado. Revisa tu bandeja de entrada.",
         "verifyResentError": "No pudimos enviar el email. Inténtalo de nuevo en unos minutos."
@@ -1688,9 +1689,10 @@
       "errorTitle": "Error"
     },
     "emailVerification": {
-      "noticeTitle": "Email pendiente de validación",
-      "noticeBody": "Puedes seguir entrando y usar el trial, pero no podrás activar la cuenta premium hasta validar tu email.",
-      "resend": "Reenviar email",
+      "noticeTitle": "Tu email está pendiente de validación.",
+      "noticeBody": "Por favor, accede a tu correo y valida el email.",
+      "notReceived": "¿No has recibido el email?",
+      "resend": "reenviar email",
       "resending": "Reenviando...",
       "resendSuccess": "Hemos reenviado el email de validación.",
       "resendError": "No se pudo reenviar el email de validación.",
@@ -1771,8 +1773,9 @@
       "session": "Cargando sesión…"
     },
     "emailVerification": {
-      "notice": "Debes validar tu email antes de continuar con el onboarding de modelo.",
-      "resend": "Reenviar email",
+      "notice": "Tu email está pendiente de validación. Por favor, accede a tu correo y valida el email.",
+      "notReceived": "¿No has recibido el email?",
+      "resend": "reenviar email",
       "resending": "Reenviando...",
       "resendSuccess": "Hemos reenviado el email de validación.",
       "resendError": "No se pudo reenviar el email de validación."
@@ -3991,8 +3994,9 @@
     "banners": {
       "kycPending": "Verificación de identidad pendiente. Completa el KYC para activar plenamente tu cuenta Master.",
       "contractPending": "Contrato Master pendiente de firma. Fírmalo desde tu perfil para operar sin restricciones.",
-      "emailNotVerified": "Verifica tu email para operar. Puedes ver el panel pero no invitar modelos ni solicitar retiros hasta verificar. Revisa tu bandeja de entrada (y la carpeta de spam).",
-      "emailResendCta": "Reenviar email de verificación",
+      "emailNotVerified": "Tu email está pendiente de validación. Por favor, accede a tu correo y valida el email.",
+      "emailNotReceived": "¿No has recibido el email?",
+      "emailResendCta": "reenviar email",
       "emailResendLoading": "Enviando…",
       "emailResendOk": "Email reenviado. Revisa tu bandeja.",
       "emailResendErr": "No se pudo reenviar. Inténtalo de nuevo.",

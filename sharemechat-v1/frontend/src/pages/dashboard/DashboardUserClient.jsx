@@ -41,9 +41,9 @@ const EmailVerificationBanner = styled.aside`
   max-width: 430px;
   margin-top: 10px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
   padding: 10px 12px;
   border-radius: 14px;
   border: 1px solid rgba(214, 174, 92, 0.34);
@@ -79,33 +79,30 @@ const EmailVerificationBannerBody = styled.div`
   color: rgba(122, 75, 0, 0.86);
 `;
 
+// Reenvío de verificación: enlace de texto plano (NO botón). Sin pill, sin
+// borde ni fondo — link discreto para no incitar a pulsarlo (operador 2026-08-16).
 const EmailVerificationBannerButton = styled.button`
-  flex-shrink: 0;
-  align-self: center;
-  padding: 7px 11px;
-  border-radius: 999px;
-  border: 1px solid rgba(214, 174, 92, 0.52);
-  background: rgba(255, 255, 255, 0.72);
+  align-self: flex-start;
+  padding: 0;
+  background: none;
+  border: 0;
   color: #7a4b00;
-  font-size: 11px;
-  line-height: 1.2;
-  font-weight: 700;
+  font-size: 12px;
+  line-height: 1.3;
+  font-weight: 400;
+  text-decoration: underline;
+  text-underline-offset: 2px;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.08s ease;
+  transition: color 0.15s ease;
 
   &:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.92);
-    border-color: rgba(214, 174, 92, 0.74);
-    transform: translateY(-1px);
+    color: #4d2f00;
   }
 
   &:disabled {
-    opacity: 0.72;
+    opacity: 0.6;
     cursor: default;
-  }
-
-  @media (max-width: 768px) {
-    align-self: flex-start;
+    text-decoration: none;
   }
 `;
 
@@ -917,6 +914,9 @@ const DashboardUserClient = () => {
                       {t('dashboardUserClient.emailVerification.noticeBody')}
                     </EmailVerificationBannerBody>
                   </EmailVerificationBannerText>
+                  <EmailVerificationBannerBody>
+                    {t('dashboardUserClient.emailVerification.notReceived')}
+                  </EmailVerificationBannerBody>
                   <EmailVerificationBannerButton
                     type="button"
                     onClick={handleResendEmailVerification}
