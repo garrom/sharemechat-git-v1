@@ -1688,9 +1688,11 @@
     "common": {
       "errorTitle": "Error"
     },
+    "onboarding": {
+      "verifyEmail": "Verifica tu email",
+      "verifyAge": "Verifica tu edad"
+    },
     "emailVerification": {
-      "noticeTitle": "Tu email está pendiente de validación.",
-      "noticeBody": "Por favor, accede a tu correo y valida el email.",
       "notReceived": "¿No has recibido el email?",
       "resend": "reenviar email",
       "resending": "Reenviando...",
@@ -1736,9 +1738,6 @@
       },
       "status": {
         "default": "Estás probando el videochat de ShareMeChat."
-      },
-      "emailVerification": {
-        "teaserGate": "Verifica tu email para ver modelos en directo."
       },
       "errors": {
         "loadPromoVideos": "Error cargando vídeos de modelos"
@@ -3878,28 +3877,6 @@
         "rateLimited": "Has alcanzado el límite de incidencias abiertas o creadas recientemente.",
         "descriptionRequired": "La descripción es obligatoria.",
         "categoryRequired": "Selecciona una categoría."
-      }
-    }
-  },
-  "onboardingChecklist": {
-    "title": "Completa tu cuenta para empezar",
-    "subtitle": "En 2 minutos tienes todo listo para usar SharemeChat al 100 %.",
-    "dismiss": "Ocultar",
-    "steps": {
-      "accountCreated": {
-        "label": "Cuenta creada",
-        "done": "✓ hecho"
-      },
-      "verifyAge": {
-        "label": "Verifica tu edad",
-        "description": "Menos de 1 minuto con nuestro proveedor Didit.",
-        "cta": "Verificar ahora"
-      },
-      "loadBalance": {
-        "label": "Carga tu primer saldo",
-        "description": "Elige el pack que prefieras. Puedes empezar desde 10 €.",
-        "cta": "Cargar saldo",
-        "blockedHint": "Primero completa la verificación de edad."
       }
     }
   },

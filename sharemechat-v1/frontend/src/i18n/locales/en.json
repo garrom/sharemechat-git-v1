@@ -1688,9 +1688,11 @@
     "common": {
       "errorTitle": "Error"
     },
+    "onboarding": {
+      "verifyEmail": "Verify your email",
+      "verifyAge": "Verify your age"
+    },
     "emailVerification": {
-      "noticeTitle": "Your email is pending verification.",
-      "noticeBody": "Please go to your inbox and verify your email.",
       "notReceived": "Didn't receive the email?",
       "resend": "Resend email",
       "resending": "Resending...",
@@ -1736,9 +1738,6 @@
       },
       "status": {
         "default": "You are trying ShareMeChat videochat."
-      },
-      "emailVerification": {
-        "teaserGate": "Verify your email to see live models."
       },
       "errors": {
         "loadPromoVideos": "Error loading model videos"
@@ -3878,28 +3877,6 @@
         "rateLimited": "You reached the limit of open or recently created tickets.",
         "descriptionRequired": "Description is required.",
         "categoryRequired": "Select a category."
-      }
-    }
-  },
-  "onboardingChecklist": {
-    "title": "Complete your account to get started",
-    "subtitle": "It takes 2 minutes to unlock SharemeChat at 100%.",
-    "dismiss": "Hide",
-    "steps": {
-      "accountCreated": {
-        "label": "Account created",
-        "done": "✓ done"
-      },
-      "verifyAge": {
-        "label": "Verify your age",
-        "description": "Less than 1 minute with our provider Didit.",
-        "cta": "Verify now"
-      },
-      "loadBalance": {
-        "label": "Load your first balance",
-        "description": "Pick the pack you prefer. You can start from €10.",
-        "cta": "Load balance",
-        "blockedHint": "Complete age verification first."
       }
     }
   },

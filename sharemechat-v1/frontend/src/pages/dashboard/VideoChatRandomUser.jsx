@@ -96,7 +96,7 @@ export default function VideoChatRandomUser(props) {
     handleActivateCamera,
     statusText,
     error,
-    emailNoticeSlot,
+    onboardingSlot,
     modelNickname,
     modelAvatar,
     handleFavoriteGate,
@@ -121,13 +121,11 @@ export default function VideoChatRandomUser(props) {
   const [activePromoIndex, setActivePromoIndex] = useState(null);
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoError, setPromoError] = useState('');
-  const [promoEmailGate, setPromoEmailGate] = useState(false);
   const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
 
   const fetchTeasers = async () => {
     setPromoLoading(true);
     setPromoError('');
-    setPromoEmailGate(false);
 
     try {
       const data = await apiFetch(`/models/teasers?page=${TEASERS_PAGE_DEFAULT}&size=${TEASERS_PAGE_SIZE}`);
@@ -148,9 +146,9 @@ export default function VideoChatRandomUser(props) {
       if (mapped.length > 0) setCurrentPromoIndex(0);
     } catch (e) {
       setPromoVideos([]);
-      if (String(e?.code || '').toUpperCase() === 'EMAIL_NOT_VERIFIED') {
-        setPromoEmailGate(true);
-      } else {
+      // Email sin verificar (EMAIL_NOT_VERIFIED): el aviso vive en la barra de
+      // onboarding, no en el panel de teasers; aqui no mostramos nada.
+      if (String(e?.code || '').toUpperCase() !== 'EMAIL_NOT_VERIFIED') {
         setPromoError(e?.message || t('dashboardUserClient.videoChatRandomUser.errors.loadPromoVideos'));
       }
     } finally {
@@ -278,10 +276,9 @@ export default function VideoChatRandomUser(props) {
       style={{
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center',
-        gap: 12,
+        gap: 16,
         flexWrap: 'wrap',
-        padding: '8px 14px',
+        padding: '8px 16px',
         background: 'linear-gradient(90deg, rgba(30,58,138,0.92) 0%, rgba(59,130,246,0.92) 100%)',
         color: '#ffffff',
         fontSize: '0.85rem',
@@ -291,24 +288,35 @@ export default function VideoChatRandomUser(props) {
         zIndex: 10,
       }}
     >
-      <span>{t('videochat.trial.userBanner.text')}</span>
-      <button
-        type="button"
-        onClick={handleGoPremiumClick}
+      {onboardingSlot}
+      <div
         style={{
-          background: '#ffffff',
-          color: '#1e3a8a',
-          border: 'none',
-          borderRadius: 999,
-          padding: '5px 14px',
-          fontWeight: 700,
-          fontSize: '0.82rem',
-          cursor: 'pointer',
-          letterSpacing: 0.3,
+          marginLeft: 'auto',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 12,
+          whiteSpace: 'nowrap',
         }}
       >
-        {t('videochat.trial.userBanner.cta')}
-      </button>
+        <span>{t('videochat.trial.userBanner.text')}</span>
+        <button
+          type="button"
+          onClick={handleGoPremiumClick}
+          style={{
+            background: '#ffffff',
+            color: '#1e3a8a',
+            border: 'none',
+            borderRadius: 999,
+            padding: '5px 14px',
+            fontWeight: 700,
+            fontSize: '0.82rem',
+            cursor: 'pointer',
+            letterSpacing: 0.3,
+          }}
+        >
+          {t('videochat.trial.userBanner.cta')}
+        </button>
+      </div>
     </div>
   );
 
@@ -329,7 +337,6 @@ export default function VideoChatRandomUser(props) {
                     <FontAwesomeIcon icon={faVideo} />
                     {t('dashboardUserClient.videoChatRandomUser.hints.activateCamera')}
                   </StyledHelperLine>
-                  {emailNoticeSlot}
                 </StyledPaneCenterStack>
               </StyledPaneCenter>
             ) : (
@@ -355,11 +362,6 @@ export default function VideoChatRandomUser(props) {
               {promoError && (
                 <StyledStatusText $tone="error">
                   {promoError}
-                </StyledStatusText>
-              )}
-              {promoEmailGate && (
-                <StyledStatusText>
-                  {t('dashboardUserClient.videoChatRandomUser.emailVerification.teaserGate')}
                 </StyledStatusText>
               )}
 
@@ -412,7 +414,6 @@ export default function VideoChatRandomUser(props) {
                       <FontAwesomeIcon icon={faVideo} />
                       {t('dashboardUserClient.videoChatRandomUser.hints.activateCamera')}
                     </StyledHelperLine>
-                    {emailNoticeSlot}
                   </div>
                 </StyledPreCallCenter>
               )}
