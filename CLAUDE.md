@@ -45,6 +45,7 @@ No hay lectura obligatoria global. Carga el contexto mínimo según el frente:
 | Negocio, roles, compliance | `docs/01-business/` |
 | Arquitectura, backend, frontend, realtime, datos | `docs/02-architecture/` |
 | Un entorno concreto (test/audit/prod) | `docs/03-environments/` |
+| Correr tests en local / Docker / Testcontainers | `docs/03-environments/test.md` → §*Docker Desktop y Testcontainers en local* (qué corre sin Docker; por qué Testcontainers NO va en local → CI es el juez) |
 | Despliegue, runbooks, incidentes, riesgos | `docs/04-operations/` |
 | Backoffice y permisos | `docs/05-backoffice/` |
 | Decisiones pasadas | `docs/06-decisions/` |
