@@ -8,6 +8,24 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-08-16 — BFPM Fase 4B-b cerrada: resumen admin + política de refund con bonus (ADR-012, #D-35)
+
+**Qué:** cerrada la última fase de BFPM (ADR-012). Dos piezas, ambas en main y verdes en CI (backend + frontend + E2E + integración Testcontainers).
+
+**Pieza 1 — resumen admin BFPM** (commit `86ad2ef5`): `GET /api/admin/audit/bfpm-summary` read-only (reutiliza las queries de `BalanceLedgerAuditRepository` de 4B-a **sin crear `AuditRun`**) → invariante actual (Σ BONUS_GRANT + Σ BONUS_FUNDING, con `invariantOk` por epsilon 0.01), bonus emitido/financiado, nº de pares (`countBonusPairs`), y anomalías vivas (huérfanos grant/funding + mismatch `total_pagos`). Frontend: tab "BFPM" en `AdminAuditPanel` (`AuditBfpmPanel`, patrón `AuditAccountingPanel`). Tests: MockMvc del endpoint (invariante ok/rota/borde epsilon) + Jest del panel.
+
+**Pieza 2 — política de refund = A** (commit `b5860b77`): el webhook PSP `REFUNDED` dejaba de ser no-op (#D-35). `TransactionService.reversePackRefund(clientUserId, orderId)` revierte contablemente el crédito **leyendo el ledger real por `order=`** (INGRESO = price; BONUS_GRANT = bonus del pack **+ promo welcome100** si la hubo) en vez de re-derivar del catálogo — se descubrió al leer el código que un primer pago puede llevar DOS pares de bonus (pack + promo), que el spec inicial no contemplaba. Si el saldo cubre el clawback → reversal limpio del par (op types reutilizados en negativo → invariante del par sigue = 0 y `total_pagos == Σ INGRESO`, ambos checks de 4B-a intactos); si el saldo se consumió (saldo fungible → no se puede adivinar qué bonus queda) → **no revierte**, la `payment_session` queda en `REFUND_REVIEW` para revisión manual (escape hatch = `manualRefundToClient`). `PspWebhookOrchestratorService.handleRefunded` cablea el `case REFUNDED` (idempotente por status).
+
+**Decisiones:**
+- **Refund por ledger real** (no re-derivar del catálogo): robusto ante promo/futuros bonus y ante cambios de catálogo posteriores a la compra.
+- **Señal de revisión = estado `REFUND_REVIEW`**, no `AccountingAnomaly`: la entidad exige `audit_run_id NOT NULL` (las anomalías son artefactos de runs); un `audit_run_id` falso sería deuda. Así el servicio de dinero no se acopla al módulo de auditoría. Follow-up trivial: un check del `AccountingAuditJob` que convierta esas sessions en anomalías del panel.
+- **No se libera el cupo** de la promo "100 primeros clientes" al refundear (cupo dado por usado; evita abuso compra→refund→recupero).
+- **No se toca `manualRefundToClient`** (refund admin genérico existente).
+
+**Nota de proceso:** todo el bloque se materializó desde un worktree "seed" **445 commits por detrás de main**. Se trabajó contra `origin/main` vía plumbing (blobs sobre `origin/main` + push CAS) verificando fichero a fichero que cada cambio fuera diff limpio contra el main real, para no revertir trabajo de sesiones paralelas (un primer intento llegó a contaminar `es.json`/`en.json` con i18n stale; se detectó y rehízo antes de integrar). De paso se arregló el **E2E roto** que arrastraba main (commit `9612338d`): la bisección por histórico de CI señaló que `001d6c7e` "onboarding = 2 verificaciones" retiró el botón "Cargar saldo" que el spec de checkout pulsaba; el spec ahora usa "Hazte Premium" del `TrialFreeBanner`.
+
+---
+
 ## 2026-08-16 — Nivelación del Model Collaboration Agreement a v4.2 en AUDIT y PROD (cierre de drift legal + fix de caché)
 
 **Qué:** AUDIT y PROD servían el contrato de modelo v4.1 (`model_contract_v4_2026-03-23`, sha `783A747…`, poblado en PRO-3) mientras TEST ya corría v4.2 (`model_contract_v42_2026-07-31`, sha `3E1CBFAC…DA3`) desde 2026-07-31. Se nivelaron AUDIT+PROD a v4.2; los tres entornos quedan idénticos.

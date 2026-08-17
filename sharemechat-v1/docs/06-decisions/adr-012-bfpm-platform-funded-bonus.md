@@ -6,7 +6,7 @@ Aceptada.
 
 - **Fase 4A — implementación mínima viable**: implementada y validada en TEST. Catálogo vigente con bonus operativo (`P20` y `P40`); `P10` sin bonus.
 - **Fase 4B-a — auditoría interna contable**: implementada y validada en TEST. Cuatro checks BFPM integrados en `ACCOUNTING_AUDIT` scope `DEFAULT`. Sin falsos positivos.
-- **Fase 4B-b — reporting backoffice + política de refund con bonus**: pendiente.
+- **Fase 4B-b — reporting backoffice + política de refund con bonus**: implementada y validada en CI (2026-08-16). Resumen admin BFPM (endpoint read-only + tab "BFPM" en el panel de auditoría) + política de refund **A**: el webhook PSP `REFUNDED` revierte contablemente el par BFPM leyendo el ledger real por `order=` (incluye promo welcome100); si el saldo ya se consumió, no revierte y la session queda en `REFUND_REVIEW` para revisión manual.
 - **Integración CCBill real y firma webhook**: bloqueada hasta recibir el manual oficial. Esta ADR no anticipa contrato PSP.
 
 Esta ADR define el contrato contable que cualquier implementación o evolución posterior debe respetar.
@@ -365,10 +365,11 @@ Hasta que Fase 4B entre, BFPM solo debe activarse en entornos donde la auditorí
   - cuatro checks nuevos en `AccountingAuditJobImpl.runDefaultAccountingChecks`: `BFPM_INVARIANT_BREACH` (CRITICAL), `BFPM_BONUS_GRANT_WITHOUT_FUNDING` (ERROR), `BFPM_BONUS_FUNDING_WITHOUT_GRANT` (ERROR), `BFPM_TOTAL_PAGOS_MISMATCH` (WARNING);
   - mismo `EPSILON = 0.01` que el resto de invariantes contables;
   - validación TEST con `audit_run_id=113` y `anomalies_found=0` (ver sección "Validación TEST — Fase 4B-a").
-- **Fase 4B-b — reporting backoffice y política de refund con bonus**: pendiente. Alcance:
-  - endpoint admin con resumen BFPM (bonus emitido / financiado / número de pares / invariante actual);
-  - decisión documental y técnica de refund cuando el saldo cliente incluye bonus consumido o pendiente;
-  - alertas operativas si procede.
+- **Fase 4B-b — reporting backoffice y política de refund con bonus**: completada y validada en CI (2026-08-16). Detalles:
+  - **Resumen admin**: `GET /api/admin/audit/bfpm-summary` read-only (reutiliza las queries de 4B-a sin crear `AuditRun`) → invariante actual (Σ BONUS_GRANT + Σ BONUS_FUNDING), bonus emitido/financiado, nº de pares, y anomalías vivas (huérfanos + mismatch `total_pagos`). Frontend: tab "BFPM" en `AdminAuditPanel` (`AuditBfpmPanel`). Tests: MockMvc del endpoint + Jest del panel.
+  - **Política de refund = A** (decisión): el webhook PSP `REFUNDED` deja de ser no-op. `TransactionService.reversePackRefund` lee el ledger real por `order=` (INGRESO = price; BONUS_GRANT = bonus del pack **+ promo welcome100** si la hubo) y, si el saldo cubre el clawback, aplica el reversal contable del par (op types reutilizados en negativo → invariante del par sigue = 0 y `total_pagos == Σ INGRESO`). Si el saldo se consumió (fungible), **no revierte**: la session queda en `REFUND_REVIEW` para revisión manual (escape hatch = `manualRefundToClient`). Refinamiento: la señal de revisión es un estado de `payment_session`, no un `AccountingAnomaly` (que exige `audit_run_id`), para no acoplar el servicio de dinero al módulo de auditoría. Test de integración (Testcontainers): reversal limpio + bloqueo por consumo.
+  - **No se libera** el cupo de la promo "100 primeros clientes" al refundear un primer pago (decisión: cupo dado por usado; evita abuso compra→refund→recupero).
+  - Pendiente opcional (follow-up trivial): un check del `AccountingAuditJob` que convierta las sessions `REFUND_REVIEW` en anomalías "de verdad" para que aparezcan en el panel.
 - **Fase 5 — CCBill real y firma webhook**: **sigue bloqueada** hasta recibir el manual oficial de integración. No se infiere ni se implementa por aproximación.
 
 Esta ADR es la fuente de verdad de la decisión sobre el contrato contable de BFPM. Cualquier matiz futuro sobre el modelo de bonus debe registrarse aquí o en una ADR posterior; no debe filtrarse a runbooks ni a documentación operativa sin pasar por la decisión documental.
