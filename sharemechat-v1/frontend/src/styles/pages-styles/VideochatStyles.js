@@ -1064,7 +1064,7 @@ export const StyledGiftBar = styled.div`
   /* Favoritos (2026-08-17): barra clara arriba -> oscura abajo, se funde con
      el chat (parte superior del "bloque inferior" en degradado). */
   &[data-kind='favorites-gift-bar']:not([data-surface]) {
-    background: linear-gradient(180deg, rgba(17,20,24,0) 0%, rgba(17,20,24,0.6) 100%);
+    background: linear-gradient(180deg, #6b6f78 0%, #5a5e67 100%);
     border-top: 0;
   }
 
@@ -2036,8 +2036,8 @@ export const StyledChatDockMessageComposer = styled(StyledChatDock)`
   &[data-kind='favorites-chat'] {
     border-top: 0;
     /* Cierre del "bloque inferior" en degradado: continua desde la barra de
-       gifts (0.6) hasta negro solido abajo (2026-08-17). */
-    background: linear-gradient(180deg, rgba(17,20,24,0.6) 0%, #111418 100%);
+       gifts (gris claro) hasta gris oscuro abajo (2026-08-17, grises no negro). */
+    background: linear-gradient(180deg, #5a5e67 0%, #2b2f36 100%);
     & > input {
       background: rgba(255,255,255,0.10);
       color: #f8fafc;

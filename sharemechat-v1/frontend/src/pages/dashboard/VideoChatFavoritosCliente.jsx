@@ -351,7 +351,7 @@ export default function VideoChatFavoritosCliente(props){
       ? { c: '#f59e0b', label: t('common.presence.busy', 'ocupado') }
       : { c: '#9ca3af', label: t('common.presence.offline', 'desconectado') };
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px 22px', background: 'linear-gradient(180deg, #111418 0%, rgba(17,20,24,0.55) 58%, rgba(17,20,24,0) 100%)', borderBottom: 'none', flexShrink: 0, position: 'relative', zIndex: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px 22px', background: 'linear-gradient(180deg, #2b2f36 0%, #6b6f78 100%)', borderBottom: 'none', flexShrink: 0, position: 'relative', zIndex: 6 }}>
         <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#ff5c8a,#a78bfa)', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
           {(centerChatPeerName || '?').charAt(0).toUpperCase()}
         </div>
