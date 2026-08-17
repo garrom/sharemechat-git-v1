@@ -19,9 +19,9 @@ const HERO_IMG = `${ASSETS_BASE}/models/chica-corazon.png`;
 // una pieza HTML/CSS). Tema claro editorial (vino + oro), coherente con
 // el resto de paginas publicas.
 const Wrap = styled.div`
-  --ground:#FBF7F2; --panel:#FFFFFF; --ink:#241019; --muted:#8B7B81;
-  --line:#E8DCD4; --wine:#8E2A44; --wine-soft:#B65068; --gold:#B0803A;
-  --plum:#3E2130; --ground-2:#F4EBE3; --on-plum:#F6ECE4;
+  --ground:#ffffff; --panel:#ffffff; --ink:#141416; --muted:#6b6f76;
+  --line:#ece9e6; --wine:#ea1d1d; --wine-soft:#f0555a; --gold:#ea1d1d;
+  --plum:#0d0d10; --ground-2:#faf9f8; --on-plum:#ffffff;
   background:var(--ground); color:var(--ink);
   font-family:'Avenir Next','Segoe UI',system-ui,-apple-system,'Helvetica Neue',sans-serif;
   line-height:1.6; padding:0 0 60px;
@@ -47,7 +47,7 @@ const Wrap = styled.div`
   .lead{ font-size:clamp(.96rem,1.9vw,1.05rem); max-width:30em; opacity:.88; margin:0 0 24px; text-wrap:balance; }
   .lead b{ color:var(--wine); }
   .cta{ display:inline-flex; align-items:center; gap:10px; appearance:none; border:0;
-    background:linear-gradient(90deg,var(--gold),#8E2A44); color:#fff; font-weight:700;
+    background:var(--wine); color:#fff; font-weight:700;
     padding:14px 28px; border-radius:999px; font-size:1rem; cursor:pointer; }
   .cta:hover{ filter:brightness(1.06); }
   .cta.small{ padding:12px 24px; font-size:.96rem; }
@@ -87,7 +87,7 @@ const Wrap = styled.div`
   .tline{ display:flex; gap:10px; align-items:flex-start; font-size:.92rem; }
   .tline svg{ flex:none; width:18px; height:18px; color:var(--gold); margin-top:3px; }
 
-  .ctafinal{ background:linear-gradient(160deg,var(--plum),#241019); color:var(--on-plum);
+  .ctafinal{ background:linear-gradient(160deg,var(--plum),#1a1a1e); color:var(--on-plum);
     text-align:center; border-radius:14px; padding:36px 24px; margin-top:8px; }
   .ctafinal h2{ font-size:clamp(1.6rem,4vw,2.2rem); font-weight:600; margin:0 0 8px; color:var(--on-plum); }
   .ctafinal p{ color:color-mix(in srgb,var(--on-plum) 78%,transparent); margin:0 auto 22px; max-width:32em; }
@@ -155,7 +155,6 @@ export default function ModelLanding() {
         onGoBlog={goBlog}
         onLogin={goLogin}
         showBuy={false}
-        navbarBg="#4a1622"
         showLocaleSwitcher
         showBottomNav
       />
