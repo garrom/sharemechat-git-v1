@@ -256,8 +256,10 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login', aud
 
           {/* ADR-058: separador + boton Google Sign-In para login. Envolvente
               con flag isGoogleOAuthEnabled (Estrategia 3, 2026-08-07): en PROD
-              se oculta hasta que se publique consent Google Cloud. */}
-          {isGoogleOAuthEnabled() && (
+              se oculta hasta que se publique consent Google Cloud.
+              Google (registro/login) es solo para CLIENTES; en el contexto
+              modelo (audience='model', desde /modelos) no aplica -> se oculta. */}
+          {isGoogleOAuthEnabled() && audience !== 'model' && (
             <>
               <div
                 style={{
