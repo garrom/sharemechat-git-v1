@@ -122,6 +122,34 @@ class SitemapControllerSitemapTest {
     }
 
     @Test
+    void prodApexEmitsLandingPagesBothLocales() {
+        // Fase SEO (2026-08-17): las landings de captacion (/modelos, /for-studios)
+        // deben estar en el sitemap con alternates cruzados ES/EN y prioridad 0.8.
+        ContentArticleService svc = mock(ContentArticleService.class);
+        when(svc.listPublishedForSitemap()).thenReturn(List.of());
+        ResponseEntity<String> resp =
+                controllerWithBaseUrl("https://sharemechat.com", svc).sitemap();
+        String body = resp.getBody();
+        assertNotNull(body);
+        for (String path : new String[] { "/modelos", "/for-studios" }) {
+            assertTrue(body.contains("<loc>https://sharemechat.com" + path + "</loc>"),
+                    "sitemap must include ES " + path);
+            assertTrue(body.contains("<loc>https://sharemechat.com/en" + path + "</loc>"),
+                    "sitemap must include EN /en" + path);
+            assertTrue(body.contains(
+                    "<xhtml:link rel=\"alternate\" hreflang=\"es\" href=\"https://sharemechat.com"
+                            + path + "\"/>"),
+                    "alternate ES must point to " + path);
+            assertTrue(body.contains(
+                    "<xhtml:link rel=\"alternate\" hreflang=\"en\" href=\"https://sharemechat.com/en"
+                            + path + "\"/>"),
+                    "alternate EN must point to /en" + path);
+        }
+        assertTrue(body.contains("<priority>0.8</priority>"),
+                "landing priority must be 0.8");
+    }
+
+    @Test
     void prodApexKeepsBlogIndexBothLocales() {
         // Regresion del paquete 5 (ADR-025): el sitemap sigue listando
         // /blog/es y /blog/en como entradas con alternates cruzados,

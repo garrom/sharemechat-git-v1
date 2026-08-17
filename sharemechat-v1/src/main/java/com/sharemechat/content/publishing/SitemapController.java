@@ -73,6 +73,13 @@ public class SitemapController {
             "/legal"
     );
 
+    // Landings publicas de captacion (Opcion B modelos + ADR-056 estudios).
+    // Prioridad de landing (0.8) > paginas de footer (0.5); crawleables ES/EN.
+    private static final List<String> STATIC_LANDING_PATHS = List.of(
+            "/modelos",
+            "/for-studios"
+    );
+
     private final ContentArticleService articleService;
     private final PublicSiteProperties siteProperties;
 
@@ -119,6 +126,18 @@ public class SitemapController {
             );
             appendUrl(sb, esUrl, null, "monthly", "0.5", null, alts);
             appendUrl(sb, enUrl, null, "monthly", "0.5", null, alts);
+        }
+
+        // Landings publicas de captacion: 2 paths x 2 locales = 4 <url>, prioridad 0.8.
+        for (String path : STATIC_LANDING_PATHS) {
+            String esUrl = baseUrl + path;
+            String enUrl = baseUrl + "/en" + path;
+            List<SitemapAlternate> alts = List.of(
+                    new SitemapAlternate("es", esUrl),
+                    new SitemapAlternate("en", enUrl)
+            );
+            appendUrl(sb, esUrl, null, "weekly", "0.8", null, alts);
+            appendUrl(sb, enUrl, null, "weekly", "0.8", null, alts);
         }
 
         // Home del blog por locale.
