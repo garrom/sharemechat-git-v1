@@ -8,6 +8,31 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-08-17 — SEO de las landings de captación (/modelos, /for-studios) LIVE en PROD + deploy de backend
+
+**Qué:** cerrado el frente SEO de las landings públicas (Opción B modelos + estudios Master) en 3 fixes, todo LIVE en PROD, incluido el primer deploy de backend a PROD desde el 2026-08-16 (que llevó a live el sitemap + el backend BFPM 4B-b).
+
+**Arranque = revisión de la implementación de `/modelos`** (hecha por otra sesión): seguridad OK (`/modelos` es ruta SPA servida por CloudFront, NO endpoint de backend; SecurityConfig sin cambios; el registro modelo es `permitAll` pero con age-gate + country-gate propios + `@Valid` + rate-limit + rol asignado server-side). Añadido `ModelLanding.test.jsx` y **cazada+arreglada una regresión E2E** que la feature dejó en main (`registro-cliente.spec` seguía clicando el selector "Hombre" que la Opción B retiró; commit `18237aed`).
+
+**Fix 1 — sitemap (backend):** `SitemapController` emite `/modelos` y `/for-studios` (ES + `/en`, alternates hreflang cruzados, prioridad 0.8 de landing) + test. Va live vía backend.
+
+**Fix 3 — on-page:** ya integrado por la sesión de captación (`seo.modelLanding` + `<Seo localeAware urlPath="/modelos">` client-side: title/description/canonical/hreflang). Verificado, sin código nuevo.
+
+**Fix 2 — prerender para tarjetas sociales (el trozo grande):** el HTML servido de `/modelos` llevaba el meta del home (react-helmet solo aplica al ejecutar JS; los scrapers sociales no lo ejecutan). Solución = patrón del blog extendido a landings:
+- **CloudFront Function `redirect-spa-prod.js`**: enruta las 4 landings a `<path>/index.html` (prerender), match EXACTO, degradación 403→CER→shell SPA. Probada con `aws cloudfront test-function` sobre 11 URIs (home/blog/api/faq/client/`modelos-foo`/`modelos/sub`…) ANTES de publicar a LIVE → cero regresión.
+- **Orquestador `prerender-landings-prod.ps1`** (reusa `render.js` del blog vía su fallback title+canonical) → S3.
+- **Bug encontrado en verificación:** react-helmet AÑADE las og de la página sin quitar las estáticas del `index.html` → og DUPLICADO (home + página). El blog no lo tiene porque reemplaza vía DOM manual (`seoHelpers.js`), no Helmet. Fix: **dedup de og/twitter en `render.js`** (quedarse con la última por property = la del `<Seo>`, correcta); no-op para el blog.
+
+**Auto-heal (cron):** las landings, como el blog, hay que re-renderizarlas tras cada deploy de frontend (si no, sirven HTML con referencias al bundle viejo → JS 404 → CTAs rotos). Integrado en el **cron de prerender de 15 min** vía `run_landings_autoheal` (AISLADO: llamada con guarda, todos los caminos devuelven 0 → no puede abortar el prerender del blog): compara el hash `main.<x>.js` del home vs cada landing y re-renderiza+invalida SOLO las stale. **Se lee vía curl a CloudFront, no `aws s3 cp`**, porque el rol IAM del EC2 tiene ListBucket+PutObject pero NO GetObject (bucket con OAC: solo CloudFront lee) — `aws s3 cp` de lectura da 403. Sin coste de invalidación en pasadas normales; auto-sana en ≤15 min. `render.js` con dedup desplegado también al EC2.
+
+**Deploy de backend a PROD (`024fce4e`):** construido desde un checkout de main-actual limpio (el top-level/root, liberado por la otra sesión — el worktree seed de esta sesión está 445 commits detrás y no puede construir main). Drift ALERT (no CRITICAL) que este deploy RESUELVE (backend estaba 30 commits detrás). Solo 3 commits tocan backend (todos verdes en CI): BFPM summary + BFPM refund + sitemap Fix 1. Sin migraciones Flyway ni cambios de config. Smoke PRELAUNCH OK (gate `503 + X-Product-Mode`, login no-503, sitemap con `/modelos`). Backup N=1. Manifest `prod.yaml` actualizado con RemoteVerify (SHA remoto == local) + committeado.
+
+**Coordinación (GIT-WORKFLOW §7.3):** la otra sesión desplegó Card 2 (bundle `main.3153cceb.js`) durante el frente; re-prerendericé las landings contra ese bundle. Ella mantuvo su trabajo en TEST mientras yo tocaba `prod.yaml`, para no colisionar el manifest.
+
+**Nota de proceso:** todo el bloque materializado vía plumbing sobre `origin/main` (blobs + push CAS) desde el worktree stale, verificando fichero a fichero el diff limpio contra main real; los deploys de infra (backend JAR, CF function, prerender, cron) desde el root puesto en main-actual.
+
+---
+
 ## 2026-08-16 — BFPM Fase 4B-b cerrada: resumen admin + política de refund con bonus (ADR-012, #D-35)
 
 **Qué:** cerrada la última fase de BFPM (ADR-012). Dos piezas, ambas en main y verdes en CI (backend + frontend + E2E + integración Testcontainers).
