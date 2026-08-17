@@ -750,7 +750,7 @@ export const useAppModals = () => {
       return;
     }
 
-    const { initialView = 'login' } = options;
+    const { initialView = 'login', audience = null } = options;
     const cameFromLoginRoute = location.pathname === '/login';
 
     const handleClose = () => {
@@ -768,6 +768,7 @@ export const useAppModals = () => {
       content: (
         <LoginModalContent
           initialView={initialView}
+          audience={audience}
           onClose={handleClose}
           onLoginSuccess={closeModal}
         />

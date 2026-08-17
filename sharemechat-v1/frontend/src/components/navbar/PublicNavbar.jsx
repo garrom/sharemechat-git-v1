@@ -17,6 +17,8 @@ const PublicNavbar = ({
   onGoBlog,
   onBuy,
   onLogin,
+  showBuy = true,
+  navbarBg = null,
   showLocaleSwitcher = true,
   showBottomNav = true,
 }) => {
@@ -45,12 +47,12 @@ const PublicNavbar = ({
       balanceText={null}
       queueText={null}
       showLocaleSwitcher={showLocaleSwitcher}
-      primaryAction={{
+      primaryAction={showBuy ? {
         label: i18n.t('home.cta.buy'),
         onClick: onBuy,
         icon: faGem,
         iconStyle: { color: '#22c55e', fontSize: '1rem' },
-      }}
+      } : null}
       secondaryAction={{
         label: i18n.t('home.cta.login'),
         onClick: onLogin,
@@ -73,14 +75,14 @@ const PublicNavbar = ({
       topRightContent={null}
       showLocaleSwitcher={showLocaleSwitcher}
       items={[
-        {
+        ...(showBuy ? [{
           key: 'buy',
           icon: faGem,
           iconStyle: { color: '#22c55e', fontSize: '1rem' },
           label: i18n.t('home.cta.buy'),
           onClick: onBuy,
           useIconWrapper: false,
-        },
+        }] : []),
         ...(onGoSupport
           ? [{
               key: 'support',
@@ -123,6 +125,7 @@ const PublicNavbar = ({
       mobileBottomNav={mobileBottomNav}
       mobileMenuButtonLabel={i18n.t('home.nav.openMenuAria')}
       mobileMenuButtonTitle={i18n.t('home.nav.menuTitle')}
+      navbarBg={navbarBg}
     />
   );
 };

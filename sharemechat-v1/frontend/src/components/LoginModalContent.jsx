@@ -22,7 +22,7 @@ import { canAccessBackoffice } from '../utils/backofficeAccess';
 import { buildAdminAppUrl, isAdminSurface, navigateToUrl, resolveHomeUrl } from '../utils/runtimeSurface';
 import { isGoogleOAuthEnabled } from '../config/runtimeEnv';
 
-const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) => {
+const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login', audience = null }) => {
   const [view, setView] = useState(initialView);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -143,6 +143,7 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) =
 
   return (
     <StyledForm
+      $audience={audience}
       onSubmit={view === 'login' ? handleLogin : undefined}
       noValidate
     >
@@ -174,7 +175,13 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) =
             // se abrio el modal: /for-studios -> register-master, /modelos ->
             // register-model. En el resto (home, login), registro de CLIENTE
             // por defecto (Opcion B: una puerta por rol, sin selector genero).
-            setView(initialView && initialView.startsWith('register-') ? initialView : 'register-client');
+            setView(
+              initialView && initialView.startsWith('register-')
+                ? initialView
+                : (audience === 'model' ? 'register-model'
+                  : audience === 'master' ? 'register-master'
+                  : 'register-client')
+            );
           }}
         >
           {i18n.t('auth.tabs.register')}
@@ -183,7 +190,7 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) =
 
       {view === 'login' && (
         <>
-          <FormTitle>{i18n.t('auth.login.title')}</FormTitle>
+          <FormTitle>{audience === 'model' ? i18n.t('auth.login.titleModel') : i18n.t('auth.login.title')}</FormTitle>
 
           {status && <Status role="status">{status}</Status>}
           {error && <StyledError role="alert">{error}</StyledError>}

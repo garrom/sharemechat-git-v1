@@ -113,9 +113,6 @@ const IconCard = () => (
 const IconHeart = () => (
   <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M20.8 8.6a4.3 4.3 0 00-7-1.3L12 8.9l-1.8-1.6a4.3 4.3 0 10-5.9 6.2L12 21l7.7-7.5a4.3 4.3 0 001.1-4.9z" /></svg>
 );
-const IconTrend = () => (
-  <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8" /><path d="M17 7h4v4" /></svg>
-);
 const IconCheck = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
 );
@@ -126,7 +123,6 @@ const BENEFITS = [
   { key: 'verified', Icon: IconShield },
   { key: 'payments', Icon: IconCard },
   { key: 'oneToOne', Icon: IconHeart },
-  { key: 'tiers', Icon: IconTrend },
 ];
 
 const TRUST_KEYS = ['age', 'gdpr', 'control', 'support'];
@@ -136,8 +132,8 @@ export default function ModelLanding() {
   const { openLoginModal } = useAppModals();
   const t = (k) => i18n.t(`modelLanding.${k}`);
 
-  const openRegisterModel = () => openLoginModal({ initialView: 'register-model' });
-  const goLogin = () => openLoginModal();
+  const openRegisterModel = () => openLoginModal({ initialView: 'register-model', audience: 'model' });
+  const goLogin = () => openLoginModal({ audience: 'model' });
   const goBlog = () => history.push('/blog');
   const handleBrandClick = (e) => {
     if (e && e.preventDefault) e.preventDefault();
@@ -153,8 +149,9 @@ export default function ModelLanding() {
         onGoVideochat={goLogin}
         onGoFavorites={goLogin}
         onGoBlog={goBlog}
-        onBuy={openRegisterModel}
         onLogin={goLogin}
+        showBuy={false}
+        navbarBg="#4a1622"
         showLocaleSwitcher
         showBottomNav
       />

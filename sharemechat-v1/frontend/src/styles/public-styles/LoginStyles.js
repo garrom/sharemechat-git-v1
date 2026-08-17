@@ -14,7 +14,7 @@ export const StyledForm = styled.form`
   max-width: ${p => p.$wide ? '820px' : '520px'};
   padding: ${p => p.$wide ? '38px 44px 34px' : '28px 28px'};
   border-radius: 24px;
-  background: ${colors.backsolid || '#020617'};
+  background: ${p => (p.$audience === 'model' ? '#7d2137' : (colors.backsolid || '#020617'))};
   border: 1px solid #0b1120;
   box-shadow: 0 32px 80px rgba(0,0,0,0.8);
   color: #e5e7eb;

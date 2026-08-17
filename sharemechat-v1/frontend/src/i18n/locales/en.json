@@ -769,6 +769,7 @@
     },
     "login": {
       "title": "Log in",
+      "titleModel": "Model login",
       "status": {
         "successRedirecting": "Access granted. Redirecting…"
       },
@@ -918,7 +919,7 @@
       }
     },
     "registerModel": {
-      "title": "Sign up",
+      "title": "Model registration",
       "placeholders": {
         "nickname": "Nickname",
         "email": "Email",
@@ -3900,12 +3901,11 @@
       "kicker": "Your way, with backup.",
       "sub": "A private one-on-one video chat, with both sides verified and payouts under control. You set the rules of your work.",
       "items": {
-        "price": { "title": "You set the price", "text": "Set your per-minute rate once you reach your first earnings goal." },
-        "hours": { "title": "At your pace", "text": "You work within time windows and pick the ones that suit you best." },
+        "price": { "title": "You set the price", "text": "Set your own per-minute rate." },
+        "hours": { "title": "At your pace", "text": "You work with flexible hours." },
         "verified": { "title": "Verified clients", "text": "Age and identity checked on both sides of the camera." },
         "payments": { "title": "Paid on time", "text": "Secure payouts, no hidden fees or surprises." },
-        "oneToOne": { "title": "One-on-one, not a showcase", "text": "Private sessions: more intimate and better paid than open cam." },
-        "tiers": { "title": "You grow by tiers", "text": "The more you bill, the better the tier: better share and higher rates." }
+        "oneToOne": { "title": "One-on-one, not a showcase", "text": "Private sessions: more intimate and better paid than open cam." }
       }
     },
     "earn": {
