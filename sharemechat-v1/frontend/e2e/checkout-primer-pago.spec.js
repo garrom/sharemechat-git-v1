@@ -92,11 +92,14 @@ test('primer pago: cliente FORM_CLIENT elige pack y es redirigido a la invoiceUr
 
   await page.goto('/dashboard-user-client');
 
-  // El CTA de compra de la navbar ("Hazte Premium") está tras la hamburguesa en
-  // este ancho; usamos el botón "Cargar saldo" del widget de onboarding, que
-  // dispara el MISMO handler (handleFirstPayment) y está siempre visible en el
-  // idioma por defecto del producto (ES, ruta sin prefijo /en).
-  await page.getByRole('button', { name: 'Cargar saldo' }).click();
+  // El botón "Cargar saldo" del onboarding se retiró (commit "onboarding cliente
+  // = 2 verificaciones": cargar saldo = hacerse premium, ya no es un paso). El
+  // MISMO handler (handleFirstPayment) se dispara desde el CTA "Hazte Premium" del
+  // banner de modo gratuito (TrialFreeBanner: sticky, siempre visible en la sección
+  // videochat). Se scopea al banner (role=note "Modo gratuito") para no colisionar
+  // con el "Hazte Premium" de la navbar.
+  const trialBanner = page.getByRole('note', { name: 'Modo gratuito' });
+  await trialBanner.getByRole('button', { name: 'Hazte Premium' }).click();
 
   // Modal de selección de pack: cada PackCard muestra "{minutes} min". Elegimos
   // el recomendado (P20 = "22 min").
