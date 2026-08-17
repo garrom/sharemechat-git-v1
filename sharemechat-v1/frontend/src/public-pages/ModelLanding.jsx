@@ -155,8 +155,8 @@ export default function ModelLanding() {
         onGoBlog={goBlog}
         onLogin={goLogin}
         showBuy={false}
+        showTabs={false}
         showLocaleSwitcher
-        showBottomNav
       />
 
       <Wrap>

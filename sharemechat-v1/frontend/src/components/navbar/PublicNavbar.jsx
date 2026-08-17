@@ -18,6 +18,7 @@ const PublicNavbar = ({
   onBuy,
   onLogin,
   showBuy = true,
+  showTabs = true,
   navbarBg = null,
   showLocaleSwitcher = true,
   showBottomNav = true,
@@ -119,10 +120,10 @@ const PublicNavbar = ({
     <NavbarBase
       onBrandClick={onBrandClick}
       brandAriaLabel="SharemeChat"
-      desktopLeft={desktopLeft}
+      desktopLeft={showTabs ? desktopLeft : null}
       desktopRight={desktopRight}
       mobileMenu={mobileMenu}
-      mobileBottomNav={mobileBottomNav}
+      mobileBottomNav={showTabs ? mobileBottomNav : null}
       mobileMenuButtonLabel={i18n.t('home.nav.openMenuAria')}
       mobileMenuButtonTitle={i18n.t('home.nav.menuTitle')}
       navbarBg={navbarBg}
