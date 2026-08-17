@@ -1,27 +1,28 @@
 ﻿# Manifest de estado de despliegue - entorno PROD
-# Schema v1. Seccion backend actualizada por update-manifest-backend.ps1
-# (Fase 1 paso 2b, opcion B). El script lo invoca el operador tras un
-# deploy manual del backend (scp + restart). NO se hace commit
-# automatico: el operador commitea cuando le conviene (decision D2).
+# Schema v1. Auto-gestionado por deploy-frontend.ps1 (Fase 1
+# paso 2a). El paso [5.5/N] de cada deploy escribe el bloque
+# correspondiente al surface desplegado tras smoke OK. NO se
+# hace commit automatico: el operador commitea el manifest
+# cuando le conviene (decision D2).
 #
 schema_version: 1
 frontend_product:
-  cloudfront_invalidation_id: I3RU6CFLWA9S4COMQA7UUEIO8U
+  cloudfront_invalidation_id: ID0DJ97RR1J26EHCB6GAQ1UQOW
   verification:
-    method: deploy-frontend.ps1-live-build_2026-08-17T18:28:33Z
+    method: deploy-frontend.ps1-live-build_2026-08-17T19:49:45Z
     git_commit_provenance: recorded_by_deploy_script
     notes: Actualizado automaticamente por deploy-frontend.ps1 (Fase 1 paso 2a) tras smoke OK del propio script.
-  deployed_at: 2026-08-17T18:28:33Z
-  built_at: 2026-08-17T18:28:33Z
-  bundle_sha256: 6cb1b915ca7a06e6c8a7ded025d635fb73a346b45c2deb2b36fd9090ac315052
-  git_commit_short: 1ceeaf0e
-  git_commit: 1ceeaf0e07afe317891fbd551abba3495779611d
+  deployed_at: 2026-08-17T19:49:45Z
+  built_at: 2026-08-17T19:49:45Z
+  bundle_sha256: 4ce9ca5e768528effd3ef832c54c32fc667a6874d85af5af1787a6bc0ebb4585
+  git_commit_short: e26c3a21
+  git_commit: e26c3a21aa3b8ea35bf61d00b5b1bcc35630b0a2
   cloudfront_distribution: E2FWNC80D4QDJC
   deployed_by: alain@LAPTOP-8UEIKVUT
   working_tree_clean: true
   bucket: sharemechat-frontend-prod
-  bundle: main.acf5e48c.js
-last_update_source: update-manifest-backend.ps1-fase1-paso2b
+  bundle: main.3153cceb.js
+last_update_source: deploy-frontend.ps1-fase1-paso2a
 last_update_by: alain@LAPTOP-8UEIKVUT
 environment: prod
 backend:
@@ -39,7 +40,7 @@ backend:
   systemd_unit: sharemechat-prod.service
   git_commit: 024fce4ec92a064b718830109ef856b594da4f95
   git_commit_short: 024fce4e
-last_updated_at: 2026-08-17T19:26:31Z
+last_updated_at: 2026-08-17T19:49:45Z
 frontend_admin:
   cloudfront_invalidation_id: I62M7ZFWEV3Z80CIUCHWTOH05L
   verification:
