@@ -704,12 +704,7 @@ export const StyledChatWhatsApp = styled.div`
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background-color: #ece5dd;
-  background-image:
-    linear-gradient(180deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.10) 100%),
-    radial-gradient(circle at 0 0, rgba(0,0,0,0.022) 0, rgba(0,0,0,0.022) 2px, transparent 2px),
-    radial-gradient(circle at 10px 10px, rgba(0,0,0,0.02) 0, rgba(0,0,0,0.02) 2px, transparent 2px);
-  background-size: auto, 20px 20px, 20px 20px;
+  background-color: #e9e3db;
 `;
 
 
@@ -1065,6 +1060,13 @@ export const StyledGiftBar = styled.div`
   padding: 6px 12px 2px;
   background: #111418;
   border-top: 1px solid rgba(255,255,255,0.08);
+
+  /* Favoritos (2026-08-17): barra clara arriba -> oscura abajo, se funde con
+     el chat (parte superior del "bloque inferior" en degradado). */
+  &[data-kind='favorites-gift-bar']:not([data-surface]) {
+    background: linear-gradient(180deg, #6b6f78 0%, #5a5e67 100%);
+    border-top: 0;
+  }
 
   /* Variante barra sobre el vídeo (rediseño llamada random cliente 2026-08-09):
      una sola fila de chips (gratis + pago), pill semitransparente con blur,
@@ -1711,12 +1713,10 @@ export const StyledChatScroller = styled.div`
   /* fondo solo cuando se indique explícitamente */
   &[data-bg='whatsapp'] {
     border: none; /* sin borde en modo WhatsApp */
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.10) 100%),
-      url("data:image/svg+xml,%3Csvg%20width%3D%2296%22%20height%3D%2296%22%20viewBox%3D%220%200%2096%2096%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%0A%20%20%3Cg%20fill%3D%22none%22%20stroke%3D%22%23b2a79a%22%20stroke-width%3D%221.1%22%20stroke-opacity%3D%220.42%22%20stroke-linecap%3D%22round%22%3E%0A%20%20%20%20%3Cpath%20d%3D%22M14%2016h22a7%207%200%200%201%207%207v5a7%207%200%200%201-7%207h-7l-6%205v-5h-9a7%207%200%200%201-7-7v-5a7%207%200%200%201%207-7z%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M72%2018c-1.7-2.5-5.1-2.5-6.8%200-1.7-2.5-5.1-2.5-6.8%200-1.8%202.6-0.8%206%202.5%208.6l4.3%203.3%204.3-3.3c3.3-2.6%204.3-6%202.5-8.6z%22/%3E%0A%20%20%20%20%3Crect%20x%3D%2212%22%20y%3D%2256%22%20rx%3D%224%22%20ry%3D%224%22%20width%3D%2220%22%20height%3D%2226%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M15%2059h14M15%2064h9M15%2069h10%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M76%2060l2.5%205.1%205.2%200.8-3.7%203.7%200.9%205.1-4.9-2.6-4.9%202.6%200.9-5.1-3.7-3.7%205.2-0.8z%22/%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2248%22%20cy%3D%2210%22%20r%3D%222.4%22/%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2284%22%20cy%3D%2240%22%20r%3D%222.1%22/%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2212%22%20cy%3D%2242%22%20r%3D%222.1%22/%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2248%22%20cy%3D%2284%22%20r%3D%222.4%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M34%2040c3-2.2%206-2.2%209%200%203%202.2%206%202.2%209%200%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M56%2050c3-2.2%206-2.2%209%200%203%202.2%206%202.2%209%200%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M30%2030h0.1M35%2033h0.1M40%2030h0.1%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M64%2080h0.1M69%2083h0.1M74%2080h0.1%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M4%204l8%208M84%208l8-8%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M8%2084l8%208M80%2088l8-8%22/%3E%0A%20%20%3C/g%3E%0A%3C/svg%3E%0A");
-    background-repeat: repeat;
-    background-color: #e5ddd5;
-    background-size: auto, 120px;
+    /* Fondo limpio y adulto (2026-08-17): se retira el patron SVG de
+       burbujas/estrellas/corazones (demasiado infantil). Neutro calido liso. */
+    background-image: none;
+    background-color: #e9e3db;
   }
 
   &[data-kind='favorites-chat'] {
@@ -2035,6 +2035,9 @@ export const StyledChatDockMessageComposer = styled(StyledChatDock)`
 
   &[data-kind='favorites-chat'] {
     border-top: 0;
+    /* Cierre del "bloque inferior" en degradado: continua desde la barra de
+       gifts (gris claro) hasta gris oscuro abajo (2026-08-17, grises no negro). */
+    background: linear-gradient(180deg, #5a5e67 0%, #2b2f36 100%);
     & > input {
       background: rgba(255,255,255,0.10);
       color: #f8fafc;
