@@ -65,13 +65,16 @@ run_landings_autoheal() {
     local landing_paths=("modelos" "en/modelos" "for-studios" "en/for-studios")
     local current_bundle lb lp
     local stale=()
-    current_bundle=$(aws s3 cp "s3://${S3_BUCKET}/index.html" - 2>/dev/null | grep -oE 'main\.[a-f0-9]+\.js' | head -1 || true)
+    # Se lee via curl a CloudFront (decomprimido) y NO via `aws s3 cp` porque el
+    # rol IAM del EC2 tiene ListBucket + PutObject pero NO GetObject (bucket con
+    # OAC: solo CloudFront lee los objetos). `aws s3 cp` de lectura da 403.
+    current_bundle=$(curl -fsS "${HOSTNAME_BASE}/" 2>/dev/null | grep -oE 'main\.[a-f0-9]+\.js' | head -1 || true)
     if [ -z "$current_bundle" ]; then
-        log "Landings: no pude leer el bundle de index.html; salto el check."
+        log "Landings: no pude leer el bundle actual (curl /); salto el check."
         return 0
     fi
     for lp in "${landing_paths[@]}"; do
-        lb=$(aws s3 cp "s3://${S3_BUCKET}/${lp}/index.html" - 2>/dev/null | grep -oE 'main\.[a-f0-9]+\.js' | head -1 || true)
+        lb=$(curl -fsS "${HOSTNAME_BASE}/${lp}" 2>/dev/null | grep -oE 'main\.[a-f0-9]+\.js' | head -1 || true)
         if [ "$lb" != "$current_bundle" ]; then
             stale+=("$lp")
         fi
