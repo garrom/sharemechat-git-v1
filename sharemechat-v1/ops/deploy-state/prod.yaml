@@ -7,21 +7,21 @@
 #
 schema_version: 1
 frontend_product:
-  cloudfront_invalidation_id: I8Q3SIQD0L6H2JGANVSBIBEBNY
+  cloudfront_invalidation_id: I3RU6CFLWA9S4COMQA7UUEIO8U
   verification:
-    method: deploy-frontend.ps1-live-build_2026-08-17T17:59:11Z
+    method: deploy-frontend.ps1-live-build_2026-08-17T18:28:33Z
     git_commit_provenance: recorded_by_deploy_script
     notes: Actualizado automaticamente por deploy-frontend.ps1 (Fase 1 paso 2a) tras smoke OK del propio script.
-  deployed_at: 2026-08-17T17:59:11Z
-  built_at: 2026-08-17T17:59:11Z
-  bundle_sha256: db933401a7a14f69407483f9965162c5fdfbf48797545f570b6bd329a03a3a18
-  git_commit_short: 2c6ec1b1
-  git_commit: 2c6ec1b1b9add962a8f482e6cdf0c4cf2d99ae3d
+  deployed_at: 2026-08-17T18:28:33Z
+  built_at: 2026-08-17T18:28:33Z
+  bundle_sha256: 6cb1b915ca7a06e6c8a7ded025d635fb73a346b45c2deb2b36fd9090ac315052
+  git_commit_short: 1ceeaf0e
+  git_commit: 1ceeaf0e07afe317891fbd551abba3495779611d
   cloudfront_distribution: E2FWNC80D4QDJC
   deployed_by: alain@LAPTOP-8UEIKVUT
   working_tree_clean: true
   bucket: sharemechat-frontend-prod
-  bundle: main.6e71eb56.js
+  bundle: main.acf5e48c.js
 last_update_source: deploy-frontend.ps1-fase1-paso2a
 last_update_by: alain@LAPTOP-8UEIKVUT
 environment: prod
@@ -40,7 +40,7 @@ backend:
   systemd_unit: sharemechat-prod.service
   git_commit: 939c58474a4f42bf041a3c127b92168c338c0d64
   git_commit_short: 939c5847
-last_updated_at: 2026-08-17T17:59:11Z
+last_updated_at: 2026-08-17T18:28:33Z
 frontend_admin:
   cloudfront_invalidation_id: I62M7ZFWEV3Z80CIUCHWTOH05L
   verification:
