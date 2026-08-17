@@ -271,6 +271,9 @@ public class SecurityConfig {
                         .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_STREAMS_READ_DETAIL))
                         .requestMatchers(HttpMethod.GET, "/api/admin/stats/overview")
                         .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_STATS_READ_OVERVIEW))
+                        // Card 1 Fase 2: heatmap de presencia (reutiliza permiso de stats).
+                        .requestMatchers(HttpMethod.GET, "/api/admin/stats/presence/**")
+                        .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_STATS_READ_OVERVIEW))
                         .requestMatchers(HttpMethod.GET, "/api/admin/finance/top-models")
                         .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_FINANCE_READ_TOP_MODELS))
                         .requestMatchers(HttpMethod.GET, "/api/admin/finance/top-clients")
