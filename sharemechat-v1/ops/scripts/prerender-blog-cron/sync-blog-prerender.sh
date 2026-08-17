@@ -54,6 +54,72 @@ count_nonblank() {
     echo "$count"
 }
 
+# Auto-heal de las landings de captacion (Opcion B SEO: /modelos, /for-studios
+# + variantes /en). A diferencia del blog (diff por slug faltante en S3), las
+# landings estan SIEMPRE presentes; solo se re-renderizan cuando su bundle
+# referenciado quedo viejo (hash main.<x>.js != el del index.html actual) tras
+# un deploy de frontend. Asi no invalida en cada pasada (coste) y auto-sana en
+# <=15 min. AISLADA: se llama con "|| log ..." y todos los caminos devuelven 0,
+# de modo que un fallo aqui NUNCA aborta el prerender del blog.
+run_landings_autoheal() {
+    local landing_paths=("modelos" "en/modelos" "for-studios" "en/for-studios")
+    local current_bundle lb lp
+    local stale=()
+    current_bundle=$(aws s3 cp "s3://${S3_BUCKET}/index.html" - 2>/dev/null | grep -oE 'main\.[a-f0-9]+\.js' | head -1 || true)
+    if [ -z "$current_bundle" ]; then
+        log "Landings: no pude leer el bundle de index.html; salto el check."
+        return 0
+    fi
+    for lp in "${landing_paths[@]}"; do
+        lb=$(aws s3 cp "s3://${S3_BUCKET}/${lp}/index.html" - 2>/dev/null | grep -oE 'main\.[a-f0-9]+\.js' | head -1 || true)
+        if [ "$lb" != "$current_bundle" ]; then
+            stale+=("$lp")
+        fi
+    done
+    if [ ${#stale[@]} -eq 0 ]; then
+        log "Landings: al dia (bundle=$current_bundle)."
+        return 0
+    fi
+    log "Landings stale (bundle actual=$current_bundle): ${stale[*]}"
+    local lout lcfg first
+    lout=$(mktemp -d /tmp/prerender-landings.XXXXXX)
+    lcfg="${lout}/config.json"
+    {
+        printf '{\n  "outDir": "%s",\n  "hostname": "%s",\n  "shellTitle": "%s",\n  "urls": [' "$lout" "$HOSTNAME_BASE" "$SHELL_TITLE"
+        first=1
+        for lp in "${stale[@]}"; do
+            if [ "$first" -eq 1 ]; then first=0; else printf ', '; fi
+            printf '"/%s"' "$lp"
+        done
+        printf ']\n}\n'
+    } > "$lcfg"
+    if ! ( cd "$WORK_DIR" && node render.js --config "$lcfg" >> "$LOG_FILE" 2>&1 ); then
+        log "Landings: render.js fallo; se dejan como estan (CER cubre)."
+        rm -rf "$lout"
+        return 0
+    fi
+    local inval=() lh
+    for lp in "${stale[@]}"; do
+        lh="${lout}/${lp}/index.html"
+        if [ -f "$lh" ] && [ "$(wc -c < "$lh")" -ge 10000 ]; then
+            aws s3 cp "$lh" "s3://${S3_BUCKET}/${lp}/index.html" \
+                --content-type "text/html; charset=utf-8" \
+                --cache-control "public, max-age=300" >> "$LOG_FILE" 2>&1
+            inval+=("/${lp}")
+        else
+            log "Landings: HTML sospechoso para $lp (falta o <10KB); no se sube."
+        fi
+    done
+    if [ ${#inval[@]} -gt 0 ]; then
+        local lid
+        lid=$(aws cloudfront create-invalidation --distribution-id "$CF_DIST_ID" \
+            --paths "${inval[@]}" --query 'Invalidation.Id' --output text 2>>"$LOG_FILE" || true)
+        log "Landings: re-renderizadas ${#inval[@]}, invalidation=$lid"
+    fi
+    rm -rf "$lout"
+    return 0
+}
+
 # Lock con flock - si ya hay otra ejecucion, salir limpio
 exec 200>"$LOCK_FILE"
 if ! flock -n 200; then
@@ -63,6 +129,9 @@ fi
 
 START_TS=$(date +%s)
 log "===== Inicio sync-blog-prerender ====="
+
+# Auto-heal de landings (aislado; nunca aborta el prerender del blog).
+run_landings_autoheal || log "Landings: autoheal fallo no critico, continuo con blog."
 
 # 1. Obtener slugs publicados via API publica
 log "Consultando API publica..."
