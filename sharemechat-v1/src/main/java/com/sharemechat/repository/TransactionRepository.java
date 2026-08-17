@@ -324,4 +324,24 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
                                                    @Param("from") LocalDateTime from,
                                                    @Param("to") LocalDateTime to,
                                                    Pageable pageable);
+
+    /**
+     * BFPM Fase 4B-b (ADR-012, #D-35): suma los importes POSITIVOS del cliente
+     * para un {@code operationType} concreto de una compra, emparejada por la
+     * descripción estructurada que termina en {@code order=<orderId>} (mismo
+     * mecanismo de trazabilidad de Fase 4A). Sirve al reversal de refund para
+     * recuperar lo REALMENTE acreditado (INGRESO = price; BONUS_GRANT = bonus del
+     * pack + promo welcome100 si la hubo), sin re-derivar del catálogo.
+     *
+     * <p>El filtro {@code t.amount > 0} excluye los propios asientos de reversal
+     * (que son negativos), haciendo la suma idempotente frente a reintentos.
+     */
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t "
+            + "WHERE t.user.id = :userId "
+            + "  AND t.operationType = :op "
+            + "  AND t.amount > 0 "
+            + "  AND t.description LIKE :descLike")
+    BigDecimal sumPositiveClientAmountByOpAndOrder(@Param("userId") Long userId,
+                                                   @Param("op") String op,
+                                                   @Param("descLike") String descLike);
 }

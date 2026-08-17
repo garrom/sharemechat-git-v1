@@ -1240,4 +1240,153 @@ public class TransactionService {
     public Gift processGiftInChat(Long clientId, Long modelId, Long giftId) {
         return processGift(clientId, modelId, giftId, null);
     }
+
+    // =========================================================================
+    // BFPM Fase 4B-b (ADR-012, #D-35): reversal de refund con bonus.
+    // Política A: si la compra sigue "entera" en el saldo -> reversal contable
+    // limpio del par BFPM (mantiene la invariante Σ BONUS_GRANT + Σ BONUS_FUNDING
+    // = 0 y total_pagos == Σ INGRESO). Si el cliente ya consumió parte (saldo
+    // fungible) -> NO se revierte automáticamente: se devuelve BLOCKED para que
+    // el caller marque la session a revisión manual.
+    // =========================================================================
+
+    public enum RefundOutcome {
+        /** Reversal contable completo aplicado. */
+        REVERSED,
+        /** Saldo insuficiente para clawback limpio (consumo parcial): revisión manual. */
+        BLOCKED_INSUFFICIENT_BALANCE,
+        /** No hay ledger para el order (nada que revertir). */
+        NO_LEDGER,
+        /** El usuario no es CLIENT (estado inesperado): revisión manual. */
+        NOT_CLIENT
+    }
+
+    /**
+     * Revierte contablemente el crédito de una compra (identificada por
+     * {@code orderId}) tras un refund del PSP. Reversal por LEDGER REAL: suma lo
+     * efectivamente acreditado (INGRESO = price; BONUS_GRANT = bonus del pack +
+     * promo welcome100 si la hubo) emparejando por {@code order=<orderId>}, en
+     * vez de re-derivar del catálogo. Atómico (@Transactional) con lock pesimista
+     * del cliente. Idempotencia = responsabilidad del caller (guardar por status
+     * de la session); adicionalmente el filtro amount>0 de la suma ignora los
+     * propios asientos de reversal.
+     */
+    @Transactional
+    public RefundOutcome reversePackRefund(Long clientUserId, String orderId) {
+        if (clientUserId == null || clientUserId <= 0) {
+            throw new IllegalArgumentException("clientUserId invalido");
+        }
+        if (orderId == null || orderId.isBlank()) {
+            throw new IllegalArgumentException("orderId requerido");
+        }
+
+        User user = lockUserOrThrow(clientUserId);
+        if (!Constants.Roles.CLIENT.equals(user.getRole())) {
+            log.error("[REFUND] usuario no CLIENT userId={} role={} order={} -> revision manual",
+                    clientUserId, user.getRole(), orderId);
+            return RefundOutcome.NOT_CLIENT;
+        }
+
+        Client client = clientRepository.findByUser(user)
+                .orElseThrow(() -> new IllegalStateException("Cliente no encontrado userId=" + clientUserId));
+
+        BigDecimal previousBalance = lastBalanceOf(clientUserId);
+        BigDecimal saldoCache = client.getSaldoActual() == null ? BigDecimal.ZERO : client.getSaldoActual();
+        if (saldoCache.compareTo(previousBalance) != 0) {
+            throw new IllegalStateException(
+                    "Inconsistencia CLIENT: ultimo balance (" + previousBalance + ") != clients.saldo_actual (" + saldoCache + ")");
+        }
+
+        // Recupera lo realmente acreditado para este order (positivos; excluye reversals).
+        String descLike = "%order=" + orderId;
+        BigDecimal ingreso = nz(transactionRepository
+                .sumPositiveClientAmountByOpAndOrder(clientUserId, "INGRESO", descLike))
+                .setScale(2, RoundingMode.HALF_UP);
+        BigDecimal bonus = nz(transactionRepository
+                .sumPositiveClientAmountByOpAndOrder(clientUserId, Constants.OperationTypes.BONUS_GRANT, descLike))
+                .setScale(2, RoundingMode.HALF_UP);
+        BigDecimal credited = ingreso.add(bonus);
+
+        if (credited.compareTo(BigDecimal.ZERO) <= 0) {
+            log.warn("[REFUND] sin ledger para order={} userId={} (nada que revertir)", orderId, clientUserId);
+            return RefundOutcome.NO_LEDGER;
+        }
+
+        // Política A: solo reversal limpio si el saldo cubre el clawback total.
+        if (previousBalance.compareTo(credited) < 0) {
+            log.error("[REFUND] saldo insuficiente para reversal limpio (#D-35) userId={} order={} saldo={} credited={} -> REVISION MANUAL",
+                    clientUserId, orderId, previousBalance, credited);
+            return RefundOutcome.BLOCKED_INSUFFICIENT_BALANCE;
+        }
+
+        // 1) Reversal INGRESO (negativo). total_pagos baja en price (mantiene total_pagos == Σ INGRESO).
+        String descIngresoRev = "Refund reversal INGRESO order=" + orderId;
+        BigDecimal balanceAfterIngreso = previousBalance.subtract(ingreso);
+        Transaction txIng = new Transaction();
+        txIng.setUser(user);
+        txIng.setAmount(ingreso.negate());
+        txIng.setOperationType("INGRESO");
+        txIng.setDescription(descIngresoRev);
+        Transaction savedIng = transactionRepository.save(txIng);
+
+        Balance balIng = new Balance();
+        balIng.setUserId(clientUserId);
+        balIng.setTransactionId(savedIng.getId());
+        balIng.setOperationType("INGRESO");
+        balIng.setAmount(ingreso.negate());
+        balIng.setBalance(balanceAfterIngreso);
+        balIng.setDescription(descIngresoRev);
+        balanceRepository.save(balIng);
+
+        BigDecimal finalBalance = balanceAfterIngreso;
+
+        // 2) Reversal del par BFPM (grant cliente + funding plataforma), solo si hubo bonus.
+        // Descripciones simétricas bonus_grant/bonus_funding para que el pairing de
+        // auditoría 4B-a (REPLACE) empareje también los reversals (sin falsos huérfanos).
+        if (bonus.compareTo(BigDecimal.ZERO) > 0) {
+            String descGrantRev = "BFPM bonus_grant REVERSAL order=" + orderId;
+            String descFundingRev = "BFPM bonus_funding REVERSAL order=" + orderId;
+            BigDecimal balanceAfterBonus = balanceAfterIngreso.subtract(bonus);
+
+            Transaction txBonus = new Transaction();
+            txBonus.setUser(user);
+            txBonus.setAmount(bonus.negate());
+            txBonus.setOperationType(Constants.OperationTypes.BONUS_GRANT);
+            txBonus.setDescription(descGrantRev);
+            Transaction savedBonus = transactionRepository.save(txBonus);
+
+            Balance balBonus = new Balance();
+            balBonus.setUserId(clientUserId);
+            balBonus.setTransactionId(savedBonus.getId());
+            balBonus.setOperationType(Constants.OperationTypes.BONUS_GRANT);
+            balBonus.setAmount(bonus.negate());
+            balBonus.setBalance(balanceAfterBonus);
+            balBonus.setDescription(descGrantRev);
+            balanceRepository.save(balBonus);
+
+            finalBalance = balanceAfterBonus;
+
+            // Plataforma: revierte el BONUS_FUNDING (importe positivo, deshace el negativo original).
+            PlatformTransaction ptx = new PlatformTransaction();
+            ptx.setAmount(bonus);
+            ptx.setOperationType(Constants.OperationTypes.BONUS_FUNDING);
+            ptx.setDescription(descFundingRev);
+            PlatformTransaction savedPtx = platformTransactionRepository.save(ptx);
+            appendPlatformBalance(savedPtx.getId(), bonus, descFundingRev);
+        }
+
+        // 3) Caches denormalizadas: saldo baja en credited; total_pagos baja en price.
+        client.setSaldoActual(finalBalance);
+        BigDecimal currentTotalPagos = client.getTotalPagos() == null ? BigDecimal.ZERO : client.getTotalPagos();
+        client.setTotalPagos(currentTotalPagos.subtract(ingreso));
+        clientRepository.save(client);
+
+        log.info("[REFUND] reversal OK userId={} order={} ingreso={} bonus={} credited={} newBalance={}",
+                clientUserId, orderId, ingreso, bonus, credited, finalBalance);
+        return RefundOutcome.REVERSED;
+    }
+
+    private static BigDecimal nz(BigDecimal v) {
+        return v == null ? BigDecimal.ZERO : v;
+    }
 }

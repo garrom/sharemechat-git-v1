@@ -228,11 +228,7 @@ public class PspWebhookOrchestratorService {
                 paymentSessionRepository.save(session);
                 break;
             case REFUNDED:
-                // #D-35 politica refund con bonus pendiente. Por ahora solo marca.
-                session.setStatus("REFUNDED");
-                paymentSessionRepository.save(session);
-                log.warn("[PSP-WEBHOOK] REFUNDED recibido, requiere politica manual #D-35 provider={} orderId={}",
-                        providerKey, session.getOrderId());
+                handleRefunded(session, providerKey);
                 break;
             case PENDING:
             default:
@@ -318,6 +314,47 @@ public class PspWebhookOrchestratorService {
     private String safeMsg(Throwable t) {
         String m = t.getMessage();
         return m == null ? t.getClass().getSimpleName() : m;
+    }
+
+    /**
+     * BFPM Fase 4B-b (ADR-012, #D-35): procesa un refund del PSP sobre una
+     * compra ya acreditada. Solo actúa si la session estaba SUCCESS (crédito
+     * aplicado) y aún no fue refundeada (idempotencia por status). Delega el
+     * reversal contable en {@link TransactionService#reversePackRefund}
+     * (política A): REVERSED -> session queda REFUNDED; cualquier otro outcome
+     * (saldo consumido, estado inesperado, sin ledger) -> session queda
+     * REFUND_REVIEW + log.error para revisión manual.
+     */
+    private void handleRefunded(PaymentSession session, String providerKey) {
+        String current = session.getStatus();
+        if ("REFUNDED".equals(current) || "REFUND_REVIEW".equals(current)) {
+            log.info("[PSP-WEBHOOK] REFUNDED ya procesado (status={}) provider={} orderId={}",
+                    current, providerKey, session.getOrderId());
+            return;
+        }
+        if (!"SUCCESS".equals(current)) {
+            // Refund de algo que nunca se acreditó: no hay ledger que revertir.
+            session.setStatus("REFUNDED");
+            paymentSessionRepository.save(session);
+            log.warn("[PSP-WEBHOOK] REFUNDED sobre session no-SUCCESS (status={}) provider={} orderId={} (solo marca)",
+                    current, providerKey, session.getOrderId());
+            return;
+        }
+
+        TransactionService.RefundOutcome outcome = transactionService.reversePackRefund(
+                session.getUser().getId(), session.getOrderId());
+
+        if (outcome == TransactionService.RefundOutcome.REVERSED) {
+            session.setStatus("REFUNDED");
+            paymentSessionRepository.save(session);
+            log.info("[PSP-WEBHOOK] REFUNDED revertido (BFPM) provider={} orderId={}",
+                    providerKey, session.getOrderId());
+        } else {
+            session.setStatus("REFUND_REVIEW");
+            paymentSessionRepository.save(session);
+            log.error("[PSP-WEBHOOK] REFUNDED requiere REVISION MANUAL (#D-35) outcome={} provider={} orderId={}",
+                    outcome, providerKey, session.getOrderId());
+        }
     }
 
     /**
