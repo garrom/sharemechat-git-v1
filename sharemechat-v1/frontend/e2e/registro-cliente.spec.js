@@ -2,8 +2,10 @@
 //
 // Flujo real (mapeado sobre el código, superficie product en ES):
 //   age-gate de invitado (se siembra en localStorage para saltarlo)
-//   -> Home -> CTA "Iniciar Video Chat" -> paso de género -> "Hombre" (=cliente)
-//   -> formulario -> "Registrarse" -> modal de éxito "Revisa tu bandeja de entrada".
+//   -> Home -> CTA "Iniciar Video Chat" -> formulario cliente DIRECTO
+//   -> "Registrarse" -> modal de éxito "Revisa tu bandeja de entrada".
+//   (Opción B, 2026-08-17: el selector hombre/mujer se retiró; goRegister abre
+//    register-client directo. El cliente ya no pasa por el paso de género.)
 //
 // El POST /api/users/register/client se intercepta y se responde 200 sin tocar
 // backend real (ya cubierto por los tests de integración). El resto de /api se
@@ -35,9 +37,9 @@ test('registro cliente: happy-path muestra el aviso de verificación por email',
 
   await page.goto('/');
 
-  // Home -> abrir el flujo de registro (paso de género) -> elegir cliente ("Hombre").
+  // Home -> "Iniciar Video Chat" abre DIRECTO el registro de cliente (Opción B:
+  // el selector hombre/mujer se retiró; goRegister -> initialView register-client).
   await page.getByRole('button', { name: 'Iniciar Video Chat' }).click();
-  await page.getByRole('button', { name: 'Hombre' }).click();
 
   // Formulario de cliente. Los inputs no tienen label accesible -> por placeholder.
   await page.getByPlaceholder('Apodo / Nickname').fill('e2euser');
