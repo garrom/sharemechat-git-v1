@@ -112,6 +112,31 @@ async function renderOne(browser, hostname, url, shellTitle, outDir) {
       console.warn(`[WARN] ${url} - alguna imagen no cargo en 15s, capturando igualmente`);
     }
 
+    // Dedup de meta og:/twitter: antes de capturar. react-helmet-async (usado por
+    // el componente <Seo>) ANADE las tags de la pagina pero NO elimina las
+    // estaticas del shell index.html (defaults del home) -> quedan duplicadas
+    // (p.ej. og:title del home + og:title de la pagina). Los crawlers sociales
+    // pueden coger la equivocada. Nos quedamos con la ULTIMA por property/name
+    // (= la inyectada por <Seo>, la correcta, que va despues en el <head>).
+    // No-op para paginas que ya salen limpias (el blog reemplaza via DOM manual
+    // en seoHelpers.js, no via Helmet).
+    await page.evaluate(() => {
+      var seen = {};
+      var metas = Array.prototype.slice.call(
+        document.querySelectorAll('meta[property^="og:"], meta[name^="twitter:"]')
+      );
+      for (var i = metas.length - 1; i >= 0; i--) {
+        var m = metas[i];
+        var key = m.getAttribute('property') || m.getAttribute('name');
+        if (!key) { continue; }
+        if (seen[key]) {
+          if (m.parentNode) { m.parentNode.removeChild(m); }
+        } else {
+          seen[key] = true;
+        }
+      }
+    });
+
     const html = await page.content();
     const title = await page.title();
 
