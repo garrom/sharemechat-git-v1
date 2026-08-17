@@ -143,7 +143,6 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login', aud
 
   return (
     <StyledForm
-      $audience={audience}
       onSubmit={view === 'login' ? handleLogin : undefined}
       noValidate
     >

@@ -3886,7 +3886,7 @@
       "chip": "Buscamos modelos · plazas abiertas",
       "titleAccent": "Cuidamos",
       "titleRest": "a las modelos.",
-      "sub1a": "Ofrecemos mayor rentabilidad",
+      "sub1a": "Obtén mayor rentabilidad",
       "sub1b": "que otras plataformas.",
       "sub2a": "Respetamos tu ritmo, sabemos que",
       "sub2b": "tu tiempo vale.",
@@ -3901,11 +3901,12 @@
       "kicker": "A tu manera, con respaldo.",
       "sub": "Un videochat privado uno a uno, con las dos partes verificadas y los cobros bajo control. Tú pones las reglas de tu trabajo.",
       "items": {
-        "price": { "title": "Tú fijas el precio", "text": "Marca tu propia tarifa por minuto." },
-        "hours": { "title": "A tu ritmo", "text": "Trabajas con flexibilidad horaria." },
+        "price": { "title": "Tú fijas el precio", "text": "Marca tu tarifa por minuto al alcanzar tu primer objetivo de facturación." },
+        "hours": { "title": "A tu ritmo", "text": "Trabajas por ventanas horarias y eliges las que mejor te encajen." },
         "verified": { "title": "Clientes verificados", "text": "Edad e identidad comprobadas a ambos lados de la cámara." },
         "payments": { "title": "Cobros a tiempo", "text": "Pagos seguros, sin comisiones ocultas ni sorpresas." },
-        "oneToOne": { "title": "Uno a uno, no escaparate", "text": "Sesiones privadas: más íntimas y mejor remuneradas que el cam abierto." }
+        "oneToOne": { "title": "Uno a uno, no escaparate", "text": "Sesiones privadas: más íntimas y mejor remuneradas que el cam abierto." },
+        "tiers": { "title": "Creces por tramos", "text": "Cuanto más facturas, mejor tramo: mejor reparto y tarifas más altas." }
       }
     },
     "earn": {

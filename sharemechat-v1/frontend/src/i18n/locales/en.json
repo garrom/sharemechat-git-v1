@@ -3886,7 +3886,7 @@
       "chip": "Looking for models · openings available",
       "titleAccent": "We take care of",
       "titleRest": "our models.",
-      "sub1a": "We offer better earnings",
+      "sub1a": "Get better earnings",
       "sub1b": "than other platforms.",
       "sub2a": "We respect your pace, we know that",
       "sub2b": "your time matters.",
@@ -3901,11 +3901,12 @@
       "kicker": "Your way, with backup.",
       "sub": "A private one-on-one video chat, with both sides verified and payouts under control. You set the rules of your work.",
       "items": {
-        "price": { "title": "You set the price", "text": "Set your own per-minute rate." },
-        "hours": { "title": "At your pace", "text": "You work with flexible hours." },
+        "price": { "title": "You set the price", "text": "Set your per-minute rate once you reach your first earnings goal." },
+        "hours": { "title": "At your pace", "text": "You work within time windows and pick the ones that suit you best." },
         "verified": { "title": "Verified clients", "text": "Age and identity checked on both sides of the camera." },
         "payments": { "title": "Paid on time", "text": "Secure payouts, no hidden fees or surprises." },
-        "oneToOne": { "title": "One-on-one, not a showcase", "text": "Private sessions: more intimate and better paid than open cam." }
+        "oneToOne": { "title": "One-on-one, not a showcase", "text": "Private sessions: more intimate and better paid than open cam." },
+        "tiers": { "title": "You grow by tiers", "text": "The more you bill, the better the tier: better share and higher rates." }
       }
     },
     "earn": {

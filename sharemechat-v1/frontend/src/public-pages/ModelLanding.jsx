@@ -113,6 +113,9 @@ const IconCard = () => (
 const IconHeart = () => (
   <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M20.8 8.6a4.3 4.3 0 00-7-1.3L12 8.9l-1.8-1.6a4.3 4.3 0 10-5.9 6.2L12 21l7.7-7.5a4.3 4.3 0 001.1-4.9z" /></svg>
 );
+const IconTrend = () => (
+  <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8" /><path d="M17 7h4v4" /></svg>
+);
 const IconCheck = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
 );
@@ -123,6 +126,7 @@ const BENEFITS = [
   { key: 'verified', Icon: IconShield },
   { key: 'payments', Icon: IconCard },
   { key: 'oneToOne', Icon: IconHeart },
+  { key: 'tiers', Icon: IconTrend },
 ];
 
 const TRUST_KEYS = ['age', 'gdpr', 'control', 'support'];
@@ -200,19 +204,6 @@ export default function ModelLanding() {
                   </div>
                 </div>
               ))}
-            </div>
-          </section>
-
-          <hr className="rule" />
-
-          {/* COBRAS POR TU TIEMPO */}
-          <section className="section">
-            <div className="earn">
-              <svg className="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v10M9.3 9.2a2.7 2.7 0 012.7-1.6c1.6 0 2.6.9 2.6 2.1 0 2.6-5.2 1.9-5.2 4.6 0 1.2 1.1 2.1 2.6 2.1a2.7 2.7 0 002.7-1.6" /></svg>
-              <div>
-                <h4 className="serif">{t('earn.title')}</h4>
-                <p>{t('earn.text')}</p>
-              </div>
             </div>
           </section>
 
