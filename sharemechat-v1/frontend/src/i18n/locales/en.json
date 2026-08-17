@@ -874,11 +874,6 @@
         "submit": "Error changing the password"
       }
     },
-    "registerGender": {
-      "title": "Join as",
-      "male": "Man",
-      "female": "Woman"
-    },
     "google": {
       "orSeparator": "or",
       "errors": {
@@ -3767,6 +3762,10 @@
     "forStudios": {
       "title": "SharemeChat for studios · Master Program",
       "description": "SharemeChat Master Program: onboard your models under your umbrella, unlock higher tiers on aggregated volume, cash out via multiple payout methods."
+    },
+    "modelLanding": {
+      "title": "Work as a model on SharemeChat",
+      "description": "Verified 1-on-1 video chat. We take care of our models: better earnings than other platforms, your own pace and secure payouts. Sign up and start."
     }
   },
   "support": {
@@ -3879,6 +3878,53 @@
         "descriptionRequired": "Description is required.",
         "categoryRequired": "Select a category."
       }
+    }
+  },
+  "modelLanding": {
+    "hero": {
+      "chip": "Looking for models · openings available",
+      "titleAccent": "We take care of",
+      "titleRest": "our models.",
+      "sub1a": "We offer better earnings",
+      "sub1b": "than other platforms.",
+      "sub2a": "We respect your pace, we know that",
+      "sub2b": "your time matters.",
+      "leadA": "A verified 1-on-1 video chat",
+      "leadB": "with room to grow",
+      "cta": "Sign up now",
+      "verified": "Verified profile",
+      "imageAlt": "SharemeChat model"
+    },
+    "benefits": {
+      "label": "Why SharemeChat",
+      "kicker": "Your way, with backup.",
+      "sub": "A private one-on-one video chat, with both sides verified and payouts under control. You set the rules of your work.",
+      "items": {
+        "price": { "title": "You set the price", "text": "Set your per-minute rate once you reach your first earnings goal." },
+        "hours": { "title": "At your pace", "text": "You work within time windows and pick the ones that suit you best." },
+        "verified": { "title": "Verified clients", "text": "Age and identity checked on both sides of the camera." },
+        "payments": { "title": "Paid on time", "text": "Secure payouts, no hidden fees or surprises." },
+        "oneToOne": { "title": "One-on-one, not a showcase", "text": "Private sessions: more intimate and better paid than open cam." },
+        "tiers": { "title": "You grow by tiers", "text": "The more you bill, the better the tier: better share and higher rates." }
+      }
+    },
+    "earn": {
+      "title": "You get paid for your time",
+      "text": "The client pays for the minutes you spend live and you keep your share of every session, with no middlemen between your work and your payout."
+    },
+    "trust": {
+      "label": "With every safeguard",
+      "lines": {
+        "age": "Platform for adults 18+ only, with real verification.",
+        "gdpr": "Your data, protected under GDPR.",
+        "control": "You control what you show and to whom.",
+        "support": "Human support whenever you need it."
+      }
+    },
+    "ctaFinal": {
+      "title": "Ready to start?",
+      "text": "Create your profile today and start getting paid for your time, your way.",
+      "cta": "Sign up on SharemeChat"
     }
   },
   "forStudios": {

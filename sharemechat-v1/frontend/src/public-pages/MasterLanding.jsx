@@ -85,7 +85,7 @@ export default function MasterLanding() {
   const t = (k) => i18n.t(`forStudios.${k}`);
 
   const openRegister = () => openLoginModal({ initialView: 'register-master' });
-  const openRegisterClient = () => openLoginModal({ initialView: 'register-gender' });
+  const openRegisterClient = () => openLoginModal({ initialView: 'register-client' });
   const goLogin = () => openLoginModal();
   const goBlog = () => history.push('/blog');
   const goHowItWorks = () => {

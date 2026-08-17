@@ -81,6 +81,10 @@ export default function Footer() {
           <Link to="/for-studios">For studios</Link>
           <span className="separator">|</span>
 
+          {/* Captacion publica de modelos (Opcion B). */}
+          <Link to="/modelos">Models</Link>
+          <span className="separator">|</span>
+
           {/* Legal es es-only por diseño: App.jsx redirige /en/legal -> /legal.
               Se deja como anchor absoluto a /legal a propósito (NO migrar a <Link>:
               bajo /en generaría /en/legal y forzaría esa redirección con recarga). */}
@@ -116,6 +120,9 @@ export default function Footer() {
               <span className="separator">|</span>
 
               <Link to="/for-studios">For studios</Link>
+              <span className="separator">|</span>
+
+              <Link to="/modelos">Models</Link>
               <span className="separator">|</span>
 
               {/* Legal es es-only por diseño (ver nota en la variante desktop):

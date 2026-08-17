@@ -790,13 +790,13 @@ export const useAppModals = () => {
       hideChrome: true,
       onClose: () => {
         closeModal();
-        openLoginModal({ initialView: 'register-gender' });
+        openLoginModal({ initialView: 'register-client' });
       },
       content: (
         <PublicSignupTeaserModal
           onClose={() => {
             closeModal();
-            openLoginModal({ initialView: 'register-gender' });
+            openLoginModal({ initialView: 'register-client' });
           }}
         />
       ),

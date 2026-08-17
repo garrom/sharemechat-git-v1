@@ -78,7 +78,7 @@ export default function Home() {
   },[location.pathname,loginModalOpened,openLoginModal]);
 
   const goLogin=()=>{openLoginModal();};
-  const goRegister=()=>{openLoginModal({initialView:'register-gender'});};
+  const goRegister=()=>{openLoginModal({initialView:'register-client'});};
   const goHowItWorks=()=>{
     quickMatchingRef.current?.scrollIntoView({behavior:'smooth',block:'start'});
   };
