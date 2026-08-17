@@ -163,9 +163,6 @@ export default function ModelLanding() {
         <div className="sheet">
           {/* HERO */}
           <section className="hero">
-            <div className="brandrow">
-              <span className="chip"><span className="dot" />{t('hero.chip')}</span>
-            </div>
             <div className="herogrid">
               <div>
                 <h1 className="serif"><span className="big">{t('hero.titleAccent')}</span> {t('hero.titleRest')}</h1>
