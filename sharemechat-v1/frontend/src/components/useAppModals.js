@@ -750,7 +750,7 @@ export const useAppModals = () => {
       return;
     }
 
-    const { initialView = 'login' } = options;
+    const { initialView = 'login', audience = null } = options;
     const cameFromLoginRoute = location.pathname === '/login';
 
     const handleClose = () => {
@@ -768,6 +768,7 @@ export const useAppModals = () => {
       content: (
         <LoginModalContent
           initialView={initialView}
+          audience={audience}
           onClose={handleClose}
           onLoginSuccess={closeModal}
         />
@@ -790,13 +791,13 @@ export const useAppModals = () => {
       hideChrome: true,
       onClose: () => {
         closeModal();
-        openLoginModal({ initialView: 'register-gender' });
+        openLoginModal({ initialView: 'register-client' });
       },
       content: (
         <PublicSignupTeaserModal
           onClose={() => {
             closeModal();
-            openLoginModal({ initialView: 'register-gender' });
+            openLoginModal({ initialView: 'register-client' });
           }}
         />
       ),

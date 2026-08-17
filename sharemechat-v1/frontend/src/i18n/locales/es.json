@@ -769,6 +769,7 @@
     },
     "login": {
       "title": "Iniciar sesión",
+      "titleModel": "Login Modelo",
       "status": {
         "successRedirecting": "Acceso correcto. Redirigiendo…"
       },
@@ -874,11 +875,6 @@
         "submit": "Error al cambiar la contraseña"
       }
     },
-    "registerGender": {
-      "title": "Únete como",
-      "male": "Hombre",
-      "female": "Mujer"
-    },
     "google": {
       "orSeparator": "o",
       "errors": {
@@ -923,7 +919,7 @@
       }
     },
     "registerModel": {
-      "title": "Registro",
+      "title": "Registro Modelo",
       "placeholders": {
         "nickname": "Apodo / Nickname",
         "email": "Email",
@@ -3767,6 +3763,10 @@
     "forStudios": {
       "title": "SharemeChat para estudios · Programa Master",
       "description": "Programa Master de SharemeChat: da de alta modelos bajo tu umbrella, escala tramos por volumen agregado y cobra con múltiples métodos de pago."
+    },
+    "modelLanding": {
+      "title": "Trabaja como modelo en SharemeChat",
+      "description": "Videochat 1-a-1 verificado. Cuidamos a las modelos: mayor rentabilidad que otras plataformas, tu ritmo y cobros seguros. Regístrate y empieza."
     }
   },
   "support": {
@@ -3879,6 +3879,53 @@
         "descriptionRequired": "La descripción es obligatoria.",
         "categoryRequired": "Selecciona una categoría."
       }
+    }
+  },
+  "modelLanding": {
+    "hero": {
+      "chip": "Buscamos modelos · plazas abiertas",
+      "titleAccent": "Cuidamos",
+      "titleRest": "a las modelos.",
+      "sub1a": "Obtén mayor rentabilidad",
+      "sub1b": "que otras plataformas.",
+      "sub2a": "Respetamos tu ritmo, sabemos que",
+      "sub2b": "tu tiempo vale.",
+      "leadA": "Un videochat 1-a-1 verificado",
+      "leadB": "con potencial de mucho crecimiento",
+      "cta": "Regístrate ahora",
+      "verified": "Perfil verificado",
+      "imageAlt": "Modelo de SharemeChat"
+    },
+    "benefits": {
+      "label": "Por qué SharemeChat",
+      "kicker": "A tu manera, con respaldo.",
+      "sub": "Un videochat privado uno a uno, con las dos partes verificadas y los cobros bajo control. Tú pones las reglas de tu trabajo.",
+      "items": {
+        "price": { "title": "Tú fijas el precio", "text": "Marca tu tarifa por minuto al alcanzar tu primer objetivo de facturación." },
+        "hours": { "title": "A tu ritmo", "text": "Trabajas por ventanas horarias y eliges las que mejor te encajen." },
+        "verified": { "title": "Clientes verificados", "text": "Edad e identidad comprobadas a ambos lados de la cámara." },
+        "payments": { "title": "Cobros a tiempo", "text": "Pagos seguros, sin comisiones ocultas ni sorpresas." },
+        "oneToOne": { "title": "Uno a uno, no escaparate", "text": "Sesiones privadas: más íntimas y mejor remuneradas que el cam abierto." },
+        "tiers": { "title": "Creces por tramos", "text": "Cuanto más facturas, mejor tramo: mejor reparto y tarifas más altas." }
+      }
+    },
+    "earn": {
+      "title": "Cobras por tu tiempo",
+      "text": "El cliente paga por los minutos que pasáis en directo y te llevas tu parte de cada sesión, sin intermediarios entre tu trabajo y tu cobro."
+    },
+    "trust": {
+      "label": "Con todas las garantías",
+      "lines": {
+        "age": "Plataforma solo para mayores de 18, con verificación real.",
+        "gdpr": "Tus datos, protegidos conforme al RGPD.",
+        "control": "Controlas qué muestras y a quién.",
+        "support": "Soporte humano cuando lo necesites."
+      }
+    },
+    "ctaFinal": {
+      "title": "¿Lista para empezar?",
+      "text": "Crea tu perfil hoy y empieza a cobrar por tu tiempo, a tu manera.",
+      "cta": "Regístrate en SharemeChat"
     }
   },
   "forStudios": {

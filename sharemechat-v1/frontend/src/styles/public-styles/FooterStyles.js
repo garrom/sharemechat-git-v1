@@ -3,13 +3,13 @@ import styled from 'styled-components';
 export const FooterWrap = styled.footer`
   background: #0f0f0f;
   color: #d1d5db;
-  padding: 40px 0 60px;
+  padding: 16px 0 18px;
   text-align: center;
   font-size: 0.85rem;
   margin-top: auto;
 
   @media (max-width: 768px) {
-    padding: 18px 0 calc(22px + var(--bottom-nav-height) + env(safe-area-inset-bottom));
+    padding: 12px 0 calc(14px + var(--bottom-nav-height) + env(safe-area-inset-bottom));
   }
 `;
 
@@ -119,10 +119,10 @@ export const MobileMoreInner = styled.div`
 `;
 
 export const LinksRow = styled.div`
-  margin-top: 22px;
   font-size: 0.83rem;
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: center;
   gap: 6px;
 
@@ -133,6 +133,7 @@ export const LinksRow = styled.div`
 
   a:hover {
     text-decoration: underline;
+    color: #ea1d1d;
   }
 
   span.separator {
@@ -140,7 +141,19 @@ export const LinksRow = styled.div`
   }
 
   @media (max-width: 768px) {
-    display: none;
+    font-size: 0.78rem;
+    gap: 5px;
+  }
+`;
+
+export const Copyright = styled.div`
+  margin-top: 8px;
+  font-size: 0.72rem;
+  opacity: 0.6;
+
+  @media (max-width: 768px) {
+    font-size: 0.7rem;
+    margin-top: 6px;
   }
 `;
 

@@ -11,7 +11,7 @@ import { useSession } from '../components/SessionProvider';
 import {
   StyledForm, StyledInput, StyledButton, StyledLinkButton,
   StyledError, Status, Field, FieldError, FormTitle,
-  CloseBtn as LoginCloseBtn, TabsRow, TabButton, RegisterGenderRow
+  CloseBtn as LoginCloseBtn, TabsRow, TabButton
 } from '../styles/public-styles/LoginStyles';
 
 import Roles from '../constants/Roles';
@@ -22,7 +22,7 @@ import { canAccessBackoffice } from '../utils/backofficeAccess';
 import { buildAdminAppUrl, isAdminSurface, navigateToUrl, resolveHomeUrl } from '../utils/runtimeSurface';
 import { isGoogleOAuthEnabled } from '../config/runtimeEnv';
 
-const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) => {
+const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login', audience = null }) => {
   const [view, setView] = useState(initialView);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -140,11 +140,9 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) =
 
   const isLoginTab = view === 'login';
   const isRegisterTab = view !== 'login';
-  const isRegisterGenderView = view === 'register-gender';
 
   return (
     <StyledForm
-      $wide={isRegisterGenderView}
       onSubmit={view === 'login' ? handleLogin : undefined}
       noValidate
     >
@@ -172,11 +170,17 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) =
           type="button"
           data-active={isRegisterTab}
           onClick={() => {
-            // ADR-056 Fase S5.a.6-fix: si el modal se abrio desde /for-studios
-            // (initialView='register-master'), el tab "Registrate" debe volver
-            // al flujo Master, no al selector gender de cliente/modelo. Preserva
-            // la intencion inicial del visitante.
-            setView(initialView === 'register-master' ? 'register-master' : 'register-gender');
+            // Preserva la intencion de registro del visitante segun de donde
+            // se abrio el modal: /for-studios -> register-master, /modelos ->
+            // register-model. En el resto (home, login), registro de CLIENTE
+            // por defecto (Opcion B: una puerta por rol, sin selector genero).
+            setView(
+              initialView && initialView.startsWith('register-')
+                ? initialView
+                : (audience === 'model' ? 'register-model'
+                  : audience === 'master' ? 'register-master'
+                  : 'register-client')
+            );
           }}
         >
           {i18n.t('auth.tabs.register')}
@@ -185,7 +189,7 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) =
 
       {view === 'login' && (
         <>
-          <FormTitle>{i18n.t('auth.login.title')}</FormTitle>
+          <FormTitle>{audience === 'model' ? i18n.t('auth.login.titleModel') : i18n.t('auth.login.title')}</FormTitle>
 
           {status && <Status role="status">{status}</Status>}
           {error && <StyledError role="alert">{error}</StyledError>}
@@ -252,8 +256,10 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) =
 
           {/* ADR-058: separador + boton Google Sign-In para login. Envolvente
               con flag isGoogleOAuthEnabled (Estrategia 3, 2026-08-07): en PROD
-              se oculta hasta que se publique consent Google Cloud. */}
-          {isGoogleOAuthEnabled() && (
+              se oculta hasta que se publique consent Google Cloud.
+              Google (registro/login) es solo para CLIENTES; en el contexto
+              modelo (audience='model', desde /modelos) no aplica -> se oculta. */}
+          {isGoogleOAuthEnabled() && audience !== 'model' && (
             <>
               <div
                 style={{
@@ -278,22 +284,6 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) =
               />
             </>
           )}
-        </>
-      )}
-
-      {view === 'register-gender' && (
-        <>
-          <FormTitle>{i18n.t('auth.registerGender.title')}</FormTitle>
-
-          <RegisterGenderRow>
-            <StyledButton type="button" onClick={() => setView('register-client')}>
-              {i18n.t('auth.registerGender.male')}
-            </StyledButton>
-
-            <StyledButton type="button" onClick={() => setView('register-model')}>
-              {i18n.t('auth.registerGender.female')}
-            </StyledButton>
-          </RegisterGenderRow>
         </>
       )}
 

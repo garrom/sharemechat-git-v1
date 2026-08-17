@@ -16,6 +16,7 @@ const NavbarBase = ({
   mobileBottomNav = null,
   mobileMenuButtonLabel,
   mobileMenuButtonTitle,
+  navbarBg = null,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -29,7 +30,7 @@ const NavbarBase = ({
 
   return (
     <>
-      <StyledNavbar>
+      <StyledNavbar $bg={navbarBg}>
         <div style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
           <StyledBrand
             href="#"

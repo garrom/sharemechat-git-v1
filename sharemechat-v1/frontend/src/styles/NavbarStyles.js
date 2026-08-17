@@ -31,7 +31,7 @@ export const StyledNavbar = styled.nav`
   align-items: center;
   height: var(--navbar-height-desktop);
   padding: 0 ${space.lg};
-  background: #111418;
+  background: ${p => p.$bg || '#111418'};
   backdrop-filter: none;
   box-shadow: none;
   position: sticky;

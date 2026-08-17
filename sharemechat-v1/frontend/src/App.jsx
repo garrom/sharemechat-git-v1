@@ -27,6 +27,7 @@ import ChangePasswordPage from './pages/subpages/ChangePasswordPage';
 import ModelDocuments from './pages/subpages/ModelDocuments';
 import Home from './public-pages/Home';
 import MasterLanding from './public-pages/MasterLanding';
+import ModelLanding from './public-pages/ModelLanding';
 import MasterModelActivationPage from './public-pages/MasterModelActivationPage';
 import Unauthorized from './public-pages/Unauthorized';
 import ResetPassword from './public-pages/ResetPassword';
@@ -201,6 +202,9 @@ function App() {
 
                     {/* ADR-056 S5.b: captacion publica Master (Opcion A). */}
                     <Route path="/for-studios" component={MasterLanding} />
+                    {/* Captacion publica de MODELOS (Opcion B): landing propia
+                        con CTA a registro modelo directo (register-model). */}
+                    <Route path="/modelos" component={ModelLanding} />
                     <Route path="/master/invite/activate/:token" component={MasterModelActivationPage} />
 
                     <Route path="/client" render={() => (<RequireRole role="CLIENT"><DashboardClient /></RequireRole>)} />
