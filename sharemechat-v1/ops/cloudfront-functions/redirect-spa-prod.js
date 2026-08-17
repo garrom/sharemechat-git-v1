@@ -46,17 +46,34 @@ function handler(event) {
         return request;
     }
 
+    // Landings publicas de captacion con pre-render (Fix 2 SEO, 2026-08-17):
+    // sirven su propio HTML con og:/title/canonical correctos desde
+    // s3://.../<path>/index.html, para que los scrapers sociales (WhatsApp,
+    // Facebook, Twitter — que NO ejecutan JS) muestren la tarjeta correcta al
+    // compartir el enlace, en vez del meta del shell home. Match EXACTO (no
+    // prefijo) para no capturar sub-rutas inexistentes. Misma degradacion que
+    // el blog: si el objeto no existe, S3 (OAC) 403 -> CER -> 200 + /index.html
+    // (shell SPA, CSR). Ver seo-edge-function-analysis-2026-06-21.md.
+    var prerenderedLandings = {
+        '/modelos': 1,
+        '/en/modelos': 1,
+        '/for-studios': 1,
+        '/en/for-studios': 1
+    };
+
     // Reescritura SPA:
     // - /blog/* (paths con pre-render selectivo): anadir /index.html como sufijo.
     //   Permite servir HTML especificos por articulo y listing desde
     //   s3://sharemechat-frontend-prod/blog/<path>/index.html.
     //   Si el objeto no existe, S3 (OAC) devuelve 403 y la distribucion lo
     //   convierte a 200 + /index.html (Custom Error Response) -> shell SPA.
-    //   Ver seo-edge-function-analysis-2026-06-21.md.
+    // - Landings de captacion pre-renderizadas (arriba): mismo sufijo /index.html.
     // - Resto de paths sin extension: shell SPA en /index.html como hasta hoy.
     if (!uri.includes('.')) {
+        var trimmed = uri.replace(/\/$/, '');
         if (uri === '/blog' || uri.startsWith('/blog/')) {
-            var trimmed = uri.replace(/\/$/, '');
+            request.uri = trimmed + '/index.html';
+        } else if (prerenderedLandings[trimmed]) {
             request.uri = trimmed + '/index.html';
         } else {
             request.uri = '/index.html';
