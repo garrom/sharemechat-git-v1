@@ -15,51 +15,6 @@ const dangerBg = '#fbf1f1';
 const dangerBorder = '#dbbcbc';
 const dangerText = '#8f5b5b';
 
-// Card 1 Fase 2: panel inline (no modal) que continúa la página bajo el chat
-// en favoritos, a todo el ancho.
-export const ProfilePanel = styled.section`
-  width: 100%;
-  background: ${surface};
-  color: ${textMain};
-  border-radius: 18px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
-`;
-
-export const PanelHead = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 20px;
-  border-bottom: 1px solid ${border};
-`;
-
-export const PanelTitle = styled.h2`
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  color: ${textMain};
-`;
-
-export const PanelClose = styled.button`
-  border: 0;
-  background: transparent;
-  color: #9aa4ad;
-  font-size: 1.2rem;
-  line-height: 1;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 8px;
-
-  &:hover { background: ${surfaceMuted}; color: ${textMain}; }
-`;
-
-export const PanelInner = styled.div`
-  padding: 22px 24px;
-`;
-
 export const ProfileBody = styled.div`
   display: grid;
   gap: 18px;

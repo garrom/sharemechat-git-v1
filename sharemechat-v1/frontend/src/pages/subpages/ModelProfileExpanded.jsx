@@ -23,11 +23,6 @@ import i18n from '../../i18n';
 import { apiFetch } from '../../config/http';
 import ModalBase from '../../components/ModalBase';
 import {
-  ProfilePanel,
-  PanelHead,
-  PanelTitle,
-  PanelClose,
-  PanelInner,
   ProfileBody,
   ProfileHeaderRow,
   HeaderPhotoFrame,
@@ -91,7 +86,7 @@ const todayIsoDay = () => {
   return d === 0 ? 7 : d;
 };
 
-const ModelProfileExpanded = ({ userId, fallbackNickname, onClose }) => {
+const ModelProfileExpanded = ({ open, userId, fallbackNickname, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState(null);
   const [assets, setAssets] = useState([]);
@@ -100,7 +95,7 @@ const ModelProfileExpanded = ({ userId, fallbackNickname, onClose }) => {
   const [selectedDay, setSelectedDay] = useState(todayIsoDay());
 
   useEffect(() => {
-    if (!userId) return;
+    if (!open || !userId) return;
     let cancelled = false;
     setLoading(true);
     setProfile(null);
@@ -135,7 +130,7 @@ const ModelProfileExpanded = ({ userId, fallbackNickname, onClose }) => {
     })();
 
     return () => { cancelled = true; };
-  }, [userId]);
+  }, [open, userId]);
 
   const handleClose = useCallback(() => {
     setLightbox({ open: false, asset: null });
@@ -350,20 +345,21 @@ const ModelProfileExpanded = ({ userId, fallbackNickname, onClose }) => {
   };
 
   return (
-    <ProfilePanel>
-      <PanelHead>
-        <PanelTitle>
-          {profile?.nickname
-            ? tk('modelProfileExpanded.title', { name: profile.nickname })
-            : tk('modelProfileExpanded.titleDefault')}
-        </PanelTitle>
-        <PanelClose type="button" onClick={handleClose} aria-label={tk('common.close')}>✕</PanelClose>
-      </PanelHead>
-      <PanelInner>
+    <>
+      <ModalBase
+        open={!!open}
+        onClose={handleClose}
+        title={profile?.nickname
+          ? tk('modelProfileExpanded.title', { name: profile.nickname })
+          : tk('modelProfileExpanded.titleDefault')}
+        size="xl"
+        variant="info"
+        actions={[{ label: tk('common.close'), primary: true, onClick: handleClose }]}
+      >
         {renderContent()}
-      </PanelInner>
+      </ModalBase>
 
-      {/* Lightbox apilado para ampliar foto/vídeo individual (sigue siendo overlay). */}
+      {/* Lightbox apilado para ampliar foto/vídeo individual. */}
       <ModalBase
         open={lightbox.open}
         onClose={() => setLightbox({ open: false, asset: null })}
@@ -382,7 +378,7 @@ const ModelProfileExpanded = ({ userId, fallbackNickname, onClose }) => {
           ) : null}
         </LightboxFrame>
       </ModalBase>
-    </ProfilePanel>
+    </>
   );
 };
 

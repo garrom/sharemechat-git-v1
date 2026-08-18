@@ -146,13 +146,9 @@ export const DashboardShell = styled.div`
      - Resto (stats, blog, historial, tickets): min-height 100vh + auto →
        el body scrollea globalmente y el Footer aparece al final sin
        solapar el contenido. Navbar sticky top:0 se queda arriba. */
-  /* Card 1 Fase 2: con un perfil inline abierto en favoritos, el shell pasa
-     a scrollable (la fila de columnas se capa a 85vh en StyledMainContent, el
-     chat conserva su scroller interno → no reintroduce la regresión 2026-08-08)
-     y el panel de perfil fluye debajo a todo el ancho. */
-  height: ${props => (IS_APP_TAB(props['data-tab']) && props['data-profile-open'] !== '1') ? '100vh' : 'auto'};
+  height: ${props => IS_APP_TAB(props['data-tab']) ? '100vh' : 'auto'};
   min-height: 100vh;
-  overflow: ${props => (IS_APP_TAB(props['data-tab']) && props['data-profile-open'] !== '1') ? 'hidden' : 'visible'};
+  overflow: ${props => IS_APP_TAB(props['data-tab']) ? 'hidden' : 'visible'};
   background: var(--c-black);
   min-width: 48px;
 
@@ -211,14 +207,6 @@ export const StyledMainContent = styled.div`
   /* Favoritos puro: columnas pegadas, sin radios ni sombra (look del mock). */
   ${props => props['data-tab'] === 'favoritos' && `
     & > * { border-radius: 0 !important; box-shadow: none !important; }
-  `}
-
-  /* Card 1 Fase 2: perfil inline abierto → la fila de columnas se capa a 85vh
-     (como el mock) para que el chat mantenga su scroller y el panel de perfil
-     asome/fluya debajo con el scroll de la página. */
-  ${props => props['data-profile-open'] === '1' && props['data-tab'] === 'favoritos' && `
-    height: 85vh;
-    flex: 0 0 auto;
   `}
 
   @media (max-width: 768px) {

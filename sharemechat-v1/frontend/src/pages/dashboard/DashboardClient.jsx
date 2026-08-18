@@ -118,25 +118,16 @@ const DashboardClient = () => {
   const [chatInput, setChatInput] = useState('');
   const [activeTab, setActiveTab] = useState('videochat');
 
-  // Card 1 Fase 2: perfil de modelo como panel INLINE a todo el ancho debajo
-  // del chat en favoritos (desktop). Estado elevado desde FavoritesClientList
-  // y desde el botón "Ver perfil completo" del header del chat.
+  // Card 1 Fase 2: perfil de modelo como modal grande en favoritos (desktop).
+  // Estado elevado desde FavoritesClientList (menú "…") y desde el botón
+  // "Ver perfil completo" del header del chat.
   const [profileUser, setProfileUser] = useState(null);
-  const profilePanelRef = useRef(null);
   const openModelProfile = useCallback((u) => {
     if (!u?.id) return;
     setProfileUser({ id: u.id, nickname: u.nickname || null });
   }, []);
   const closeModelProfile = useCallback(() => setProfileUser(null), []);
-  useEffect(() => {
-    if (!profileUser) return;
-    const el = profilePanelRef.current;
-    if (!el) return;
-    requestAnimationFrame(() => {
-      try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
-    });
-  }, [profileUser]);
-  // Al salir de favoritos, cerrar el panel para no arrastrar estado.
+  // Al salir de favoritos, cerrar el modal para no arrastrar estado.
   useEffect(() => {
     if (activeTab !== 'favoritos' && profileUser) setProfileUser(null);
   }, [activeTab, profileUser]);
@@ -3149,7 +3140,7 @@ const DashboardClient = () => {
 
 
   return(
-    <DashboardShell data-tab={activeTab} data-profile-open={(profileUser && activeTab === 'favoritos') ? '1' : undefined}>
+    <DashboardShell data-tab={activeTab}>
       <GlobalBlack/>
       <AuthenticatedConsentModal
         open={consentRequired}
@@ -3178,7 +3169,7 @@ const DashboardClient = () => {
       {/* ========= FIN NAVBAR  ======== */}
 
       {/* ========= INICIO MAIN  ======== */}
-      <StyledMainContent data-tab={activeTab} data-profile-open={(profileUser && activeTab === 'favoritos') ? '1' : undefined}>
+      <StyledMainContent data-tab={activeTab}>
         {activeTab==='videochat'?(
           <VideoChatRandomCliente
             isMobile={isMobile}
@@ -3315,19 +3306,13 @@ const DashboardClient = () => {
       </StyledMainContent>
       {/* ======FIN MAIN ======== */}
 
-      {/* Card 1 Fase 2: perfil de modelo como panel INLINE a todo el ancho,
-          continuación de la página bajo el chat (desktop favoritos). */}
-      {activeTab === 'favoritos' && profileUser && (
-        <div ref={profilePanelRef} style={{ padding: '8px 16px 60px', background: 'var(--c-black)' }}>
-          <div style={{ maxWidth: 1180, margin: '0 auto' }}>
-            <ModelProfileExpanded
-              userId={profileUser.id}
-              fallbackNickname={profileUser.nickname}
-              onClose={closeModelProfile}
-            />
-          </div>
-        </div>
-      )}
+      {/* Card 1 Fase 2: perfil de modelo como modal grande (favoritos desktop). */}
+      <ModelProfileExpanded
+        open={activeTab === 'favoritos' && !!profileUser}
+        userId={profileUser?.id}
+        fallbackNickname={profileUser?.nickname}
+        onClose={closeModelProfile}
+      />
 
       <LivenessChallengeModal
         open={livenessModalOpen}
