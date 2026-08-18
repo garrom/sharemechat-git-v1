@@ -3315,9 +3315,12 @@ const DashboardClient = () => {
         presence={profileUser?.presence}
         onClose={closeModelProfile}
         onStartVideochat={(peerId) => {
+          const nick = profileUser?.nickname || null;
           closeModelProfile();
           if (peerId && typeof handleOpenChatFromFavorites === 'function') {
-            handleOpenChatFromFavorites(peerId);
+            setActiveTab('favoritos');
+            // handleOpenChatFromFavorites espera un objeto {id, nickname}, no un número.
+            handleOpenChatFromFavorites({ id: peerId, nickname: nick });
           }
         }}
       />
