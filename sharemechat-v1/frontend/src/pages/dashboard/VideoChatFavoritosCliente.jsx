@@ -738,7 +738,7 @@ export default function VideoChatFavoritosCliente(props){
                                     la cabecera de la columna de chat. */}
                                 {/* Card 1 Fase B: like a la modelo abajo-derecha, sobre el vídeo (encima de la barra). */}
                                 {callPeerId && (
-                                  <div style={{ position:'absolute', right:20, bottom:78, zIndex:6 }}>
+                                  <div style={{ position:'absolute', right:20, bottom:100, zIndex:6 }}>
                                     <LikeHeart modelUserId={callPeerId} />
                                   </div>
                                 )}

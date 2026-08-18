@@ -1105,7 +1105,7 @@ export default function VideoChatRandomCliente(props) {
                             de la columna de chat como botón normal. */}
                         {/* Card 1 Fase B: like a la modelo abajo-derecha, sobre el vídeo remoto (encima de la barra). */}
                         {randomModelId && (
-                          <div style={{ position: 'absolute', right: 20, bottom: 78, zIndex: 6 }}>
+                          <div style={{ position: 'absolute', right: 20, bottom: 100, zIndex: 6 }}>
                             <LikeHeart modelUserId={randomModelId} />
                           </div>
                         )}
