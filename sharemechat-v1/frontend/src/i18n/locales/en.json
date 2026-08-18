@@ -509,7 +509,8 @@
       "sex": "Sex",
       "height": "Height",
       "butt": "Butt size",
-      "body": "Body"
+      "body": "Body",
+      "languages": "Languages"
     },
     "sections": {
       "photos": "Photos",
@@ -517,6 +518,7 @@
       "data": "Details",
       "availability": "Usually online"
     },
+    "startVideochat": "Start video chat →",
     "sexValue": "Female",
     "bustValues": { "SMALL": "Small", "MEDIUM": "Medium", "LARGE": "Large", "XLARGE": "Extra large" },
     "buttValues": { "SMALL": "Small", "MEDIUM": "Medium", "LARGE": "Large", "XLARGE": "Extra large" },

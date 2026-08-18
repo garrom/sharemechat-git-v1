@@ -365,7 +365,7 @@ export default function VideoChatFavoritosCliente(props){
           {onViewProfile && centerChatPeerId && (
             <button
               type="button"
-              onClick={() => onViewProfile({ id: centerChatPeerId, nickname: centerChatPeerName })}
+              onClick={() => onViewProfile({ id: centerChatPeerId, nickname: centerChatPeerName, presence: peerPresenceNorm })}
               style={{ fontSize: 12.5, color: '#fff', border: '1px solid rgba(255,255,255,0.5)', borderRadius: 999, padding: '5px 12px', cursor: 'pointer', background: 'rgba(255,255,255,0.10)', whiteSpace: 'nowrap' }}
             >
               {t('dashboardClient.videoChatFavoritosCliente.actions.viewProfile', 'Ver perfil completo ↓')}

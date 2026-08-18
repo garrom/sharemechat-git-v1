@@ -23,13 +23,20 @@ import i18n from '../../i18n';
 import { apiFetch } from '../../config/http';
 import ModalBase from '../../components/ModalBase';
 import {
+  ProfilePanel,
+  PanelHead,
+  PanelTitle,
+  PanelClose,
+  PanelInner,
   ProfileBody,
   ProfileHeaderRow,
   HeaderPhotoFrame,
   HeaderEmptyPhoto,
   HeaderInfo,
   Nickname,
+  OnlineBadge,
   RateBadge,
+  CtaButton,
   Biography,
   InterestsLine,
   InterestsLabel,
@@ -86,7 +93,7 @@ const todayIsoDay = () => {
   return d === 0 ? 7 : d;
 };
 
-const ModelProfileExpanded = ({ open, userId, fallbackNickname, onClose }) => {
+const ModelProfileExpanded = ({ open, userId, fallbackNickname, presence, onClose, onStartVideochat }) => {
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState(null);
   const [assets, setAssets] = useState([]);
@@ -150,6 +157,12 @@ const ModelProfileExpanded = ({ open, userId, fallbackNickname, onClose }) => {
   const displayedNickname = profile?.nickname || fallbackNickname || tk('modelProfileExpanded.fallbackNickname');
   const languages = Array.isArray(profile?.languages) ? profile.languages : [];
 
+  const presenceNorm = String(presence || '').toLowerCase();
+  const presenceOnline = presenceNorm === 'online';
+  const presenceLabel = presenceNorm
+    ? tk(`common.presence.${presenceNorm}`, { defaultValue: presenceNorm })
+    : null;
+
   const rateNum = profile?.chosenRateEurPerMin != null ? Number(profile.chosenRateEurPerMin) : null;
   const rateLabel = rateNum != null && !Number.isNaN(rateNum)
     ? tk('common.ratePerMin', { rate: rateNum.toFixed(2) })
@@ -195,8 +208,11 @@ const ModelProfileExpanded = ({ open, userId, fallbackNickname, onClose }) => {
       </HeaderPhotoFrame>
 
       <HeaderInfo>
-        <Nickname>{displayedNickname}</Nickname>
-        {rateLabel && <RateBadge>{rateLabel}</RateBadge>}
+        <Nickname>
+          {displayedNickname}
+          {presenceLabel && <OnlineBadge $online={presenceOnline}>{presenceLabel}</OnlineBadge>}
+        </Nickname>
+        {rateLabel && <RateBadge>💎 {rateLabel}</RateBadge>}
         {profile?.biography && <Biography>{profile.biography}</Biography>}
         {profile?.interests && (
           <InterestsLine>
@@ -205,13 +221,21 @@ const ModelProfileExpanded = ({ open, userId, fallbackNickname, onClose }) => {
           </InterestsLine>
         )}
         {languages.length > 0 && (
-          <LanguageChips>
-            {languages.map((l, i) => (
-              <LanguageChip key={`${l.langCode}-${i}`} $primary={!!l.primary} title={l.level || undefined}>
-                {languageLabel(l.langCode)}
-              </LanguageChip>
-            ))}
-          </LanguageChips>
+          <>
+            <InterestsLabel>{tk('modelProfileExpanded.labels.languages')}</InterestsLabel>
+            <LanguageChips>
+              {languages.map((l, i) => (
+                <LanguageChip key={`${l.langCode}-${i}`} $primary={!!l.primary} title={l.level || undefined}>
+                  {languageLabel(l.langCode)}
+                </LanguageChip>
+              ))}
+            </LanguageChips>
+          </>
+        )}
+        {typeof onStartVideochat === 'function' && (
+          <CtaButton type="button" onClick={() => onStartVideochat(userId)}>
+            {tk('modelProfileExpanded.startVideochat')}
+          </CtaButton>
         )}
       </HeaderInfo>
     </ProfileHeaderRow>
@@ -346,17 +370,20 @@ const ModelProfileExpanded = ({ open, userId, fallbackNickname, onClose }) => {
 
   return (
     <>
-      <ModalBase
-        open={!!open}
-        onClose={handleClose}
-        title={profile?.nickname
-          ? tk('modelProfileExpanded.title', { name: profile.nickname })
-          : tk('modelProfileExpanded.titleDefault')}
-        size="xl"
-        variant="info"
-        actions={[{ label: tk('common.close'), primary: true, onClick: handleClose }]}
-      >
-        {renderContent()}
+      <ModalBase open={!!open} onClose={handleClose} title="" size="xl" variant="info" hideChrome>
+        <ProfilePanel>
+          <PanelHead>
+            <PanelTitle>
+              {profile?.nickname
+                ? tk('modelProfileExpanded.title', { name: profile.nickname })
+                : tk('modelProfileExpanded.titleDefault')}
+            </PanelTitle>
+            <PanelClose type="button" onClick={handleClose} aria-label={tk('common.close')}>✕</PanelClose>
+          </PanelHead>
+          <PanelInner>
+            {renderContent()}
+          </PanelInner>
+        </ProfilePanel>
       </ModalBase>
 
       {/* Lightbox apilado para ampliar foto/vídeo individual. */}

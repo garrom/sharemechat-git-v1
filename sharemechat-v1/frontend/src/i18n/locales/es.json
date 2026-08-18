@@ -509,7 +509,8 @@
       "sex": "Sexo",
       "height": "Altura",
       "butt": "Talla de trasero",
-      "body": "Cuerpo"
+      "body": "Cuerpo",
+      "languages": "Idiomas"
     },
     "sections": {
       "photos": "Fotos",
@@ -517,6 +518,7 @@
       "data": "Datos",
       "availability": "Suele estar en línea"
     },
+    "startVideochat": "Iniciar videochat →",
     "sexValue": "Mujer",
     "bustValues": { "SMALL": "Pequeña", "MEDIUM": "Media", "LARGE": "Grande", "XLARGE": "Muy grande" },
     "buttValues": { "SMALL": "Pequeño", "MEDIUM": "Medio", "LARGE": "Grande", "XLARGE": "Muy grande" },

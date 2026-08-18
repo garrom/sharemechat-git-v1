@@ -124,7 +124,7 @@ const DashboardClient = () => {
   const [profileUser, setProfileUser] = useState(null);
   const openModelProfile = useCallback((u) => {
     if (!u?.id) return;
-    setProfileUser({ id: u.id, nickname: u.nickname || null });
+    setProfileUser({ id: u.id, nickname: u.nickname || null, presence: u.presence || null });
   }, []);
   const closeModelProfile = useCallback(() => setProfileUser(null), []);
   // Al salir de favoritos, cerrar el modal para no arrastrar estado.
@@ -3311,7 +3311,14 @@ const DashboardClient = () => {
         open={activeTab === 'favoritos' && !!profileUser}
         userId={profileUser?.id}
         fallbackNickname={profileUser?.nickname}
+        presence={profileUser?.presence}
         onClose={closeModelProfile}
+        onStartVideochat={(peerId) => {
+          closeModelProfile();
+          if (peerId && typeof handleOpenChatFromFavorites === 'function') {
+            handleOpenChatFromFavorites(peerId);
+          }
+        }}
       />
 
       <LivenessChallengeModal
