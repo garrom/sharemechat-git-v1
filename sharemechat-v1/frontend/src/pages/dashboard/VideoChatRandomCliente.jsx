@@ -4,7 +4,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import BlurredPreview from '../../components/BlurredPreview';
 import {
   faUserPlus,
-  faHeart,
   faVideo,
   faPhoneSlash,
   faForward,
@@ -726,7 +725,7 @@ export default function VideoChatRandomCliente(props) {
           aria-label={t('common.actions.addToFavorites')}
           title={t('common.actions.addToFavorites')}
         >
-          <FontAwesomeIcon icon={faHeart} />
+          <FontAwesomeIcon icon={faUserPlus} />
         </BtnCallLight>
       </StyledCallOverlayControls>
 

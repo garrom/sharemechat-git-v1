@@ -14,7 +14,7 @@ import { pricingApi } from '../../api/pricingApi';
 import BlogContent from '../blog/BlogContent';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartLine } from '@fortawesome/free-solid-svg-icons';
-import { faHeart, faVideo, faFilm, faArrowLeft, faShieldHalved } from '@fortawesome/free-solid-svg-icons';
+import { faVideo, faFilm, faArrowLeft, faShieldHalved } from '@fortawesome/free-solid-svg-icons';
 import {
   DashboardShell,StyledIconWrapper,StyledMainContent,
   StyledLeftColumn,StyledCenter,StyledRightColumn,

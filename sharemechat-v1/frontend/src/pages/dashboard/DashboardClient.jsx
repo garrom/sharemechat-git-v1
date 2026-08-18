@@ -17,7 +17,7 @@ import BlogContent from '../blog/BlogContent';
 import ClientHistoryPanel from '../subpages/ClientHistoryPanel';
 import ClientTicketsPanel from '../subpages/ClientTicketsPanel';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHeart, faVideo, faFilm, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import { faVideo, faFilm, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import {
   DashboardShell,StyledIconWrapper,StyledMainContent,
   StyledLeftColumn,StyledCenter,StyledRightColumn,
