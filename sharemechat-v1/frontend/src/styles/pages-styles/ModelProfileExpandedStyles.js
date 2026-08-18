@@ -274,26 +274,6 @@ export const InterestChip = styled.span`
   color: #e6c3c8;
 `;
 
-export const CtaButton = styled.button`
-  margin-top: 6px;
-  justify-self: start;
-  align-self: flex-start;
-  width: fit-content;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: ${red};
-  color: #fff;
-  border: 0;
-  border-radius: 999px;
-  padding: 10px 22px;
-  font-size: 0.88rem;
-  font-weight: 700;
-  cursor: pointer;
-
-  &:hover { filter: brightness(1.08); }
-`;
-
 export const SectionDivider = styled.hr`
   margin: 0;
   border: 0;

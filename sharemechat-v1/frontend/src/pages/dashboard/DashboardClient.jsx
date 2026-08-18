@@ -3314,15 +3314,6 @@ const DashboardClient = () => {
         fallbackNickname={profileUser?.nickname}
         presence={profileUser?.presence}
         onClose={closeModelProfile}
-        onStartVideochat={(peerId) => {
-          const nick = profileUser?.nickname || null;
-          closeModelProfile();
-          if (peerId && typeof handleOpenChatFromFavorites === 'function') {
-            setActiveTab('favoritos');
-            // handleOpenChatFromFavorites espera un objeto {id, nickname}, no un número.
-            handleOpenChatFromFavorites({ id: peerId, nickname: nick });
-          }
-        }}
       />
 
       <LivenessChallengeModal

@@ -41,7 +41,6 @@ import {
   Nickname,
   OnlineBadge,
   RateBadge,
-  CtaButton,
   Biography,
   InterestsLine,
   InterestsLabel,
@@ -99,7 +98,7 @@ const todayIsoDay = () => {
   return d === 0 ? 7 : d;
 };
 
-const ModelProfileExpanded = ({ open, userId, fallbackNickname, presence, onClose, onStartVideochat }) => {
+const ModelProfileExpanded = ({ open, userId, fallbackNickname, presence, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState(null);
   const [assets, setAssets] = useState([]);
@@ -296,11 +295,6 @@ const ModelProfileExpanded = ({ open, userId, fallbackNickname, presence, onClos
               ))}
             </LanguageChips>
           </>
-        )}
-        {typeof onStartVideochat === 'function' && (
-          <CtaButton type="button" onClick={() => onStartVideochat(userId)}>
-            {tk('modelProfileExpanded.startVideochat')}
-          </CtaButton>
         )}
       </HeaderInfo>
     </ProfileHeaderRow>
