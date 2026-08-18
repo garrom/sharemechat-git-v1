@@ -519,6 +519,18 @@
       "availability": "Usually online"
     },
     "startVideochat": "Start video chat →",
+    "likes": {
+      "like": "Like",
+      "unlike": "Unlike",
+      "badgeNone": "No badge yet · be the first"
+    },
+    "badgeValues": {
+      "TIARA": "Tiara",
+      "DIADEM": "Diadem",
+      "CROWN": "Crown",
+      "GEMS_CROWN": "Jewelled Crown",
+      "IMPERIAL": "Imperial"
+    },
     "sexValue": "Female",
     "bustValues": { "SMALL": "Small", "MEDIUM": "Medium", "LARGE": "Large", "XLARGE": "Extra large" },
     "buttValues": { "SMALL": "Small", "MEDIUM": "Medium", "LARGE": "Large", "XLARGE": "Extra large" },

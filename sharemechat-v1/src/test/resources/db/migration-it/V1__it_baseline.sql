@@ -2208,6 +2208,26 @@ LOCK TABLES `model_presence_samples` WRITE;
 /*!40000 ALTER TABLE `model_presence_samples` DISABLE KEYS */;
 /*!40000 ALTER TABLE `model_presence_samples` ENABLE KEYS */;
 UNLOCK TABLES;
+DROP TABLE IF EXISTS `model_likes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `model_likes` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `client_user_id` bigint NOT NULL,
+  `model_user_id` bigint NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_model_likes_pair` (`client_user_id`,`model_user_id`),
+  KEY `idx_model_likes_model` (`model_user_id`),
+  CONSTRAINT `fk_model_likes_client` FOREIGN KEY (`client_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_model_likes_model` FOREIGN KEY (`model_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+LOCK TABLES `model_likes` WRITE;
+/*!40000 ALTER TABLE `model_likes` DISABLE KEYS */;
+/*!40000 ALTER TABLE `model_likes` ENABLE KEYS */;
+UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;

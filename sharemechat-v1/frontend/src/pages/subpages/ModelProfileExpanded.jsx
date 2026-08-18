@@ -22,7 +22,12 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import i18n from '../../i18n';
 import { apiFetch } from '../../config/http';
 import ModalBase from '../../components/ModalBase';
+import RoyaltyBadge from '../../components/RoyaltyBadge';
 import {
+  LikesRow,
+  LikeButton,
+  RankChip,
+  RankNone,
   ProfilePanel,
   PanelHead,
   PanelTitle,
@@ -100,6 +105,8 @@ const ModelProfileExpanded = ({ open, userId, fallbackNickname, presence, onClos
   const [unavailable, setUnavailable] = useState(false);
   const [lightbox, setLightbox] = useState({ open: false, asset: null });
   const [selectedDay, setSelectedDay] = useState(todayIsoDay());
+  const [likeState, setLikeState] = useState(null);
+  const [likeBusy, setLikeBusy] = useState(false);
 
   useEffect(() => {
     if (!open || !userId) return;
@@ -109,11 +116,13 @@ const ModelProfileExpanded = ({ open, userId, fallbackNickname, presence, onClos
     setAssets([]);
     setUnavailable(false);
     setSelectedDay(todayIsoDay());
+    setLikeState(null);
 
     (async () => {
       let profileFailed = false;
       let p = null;
       let a = [];
+      let likes = null;
       try {
         p = await apiFetch(`/models/${userId}/public-profile`);
       } catch (e) {
@@ -125,6 +134,11 @@ const ModelProfileExpanded = ({ open, userId, fallbackNickname, presence, onClos
       } catch (e) {
         a = [];
       }
+      try {
+        likes = await apiFetch(`/models/${userId}/likes`);
+      } catch (e) {
+        likes = null;
+      }
       if (cancelled) return;
 
       if (profileFailed) {
@@ -132,6 +146,7 @@ const ModelProfileExpanded = ({ open, userId, fallbackNickname, presence, onClos
       } else {
         setProfile(p);
         setAssets(a);
+        setLikeState(likes);
       }
       setLoading(false);
     })();
@@ -143,6 +158,19 @@ const ModelProfileExpanded = ({ open, userId, fallbackNickname, presence, onClos
     setLightbox({ open: false, asset: null });
     if (typeof onClose === 'function') onClose();
   }, [onClose]);
+
+  const handleToggleLike = useCallback(async () => {
+    if (!userId || likeBusy) return;
+    setLikeBusy(true);
+    try {
+      const res = await apiFetch(`/models/${userId}/likes/toggle`, { method: 'POST' });
+      setLikeState(res);
+    } catch (e) {
+      // silencioso: si falla, el estado no cambia
+    } finally {
+      setLikeBusy(false);
+    }
+  }, [userId, likeBusy]);
 
   // ----- Derivaciones -----
   const picAssets = assets.filter((a) => a.assetType === ASSET_PIC);
@@ -194,6 +222,36 @@ const ModelProfileExpanded = ({ open, userId, fallbackNickname, presence, onClos
   };
 
   // ----- Bloques de render -----
+  // Card 1 Fase 3: likes + insignia (donde el mock tenía las estrellas).
+  const renderLikes = () => {
+    const count = likeState?.count ?? 0;
+    const liked = !!likeState?.hasLiked;
+    const badge = likeState?.badgeCode || null;
+    const badgeName = badge ? tk(`modelProfileExpanded.badgeValues.${badge}`, { defaultValue: badge }) : null;
+    return (
+      <LikesRow>
+        <LikeButton
+          type="button"
+          $on={liked}
+          disabled={likeBusy}
+          onClick={handleToggleLike}
+          aria-label={tk(liked ? 'modelProfileExpanded.likes.unlike' : 'modelProfileExpanded.likes.like')}
+        >
+          <span className="heart">{liked ? '❤' : '🤍'}</span>
+          {Number(count).toLocaleString('es-ES')}
+        </LikeButton>
+        {badge ? (
+          <RankChip>
+            <RoyaltyBadge code={badge} size={24} title={badgeName} />
+            {badgeName}
+          </RankChip>
+        ) : (
+          <RankNone>{tk('modelProfileExpanded.likes.badgeNone')}</RankNone>
+        )}
+      </LikesRow>
+    );
+  };
+
   const renderHeader = () => (
     <ProfileHeaderRow>
       <HeaderPhotoFrame
@@ -212,6 +270,7 @@ const ModelProfileExpanded = ({ open, userId, fallbackNickname, presence, onClos
           {displayedNickname}
           {presenceLabel && <OnlineBadge $online={presenceOnline}>{presenceLabel}</OnlineBadge>}
         </Nickname>
+        {renderLikes()}
         {rateLabel && <RateBadge>💎 {rateLabel}</RateBadge>}
         {profile?.biography && <Biography>{profile.biography}</Biography>}
         {profile?.interests && (

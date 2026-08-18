@@ -167,6 +167,49 @@ export const RateBadge = styled.span`
   width: fit-content;
 `;
 
+// ---- Card 1 Fase 3: bloque de likes + insignia ----
+export const LikesRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+`;
+
+export const LikeButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid ${({ $on }) => ($on ? 'rgba(234,29,29,0.5)' : lineSoft)};
+  background: ${({ $on }) => ($on ? 'rgba(234,29,29,0.14)' : surfaceMuted)};
+  color: ${textMain};
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:disabled { opacity: 0.6; cursor: default; }
+  .heart { color: ${red}; font-size: 1rem; line-height: 1; }
+`;
+
+export const RankChip = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: ${surfaceMuted};
+  border: 1px solid ${line};
+  border-radius: 999px;
+  padding: 5px 12px 5px 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: ${textMain};
+`;
+
+export const RankNone = styled.span`
+  font-size: 0.82rem;
+  color: ${textMuted};
+`;
+
 export const Biography = styled.p`
   margin: 0;
   font-size: 0.98rem;
