@@ -154,6 +154,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/models/*/assets").hasAnyRole("USER", "CLIENT", "MODEL", "ADMIN")
                         // Perfil público del modelo (modal "Ver perfil completo" desde favoritos del cliente)
                         .requestMatchers(HttpMethod.GET, "/api/models/*/public-profile").hasAnyRole("USER", "CLIENT", "MODEL", "ADMIN")
+                        // Card 1 Fase 3: likes cliente→modelo. El que da like es CLIENT/USER,
+                        // no MODEL, así que hay que permitirlo ANTES del catch-all /api/models/** (rol MODEL).
+                        .requestMatchers(HttpMethod.GET, "/api/models/*/likes").hasAnyRole("USER", "CLIENT", "MODEL", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/models/*/likes/toggle").hasAnyRole("USER", "CLIENT", "MODEL", "ADMIN")
                         // Endpoints del propio modelo (USER onboarding + MODEL)
                         .requestMatchers("/api/me/assets/**").hasAnyRole("USER", "MODEL")
                         .requestMatchers(HttpMethod.GET, "/api/me/assets").hasAnyRole("USER", "MODEL")

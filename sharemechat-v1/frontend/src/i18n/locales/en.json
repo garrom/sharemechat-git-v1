@@ -519,6 +519,7 @@
       "availability": "Usually online"
     },
     "likes": {
+      "label": "Like",
       "like": "Like",
       "unlike": "Unlike",
       "badgeNone": "No badge yet · be the first"

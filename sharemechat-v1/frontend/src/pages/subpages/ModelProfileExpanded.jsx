@@ -238,7 +238,7 @@ const ModelProfileExpanded = ({ open, userId, fallbackNickname, presence, onClos
           aria-label={tk(liked ? 'modelProfileExpanded.likes.unlike' : 'modelProfileExpanded.likes.like')}
         >
           <span className="heart">{liked ? '❤' : '🤍'}</span>
-          {Number(count).toLocaleString('es-ES')}
+          {tk('modelProfileExpanded.likes.label')} · {Number(count).toLocaleString('es-ES')}
         </LikeButton>
         {badge ? (
           <RankChip>
