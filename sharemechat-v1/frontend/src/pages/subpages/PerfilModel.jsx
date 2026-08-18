@@ -61,6 +61,9 @@ import {
 
 import MyAssetsManager from './MyAssetsManager';
 import PreferredChatLangCard from '../../components/PreferredChatLangCard';
+import ModelReputationCard from '../../components/ModelReputationCard';
+import ModelRankingModal from '../../components/ModelRankingModal';
+import ModelProfileExpanded from './ModelProfileExpanded';
 
 const PerfilModel = () => {
   const t = (key, options) => i18n.t(key, options);
@@ -73,6 +76,10 @@ const PerfilModel = () => {
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
   const [userId, setUserId] = useState(null);
+
+  // Card 1 Fase C: ranking "Top modelos" + perfil de una modelo del ranking.
+  const [rankingOpen, setRankingOpen] = useState(false);
+  const [rankProfileUser, setRankProfileUser] = useState(null);
 
   const [form, setForm] = useState({
     email: '',
@@ -580,6 +587,9 @@ const PerfilModel = () => {
 
             {/* COLUMNA DERECHA: SEGURIDAD Y CUENTA */}
             <ProfileColSide>
+              {/* Card 1 Fase C: reputación (likes + insignia + progreso) + acceso al ranking. */}
+              <ModelReputationCard onOpenRanking={() => setRankingOpen(true)} />
+
               {/* pending-hardening §5.3 (2026-08-08): selector idioma
                   preferido para chat P2P. Se auto-oculta si la feature de
                   traduccion no esta habilitada en el entorno. */}
@@ -613,6 +623,19 @@ const PerfilModel = () => {
           </ProfileGrid>
         )}
       </ProfileMain>
+
+      {/* Card 1 Fase C: ranking Top modelos + perfil de una modelo del ranking. */}
+      <ModelRankingModal
+        open={rankingOpen}
+        onClose={() => setRankingOpen(false)}
+        onOpenProfile={(u) => { setRankingOpen(false); setRankProfileUser(u); }}
+      />
+      <ModelProfileExpanded
+        open={!!rankProfileUser}
+        userId={rankProfileUser?.id}
+        fallbackNickname={rankProfileUser?.nickname}
+        onClose={() => setRankProfileUser(null)}
+      />
     </PageShell>
   );
 };

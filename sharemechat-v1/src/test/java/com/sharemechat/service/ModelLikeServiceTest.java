@@ -2,6 +2,8 @@ package com.sharemechat.service;
 
 import com.sharemechat.constants.Constants;
 import com.sharemechat.dto.ModelLikeStateDTO;
+import com.sharemechat.dto.ModelRankingDTO;
+import com.sharemechat.dto.ModelReputationDTO;
 import com.sharemechat.entity.ModelLike;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.ModelLikeRepository;
@@ -13,6 +15,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -104,6 +107,68 @@ class ModelLikeServiceTest {
     @Test
     void toggle_rechazaSelfLike() {
         assertThrows(IllegalArgumentException.class, () -> service.toggle(1L, 1L));
+    }
+
+    @Test
+    void nextBadge_escalera() {
+        assertEquals("TIARA", ModelLikeService.nextBadge(0).code());
+        assertEquals("DIADEM", ModelLikeService.nextBadge(10).code());
+        assertEquals("CROWN", ModelLikeService.nextBadge(25).code());
+        assertEquals("IMPERIAL", ModelLikeService.nextBadge(240).code());
+        assertNull(ModelLikeService.nextBadge(250));
+        assertNull(ModelLikeService.nextBadge(1000));
+    }
+
+    @Test
+    void getReputation_calculaProgreso() {
+        when(likeRepo.countByModelUserId(5L)).thenReturn(12L);
+        ModelReputationDTO r = service.getReputation(5L);
+        assertEquals(12L, r.count());
+        assertEquals("TIARA", r.badgeCode());
+        assertEquals("DIADEM", r.nextBadgeCode());
+        assertEquals(25L, r.nextThreshold());
+        assertEquals(13L, r.likesToNext());
+    }
+
+    @Test
+    void getReputation_maximoSinSiguiente() {
+        when(likeRepo.countByModelUserId(5L)).thenReturn(300L);
+        ModelReputationDTO r = service.getReputation(5L);
+        assertEquals("IMPERIAL", r.badgeCode());
+        assertNull(r.nextBadgeCode());
+        assertNull(r.likesToNext());
+    }
+
+    @Test
+    void getRanking_entriesYSelfFuera() {
+        when(likeRepo.topByLikes(any())).thenReturn(java.util.List.<Object[]>of(
+                new Object[]{5L, 100L}, new Object[]{6L, 50L}));
+        User u5 = model(5L); u5.setNickname("Guarris");
+        User u6 = model(6L); u6.setNickname("Lucia");
+        when(userRepo.findAllById(any())).thenReturn(java.util.List.of(u5, u6));
+        when(likeRepo.countByModelUserId(9L)).thenReturn(3L);
+        when(likeRepo.countModelsAboveLikes(3L)).thenReturn(2L);
+        User u9 = model(9L); u9.setNickname("Maria");
+        when(userRepo.findById(9L)).thenReturn(Optional.of(u9));
+
+        ModelRankingDTO r = service.getRanking(9L, 30);
+
+        assertEquals(2, r.entries().size());
+        assertEquals(1, r.entries().get(0).rank());
+        assertEquals("Guarris", r.entries().get(0).nickname());
+        assertEquals("GEMS_CROWN", r.entries().get(0).badgeCode());
+        assertNotNull(r.self());
+        assertEquals(3, r.self().rank());
+        assertEquals("Maria", r.self().nickname());
+    }
+
+    @Test
+    void getRanking_selfNullSiEnTop() {
+        when(likeRepo.topByLikes(any())).thenReturn(java.util.List.<Object[]>of(new Object[]{5L, 100L}));
+        User u5 = model(5L); u5.setNickname("Guarris");
+        when(userRepo.findAllById(any())).thenReturn(java.util.List.of(u5));
+        ModelRankingDTO r = service.getRanking(5L, 30);
+        assertNull(r.self());
     }
 
     @Test

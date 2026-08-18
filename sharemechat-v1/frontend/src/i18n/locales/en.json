@@ -566,6 +566,21 @@
       "RO": "Romanian"
     }
   },
+  "modelReputation": {
+    "title": "Your reputation",
+    "noBadge": "No badge yet",
+    "toNext": "{{n}} more to reach",
+    "maxed": "You're at the top badge!",
+    "viewRanking": "View Top models"
+  },
+  "modelRanking": {
+    "title": "Top models",
+    "loading": "Loading ranking…",
+    "error": "Could not load the ranking.",
+    "empty": "No likes on the platform yet. Be the first!",
+    "noBadge": "no badge",
+    "selfNote": "Even outside the Top 30, you always see your position. Get more likes to climb."
+  },
   "checkout": {
     "success": {
       "title": "Confirming your payment",

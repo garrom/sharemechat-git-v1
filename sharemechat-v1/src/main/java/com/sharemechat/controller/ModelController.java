@@ -65,6 +65,8 @@ public class ModelController {
     private final MasterModelSplitRepository masterModelSplitRepository;
     private final MasterRepository masterRepository;
     private final UserRepository userRepository;
+    // Card 1 Fase C: reputación propia + ranking de la modelo.
+    private final com.sharemechat.service.ModelLikeService modelLikeService;
     private static final Logger log = LoggerFactory.getLogger(ModelController.class);
 
     public ModelController(ModelService modelService,
@@ -78,7 +80,8 @@ public class ModelController {
                            ModelRepository modelRepository,
                            MasterModelSplitRepository masterModelSplitRepository,
                            MasterRepository masterRepository,
-                           UserRepository userRepository) {
+                           UserRepository userRepository,
+                           com.sharemechat.service.ModelLikeService modelLikeService) {
         this.modelService = modelService;
         this.userService = userService;
         this.modelDocumentRepository = modelDocumentRepository;
@@ -91,6 +94,30 @@ public class ModelController {
         this.masterModelSplitRepository = masterModelSplitRepository;
         this.masterRepository = masterRepository;
         this.userRepository = userRepository;
+        this.modelLikeService = modelLikeService;
+    }
+
+    // ==========================
+    // Card 1 Fase C: reputación propia + ranking (solo MODEL)
+    // ==========================
+    @GetMapping("/me/reputation")
+    public ResponseEntity<?> getMyReputation(Authentication authentication) {
+        User user = requireUser(authentication);
+        if (user == null) return unauth();
+        if (!Constants.Roles.MODEL.equals(user.getRole())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Requiere rol MODEL");
+        }
+        return ResponseEntity.ok(modelLikeService.getReputation(user.getId()));
+    }
+
+    @GetMapping("/ranking")
+    public ResponseEntity<?> getModelsRanking(Authentication authentication) {
+        User user = requireUser(authentication);
+        if (user == null) return unauth();
+        if (!Constants.Roles.MODEL.equals(user.getRole())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Requiere rol MODEL");
+        }
+        return ResponseEntity.ok(modelLikeService.getRanking(user.getId(), 30));
     }
 
     // ==========================

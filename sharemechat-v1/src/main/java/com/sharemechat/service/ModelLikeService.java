@@ -2,15 +2,21 @@ package com.sharemechat.service;
 
 import com.sharemechat.constants.Constants;
 import com.sharemechat.dto.ModelLikeStateDTO;
+import com.sharemechat.dto.ModelRankingDTO;
+import com.sharemechat.dto.ModelReputationDTO;
 import com.sharemechat.entity.ModelLike;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.ModelLikeRepository;
 import com.sharemechat.repository.UserRepository;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Card 1 Fase 3: likes cliente→modelo + insignias por umbral.
@@ -69,6 +75,67 @@ public class ModelLikeService {
             }
         }
         return getState(clientId, modelId);
+    }
+
+    // =====================================================================
+    // Card 1 Fase C: reputación propia + ranking
+    // =====================================================================
+
+    /** Reputación de la modelo: sus likes + insignia + progreso al siguiente escalón. */
+    @Transactional(readOnly = true)
+    public ModelReputationDTO getReputation(Long modelId) {
+        long count = modelLikeRepository.countByModelUserId(modelId);
+        String badge = resolveBadge(count);
+        // Siguiente escalón = menor umbral estrictamente mayor que count.
+        Badge next = nextBadge(count);
+        return new ModelReputationDTO(
+                count,
+                badge,
+                next != null ? next.code() : null,
+                next != null ? next.threshold() : null,
+                next != null ? (next.threshold() - count) : null);
+    }
+
+    /** Ranking Top-N por likes + la posición de la modelo que consulta (si queda fuera). */
+    @Transactional(readOnly = true)
+    public ModelRankingDTO getRanking(Long viewerId, int limit) {
+        List<Object[]> rows = modelLikeRepository.topByLikes(PageRequest.of(0, Math.max(1, limit)));
+
+        List<Long> ids = new ArrayList<>(rows.size());
+        for (Object[] r : rows) ids.add((Long) r[0]);
+        Map<Long, String> nicks = new LinkedHashMap<>();
+        userRepository.findAllById(ids).forEach(u -> nicks.put(u.getId(), u.getNickname()));
+
+        List<ModelRankingDTO.Entry> entries = new ArrayList<>(rows.size());
+        int rank = 0;
+        boolean viewerInTop = false;
+        for (Object[] r : rows) {
+            rank++;
+            Long mid = (Long) r[0];
+            long c = ((Number) r[1]).longValue();
+            if (mid.equals(viewerId)) viewerInTop = true;
+            entries.add(new ModelRankingDTO.Entry(rank, mid, nicks.getOrDefault(mid, ""), c, resolveBadge(c)));
+        }
+
+        ModelRankingDTO.Entry self = null;
+        if (viewerId != null && !viewerInTop) {
+            long myCount = modelLikeRepository.countByModelUserId(viewerId);
+            int myRank = (int) modelLikeRepository.countModelsAboveLikes(myCount) + 1;
+            String nick = userRepository.findById(viewerId).map(User::getNickname).orElse("");
+            self = new ModelRankingDTO.Entry(myRank, viewerId, nick, myCount, resolveBadge(myCount));
+        }
+        return new ModelRankingDTO(entries, self);
+    }
+
+    /** Menor insignia cuyo umbral es estrictamente mayor que {@code count}; null si ya en el máximo. */
+    static Badge nextBadge(long count) {
+        Badge best = null;
+        for (Badge b : BADGES) {
+            if (b.threshold() > count && (best == null || b.threshold() < best.threshold())) {
+                best = b;
+            }
+        }
+        return best;
     }
 
     /** Insignia vigente para un total de likes; null por debajo del primer umbral. */

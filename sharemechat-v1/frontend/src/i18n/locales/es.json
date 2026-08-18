@@ -566,6 +566,21 @@
       "RO": "Rumano"
     }
   },
+  "modelReputation": {
+    "title": "Tu reputación",
+    "noBadge": "Aún sin insignia",
+    "toNext": "Te faltan {{n}} para",
+    "maxed": "¡Estás en la insignia máxima!",
+    "viewRanking": "Ver Top modelos"
+  },
+  "modelRanking": {
+    "title": "Top modelos",
+    "loading": "Cargando ranking…",
+    "error": "No se pudo cargar el ranking.",
+    "empty": "Aún no hay likes en la plataforma. ¡Sé la primera!",
+    "noBadge": "sin insignia",
+    "selfNote": "Aunque no estés en el Top 30, siempre ves tu posición. Sube likes para escalar."
+  },
   "checkout": {
     "success": {
       "title": "Confirmando tu pago",
