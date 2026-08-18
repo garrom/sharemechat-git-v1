@@ -260,7 +260,7 @@ export const LanguageChip = styled.span`
   &::first-letter { text-transform: uppercase; }
 `;
 
-// Chip de intereses: borde granate suave (como el mock).
+// Chip de intereses: RELLENO granate oscuro (como el mock), no negro.
 export const InterestChip = styled.span`
   display: inline-flex;
   align-items: center;
@@ -268,9 +268,9 @@ export const InterestChip = styled.span`
   border-radius: 999px;
   font-size: 0.8rem;
   font-weight: 500;
-  background: ${surfaceMuted};
-  border: 1px solid rgba(234, 29, 29, 0.3);
-  color: ${textSoft};
+  background: #3a1620;
+  border: 1px solid rgba(234, 29, 29, 0.35);
+  color: #e6c3c8;
 `;
 
 export const CtaButton = styled.button`
@@ -284,8 +284,8 @@ export const CtaButton = styled.button`
   background: ${red};
   color: #fff;
   border: 0;
-  border-radius: 12px;
-  padding: 10px 20px;
+  border-radius: 999px;
+  padding: 10px 22px;
   font-size: 0.88rem;
   font-weight: 700;
   cursor: pointer;

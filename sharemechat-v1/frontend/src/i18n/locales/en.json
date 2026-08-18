@@ -1252,7 +1252,7 @@
         "sendGift": "Send gift",
         "backToList": "Back to list",
         "startVideoChat": "Start VideoChat",
-        "viewProfile": "View full profile ↓"
+        "viewProfile": "View full profile"
       },
       "hints": {
         "activateCamera": "activate camera to start videochat",

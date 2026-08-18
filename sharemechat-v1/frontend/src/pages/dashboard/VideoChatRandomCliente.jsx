@@ -146,6 +146,7 @@ export default function VideoChatRandomCliente(props) {
     sendRandomMediaReady,
     nextDisabled,
     handleReportPeer,
+    onViewProfile,
     currentModelRate,
     currentSaldo,
   } = props;
@@ -893,7 +894,9 @@ export default function VideoChatRandomCliente(props) {
 
                       <StyledTeaserMediaButton
                         type="button"
-                        onClick={() => handleOpenPromo(currentPromoIndex)}
+                        onClick={() => (onViewProfile
+                          ? onViewProfile({ id: currentPromo.id, nickname: currentPromo.modelName })
+                          : handleOpenPromo(currentPromoIndex))}
                         title={currentPromo.title || t('dashboardClient.videoChatRandomCliente.actions.viewTeaser')}
                       >
                         <BlurredPreview

@@ -127,9 +127,9 @@ const DashboardClient = () => {
     setProfileUser({ id: u.id, nickname: u.nickname || null, presence: u.presence || null });
   }, []);
   const closeModelProfile = useCallback(() => setProfileUser(null), []);
-  // Al salir de favoritos, cerrar el modal para no arrastrar estado.
+  // Al salir de favoritos/videochat, cerrar el modal para no arrastrar estado.
   useEffect(() => {
-    if (activeTab !== 'favoritos' && profileUser) setProfileUser(null);
+    if (activeTab !== 'favoritos' && activeTab !== 'videochat' && profileUser) setProfileUser(null);
   }, [activeTab, profileUser]);
   const [currentModelId, setCurrentModelId] = useState(null);
   const [currentModelRate, setCurrentModelRate] = useState(null);
@@ -3203,6 +3203,7 @@ const DashboardClient = () => {
             handleActivateCamera={handleActivateCamera}
             handleBlockPeer={handleBlockPeer}
             handleReportPeer={handleReportPeer}
+            onViewProfile={openModelProfile}
             matchGraceRef={matchGraceRef}
             nextDisabled={nexting}
             currentModelRate={currentModelRate}
@@ -3306,9 +3307,9 @@ const DashboardClient = () => {
       </StyledMainContent>
       {/* ======FIN MAIN ======== */}
 
-      {/* Card 1 Fase 2: perfil de modelo como modal grande (favoritos desktop). */}
+      {/* Card 1: perfil de modelo como modal grande (favoritos + videochat). */}
       <ModelProfileExpanded
-        open={activeTab === 'favoritos' && !!profileUser}
+        open={(activeTab === 'favoritos' || activeTab === 'videochat') && !!profileUser}
         userId={profileUser?.id}
         fallbackNickname={profileUser?.nickname}
         presence={profileUser?.presence}
