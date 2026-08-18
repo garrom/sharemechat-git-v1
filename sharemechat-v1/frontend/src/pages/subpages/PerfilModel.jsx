@@ -24,6 +24,7 @@ import {
   Message,
   Label,
   Input,
+  Select,
   Textarea,
   Hint,
   ProfileMain,
@@ -81,6 +82,16 @@ const PerfilModel = () => {
     biography: '',
     interests: '',
   });
+
+  // Card 1 Fase 2: datos físicos (perfil público visto por el cliente).
+  const [physical, setPhysical] = useState({ bustSize: '', heightCm: '', buttSize: '', bodyType: '' });
+  const [physicalSaving, setPhysicalSaving] = useState(false);
+  const PHYS_OPTS = {
+    bust: ['SMALL', 'MEDIUM', 'LARGE', 'XLARGE'],
+    butt: ['SMALL', 'MEDIUM', 'LARGE', 'XLARGE'],
+    body: ['SLIM', 'ATHLETIC', 'AVERAGE', 'CURVY', 'BBW'],
+  };
+  const physLabel = (kind, code) => t(`modelProfileExpanded.${kind}Values.${code}`, { defaultValue: code });
 
   // Capa 2: avatar del header derivado del asset PIC principal APPROVED.
   // El MyAssetsManager nos lo entrega vía onAssetsChange en cada refresh.
@@ -152,6 +163,17 @@ const PerfilModel = () => {
           interests: data.interests || '',
         });
 
+        // Card 1 Fase 2: datos físicos (no bloquea el perfil si falla).
+        try {
+          const attrs = await apiFetch('/me/profile-attributes');
+          setPhysical({
+            bustSize: attrs?.bustSize || '',
+            heightCm: attrs?.heightCm != null ? String(attrs.heightCm) : '',
+            buttSize: attrs?.buttSize || '',
+            bodyType: attrs?.bodyType || '',
+          });
+        } catch (_) { /* sin atributos aún */ }
+
         await loadContractStatus();
       } catch (e) {
         setError(e?.message || t('profileCommon.errors.loadProfile'));
@@ -166,6 +188,41 @@ const PerfilModel = () => {
   const onChange = (e) => {
     const { name, value } = e.target;
     setForm((f) => ({ ...f, [name]: value }));
+  };
+
+  const onChangePhysical = (e) => {
+    const { name, value } = e.target;
+    setPhysical((p) => ({ ...p, [name]: value }));
+  };
+
+  const handleSavePhysical = async () => {
+    setPhysicalSaving(true);
+    setError('');
+    setMsg('');
+    try {
+      const payload = {
+        bustSize: physical.bustSize || null,
+        heightCm: physical.heightCm !== '' ? Number(physical.heightCm) : null,
+        buttSize: physical.buttSize || null,
+        bodyType: physical.bodyType || null,
+      };
+      const saved = await apiFetch('/me/profile-attributes', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      setPhysical({
+        bustSize: saved?.bustSize || '',
+        heightCm: saved?.heightCm != null ? String(saved.heightCm) : '',
+        buttSize: saved?.buttSize || '',
+        bodyType: saved?.bodyType || '',
+      });
+      setMsg(t('profileCommon.success.saved'));
+    } catch (e) {
+      setError(e?.message || t('profileCommon.errors.save'));
+    } finally {
+      setPhysicalSaving(false);
+    }
   };
 
   const handleSave = async () => {
@@ -456,6 +513,60 @@ const PerfilModel = () => {
                     disabled={saving}
                   >
                     {saving ? t('profileCommon.actions.saving') : t('profileCommon.actions.saveChanges')}
+                  </ProfilePrimaryButton>
+                </CardFooter>
+              </ProfileCard>
+
+              {/* Card 1 Fase 2: DATOS FÍSICOS (perfil público visto por el cliente) */}
+              <ProfileCard>
+                <CardHeader>
+                  <CardTitle>{t('perfilModel.physical.title')}</CardTitle>
+                  <CardSubtitle>{t('perfilModel.physical.subtitle')}</CardSubtitle>
+                </CardHeader>
+                <CardBody>
+                  <FormGridNew>
+                    <FormFieldNew>
+                      <Label>{t('perfilModel.physical.bust')}</Label>
+                      <Select name="bustSize" value={physical.bustSize} onChange={onChangePhysical}>
+                        <option value="">{t('perfilModel.physical.none')}</option>
+                        {PHYS_OPTS.bust.map((c) => <option key={c} value={c}>{physLabel('bust', c)}</option>)}
+                      </Select>
+                    </FormFieldNew>
+
+                    <FormFieldNew>
+                      <Label>{t('perfilModel.physical.height')}</Label>
+                      <Input
+                        type="number"
+                        name="heightCm"
+                        min="120"
+                        max="220"
+                        value={physical.heightCm}
+                        onChange={onChangePhysical}
+                        placeholder="165"
+                      />
+                    </FormFieldNew>
+
+                    <FormFieldNew>
+                      <Label>{t('perfilModel.physical.butt')}</Label>
+                      <Select name="buttSize" value={physical.buttSize} onChange={onChangePhysical}>
+                        <option value="">{t('perfilModel.physical.none')}</option>
+                        {PHYS_OPTS.butt.map((c) => <option key={c} value={c}>{physLabel('butt', c)}</option>)}
+                      </Select>
+                    </FormFieldNew>
+
+                    <FormFieldNew>
+                      <Label>{t('perfilModel.physical.body')}</Label>
+                      <Select name="bodyType" value={physical.bodyType} onChange={onChangePhysical}>
+                        <option value="">{t('perfilModel.physical.none')}</option>
+                        {PHYS_OPTS.body.map((c) => <option key={c} value={c}>{physLabel('body', c)}</option>)}
+                      </Select>
+                    </FormFieldNew>
+                  </FormGridNew>
+                  <Hint>{t('perfilModel.physical.hint')}</Hint>
+                </CardBody>
+                <CardFooter>
+                  <ProfilePrimaryButton type="button" onClick={handleSavePhysical} disabled={physicalSaving}>
+                    {physicalSaving ? t('profileCommon.actions.saving') : t('profileCommon.actions.saveChanges')}
                   </ProfilePrimaryButton>
                 </CardFooter>
               </ProfileCard>

@@ -331,6 +331,16 @@
   "perfilModel": {
     "displayName": "Tu perfil de modelo",
     "role": "Modelo",
+    "physical": {
+      "title": "Datos físicos",
+      "subtitle": "Estos datos sí se muestran a los clientes en tu perfil público. Rellena solo los que quieras.",
+      "bust": "Talla de pecho",
+      "height": "Altura (cm)",
+      "butt": "Talla de trasero",
+      "body": "Cuerpo",
+      "none": "— Sin especificar —",
+      "hint": "El sexo se muestra siempre como «Mujer» y la edad se calcula desde tu fecha de nacimiento."
+    },
     "header": {
       "subtitle": "Completa tus datos y sube una foto y un vídeo de presentación para atraer más clientes."
     },
@@ -493,11 +503,29 @@
     "unavailable": "Esta modelo ya no está disponible.",
     "noPrincipalPhoto": "Sin foto disponible",
     "labels": {
-      "interests": "Intereses"
+      "interests": "Intereses",
+      "age": "Edad",
+      "bust": "Talla de pecho",
+      "sex": "Sexo",
+      "height": "Altura",
+      "butt": "Talla de trasero",
+      "body": "Cuerpo"
     },
     "sections": {
       "photos": "Fotos",
-      "videos": "Vídeos"
+      "videos": "Vídeos",
+      "data": "Datos",
+      "availability": "Suele estar en línea"
+    },
+    "sexValue": "Mujer",
+    "bustValues": { "SMALL": "Pequeña", "MEDIUM": "Media", "LARGE": "Grande", "XLARGE": "Muy grande" },
+    "buttValues": { "SMALL": "Pequeño", "MEDIUM": "Medio", "LARGE": "Grande", "XLARGE": "Muy grande" },
+    "bodyValues": { "SLIM": "Delgada", "ATHLETIC": "Atlética", "AVERAGE": "Normal", "CURVY": "Con curvas", "BBW": "Voluptuosa" },
+    "days": { "1": "Lunes", "2": "Martes", "3": "Miércoles", "4": "Jueves", "5": "Viernes", "6": "Sábado", "7": "Domingo" },
+    "availability": {
+      "note": "Disponibilidad habitual observada · hora peninsular (Europe/Madrid)",
+      "prevDay": "Día anterior",
+      "nextDay": "Día siguiente"
     },
     "empty": {
       "photos": "Esta modelo aún no tiene fotos aprobadas.",
@@ -1208,7 +1236,8 @@
         "fullscreen": "Pantalla completa",
         "sendGift": "Enviar regalo",
         "backToList": "Volver a la lista",
-        "startVideoChat": "Iniciar VideoChat"
+        "startVideoChat": "Iniciar VideoChat",
+        "viewProfile": "Ver perfil completo ↓"
       },
       "hints": {
         "activateCamera": "activar cámara para iniciar videochat",

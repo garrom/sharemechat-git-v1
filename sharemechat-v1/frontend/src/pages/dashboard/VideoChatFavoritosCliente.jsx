@@ -48,7 +48,7 @@ export default function VideoChatFavoritosCliente(props){
       fmtEUR,showCenterGifts,sendGiftMsg,contactMode,enterCallMode,callStatus,callCameraActive,
       callPeerId,callPeerName,callPeerAvatar,callRemoteVideoRef,callLocalVideoRef,callRemoteWrapRef,callListRef,
       handleCallActivateCamera,handleCallInvite,handleCallAccept,handleCallReject,handleCallEnd,toggleFullscreen,
-      callError,backToList,user,
+      callError,backToList,user,onViewProfile,
       currentModelRate,currentSaldo} = props;
 
   const baseBalanceRef = useRef(null);
@@ -361,7 +361,16 @@ export default function VideoChatFavoritosCliente(props){
           </div>
           <div style={{ fontSize: 11, color: pMeta.c }}>● {pMeta.label}</div>
         </div>
-        <div style={{ marginLeft: 'auto' }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+          {onViewProfile && centerChatPeerId && (
+            <button
+              type="button"
+              onClick={() => onViewProfile({ id: centerChatPeerId, nickname: centerChatPeerName })}
+              style={{ fontSize: 12.5, color: '#fff', border: '1px solid rgba(255,255,255,0.5)', borderRadius: 999, padding: '5px 12px', cursor: 'pointer', background: 'rgba(255,255,255,0.10)', whiteSpace: 'nowrap' }}
+            >
+              {t('dashboardClient.videoChatFavoritosCliente.actions.viewProfile', 'Ver perfil completo ↓')}
+            </button>
+          )}
           {shouldShowTranslationToggle && <TranslationToggleButton />}
         </div>
       </div>

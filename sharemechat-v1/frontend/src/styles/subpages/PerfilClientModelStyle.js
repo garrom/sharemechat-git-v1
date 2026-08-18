@@ -102,6 +102,34 @@ export const Input = styled.input`
   }
 `;
 
+// Card 1 Fase 2: desplegable para el editor de datos físicos de la modelo.
+// Mismo look que Input.
+export const Select = styled.select`
+  ${inputBase}
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-height: 48px;
+  background: ${surface};
+  border: 1px solid ${borderSoft};
+  color: ${textMain};
+  border-radius: 14px;
+  appearance: none;
+  cursor: pointer;
+
+  &:focus {
+    border-color: #bcc6d1;
+    box-shadow: 0 0 0 3px rgba(53, 69, 86, 0.08);
+  }
+
+  &:disabled {
+    background: #f6f8fa;
+    border-color: #e1e6eb;
+    color: #6d7783;
+    cursor: default;
+  }
+`;
+
 export const Textarea = styled.textarea`
   ${inputBase}
   box-sizing: border-box;

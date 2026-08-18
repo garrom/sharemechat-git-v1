@@ -20,6 +20,7 @@ import AdminModelBansPanel from './AdminModelBansPanel';
 import AdminOverviewPanel from './AdminOverviewPanel';
 import AdminProfilePage from './AdminProfilePage';
 import AdminStatsPanel from './AdminStatsPanel';
+import AdminPresencePanel from './AdminPresencePanel';
 import AdminAcquisitionPanel from './AdminAcquisitionPanel';
 import AdminSupportPanel from './AdminSupportPanel';
 import AdminContentPanel from './content/AdminContentPanel';
@@ -546,6 +547,16 @@ const DashboardAdmin = () => {
                   subtitle={t('admin.streams.wrapper.statsSubtitle')}
                 >
                   <AdminStatsPanel />
+                </AdminPage>
+              )}
+
+              {capabilities.canViewStats && (
+                <AdminPage
+                  muted
+                  title={t('admin.presence.wrapperTitle', { defaultValue: 'Presencia de modelos' })}
+                  subtitle={t('admin.presence.wrapperSubtitle', { defaultValue: 'Cuándo suelen estar en línea (heatmap día×hora, hora peninsular).' })}
+                >
+                  <AdminPresencePanel />
                 </AdminPage>
               )}
 

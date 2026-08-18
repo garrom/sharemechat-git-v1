@@ -5,6 +5,7 @@ import { getResolvedLocale } from '../../i18n/localeUtils';
 import { useHistory, useLocation } from 'react-router-dom';
 import Peer from 'simple-peer';
 import FavoritesClientList from '../favorites/FavoritesClientList';
+import ModelProfileExpanded from '../subpages/ModelProfileExpanded';
 import { useAppModals } from '../../components/useAppModals';
 import { useCallUi } from '../../components/CallUiContext';
 import { ensureClientKycApproved } from '../../utils/clientKycGate';
@@ -116,6 +117,29 @@ const DashboardClient = () => {
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [activeTab, setActiveTab] = useState('videochat');
+
+  // Card 1 Fase 2: perfil de modelo como panel INLINE a todo el ancho debajo
+  // del chat en favoritos (desktop). Estado elevado desde FavoritesClientList
+  // y desde el botón "Ver perfil completo" del header del chat.
+  const [profileUser, setProfileUser] = useState(null);
+  const profilePanelRef = useRef(null);
+  const openModelProfile = useCallback((u) => {
+    if (!u?.id) return;
+    setProfileUser({ id: u.id, nickname: u.nickname || null });
+  }, []);
+  const closeModelProfile = useCallback(() => setProfileUser(null), []);
+  useEffect(() => {
+    if (!profileUser) return;
+    const el = profilePanelRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
+    });
+  }, [profileUser]);
+  // Al salir de favoritos, cerrar el panel para no arrastrar estado.
+  useEffect(() => {
+    if (activeTab !== 'favoritos' && profileUser) setProfileUser(null);
+  }, [activeTab, profileUser]);
   const [currentModelId, setCurrentModelId] = useState(null);
   const [currentModelRate, setCurrentModelRate] = useState(null);
   const [saldo, setSaldo] = useState(null);
@@ -3125,7 +3149,7 @@ const DashboardClient = () => {
 
 
   return(
-    <DashboardShell data-tab={activeTab}>
+    <DashboardShell data-tab={activeTab} data-profile-open={(profileUser && activeTab === 'favoritos') ? '1' : undefined}>
       <GlobalBlack/>
       <AuthenticatedConsentModal
         open={consentRequired}
@@ -3154,7 +3178,7 @@ const DashboardClient = () => {
       {/* ========= FIN NAVBAR  ======== */}
 
       {/* ========= INICIO MAIN  ======== */}
-      <StyledMainContent data-tab={activeTab}>
+      <StyledMainContent data-tab={activeTab} data-profile-open={(profileUser && activeTab === 'favoritos') ? '1' : undefined}>
         {activeTab==='videochat'?(
           <VideoChatRandomCliente
             isMobile={isMobile}
@@ -3221,6 +3245,7 @@ const DashboardClient = () => {
                     onItemsChange={setFavItems}
                     autoSelectBot={pendingAutoSelectBot}
                     onAutoSelectHandled={() => setPendingAutoSelectBot(false)}
+                    onOpenProfile={openModelProfile}
                   />
                 ):(
                   <div style={{padding:8,color:'#adb5bd'}}>{i18n.t('dashboardClient.favorites.inCallLocked')}</div>
@@ -3233,6 +3258,7 @@ const DashboardClient = () => {
               ) : (
               <VideoChatFavoritosCliente
                 isMobile={isMobile}
+                onViewProfile={openModelProfile}
                 handleOpenChatFromFavorites={handleOpenChatFromFavorites}
                 favReload={favReload}
                 selectedContactId={selectedContactId}
@@ -3288,6 +3314,20 @@ const DashboardClient = () => {
         )}
       </StyledMainContent>
       {/* ======FIN MAIN ======== */}
+
+      {/* Card 1 Fase 2: perfil de modelo como panel INLINE a todo el ancho,
+          continuación de la página bajo el chat (desktop favoritos). */}
+      {activeTab === 'favoritos' && profileUser && (
+        <div ref={profilePanelRef} style={{ padding: '8px 16px 60px', background: 'var(--c-black)' }}>
+          <div style={{ maxWidth: 1180, margin: '0 auto' }}>
+            <ModelProfileExpanded
+              userId={profileUser.id}
+              fallbackNickname={profileUser.nickname}
+              onClose={closeModelProfile}
+            />
+          </div>
+        </div>
+      )}
 
       <LivenessChallengeModal
         open={livenessModalOpen}

@@ -126,7 +126,7 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
   );
 }
 
-export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selectedId = null, autoSelectBot = false, onAutoSelectHandled = null, onItemsChange = null }) {
+export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selectedId = null, autoSelectBot = false, onAutoSelectHandled = null, onItemsChange = null, onOpenProfile = null }) {
   const [items, setItems] = useState([]);
 
   // Exponer los items al padre (para que el header del chat lea la presencia
@@ -530,8 +530,10 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
       <FavMenu style={{ left: menu.x, top: menu.y }} onClick={(e) => e.stopPropagation()} role="menu">
         {!isBlocked && (
           <>
-            {/* Capa 2 Fase 4: "Ver perfil completo" como primer item del menú */}
-            <FavMenuItem type="button" onClick={() => { closeMenu(); openExpandedProfile(u); }}>
+            {/* Capa 2 Fase 4 / Card 1 Fase 2: "Ver perfil completo".
+                Si el parent provee onOpenProfile (desktop favoritos), abre el
+                panel inline; si no, cae al modal interno (móvil). */}
+            <FavMenuItem type="button" onClick={() => { closeMenu(); onOpenProfile ? onOpenProfile(u) : openExpandedProfile(u); }}>
               <FavMenuIcon><FontAwesomeIcon icon={faUser} /></FavMenuIcon>
               <span>{i18n.t('favorites.actions.viewProfile')}</span>
             </FavMenuItem>

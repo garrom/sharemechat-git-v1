@@ -15,10 +15,156 @@ const dangerBg = '#fbf1f1';
 const dangerBorder = '#dbbcbc';
 const dangerText = '#8f5b5b';
 
+// Card 1 Fase 2: panel inline (no modal) que continúa la página bajo el chat
+// en favoritos, a todo el ancho.
+export const ProfilePanel = styled.section`
+  width: 100%;
+  background: ${surface};
+  color: ${textMain};
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+`;
+
+export const PanelHead = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid ${border};
+`;
+
+export const PanelTitle = styled.h2`
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: ${textMain};
+`;
+
+export const PanelClose = styled.button`
+  border: 0;
+  background: transparent;
+  color: #9aa4ad;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+
+  &:hover { background: ${surfaceMuted}; color: ${textMain}; }
+`;
+
+export const PanelInner = styled.div`
+  padding: 22px 24px;
+`;
+
 export const ProfileBody = styled.div`
   display: grid;
   gap: 18px;
   width: 100%;
+`;
+
+// ---- Card 1 Fase 2: bloque "Datos" (stat-tiles) ----
+export const StatsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+
+  @media (max-width: 820px) { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 460px) { grid-template-columns: repeat(2, 1fr); }
+`;
+
+export const Stat = styled.div`
+  background: ${surfaceMuted};
+  border: 1px solid ${border};
+  border-radius: 14px;
+  padding: 14px 12px;
+  text-align: center;
+`;
+
+export const StatValue = styled.div`
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: ${textMain};
+
+  small { font-size: 0.72rem; font-weight: 600; color: #8a939c; }
+`;
+
+export const StatLabel = styled.div`
+  font-size: 0.72rem;
+  color: #7c8792;
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+`;
+
+// ---- Card 1 Fase 2: bloque "Suele estar en línea" (histograma) ----
+export const AvailabilityHead = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+`;
+
+export const DayNav = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: ${textMuted};
+`;
+
+export const DayNavBtn = styled.button`
+  border: 1px solid ${border};
+  background: ${surface};
+  color: #5b6470;
+  border-radius: 8px;
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  line-height: 1;
+
+  &:hover { background: ${surfaceMuted}; }
+`;
+
+export const DayNavLabel = styled.span`
+  min-width: 78px;
+  text-align: center;
+  color: ${textMain};
+`;
+
+export const Bars = styled.div`
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 120px;
+  padding: 6px 2px 0;
+`;
+
+export const Bar = styled.span`
+  flex: 1;
+  border-radius: 4px 4px 0 0;
+  min-height: 2px;
+  height: ${({ $h }) => `${$h}%`};
+  background: ${({ $peak }) => ($peak ? '#ea1d1d' : '#aebfcd')};
+`;
+
+export const BarLabels = styled.div`
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: #93a0ac;
+  padding-top: 6px;
+`;
+
+export const AvailabilityNote = styled.div`
+  font-size: 0.75rem;
+  color: #93a0ac;
+  margin-top: 6px;
 `;
 
 export const ProfileHeaderRow = styled.header`
