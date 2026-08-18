@@ -217,7 +217,9 @@ export const LanguageChip = styled.span`
 
 export const CtaButton = styled.button`
   margin-top: 6px;
+  justify-self: start;
   align-self: flex-start;
+  width: fit-content;
   display: inline-flex;
   align-items: center;
   gap: 8px;

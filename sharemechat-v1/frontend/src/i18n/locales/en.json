@@ -526,6 +526,7 @@
     "days": { "1": "Monday", "2": "Tuesday", "3": "Wednesday", "4": "Thursday", "5": "Friday", "6": "Saturday", "7": "Sunday" },
     "availability": {
       "note": "Observed typical availability · Central European Time (Europe/Madrid)",
+      "empty": "No connection data yet. It will fill in as the model comes online.",
       "prevDay": "Previous day",
       "nextDay": "Next day"
     },

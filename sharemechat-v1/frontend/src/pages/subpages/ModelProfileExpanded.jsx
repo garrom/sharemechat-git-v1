@@ -241,31 +241,41 @@ const ModelProfileExpanded = ({ open, userId, fallbackNickname, presence, onClos
     </ProfileHeaderRow>
   );
 
-  // Bloque "Suele estar en línea" (histograma). Oculto si no hay datos.
+  // Bloque "Suele estar en línea" (histograma). Siempre visible; si aún no
+  // hay datos (arranque), muestra un placeholder en vez de ocultarse.
   const renderAvailability = () => {
-    if (!profile?.hasAvailabilityData) return null;
+    if (!profile) return null;
+    const hasData = !!profile.hasAvailabilityData;
     const dayRow = availabilityByDay[selectedDay] || new Array(24).fill(0);
     const peak = Math.max(...dayRow, 0);
     return (
       <GallerySection>
         <AvailabilityHead>
           <SectionTitle style={{ margin: 0 }}>{tk('modelProfileExpanded.sections.availability')}</SectionTitle>
-          <DayNav>
-            <DayNavBtn type="button" onClick={() => cycleDay(-1)} aria-label={tk('modelProfileExpanded.availability.prevDay')}>‹</DayNavBtn>
-            <DayNavLabel>{dayName(selectedDay)}</DayNavLabel>
-            <DayNavBtn type="button" onClick={() => cycleDay(1)} aria-label={tk('modelProfileExpanded.availability.nextDay')}>›</DayNavBtn>
-          </DayNav>
+          {hasData && (
+            <DayNav>
+              <DayNavBtn type="button" onClick={() => cycleDay(-1)} aria-label={tk('modelProfileExpanded.availability.prevDay')}>‹</DayNavBtn>
+              <DayNavLabel>{dayName(selectedDay)}</DayNavLabel>
+              <DayNavBtn type="button" onClick={() => cycleDay(1)} aria-label={tk('modelProfileExpanded.availability.nextDay')}>›</DayNavBtn>
+            </DayNav>
+          )}
         </AvailabilityHead>
-        <Bars>
-          {dayRow.map((v, h) => (
-            <Bar key={h} $h={v} $peak={v > 0 && v === peak} title={`${h}:00`} />
-          ))}
-        </Bars>
-        <BarLabels>
-          <span>00h</span><span>03h</span><span>06h</span><span>09h</span>
-          <span>12h</span><span>15h</span><span>18h</span><span>21h</span>
-        </BarLabels>
-        <AvailabilityNote>{tk('modelProfileExpanded.availability.note')}</AvailabilityNote>
+        {hasData ? (
+          <>
+            <Bars>
+              {dayRow.map((v, h) => (
+                <Bar key={h} $h={v} $peak={v > 0 && v === peak} title={`${h}:00`} />
+              ))}
+            </Bars>
+            <BarLabels>
+              <span>00h</span><span>03h</span><span>06h</span><span>09h</span>
+              <span>12h</span><span>15h</span><span>18h</span><span>21h</span>
+            </BarLabels>
+            <AvailabilityNote>{tk('modelProfileExpanded.availability.note')}</AvailabilityNote>
+          </>
+        ) : (
+          <EmptyGalleryMsg>{tk('modelProfileExpanded.availability.empty')}</EmptyGalleryMsg>
+        )}
       </GallerySection>
     );
   };

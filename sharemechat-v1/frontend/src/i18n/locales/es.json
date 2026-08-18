@@ -526,6 +526,7 @@
     "days": { "1": "Lunes", "2": "Martes", "3": "Miércoles", "4": "Jueves", "5": "Viernes", "6": "Sábado", "7": "Domingo" },
     "availability": {
       "note": "Disponibilidad habitual observada · hora peninsular (Europe/Madrid)",
+      "empty": "Todavía sin datos de conexión. Se irá completando a medida que la modelo se conecte.",
       "prevDay": "Día anterior",
       "nextDay": "Día siguiente"
     },
