@@ -2174,7 +2174,6 @@ DROP TABLE IF EXISTS `model_profile_attributes`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `model_profile_attributes` (
   `user_id` bigint NOT NULL,
-  `sex` varchar(16) DEFAULT NULL,
   `bust_size` varchar(16) DEFAULT NULL,
   `height_cm` int DEFAULT NULL,
   `butt_size` varchar(16) DEFAULT NULL,

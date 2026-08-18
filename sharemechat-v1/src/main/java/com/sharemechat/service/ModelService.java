@@ -114,7 +114,6 @@ public class ModelService {
                 user.getChosenRateEurPerMin(),
                 languageEntries,
                 age,
-                attrs != null ? attrs.getSex() : null,
                 attrs != null ? attrs.getBustSize() : null,
                 attrs != null ? attrs.getHeightCm() : null,
                 attrs != null ? attrs.getButtSize() : null,

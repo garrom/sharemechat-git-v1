@@ -10,9 +10,10 @@ import java.time.LocalDateTime;
  * modelo (user_id = users.id).
  *
  * <p>La EDAD no vive aqui: se deriva de {@code users.date_of_birth} en el
- * service (se expone como entero, nunca la fecha). Los enums
- * ({@code sex}, {@code bustSize}, {@code buttSize}, {@code bodyType}) se
- * guardan como codigo canonico y se validan en Java
+ * service (se expone como entero, nunca la fecha). El SEXO tampoco: la
+ * plataforma es 100% femenina y la card lo pinta como constante. Los enums
+ * ({@code bustSize}, {@code buttSize}, {@code bodyType}) se guardan como
+ * codigo canonico y se validan en Java
  * ({@code ModelProfileAttributesService}); el frontend los traduce via i18n.
  *
  * <p>Todos los campos son nullable: la modelo rellena lo que quiera; los
@@ -25,9 +26,6 @@ public class ModelProfileAttributes {
     @Id
     @Column(name = "user_id")
     private Long userId;
-
-    @Column(name = "sex", length = 16)
-    private String sex;
 
     @Column(name = "bust_size", length = 16)
     private String bustSize;
@@ -52,9 +50,6 @@ public class ModelProfileAttributes {
 
     public Long getUserId() { return userId; }
     public void setUserId(Long userId) { this.userId = userId; }
-
-    public String getSex() { return sex; }
-    public void setSex(String sex) { this.sex = sex; }
 
     public String getBustSize() { return bustSize; }
     public void setBustSize(String bustSize) { this.bustSize = bustSize; }

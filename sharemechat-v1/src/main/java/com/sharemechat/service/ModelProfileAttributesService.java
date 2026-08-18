@@ -23,7 +23,7 @@ import java.util.Set;
 public class ModelProfileAttributesService {
 
     // Conjuntos canónicos permitidos (revisables; el label lo pone i18n).
-    static final Set<String> SEX = Set.of("FEMALE", "MALE", "TRANS", "OTHER");
+    // El sexo no se modela: la plataforma es 100% femenina (constante en la card).
     static final Set<String> BUST = Set.of("SMALL", "MEDIUM", "LARGE", "XLARGE");
     static final Set<String> BUTT = Set.of("SMALL", "MEDIUM", "LARGE", "XLARGE");
     static final Set<String> BODY = Set.of("SLIM", "ATHLETIC", "AVERAGE", "CURVY", "BBW");
@@ -40,13 +40,12 @@ public class ModelProfileAttributesService {
     public ModelProfileAttributesDTO getForUser(Long userId) {
         return repository.findById(userId)
                 .map(a -> new ModelProfileAttributesDTO(
-                        a.getSex(), a.getBustSize(), a.getHeightCm(), a.getButtSize(), a.getBodyType()))
-                .orElseGet(() -> new ModelProfileAttributesDTO(null, null, null, null, null));
+                        a.getBustSize(), a.getHeightCm(), a.getButtSize(), a.getBodyType()))
+                .orElseGet(() -> new ModelProfileAttributesDTO(null, null, null, null));
     }
 
     @Transactional
     public ModelProfileAttributesDTO update(Long userId, ModelProfileAttributesDTO in) {
-        String sex = validateCode("sex", in.sex(), SEX);
         String bust = validateCode("bustSize", in.bustSize(), BUST);
         String butt = validateCode("buttSize", in.buttSize(), BUTT);
         String body = validateCode("bodyType", in.bodyType(), BODY);
@@ -58,14 +57,13 @@ public class ModelProfileAttributesService {
                     x.setUserId(userId);
                     return x;
                 });
-        entity.setSex(sex);
         entity.setBustSize(bust);
         entity.setHeightCm(height);
         entity.setButtSize(butt);
         entity.setBodyType(body);
         repository.save(entity);
 
-        return new ModelProfileAttributesDTO(sex, bust, height, butt, body);
+        return new ModelProfileAttributesDTO(bust, height, butt, body);
     }
 
     private static String validateCode(String field, String raw, Set<String> allowed) {

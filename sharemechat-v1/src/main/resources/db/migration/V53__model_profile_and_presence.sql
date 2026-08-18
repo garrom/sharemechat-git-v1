@@ -4,8 +4,9 @@
 -- Bloque 1: model_profile_attributes (1:1 con el modelo). Datos fisicos
 -- que la modelo declara y el cliente ve en la card ("Ver perfil completo").
 -- La EDAD no se guarda: se deriva de users.date_of_birth en el service.
--- Los enums (sex/body_type/butt_size/bust_size) se validan en Java para
--- poder evolucionar sin migracion; por eso NO llevan CHECK en BD.
+-- El SEXO no se modela: la plataforma es 100% femenina, la card lo pinta
+-- como constante en el frontend. Los enums (body_type/butt_size/bust_size)
+-- se validan en Java para poder evolucionar sin migracion; NO llevan CHECK.
 --
 -- Bloque 2: model_presence_samples (write-heavy, volumen bajo). Muestreo
 -- periodico de que modelos estan AVAILABLE, tomado por PresenceSampleJob
@@ -22,7 +23,6 @@
 
 CREATE TABLE IF NOT EXISTS model_profile_attributes (
     user_id     BIGINT NOT NULL,
-    sex         VARCHAR(16) NULL,
     bust_size   VARCHAR(16) NULL,
     height_cm   INT NULL,
     butt_size   VARCHAR(16) NULL,

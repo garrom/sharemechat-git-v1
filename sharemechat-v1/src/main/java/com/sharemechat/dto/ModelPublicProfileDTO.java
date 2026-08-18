@@ -25,12 +25,13 @@ import java.util.List;
  * {@code model_presence_samples}. Los assets gráficos (fotos + vídeos
  * aprobados) se obtienen aparte vía {@code GET /api/models/{userId}/assets}.
  *
- * <p>Card 1 Fase 2: campos físicos ({@code sex}, {@code bustSize},
- * {@code heightCm}, {@code buttSize}, {@code bodyType}) como códigos
- * canónicos (el frontend traduce vía i18n); {@code age} como entero;
- * {@code availability} = histograma "suele estar en línea" (buckets
- * día×hora en zona Europe/Madrid, intensidad 0-100). {@code hasAvailabilityData}
- * permite ocultar la sección cuando aún no hay muestras (PRELAUNCH).
+ * <p>Card 1 Fase 2: campos físicos ({@code bustSize}, {@code heightCm},
+ * {@code buttSize}, {@code bodyType}) como códigos canónicos (el frontend
+ * traduce vía i18n); {@code age} como entero; el sexo no viaja (constante
+ * femenina, lo pinta el frontend); {@code availability} = histograma "suele
+ * estar en línea" (buckets día×hora en zona Europe/Madrid, intensidad 0-100).
+ * {@code hasAvailabilityData} permite ocultar la sección cuando aún no hay
+ * muestras (PRELAUNCH).
  */
 public record ModelPublicProfileDTO(
         Long id,
@@ -41,7 +42,6 @@ public record ModelPublicProfileDTO(
         List<LanguageEntry> languages,
         // ---- Card 1 Fase 2: datos físicos ----
         Integer age,
-        String sex,
         String bustSize,
         Integer heightCm,
         String buttSize,

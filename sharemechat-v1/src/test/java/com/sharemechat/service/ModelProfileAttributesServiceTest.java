@@ -36,10 +36,9 @@ class ModelProfileAttributesServiceTest {
         when(repository.findById(7L)).thenReturn(Optional.empty());
 
         ModelProfileAttributesDTO in =
-                new ModelProfileAttributesDTO("female", "medium", 165, "large", "curvy");
+                new ModelProfileAttributesDTO("medium", 165, "large", "curvy");
         ModelProfileAttributesDTO out = service.update(7L, in);
 
-        assertEquals("FEMALE", out.sex());
         assertEquals("MEDIUM", out.bustSize());
         assertEquals(165, out.heightCm());
         assertEquals("LARGE", out.buttSize());
@@ -49,15 +48,14 @@ class ModelProfileAttributesServiceTest {
                 ArgumentCaptor.forClass(ModelProfileAttributes.class);
         verify(repository).save(captor.capture());
         assertEquals(7L, captor.getValue().getUserId());
-        assertEquals("FEMALE", captor.getValue().getSex());
+        assertEquals("MEDIUM", captor.getValue().getBustSize());
     }
 
     @Test
     void update_nullLimpiaCampos() {
         when(repository.findById(7L)).thenReturn(Optional.empty());
         ModelProfileAttributesDTO out =
-                service.update(7L, new ModelProfileAttributesDTO(null, "  ", null, null, null));
-        assertNull(out.sex());
+                service.update(7L, new ModelProfileAttributesDTO("  ", null, null, null));
         assertNull(out.bustSize()); // blank -> null
         assertNull(out.heightCm());
     }
@@ -65,22 +63,22 @@ class ModelProfileAttributesServiceTest {
     @Test
     void update_rechazaCodigoNoPermitido() {
         assertThrows(IllegalArgumentException.class, () ->
-                service.update(7L, new ModelProfileAttributesDTO("alien", null, null, null, null)));
+                service.update(7L, new ModelProfileAttributesDTO(null, null, null, "alien")));
     }
 
     @Test
     void update_rechazaAlturaFueraDeRango() {
         assertThrows(IllegalArgumentException.class, () ->
-                service.update(7L, new ModelProfileAttributesDTO(null, null, 300, null, null)));
+                service.update(7L, new ModelProfileAttributesDTO(null, 300, null, null)));
         assertThrows(IllegalArgumentException.class, () ->
-                service.update(7L, new ModelProfileAttributesDTO(null, null, 50, null, null)));
+                service.update(7L, new ModelProfileAttributesDTO(null, 50, null, null)));
     }
 
     @Test
     void getForUser_devuelveVacioSiNoExiste() {
         when(repository.findById(9L)).thenReturn(Optional.empty());
         ModelProfileAttributesDTO out = service.getForUser(9L);
-        assertNull(out.sex());
+        assertNull(out.bustSize());
         assertNull(out.heightCm());
     }
 }
