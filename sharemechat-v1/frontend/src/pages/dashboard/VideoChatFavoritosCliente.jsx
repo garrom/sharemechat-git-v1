@@ -698,8 +698,6 @@ export default function VideoChatFavoritosCliente(props){
                                     />
                                   </StyledCallTopMeta>
                                   <StyledCallTopActions>
-                                    {/* Card 1 Fase B: like a la modelo en la llamada 1-a-1. */}
-                                    {callPeerId && <LikeHeart modelUserId={callPeerId} />}
                                     <BtnCallGhost
                                       type="button"
                                       onClick={()=>toggleFullscreen(callRemoteWrapRef.current)}
@@ -738,6 +736,12 @@ export default function VideoChatFavoritosCliente(props){
                                     y de pago (centro). Sin reportar/bloquear en
                                     favoritos. "Ver original" NO va aquí: vive en
                                     la cabecera de la columna de chat. */}
+                                {/* Card 1 Fase B: like a la modelo abajo-derecha, sobre el vídeo (encima de la barra). */}
+                                {callPeerId && (
+                                  <div style={{ position:'absolute', right:20, bottom:78, zIndex:6 }}>
+                                    <LikeHeart modelUserId={callPeerId} />
+                                  </div>
+                                )}
                                 <StyledGiftFxLayer ref={fxRef} />
                                 {renderCallOverlayBar()}
                               </StyledCallStage>

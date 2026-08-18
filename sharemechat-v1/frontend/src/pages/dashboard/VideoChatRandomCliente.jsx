@@ -1027,8 +1027,6 @@ export default function VideoChatRandomCliente(props) {
                             />
                           </StyledCallTopMeta>
                           <StyledCallTopActions>
-                            {/* Card 1 Fase B: like a la modelo del random (streaming activo). */}
-                            {randomModelId && <LikeHeart modelUserId={randomModelId} />}
                             <BtnCallGhost
                               type="button"
                               onClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
@@ -1105,6 +1103,12 @@ export default function VideoChatRandomCliente(props) {
                             (izq) + regalos (centro) + reportar/bloquear (der).
                             "Ver original" ya NO va aquí: vuelve a la cabecera
                             de la columna de chat como botón normal. */}
+                        {/* Card 1 Fase B: like a la modelo abajo-derecha, sobre el vídeo remoto (encima de la barra). */}
+                        {randomModelId && (
+                          <div style={{ position: 'absolute', right: 20, bottom: 78, zIndex: 6 }}>
+                            <LikeHeart modelUserId={randomModelId} />
+                          </div>
+                        )}
                         <StyledGiftFxLayer ref={fxRef} />
                         {cameraActive && renderCallOverlayBar()}
                       </StyledCallStage>
@@ -1183,7 +1187,7 @@ export default function VideoChatRandomCliente(props) {
 
                       {/* Card 1 Fase B: like a la modelo del random (móvil, streaming activo). */}
                       {randomModelId && (
-                        <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 5 }}>
+                        <div style={{ position: 'absolute', left: 10, bottom: 80, zIndex: 5 }}>
                           <LikeHeart modelUserId={randomModelId} />
                         </div>
                       )}
