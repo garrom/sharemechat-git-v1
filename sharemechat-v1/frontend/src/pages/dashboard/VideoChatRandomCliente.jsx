@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import i18n from '../../i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import BlurredPreview from '../../components/BlurredPreview';
+import LikeHeart from '../../components/LikeHeart';
 import {
   faUserPlus,
   faVideo,
@@ -146,6 +147,7 @@ export default function VideoChatRandomCliente(props) {
     nextDisabled,
     handleReportPeer,
     onViewProfile,
+    randomModelId,
     currentModelRate,
     currentSaldo,
   } = props;
@@ -912,6 +914,13 @@ export default function VideoChatRandomCliente(props) {
                         />
                       </StyledTeaserMediaButton>
 
+                      {/* Card 1 Fase B: like a la modelo del teaser (abajo-izquierda). */}
+                      {currentPromo.id && (
+                        <div style={{ position: 'absolute', left: 12, bottom: 12, zIndex: 4 }}>
+                          <LikeHeart modelUserId={currentPromo.id} />
+                        </div>
+                      )}
+
                       <StyledTeaserFavoriteSlot>
                         <BtnCallLight
                           type="button"
@@ -1018,6 +1027,8 @@ export default function VideoChatRandomCliente(props) {
                             />
                           </StyledCallTopMeta>
                           <StyledCallTopActions>
+                            {/* Card 1 Fase B: like a la modelo del random (streaming activo). */}
+                            {randomModelId && <LikeHeart modelUserId={randomModelId} />}
                             <BtnCallGhost
                               type="button"
                               onClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
@@ -1169,6 +1180,13 @@ export default function VideoChatRandomCliente(props) {
                           </StyledCallTopMetaText>
                         </StyledCallTopMeta>
                       </StyledCallTopBar>
+
+                      {/* Card 1 Fase B: like a la modelo del random (móvil, streaming activo). */}
+                      {randomModelId && (
+                        <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 5 }}>
+                          <LikeHeart modelUserId={randomModelId} />
+                        </div>
+                      )}
 
                       <video
                         ref={remoteVideoRef}

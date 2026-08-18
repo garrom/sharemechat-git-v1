@@ -3204,6 +3204,7 @@ const DashboardClient = () => {
             handleBlockPeer={handleBlockPeer}
             handleReportPeer={handleReportPeer}
             onViewProfile={openModelProfile}
+            randomModelId={currentModelId}
             matchGraceRef={matchGraceRef}
             nextDisabled={nexting}
             currentModelRate={currentModelRate}

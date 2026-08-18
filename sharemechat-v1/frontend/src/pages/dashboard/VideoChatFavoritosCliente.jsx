@@ -4,6 +4,7 @@ import i18n from '../../i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faPhoneSlash, faVideo, faPaperPlane, faExpand } from '@fortawesome/free-solid-svg-icons';
 import FavoritesClientList from '../favorites/FavoritesClientList';
+import LikeHeart from '../../components/LikeHeart';
 import SupportMessageBubble from '../../components/support/SupportMessageBubble';
 import SessionHUD from '../../components/SessionHUD';
 import { useTranslationSettings } from '../../hooks/useTranslationSettings';
@@ -697,6 +698,8 @@ export default function VideoChatFavoritosCliente(props){
                                     />
                                   </StyledCallTopMeta>
                                   <StyledCallTopActions>
+                                    {/* Card 1 Fase B: like a la modelo en la llamada 1-a-1. */}
+                                    {callPeerId && <LikeHeart modelUserId={callPeerId} />}
                                     <BtnCallGhost
                                       type="button"
                                       onClick={()=>toggleFullscreen(callRemoteWrapRef.current)}
@@ -942,6 +945,13 @@ export default function VideoChatFavoritosCliente(props){
                     </StyledVideoTitle>
                     <video ref={callRemoteVideoRef} autoPlay playsInline style={{width:'100%',height:'100%',objectFit:'cover'}}/>
                   </StyledRemoteVideo>
+
+                  {/* Card 1 Fase B: like a la modelo en la llamada 1-a-1 (móvil). */}
+                  {callPeerId && (
+                    <div style={{ position:'absolute', left:10, bottom:10, zIndex:5 }}>
+                      <LikeHeart modelUserId={callPeerId} />
+                    </div>
+                  )}
 
                   <StyledLocalVideo>
                     <video ref={callLocalVideoRef} muted autoPlay playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block',border:'none'}}/>
