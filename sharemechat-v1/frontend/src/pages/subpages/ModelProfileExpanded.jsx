@@ -45,6 +45,7 @@ import {
   Biography,
   InterestsLine,
   InterestsLabel,
+  InterestChip,
   LanguageChips,
   LanguageChip,
   SectionDivider,
@@ -276,7 +277,12 @@ const ModelProfileExpanded = ({ open, userId, fallbackNickname, presence, onClos
         {profile?.interests && (
           <InterestsLine>
             <InterestsLabel>{tk('modelProfileExpanded.labels.interests')}</InterestsLabel>
-            {profile.interests}
+            <LanguageChips>
+              {String(profile.interests).split(',').map((it, i) => {
+                const v = it.trim();
+                return v ? <InterestChip key={i}>{v}</InterestChip> : null;
+              })}
+            </LanguageChips>
           </InterestsLine>
         )}
         {languages.length > 0 && (

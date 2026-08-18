@@ -46,7 +46,7 @@ export const PanelHead = styled.div`
 
 export const PanelTitle = styled.h2`
   margin: 0;
-  font-size: 1.02rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: ${textMain};
 `;
@@ -127,14 +127,15 @@ export const HeaderInfo = styled.div`
 
 export const Nickname = styled.h2`
   margin: 0;
-  font-size: 1.6rem;
-  line-height: 1.1;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.15;
   color: ${textMain};
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
   word-break: break-word;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
   flex-wrap: wrap;
 `;
 
@@ -152,17 +153,18 @@ export const OnlineBadge = styled.span`
   }
 `;
 
-// Tarifa en rojo de marca (como el mock).
+// Tarifa en granate suave (como el mock), no rojo fuerte.
 export const RateBadge = styled.span`
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
+  padding: 5px 13px;
   border-radius: 999px;
-  background: ${red};
-  color: #fff;
-  font-size: 0.95rem;
-  font-weight: 700;
+  background: #3c151b;
+  border: 1px solid rgba(234, 29, 29, 0.32);
+  color: #e39098;
+  font-size: 0.85rem;
+  font-weight: 600;
   letter-spacing: 0.01em;
   width: fit-content;
 `;
@@ -212,7 +214,7 @@ export const RankNone = styled.span`
 
 export const Biography = styled.p`
   margin: 0;
-  font-size: 0.98rem;
+  font-size: 0.92rem;
   line-height: 1.55;
   color: ${textSoft};
   white-space: pre-wrap;
@@ -221,15 +223,15 @@ export const Biography = styled.p`
 
 export const InterestsLine = styled.div`
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   line-height: 1.5;
   color: ${textSoft};
 `;
 
 export const InterestsLabel = styled.div`
   text-transform: uppercase;
-  font-weight: 700;
-  font-size: 0.7rem;
+  font-weight: 600;
+  font-size: 0.66rem;
   letter-spacing: 0.06em;
   color: ${textMuted};
   margin-bottom: 6px;
@@ -246,16 +248,29 @@ export const LanguageChip = styled.span`
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 5px 12px;
+  padding: 4px 11px;
   border-radius: 999px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
   background: ${surfaceMuted};
-  border: 1px solid ${({ $primary }) => ($primary ? 'rgba(234,29,29,0.5)' : lineSoft)};
+  border: 1px solid ${lineSoft};
   color: ${textSoft};
 
   &::first-letter { text-transform: uppercase; }
+`;
+
+// Chip de intereses: borde granate suave (como el mock).
+export const InterestChip = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  background: ${surfaceMuted};
+  border: 1px solid rgba(234, 29, 29, 0.3);
+  color: ${textSoft};
 `;
 
 export const CtaButton = styled.button`
@@ -270,8 +285,8 @@ export const CtaButton = styled.button`
   color: #fff;
   border: 0;
   border-radius: 12px;
-  padding: 11px 22px;
-  font-size: 0.95rem;
+  padding: 10px 20px;
+  font-size: 0.88rem;
   font-weight: 700;
   cursor: pointer;
 
@@ -286,7 +301,8 @@ export const SectionDivider = styled.hr`
 
 export const SectionTitle = styled.h3`
   margin: 0 0 12px;
-  font-size: 1.02rem;
+  font-size: 0.95rem;
+  font-weight: 700;
   line-height: 1.2;
   color: ${textMain};
 `;
@@ -313,11 +329,11 @@ export const Stat = styled.div`
 `;
 
 export const StatValue = styled.div`
-  font-size: 1.2rem;
-  font-weight: 800;
+  font-size: 1.08rem;
+  font-weight: 700;
   color: ${textMain};
 
-  small { font-size: 0.72rem; font-weight: 600; color: ${textMuted}; }
+  small { font-size: 0.7rem; font-weight: 500; color: ${textMuted}; }
 `;
 
 export const StatLabel = styled.div`
