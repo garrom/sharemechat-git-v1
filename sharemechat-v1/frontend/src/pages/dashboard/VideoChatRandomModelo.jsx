@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import i18n from '../../i18n';
 import SessionHUD from '../../components/SessionHUD';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUserPlus, faHeart, faVideo, faPhoneSlash, faForward, faPaperPlane, faBan, faFlag, faExpand } from '@fortawesome/free-solid-svg-icons';
+import { faUserPlus, faVideo, faPhoneSlash, faForward, faPaperPlane, faBan, faFlag, faExpand } from '@fortawesome/free-solid-svg-icons';
 import {
   StyledCenterVideochat,
   StyledSplit2,
@@ -733,7 +733,7 @@ export default function VideoChatRandomModelo(props) {
             aria-label={t('common.actions.addToFavorites')}
             title={t('common.actions.addToFavorites')}
           >
-            <FontAwesomeIcon icon={faHeart} />
+            <FontAwesomeIcon icon={faUserPlus} />
           </BtnCallLight>
         )}
       </StyledCallOverlayControls>

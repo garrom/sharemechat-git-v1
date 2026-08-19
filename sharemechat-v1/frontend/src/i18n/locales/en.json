@@ -331,6 +331,16 @@
   "perfilModel": {
     "displayName": "Your model profile",
     "role": "Model",
+    "physical": {
+      "title": "Physical details",
+      "subtitle": "These details ARE shown to clients on your public profile. Fill in only the ones you want.",
+      "bust": "Bust size",
+      "height": "Height (cm)",
+      "butt": "Butt size",
+      "body": "Body",
+      "none": "— Not specified —",
+      "hint": "Sex is always shown as “Female” and age is calculated from your date of birth."
+    },
     "header": {
       "subtitle": "Complete your details and upload a photo and an introduction video to attract more clients."
     },
@@ -493,11 +503,44 @@
     "unavailable": "This model is no longer available.",
     "noPrincipalPhoto": "No photo available",
     "labels": {
-      "interests": "Interests"
+      "interests": "Interests",
+      "age": "Age",
+      "bust": "Bust size",
+      "sex": "Sex",
+      "height": "Height",
+      "butt": "Butt size",
+      "body": "Body",
+      "languages": "Languages"
     },
     "sections": {
       "photos": "Photos",
-      "videos": "Videos"
+      "videos": "Videos",
+      "data": "Details",
+      "availability": "Usually online"
+    },
+    "likes": {
+      "label": "Like",
+      "like": "Like",
+      "unlike": "Unlike",
+      "badgeNone": "No badge yet · be the first"
+    },
+    "badgeValues": {
+      "TIARA": "Tiara",
+      "DIADEM": "Diadem",
+      "CROWN": "Crown",
+      "GEMS_CROWN": "Jewelled Crown",
+      "IMPERIAL": "Imperial"
+    },
+    "sexValue": "Female",
+    "bustValues": { "SMALL": "Small", "MEDIUM": "Medium", "LARGE": "Large", "XLARGE": "Extra large" },
+    "buttValues": { "SMALL": "Small", "MEDIUM": "Medium", "LARGE": "Large", "XLARGE": "Extra large" },
+    "bodyValues": { "SLIM": "Slim", "ATHLETIC": "Athletic", "AVERAGE": "Average", "CURVY": "Curvy", "BBW": "BBW" },
+    "days": { "1": "Monday", "2": "Tuesday", "3": "Wednesday", "4": "Thursday", "5": "Friday", "6": "Saturday", "7": "Sunday" },
+    "availability": {
+      "note": "Observed typical availability · Central European Time (Europe/Madrid)",
+      "empty": "No connection data yet. It will fill in as the model comes online.",
+      "prevDay": "Previous day",
+      "nextDay": "Next day"
     },
     "empty": {
       "photos": "This model does not have any approved photos yet.",
@@ -522,6 +565,21 @@
       "NL": "Dutch",
       "RO": "Romanian"
     }
+  },
+  "modelReputation": {
+    "title": "Your reputation",
+    "noBadge": "No badge yet",
+    "toNext": "{{n}} more to reach",
+    "maxed": "You're at the top badge!",
+    "viewRanking": "View Top models"
+  },
+  "modelRanking": {
+    "title": "Top models",
+    "loading": "Loading ranking…",
+    "error": "Could not load the ranking.",
+    "empty": "No likes on the platform yet. Be the first!",
+    "noBadge": "no badge",
+    "selfNote": "Even outside the Top 30, you always see your position. Get more likes to climb."
   },
   "checkout": {
     "success": {
@@ -1208,7 +1266,8 @@
         "fullscreen": "Fullscreen",
         "sendGift": "Send gift",
         "backToList": "Back to list",
-        "startVideoChat": "Start VideoChat"
+        "startVideoChat": "Start VideoChat",
+        "viewProfile": "View full profile"
       },
       "hints": {
         "activateCamera": "activate camera to start videochat",

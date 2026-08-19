@@ -5,6 +5,7 @@ import { getResolvedLocale } from '../../i18n/localeUtils';
 import { useHistory, useLocation } from 'react-router-dom';
 import Peer from 'simple-peer';
 import FavoritesClientList from '../favorites/FavoritesClientList';
+import ModelProfileExpanded from '../subpages/ModelProfileExpanded';
 import { useAppModals } from '../../components/useAppModals';
 import { useCallUi } from '../../components/CallUiContext';
 import { ensureClientKycApproved } from '../../utils/clientKycGate';
@@ -16,7 +17,7 @@ import BlogContent from '../blog/BlogContent';
 import ClientHistoryPanel from '../subpages/ClientHistoryPanel';
 import ClientTicketsPanel from '../subpages/ClientTicketsPanel';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHeart, faVideo, faFilm, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import { faVideo, faFilm, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import {
   DashboardShell,StyledIconWrapper,StyledMainContent,
   StyledLeftColumn,StyledCenter,StyledRightColumn,
@@ -116,6 +117,20 @@ const DashboardClient = () => {
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [activeTab, setActiveTab] = useState('videochat');
+
+  // Card 1 Fase 2: perfil de modelo como modal grande en favoritos (desktop).
+  // Estado elevado desde FavoritesClientList (menú "…") y desde el botón
+  // "Ver perfil completo" del header del chat.
+  const [profileUser, setProfileUser] = useState(null);
+  const openModelProfile = useCallback((u) => {
+    if (!u?.id) return;
+    setProfileUser({ id: u.id, nickname: u.nickname || null, presence: u.presence || null });
+  }, []);
+  const closeModelProfile = useCallback(() => setProfileUser(null), []);
+  // Al salir de favoritos/videochat, cerrar el modal para no arrastrar estado.
+  useEffect(() => {
+    if (activeTab !== 'favoritos' && activeTab !== 'videochat' && profileUser) setProfileUser(null);
+  }, [activeTab, profileUser]);
   const [currentModelId, setCurrentModelId] = useState(null);
   const [currentModelRate, setCurrentModelRate] = useState(null);
   const [saldo, setSaldo] = useState(null);
@@ -3188,6 +3203,8 @@ const DashboardClient = () => {
             handleActivateCamera={handleActivateCamera}
             handleBlockPeer={handleBlockPeer}
             handleReportPeer={handleReportPeer}
+            onViewProfile={openModelProfile}
+            randomModelId={currentModelId}
             matchGraceRef={matchGraceRef}
             nextDisabled={nexting}
             currentModelRate={currentModelRate}
@@ -3221,6 +3238,7 @@ const DashboardClient = () => {
                     onItemsChange={setFavItems}
                     autoSelectBot={pendingAutoSelectBot}
                     onAutoSelectHandled={() => setPendingAutoSelectBot(false)}
+                    onOpenProfile={openModelProfile}
                   />
                 ):(
                   <div style={{padding:8,color:'#adb5bd'}}>{i18n.t('dashboardClient.favorites.inCallLocked')}</div>
@@ -3233,6 +3251,7 @@ const DashboardClient = () => {
               ) : (
               <VideoChatFavoritosCliente
                 isMobile={isMobile}
+                onViewProfile={openModelProfile}
                 handleOpenChatFromFavorites={handleOpenChatFromFavorites}
                 favReload={favReload}
                 selectedContactId={selectedContactId}
@@ -3288,6 +3307,15 @@ const DashboardClient = () => {
         )}
       </StyledMainContent>
       {/* ======FIN MAIN ======== */}
+
+      {/* Card 1: perfil de modelo como modal grande (favoritos + videochat). */}
+      <ModelProfileExpanded
+        open={(activeTab === 'favoritos' || activeTab === 'videochat') && !!profileUser}
+        userId={profileUser?.id}
+        fallbackNickname={profileUser?.nickname}
+        presence={profileUser?.presence}
+        onClose={closeModelProfile}
+      />
 
       <LivenessChallengeModal
         open={livenessModalOpen}

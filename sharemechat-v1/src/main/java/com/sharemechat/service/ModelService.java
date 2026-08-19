@@ -6,11 +6,13 @@ import com.sharemechat.dto.ModelPublicProfileDTO;
 import com.sharemechat.dto.ModelTeaserDTO;
 import com.sharemechat.entity.Model;
 import com.sharemechat.entity.ModelAsset;
+import com.sharemechat.entity.ModelProfileAttributes;
 import com.sharemechat.entity.User;
 import com.sharemechat.entity.UserLanguage;
 import com.sharemechat.exception.UserNotFoundException;
 import com.sharemechat.repository.ModelAssetRepository;
 import com.sharemechat.repository.ModelDocumentRepository;
+import com.sharemechat.repository.ModelProfileAttributesRepository;
 import com.sharemechat.repository.ModelRepository;
 import com.sharemechat.repository.UserLanguageRepository;
 import com.sharemechat.repository.UserRepository;
@@ -21,6 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.Period;
 import java.util.List;
 import java.util.Objects;
 
@@ -33,19 +37,26 @@ public class ModelService {
     private final UserRepository userRepository;
     private final UserLanguageRepository userLanguageRepository;
     private final StorageUrlCodec storageUrlCodec;
+    // Card 1 Fase 2: datos físicos + disponibilidad observada del perfil público.
+    private final ModelProfileAttributesRepository profileAttributesRepository;
+    private final PresenceTelemetryService presenceTelemetryService;
 
     public ModelService(ModelRepository modelRepository,
                         ModelDocumentRepository modelDocumentRepository,
                         ModelAssetRepository modelAssetRepository,
                         UserRepository userRepository,
                         UserLanguageRepository userLanguageRepository,
-                        StorageUrlCodec storageUrlCodec) {
+                        StorageUrlCodec storageUrlCodec,
+                        ModelProfileAttributesRepository profileAttributesRepository,
+                        PresenceTelemetryService presenceTelemetryService) {
         this.modelRepository = modelRepository;
         this.modelDocumentRepository = modelDocumentRepository;
         this.modelAssetRepository = modelAssetRepository;
         this.userRepository = userRepository;
         this.userLanguageRepository = userLanguageRepository;
         this.storageUrlCodec = storageUrlCodec;
+        this.profileAttributesRepository = profileAttributesRepository;
+        this.presenceTelemetryService = presenceTelemetryService;
     }
 
     // ==========================================
@@ -88,14 +99,35 @@ public class ModelService {
                         l.isPrimary()))
                 .toList();
 
+        // Card 1 Fase 2: edad derivada de date_of_birth (nunca la fecha),
+        // datos físicos declarados, y disponibilidad observada agregada.
+        Integer age = computeAge(user.getDateOfBirth());
+        ModelProfileAttributes attrs = profileAttributesRepository.findById(userId).orElse(null);
+        List<ModelPublicProfileDTO.AvailabilityBucket> availability =
+                presenceTelemetryService.availabilityForModel(userId);
+
         return new ModelPublicProfileDTO(
                 user.getId(),
                 user.getNickname(),
                 user.getBiography(),
                 user.getInterests(),
                 user.getChosenRateEurPerMin(),
-                languageEntries
+                languageEntries,
+                age,
+                attrs != null ? attrs.getBustSize() : null,
+                attrs != null ? attrs.getHeightCm() : null,
+                attrs != null ? attrs.getButtSize() : null,
+                attrs != null ? attrs.getBodyType() : null,
+                availability,
+                !availability.isEmpty()
         );
+    }
+
+    /** Edad en años a partir de la fecha de nacimiento; null si no consta. Package-private para test. */
+    static Integer computeAge(LocalDate dateOfBirth) {
+        if (dateOfBirth == null) return null;
+        int years = Period.between(dateOfBirth, LocalDate.now()).getYears();
+        return years >= 0 ? years : null;
     }
 
     private boolean isModelPubliclyAvailable(User user) {

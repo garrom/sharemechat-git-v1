@@ -4,6 +4,7 @@ import i18n from '../../i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faPhoneSlash, faVideo, faPaperPlane, faExpand } from '@fortawesome/free-solid-svg-icons';
 import FavoritesClientList from '../favorites/FavoritesClientList';
+import LikeHeart from '../../components/LikeHeart';
 import SupportMessageBubble from '../../components/support/SupportMessageBubble';
 import SessionHUD from '../../components/SessionHUD';
 import { useTranslationSettings } from '../../hooks/useTranslationSettings';
@@ -48,7 +49,7 @@ export default function VideoChatFavoritosCliente(props){
       fmtEUR,showCenterGifts,sendGiftMsg,contactMode,enterCallMode,callStatus,callCameraActive,
       callPeerId,callPeerName,callPeerAvatar,callRemoteVideoRef,callLocalVideoRef,callRemoteWrapRef,callListRef,
       handleCallActivateCamera,handleCallInvite,handleCallAccept,handleCallReject,handleCallEnd,toggleFullscreen,
-      callError,backToList,user,
+      callError,backToList,user,onViewProfile,
       currentModelRate,currentSaldo} = props;
 
   const baseBalanceRef = useRef(null);
@@ -361,7 +362,16 @@ export default function VideoChatFavoritosCliente(props){
           </div>
           <div style={{ fontSize: 11, color: pMeta.c }}>● {pMeta.label}</div>
         </div>
-        <div style={{ marginLeft: 'auto' }}>
+        {onViewProfile && centerChatPeerId && (
+          <button
+            type="button"
+            onClick={() => onViewProfile({ id: centerChatPeerId, nickname: centerChatPeerName, presence: peerPresenceNorm })}
+            style={{ marginLeft: 12, fontSize: 12.5, color: '#fff', border: '1px solid rgba(255,255,255,0.5)', borderRadius: 999, padding: '5px 12px', cursor: 'pointer', background: 'rgba(255,255,255,0.10)', whiteSpace: 'nowrap', flexShrink: 0 }}
+          >
+            {t('dashboardClient.videoChatFavoritosCliente.actions.viewProfile', 'Ver perfil completo')}
+          </button>
+        )}
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
           {shouldShowTranslationToggle && <TranslationToggleButton />}
         </div>
       </div>
@@ -726,6 +736,12 @@ export default function VideoChatFavoritosCliente(props){
                                     y de pago (centro). Sin reportar/bloquear en
                                     favoritos. "Ver original" NO va aquí: vive en
                                     la cabecera de la columna de chat. */}
+                                {/* Card 1 Fase B: like a la modelo abajo-derecha, sobre el vídeo (encima de la barra). */}
+                                {callPeerId && (
+                                  <div style={{ position:'absolute', right:20, bottom:100, zIndex:6 }}>
+                                    <LikeHeart modelUserId={callPeerId} />
+                                  </div>
+                                )}
                                 <StyledGiftFxLayer ref={fxRef} />
                                 {renderCallOverlayBar()}
                               </StyledCallStage>
@@ -933,6 +949,13 @@ export default function VideoChatFavoritosCliente(props){
                     </StyledVideoTitle>
                     <video ref={callRemoteVideoRef} autoPlay playsInline style={{width:'100%',height:'100%',objectFit:'cover'}}/>
                   </StyledRemoteVideo>
+
+                  {/* Card 1 Fase B: like a la modelo en la llamada 1-a-1 (móvil). */}
+                  {callPeerId && (
+                    <div style={{ position:'absolute', left:10, bottom:10, zIndex:5 }}>
+                      <LikeHeart modelUserId={callPeerId} />
+                    </div>
+                  )}
 
                   <StyledLocalVideo>
                     <video ref={callLocalVideoRef} muted autoPlay playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block',border:'none'}}/>

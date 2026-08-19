@@ -154,6 +154,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/models/*/assets").hasAnyRole("USER", "CLIENT", "MODEL", "ADMIN")
                         // Perfil público del modelo (modal "Ver perfil completo" desde favoritos del cliente)
                         .requestMatchers(HttpMethod.GET, "/api/models/*/public-profile").hasAnyRole("USER", "CLIENT", "MODEL", "ADMIN")
+                        // Card 1 Fase 3: likes cliente→modelo. El que da like es CLIENT/USER,
+                        // no MODEL, así que hay que permitirlo ANTES del catch-all /api/models/** (rol MODEL).
+                        .requestMatchers(HttpMethod.GET, "/api/models/*/likes").hasAnyRole("USER", "CLIENT", "MODEL", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/models/*/likes/toggle").hasAnyRole("USER", "CLIENT", "MODEL", "ADMIN")
                         // Endpoints del propio modelo (USER onboarding + MODEL)
                         .requestMatchers("/api/me/assets/**").hasAnyRole("USER", "MODEL")
                         .requestMatchers(HttpMethod.GET, "/api/me/assets").hasAnyRole("USER", "MODEL")
@@ -270,6 +274,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/admin/streams/{id}")
                         .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_STREAMS_READ_DETAIL))
                         .requestMatchers(HttpMethod.GET, "/api/admin/stats/overview")
+                        .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_STATS_READ_OVERVIEW))
+                        // Card 1 Fase 2: heatmap de presencia (reutiliza permiso de stats).
+                        .requestMatchers(HttpMethod.GET, "/api/admin/stats/presence/**")
                         .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_STATS_READ_OVERVIEW))
                         .requestMatchers(HttpMethod.GET, "/api/admin/finance/top-models")
                         .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_FINANCE_READ_TOP_MODELS))

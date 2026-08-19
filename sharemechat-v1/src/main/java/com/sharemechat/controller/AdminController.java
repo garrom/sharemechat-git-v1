@@ -55,6 +55,8 @@ public class AdminController {
     private final com.sharemechat.master.service.AdminMasterService adminMasterService;
     // ADR-056 S7.b (2026-08-02): suspensión D11 desde admin.
     private final com.sharemechat.master.service.MasterSuspensionService masterSuspensionService;
+    // Card 1 Fase 2 (2026-08-18): heatmap de telemetría de presencia.
+    private final com.sharemechat.service.PresenceTelemetryService presenceTelemetryService;
 
     public AdminController(
             AdminService adminService,
@@ -70,7 +72,8 @@ public class AdminController {
             TransactionService transactionService,
             com.sharemechat.service.AccountDormancyService dormancyService,
             com.sharemechat.master.service.AdminMasterService adminMasterService,
-            com.sharemechat.master.service.MasterSuspensionService masterSuspensionService
+            com.sharemechat.master.service.MasterSuspensionService masterSuspensionService,
+            com.sharemechat.service.PresenceTelemetryService presenceTelemetryService
     ) {
         this.adminService = adminService;
         this.backofficeAccessService = backofficeAccessService;
@@ -86,6 +89,7 @@ public class AdminController {
         this.dormancyService = dormancyService;
         this.adminMasterService = adminMasterService;
         this.masterSuspensionService = masterSuspensionService;
+        this.presenceTelemetryService = presenceTelemetryService;
     }
 
     // ============================================================
@@ -389,6 +393,21 @@ public class AdminController {
                 "persistedRandomActive", persisted.getOrDefault("persistedRandomActive", 0L),
                 "persistedCallingActive", persisted.getOrDefault("persistedCallingActive", 0L)
         ));
+    }
+
+    // Card 1 Fase 2: heatmap de presencia por modelo (día×hora, Europe/Madrid).
+    // GET /api/admin/stats/presence/heatmap?modelUserId=123
+    @GetMapping("/stats/presence/heatmap")
+    public ResponseEntity<PresenceHeatmapDTO> presenceHeatmapByModel(
+            @RequestParam Long modelUserId) {
+        return ResponseEntity.ok(presenceTelemetryService.modelHeatmap(modelUserId));
+    }
+
+    // Card 1 Fase 2: heatmap agregado de toda la plataforma (cobertura).
+    // GET /api/admin/stats/presence/heatmap/platform
+    @GetMapping("/stats/presence/heatmap/platform")
+    public ResponseEntity<PresenceHeatmapDTO> presenceHeatmapPlatform() {
+        return ResponseEntity.ok(presenceTelemetryService.platformHeatmap());
     }
 
     // GET /api/admin/streams/{id}

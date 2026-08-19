@@ -2,9 +2,9 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import i18n from '../../i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import BlurredPreview from '../../components/BlurredPreview';
+import LikeHeart from '../../components/LikeHeart';
 import {
   faUserPlus,
-  faHeart,
   faVideo,
   faPhoneSlash,
   faForward,
@@ -146,6 +146,8 @@ export default function VideoChatRandomCliente(props) {
     sendRandomMediaReady,
     nextDisabled,
     handleReportPeer,
+    onViewProfile,
+    randomModelId,
     currentModelRate,
     currentSaldo,
   } = props;
@@ -725,7 +727,7 @@ export default function VideoChatRandomCliente(props) {
           aria-label={t('common.actions.addToFavorites')}
           title={t('common.actions.addToFavorites')}
         >
-          <FontAwesomeIcon icon={faHeart} />
+          <FontAwesomeIcon icon={faUserPlus} />
         </BtnCallLight>
       </StyledCallOverlayControls>
 
@@ -893,7 +895,9 @@ export default function VideoChatRandomCliente(props) {
 
                       <StyledTeaserMediaButton
                         type="button"
-                        onClick={() => handleOpenPromo(currentPromoIndex)}
+                        onClick={() => (onViewProfile
+                          ? onViewProfile({ id: currentPromo.id, nickname: currentPromo.modelName })
+                          : handleOpenPromo(currentPromoIndex))}
                         title={currentPromo.title || t('dashboardClient.videoChatRandomCliente.actions.viewTeaser')}
                       >
                         <BlurredPreview
@@ -909,6 +913,13 @@ export default function VideoChatRandomCliente(props) {
                           style={{ width: '100%', height: '100%' }}
                         />
                       </StyledTeaserMediaButton>
+
+                      {/* Card 1 Fase B: like a la modelo del teaser (abajo-izquierda). */}
+                      {currentPromo.id && (
+                        <div style={{ position: 'absolute', left: 12, bottom: 12, zIndex: 4 }}>
+                          <LikeHeart modelUserId={currentPromo.id} />
+                        </div>
+                      )}
 
                       <StyledTeaserFavoriteSlot>
                         <BtnCallLight
@@ -1092,6 +1103,12 @@ export default function VideoChatRandomCliente(props) {
                             (izq) + regalos (centro) + reportar/bloquear (der).
                             "Ver original" ya NO va aquí: vuelve a la cabecera
                             de la columna de chat como botón normal. */}
+                        {/* Card 1 Fase B: like a la modelo abajo-derecha, sobre el vídeo remoto (encima de la barra). */}
+                        {randomModelId && (
+                          <div style={{ position: 'absolute', right: 20, bottom: 100, zIndex: 6 }}>
+                            <LikeHeart modelUserId={randomModelId} />
+                          </div>
+                        )}
                         <StyledGiftFxLayer ref={fxRef} />
                         {cameraActive && renderCallOverlayBar()}
                       </StyledCallStage>
@@ -1167,6 +1184,13 @@ export default function VideoChatRandomCliente(props) {
                           </StyledCallTopMetaText>
                         </StyledCallTopMeta>
                       </StyledCallTopBar>
+
+                      {/* Card 1 Fase B: like a la modelo del random (móvil, streaming activo). */}
+                      {randomModelId && (
+                        <div style={{ position: 'absolute', left: 10, bottom: 80, zIndex: 5 }}>
+                          <LikeHeart modelUserId={randomModelId} />
+                        </div>
+                      )}
 
                       <video
                         ref={remoteVideoRef}
