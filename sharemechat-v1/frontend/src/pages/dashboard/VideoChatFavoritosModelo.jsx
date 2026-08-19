@@ -63,6 +63,8 @@ import {
   StyledCallOverlayBar,
   StyledCallOverlayControls,
   StyledCallOverlayGifts,
+  StyledDaySep,
+  StyledComposerBtn,
 } from '../../styles/pages-styles/VideochatStyles';
 import GiftIcon, { resolveGiftSlug, isFaceGiftCode } from '../../components/gifts/GiftIcon';
 import GiftIconDefs from '../../components/gifts/GiftIconDefs';
@@ -576,7 +578,7 @@ export default function VideoChatFavoritosModelo(props) {
       ? { c: '#f59e0b', label: t('common.presence.busy', 'ocupado') }
       : { c: '#9ca3af', label: t('common.presence.offline', 'desconectado') };
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: '#111418', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, position: 'relative', zIndex: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px', background: '#14171d', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, position: 'relative', zIndex: 6 }}>
         <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#ff5c8a,#a78bfa)', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
           {(centerChatPeerName || '?').charAt(0).toUpperCase()}
         </div>
@@ -602,6 +604,30 @@ export default function VideoChatFavoritosModelo(props) {
       { sender: 'P2P_PEER', side: 'peer' },
       opts,
     );
+  };
+
+  // Rediseño Fase 2: inserta separadores de día ("Hoy"/"Ayer"/fecha) en el hilo.
+  const renderMessagesWithDays = (msgs) => {
+    const out = [];
+    let lastDay = null;
+    (msgs || []).forEach((m) => {
+      const iso = m?.createdAt;
+      const d = iso ? new Date(iso) : null;
+      const key = d && !isNaN(d.getTime()) ? d.toDateString() : null;
+      if (key && key !== lastDay) {
+        const now = new Date();
+        const yest = new Date(now); yest.setDate(now.getDate() - 1);
+        const label = key === now.toDateString()
+          ? t('dashboardClient.favorites.day.today')
+          : key === yest.toDateString()
+          ? t('dashboardClient.favorites.day.yesterday')
+          : d.toLocaleDateString([], { day: '2-digit', month: 'long', year: 'numeric' });
+        out.push(<StyledDaySep key={`sep-${key}-${m.id}`}><span>{label}</span></StyledDaySep>);
+        lastDay = key;
+      }
+      out.push(renderChatMessage(m));
+    });
+    return out;
   };
 
   const renderChatMessageInverted = (m, opts) => {
@@ -923,14 +949,19 @@ export default function VideoChatFavoritosModelo(props) {
                                 {allowChat ? t('dashboardModel.favorites.noMessagesYet') : t('dashboardModel.favorites.chatInactive')}
                               </div>
                             )}
-                            {centerMessages.map(renderChatMessage)}
+                            {renderMessagesWithDays(centerMessages)}
                           </StyledChatMessagesInner>
                         </StyledChatScroller>
 
-                        {allowChat && renderModelGiftBar()}
-
                         <StyledChatDockMessageComposer data-kind="favorites-chat">
                           <EmojiTextPicker onInsert={(e) => setCenterInput((v) => (v || '') + e)} disabled={!allowChat} />
+                          <StyledComposerBtn
+                            type="button"
+                            onClick={() => setShowCenterGifts && setShowCenterGifts((v) => !v)}
+                            disabled={!allowChat}
+                            title={t('dashboardClient.videoChatFavoritosCliente.actions.gifts', 'Regalos')}
+                            aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.gifts', 'Regalos')}
+                          >🎁</StyledComposerBtn>
                           <StyledChatInput
                             value={centerInput}
                             onChange={(e) => setCenterInput(e.target.value)}
@@ -953,6 +984,7 @@ export default function VideoChatFavoritosModelo(props) {
                               <FontAwesomeIcon icon={faVideo} />
                             </ButtonLlamar>
                           </StyledChatDockActions>
+                          {showCenterGifts && allowChat && renderGiftPicker()}
                         </StyledChatDockMessageComposer>
                       </StyledChatWhatsApp>
                     )}
@@ -1178,14 +1210,19 @@ export default function VideoChatFavoritosModelo(props) {
                             {allowChat ? t('dashboardModel.favorites.noMessagesYet') : t('dashboardModel.favorites.chatInactive')}
                           </div>
                         )}
-                        {centerMessages.map(renderChatMessage)}
+                        {renderMessagesWithDays(centerMessages)}
                       </StyledChatMessagesInner>
                     </StyledChatScroller>
 
-                    {allowChat && renderModelGiftBar()}
-
                     <StyledChatDockMessageComposer data-kind="favorites-chat">
                       <EmojiTextPicker onInsert={(e) => setCenterInput((v) => (v || '') + e)} disabled={!allowChat} />
+                      <StyledComposerBtn
+                        type="button"
+                        onClick={() => setShowCenterGifts && setShowCenterGifts((v) => !v)}
+                        disabled={!allowChat}
+                        title={t('dashboardClient.videoChatFavoritosCliente.actions.gifts', 'Regalos')}
+                        aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.gifts', 'Regalos')}
+                      >🎁</StyledComposerBtn>
                       <StyledChatInput
                         value={centerInput}
                         onChange={(e) => setCenterInput(e.target.value)}
@@ -1199,6 +1236,7 @@ export default function VideoChatFavoritosModelo(props) {
                         disabled={!allowChat}
                         onFocus={() => { setTimeout(() => modelCenterListRef.current?.scrollIntoView({ block: 'end' }), 50); }}
                       />
+                      {showCenterGifts && allowChat && renderGiftPicker()}
                     </StyledChatDockMessageComposer>
                   </StyledChatWhatsApp>
                 )}

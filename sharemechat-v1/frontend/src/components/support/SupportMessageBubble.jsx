@@ -69,6 +69,10 @@ const Bubble = styled.div`
   word-wrap: break-word;
   overflow-wrap: break-word;
 
+  /* Cola (tail) de la burbuja, solo chat P2P favoritos (rediseño Fase 2). */
+  ${(p) => p.$tail === 'left' && `border-bottom-left-radius: 5px;`}
+  ${(p) => p.$tail === 'right' && `border-bottom-right-radius: 5px;`}
+
   p { margin: 0 0 6px 0; }
   p:last-child { margin-bottom: 0; }
   ul, ol { margin: 4px 0 4px 20px; padding: 0; }
@@ -99,7 +103,7 @@ const Bubble = styled.div`
 
 const MetaLine = styled.div`
   font-size: 0.7rem;
-  color: #64748b;
+  color: ${(p) => (p.$onDark ? '#8b94a1' : '#64748b')};
   margin: 2px 4px 0 4px;
   text-align: ${(p) => (p.$side === 'right' ? 'right' : 'left')};
 `;
@@ -132,7 +136,7 @@ const PendingTag = styled.span`
 const TranslationLine = styled.div`
   margin-top: 6px;
   padding-top: 6px;
-  border-top: 1px dashed rgba(15, 23, 42, 0.15);
+  border-top: 1px dashed ${(p) => (p.$onDark ? 'rgba(255,255,255,0.16)' : 'rgba(15, 23, 42, 0.15)')};
   font-size: 0.82rem;
   opacity: 0.75;
   display: flex;
@@ -303,17 +307,18 @@ const SupportMessageBubble = ({
     // para una columna limpia (poco ancho en pantalla). En desktop / chat
     // normal se mantiene a la derecha como siempre.
     const meSide = transparent ? 'left' : 'right';
-    const meAvatar = <Avatar $bg="#15803d">{initialOf(userNickname || 'Y')}</Avatar>;
+    const meAvatar = <Avatar $bg="#2f6b4a">{initialOf(userNickname || 'Y')}</Avatar>;
     return (
       <div>
         <Row $side={meSide}>
           {meSide === 'left' && meAvatar}
           <ColumnWrap $side={meSide}>
-            <Bubble $bg="#dcfce7" $fg="#14532d" $border="#86efac" $transparent={transparent}>
+            {/* Rediseño favoritos Fase 2: burbuja propia grafito oscuro. */}
+            <Bubble $bg="#283040" $fg="#f4f7fb" $border="transparent" $tail="right" $transparent={transparent}>
               {content}
-              {hasTranslation && <TranslationLine>{translation}</TranslationLine>}
+              {hasTranslation && <TranslationLine $onDark>{translation}</TranslationLine>}
             </Bubble>
-            <MetaLine $side={meSide}>
+            <MetaLine $side={meSide} $onDark>
               {ts}
               {pending ? <PendingTag>enviando…</PendingTag> : null}
             </MetaLine>
@@ -328,13 +333,14 @@ const SupportMessageBubble = ({
     return (
       <div>
         <Row $side="left">
-          <Avatar $bg="#e2e8f0" $fg="#475569">{initialOf(peerNickname || 'P')}</Avatar>
+          <Avatar $bg="linear-gradient(135deg,#ff5c8a,#a78bfa)" $fg="#fff">{initialOf(peerNickname || 'P')}</Avatar>
           <ColumnWrap $side="left">
-            <Bubble $bg="rgba(255,255,255,0.98)" $fg="#111827" $border="rgba(15,23,42,0.08)" $transparent={transparent}>
+            {/* Rediseño favoritos Fase 2: burbuja de la contraparte tarjeta oscura elevada. */}
+            <Bubble $bg="#1b2029" $fg="#e7ebf1" $border="rgba(255,255,255,0.07)" $tail="left" $transparent={transparent}>
               {content}
-              {hasTranslation && <TranslationLine>{translation}</TranslationLine>}
+              {hasTranslation && <TranslationLine $onDark>{translation}</TranslationLine>}
             </Bubble>
-            <MetaLine $side="left">{ts}</MetaLine>
+            <MetaLine $side="left" $onDark>{ts}</MetaLine>
           </ColumnWrap>
         </Row>
       </div>
