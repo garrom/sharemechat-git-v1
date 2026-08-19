@@ -85,7 +85,19 @@ Vídeo local (cámara propia) + vídeo remoto (la otra parte) + chat lateral. Pa
 
 ## Sección Comprar (cliente)
 
-No es página aparte: se abre desde el botón "Comprar" del navbar del cliente. Muestra los packs disponibles (10 EUR, 20 EUR con bonus, 40 EUR con bonus) y el flujo de pago.
+No es página aparte: se abre desde el botón "Comprar" del navbar del cliente. Muestra los packs disponibles (10, 20, 40 y 100 EUR, los tres últimos con bonus). El pago es en criptomoneda: el cliente es redirigido a un checkout externo donde elige la cripto y ve la dirección/QR; al confirmarse en blockchain, vuelve y se acredita el saldo. La tarjeta aún no está disponible.
+
+## Registro con Google (cliente)
+
+En el registro/login público del cliente hay un botón "Registrarse/Iniciar con Google" además del formulario de email. Solo para clientes (no modelos ni estudios). No sustituye al KYC de edad (Didit), que sigue siendo obligatorio.
+
+## Likes e insignias (perfil de modelo)
+
+En el perfil de una modelo, el cliente ve un botón de corazón para dar "like" (toggle) y, si la modelo acumula likes, su insignia de realeza (Tiara/Diadema/Corona/Corona de Gemas/Imperial) junto al contador. En su propia vista, la modelo ve "Tu reputación" (likes, insignia y cuánto falta para la siguiente) y un botón "Ver Top modelos" (ranking Top 30 por likes, solo modelos).
+
+## Panel Master (estudios)
+
+Los usuarios con cuenta Master (estudios/agencias) tienen su propio panel en la ruta /master: visión económica consolidada, listado de sus modelos, alta de nuevas modelos, cobro e histórico. El cliente y la modelo estándar no lo ven.
 
 ## Perfil
 

@@ -98,13 +98,15 @@ public class SupportBotRouterService {
                     "wise", "100 eur", "€100", "umbral",
                     "primer minuto", "resto de minutos",
                     "gift", "gifts", "regalo", "regalos",
-                    "estadísticas", "estadisticas"
+                    "estadísticas", "estadisticas",
+                    "cripto", "crypto", "wallet", "paxum", "yoursafe", "sepa",
+                    "método de cobro", "metodo de cobro"
             ), "payout-y-tiers"),
 
             new Rule("pagos-saldo", Constants.Roles.CLIENT, List.of(
                     "saldo", "recarga", "recargar",
                     "pack", "packs",
-                    "10 eur", "20 eur", "40 eur", "€10", "€20", "€40",
+                    "10 eur", "20 eur", "40 eur", "100 eur", "€10", "€20", "€40", "€100",
                     "bonus",
                     "1 eur/min", "1 eur por minuto",
                     "precio", "cuánto cuesta", "cuanto cuesta",
@@ -113,6 +115,8 @@ public class SupportBotRouterService {
                     "cargo", "cargos",
                     "factura", "facturación", "facturacion",
                     "método de pago", "metodo de pago",
+                    "cripto", "crypto", "bitcoin", "btc", "usdt", "usdc", "wallet",
+                    "tarjeta", "pagar con",
                     "comprar saldo"
             ), "pagos-y-saldo"),
 
@@ -178,7 +182,11 @@ public class SupportBotRouterService {
                     "bloquear", "bloqueo",
                     "eliminar de favoritos",
                     "videochat 1-a-1", "videochat 1a1", "videochat con favorito",
-                    "chatear con"
+                    "chatear con",
+                    "like", "likes", "me gusta", "corazón", "corazon",
+                    "insignia", "insignias", "corona", "coronas",
+                    "tiara", "diadema", "imperial", "gemas",
+                    "ranking", "top modelos", "reputación", "reputacion"
             ), "chat-y-favoritos"),
 
             new Rule("onboarding-modelo", Constants.Roles.MODEL, List.of(
@@ -200,8 +208,16 @@ public class SupportBotRouterService {
                     "kyc",
                     "verificación edad", "verificacion edad",
                     "age estimation",
+                    "google", "iniciar con google", "registrarme con google",
                     "didit"
-            ), "onboarding-cliente")
+            ), "onboarding-cliente"),
+
+            new Rule("cuentas-master", null, List.of(
+                    "master", "cuenta master", "estudio", "agencia",
+                    "modelos bajo", "administrar modelos", "administrar modelo",
+                    "dar de alta modelo", "alta de modelo", "alta de modelos",
+                    "studio"
+            ), "cuentas-master")
     );
 
     /**

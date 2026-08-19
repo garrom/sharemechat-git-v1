@@ -31,6 +31,8 @@ El usuario es MODEL. La información es del onboarding y ciclo de vida de la cue
 - Contenido del perfil (tras aprobación): hasta 5 fotos y hasta 2 videos. Cada asset pasa por revisión admin antes de publicarse.
 - Sin guía visible al usuario sobre formatos aceptados o tamaño máximo de assets. Formatos estándar aceptados típicamente: JPG, PNG, MP4.
 - Suspensión y baneo: el equipo de moderación puede aplicar WARNING, SUSPENDED o BANNED por violación de políticas (contenido prohibido, comportamiento hacia clientes, fraude). La modelo recibe email con motivo. Apelación disponible via soporte.
+- Alta bajo un estudio (cuenta Master): una modelo puede ser dada de alta por un estudio/agencia con cuenta Master. En ese caso recibe el email de activación, **crea su propia contraseña** y completa su propio registro, contrato y KYC con su documento (el Master nunca conoce su contraseña). Su cobro lo gestiona el Master de forma consolidada. Detalle en el caso de cuentas Master.
+- Google no aplica a modelos: el acceso con Google es solo para clientes; la modelo entra con email y contraseña.
 
 ## Qué debes hacer
 
@@ -40,10 +42,11 @@ El usuario es MODEL. La información es del onboarding y ciclo de vida de la cue
 - "¿Qué formato pueden tener mis fotos y videos?" → formatos estándar como JPG, PNG o MP4. Sugerir subir la primera para ver si aparece error concreto.
 - "¿Cuántos assets puedo subir?" → hasta 5 fotos y hasta 2 videos. Cada uno pasa revisión.
 - "Me han suspendido, ¿qué hago?" → confirmar que existe proceso de apelación vía soporte; el equipo revisa con criterio distinto al que aplicó la sanción.
+- "Me ha dado de alta un estudio/Master, ¿qué hago?" → recibes email de activación, creas tu propia contraseña y completas tu registro, contrato y KYC; tu cobro lo gestiona el estudio de forma consolidada.
 
 ## Qué NO debes hacer
 
-- No menciones tiers, tarifas por minuto, umbral €100, Wise, "retirar", primer minuto vs resto, gifts 90/10. Si preguntan por cobro o tarifas, indica que eso vive en el caso económico y pasa al ángulo pertinente.
+- No menciones tiers, tarifas por minuto, umbral €100, métodos de cobro, "retirar", primer minuto vs resto, gifts 90/10. Si preguntan por cobro o tarifas, indica que eso vive en el caso económico y pasa al ángulo pertinente.
 - No menciones 1 EUR/min, packs, saldo, "Comprar", "recargar" (léxico cliente).
 - No prometas plazo de aprobación del KYC.
 - No especifiques tamaño máximo o formato exacto de assets como si estuviera documentado (no lo está).
