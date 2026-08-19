@@ -1,4 +1,27 @@
 {
+  "faqPage": {
+    "title": "Preguntas frecuentes",
+    "back": "← Volver",
+    "intro": "Aquí respondemos las dudas más comunes sobre cómo funciona SharemeChat, las sesiones y los pagos.",
+    "items": [
+      { "q": "¿Qué es SharemeChat?", "a": "SharemeChat es una plataforma de videochat 1 a 1 en directo donde conectas con modelos verificadas en tiempo real para conversaciones privadas dentro de la plataforma." },
+      { "q": "¿Cómo funciona el videochat?", "a": "Una vez registrado, inicias una sesión en directo y el sistema te conecta con una modelo disponible. Si disfrutas la conversación, puedes añadirla a tus contactos y volver a hablar más adelante." },
+      { "q": "¿Necesito instalar algo?", "a": "No. SharemeChat funciona directamente en tu navegador. Solo necesitas webcam, conexión a internet y un navegador moderno." },
+      { "q": "¿Es gratis?", "a": "Crear una cuenta es gratis. Las sesiones privadas de vídeo funcionan con saldo prepago; no hay suscripciones." },
+      { "q": "¿Cómo funcionan los pagos?", "a": "Las sesiones se pagan con saldo prepago que compras en pagos puntuales dentro de la plataforma. Sin suscripciones ni cargos ocultos." },
+      { "q": "¿El pago es seguro?", "a": "Sí. Los pagos se procesan mediante proveedores de confianza y los datos sensibles los gestiona una infraestructura de pago segura." },
+      { "q": "¿Puedo terminar una sesión cuando quiera?", "a": "Sí. Puedes finalizar una sesión de vídeo en cualquier momento desde la propia interfaz." },
+      { "q": "¿Qué pasa si se corta mi conexión?", "a": "Si hay un problema de conexión, la sesión se detiene automáticamente y solo se cuenta el tiempo real en que estuvo activa." },
+      { "q": "¿Debo verificar mi edad?", "a": "Sí. SharemeChat es solo para mayores de 18 años. Todas las cuentas pasan por verificación de identidad y edad antes de poder interactuar." },
+      { "q": "¿Las modelos son reales y verificadas?", "a": "Sí. Tanto clientes como modelos pasan verificación de identidad y edad antes de poder interactuar. Las modelos superan una verificación más estricta (documento oficial + selfie + prueba de vida), así que hablas con personas reales y verificadas, no con bots." },
+      { "q": "¿Puedo bloquear a alguien?", "a": "Sí. Si no quieres volver a interactuar con una persona, puedes bloquearla." },
+      { "q": "¿Puedo reportar comportamientos inapropiados?", "a": "Sí. Dispones de herramientas para reportar conductas abusivas o sospechosas. Los reportes se revisan para mantener un entorno seguro." },
+      { "q": "¿Es seguro SharemeChat?", "a": "La seguridad y la privacidad son prioritarias. La plataforma usa sistemas de moderación, herramientas de monitorización y salvaguardas técnicas para proteger a usuarios y modelos." },
+      { "q": "¿Son privadas las sesiones de videochat?", "a": "Sí. Cada sesión es un 1 a 1 privado entre las dos personas: no se retransmite ni se abre a terceros. Para mantener un entorno seguro, la plataforma cuenta con medidas de seguridad automáticas." },
+      { "q": "¿Puedo trabajar como modelo?", "a": "Sí.", "to": "/modelos", "toLabel": "Más información para modelos" },
+      { "q": "¿Dónde puedo leer las normas?", "a": "Puedes consultarlas en nuestras Normas de la comunidad y la información legal en los Términos del servicio.", "links": [ { "to": "/community-guidelines", "label": "Normas de la comunidad" }, { "to": "/legal?tab=terms", "label": "Términos del servicio" } ] }
+    ]
+  },
   "sessionHUD": {
     "client": {
       "rateTitle": "Tarifa por minuto de la modelo",

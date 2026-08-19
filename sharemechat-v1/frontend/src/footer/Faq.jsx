@@ -1,5 +1,6 @@
 import React from 'react';
 import { useHistory } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { FooterInner, LegalText } from '../styles/public-styles/FooterStyles';
 import Seo from '../components/Seo';
 
@@ -81,6 +82,7 @@ const Chevron = ({ open }) => (
 
 export default function Faq() {
   const history = useHistory();
+  const { t } = useTranslation();
   const [openIndex, setOpenIndex] = React.useState(null);
 
   const back = () => {
@@ -93,67 +95,11 @@ export default function Faq() {
     setOpenIndex(openIndex === index ? null : index);
   };
 
-  const faqs = [
-    {
-      q: "What is SharemeChat?",
-      a: "SharemeChat is a live 1-to-1 video chat platform where users can connect with verified models in real time for private conversations inside the platform."
-    },
-    {
-      q: "How does the video chat work?",
-      a: "Once registered, you can start a live session and the system connects you with an available model. If you enjoy the interaction you can add that model to your contacts and interact again later."
-    },
-    {
-      q: "Do I need to install anything?",
-      a: "No. SharemeChat works directly in your browser using real-time video technology. You only need a webcam, internet connection and a modern browser."
-    },
-    {
-      q: "Is SharemeChat free?",
-      a: "Creating an account is free. Some users may receive limited promotional access or trials. Private video sessions operate using prepaid credits."
-    },
-    {
-      q: "How do payments work?",
-      a: "Sessions are paid using prepaid credits. Credits are purchased through simple one-time payments inside the platform. There are no subscriptions and no hidden charges."
-    },
-    {
-      q: "Is payment secure?",
-      a: "Yes. Payments are processed through trusted payment providers used by major online platforms. Sensitive payment details are handled by secure payment infrastructure."
-    },
-    {
-      q: "Can I stop a session whenever I want?",
-      a: "Yes. You can end a video session at any moment directly from the interface."
-    },
-    {
-      q: "What happens if my connection drops?",
-      a: "If a connection problem occurs the session automatically stops and the platform only counts the actual time the session was active."
-    },
-    {
-      q: "Can I block someone?",
-      a: "Yes. If you do not wish to interact with a particular user again you can block them from the platform."
-    },
-    {
-      q: "Can I report inappropriate behaviour?",
-      a: "Yes. Reporting tools allow users to flag abusive or suspicious behaviour. Reports are reviewed to maintain a safe environment."
-    },
-    {
-      q: "Is SharemeChat safe?",
-      a: "Security and privacy are extremely important. The platform uses moderation systems, monitoring tools and technical safeguards to protect both users and models."
-    },
-    {
-      q: "Where can I read the platform rules?",
-      a: (
-        <>
-          You can review the platform rules in our{" "}
-          <span style={Link} onClick={() => history.push('/community-guidelines')}>
-            Community Guidelines
-          </span>{" "}
-          and legal information in the{" "}
-          <span style={Link} onClick={() => history.push('/legal?tab=terms')}>
-            Terms of Service
-          </span>.
-        </>
-      )
-    }
-  ];
+  // Contenido i18n (namespace translation, clave faqPage). Locale-aware: la
+  // interfaz cambia ES/EN con el resto de la app. Antes estaba hardcoded en
+  // inglés (se veía en inglés también bajo /es).
+  const items = t('faqPage.items', { returnObjects: true });
+  const faqs = Array.isArray(items) ? items : [];
 
   return (
     <>
@@ -162,14 +108,11 @@ export default function Faq() {
       <FooterInner>
 
         <div style={HeroBlock}>
-          <button style={BackButton} onClick={back}>← Back</button>
+          <button style={BackButton} onClick={back}>{t('faqPage.back')}</button>
 
-          <h1 style={PageTitle}>Frequently Asked Questions</h1>
+          <h1 style={PageTitle}>{t('faqPage.title')}</h1>
 
-          <p style={Intro}>
-            Here you can find answers to the most common questions about
-            SharemeChat, how the platform works, and how sessions and payments operate.
-          </p>
+          <p style={Intro}>{t('faqPage.intro')}</p>
         </div>
 
         <div style={ContentWrap}>
@@ -183,7 +126,25 @@ export default function Faq() {
 
               {openIndex === i && (
                 <div style={AnswerWrap}>
-                  <p style={Answer}>{item.a}</p>
+                  <p style={Answer}>
+                    {item.a}
+                    {item.to && (
+                      <>
+                        {' '}
+                        <span style={Link} onClick={() => history.push(item.to)}>
+                          {item.toLabel}
+                        </span>
+                      </>
+                    )}
+                    {Array.isArray(item.links) && item.links.map((l, j) => (
+                      <React.Fragment key={j}>
+                        {j === 0 ? ' ' : ' · '}
+                        <span style={Link} onClick={() => history.push(l.to)}>
+                          {l.label}
+                        </span>
+                      </React.Fragment>
+                    ))}
+                  </p>
                 </div>
               )}
             </div>
