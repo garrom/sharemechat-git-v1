@@ -484,32 +484,39 @@ export default function VideoChatFavoritosModelo(props) {
   const buildBubble = (m, isMe, senderMe, senderPeer, opts = {}) => {
     const { transparent = false } = opts;
     const giftData = resolveGiftData(m);
+    // Lado y sender YA resueltos (invertidos si aplica). El avatar sigue la
+    // identidad del sender (P2P_ME=yo verde / P2P_PEER=contraparte degradado),
+    // como las burbujas de texto de SupportMessageBubble.
+    const side = isMe ? senderMe.side : senderPeer.side;
+    const sender = isMe ? senderMe.sender : senderPeer.sender;
+    const avatarIsMe = sender === 'P2P_ME';
+    // Rediseño Fase 2: emojis y regalos también llevan mini-avatar. En el
+    // overlay de llamada (transparent) se conserva el padding sin avatar.
+    const msgAvatar = (
+      <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 13, color: '#fff', background: avatarIsMe ? '#2f6b4a' : 'linear-gradient(135deg,#ff5c8a,#a78bfa)' }}>
+        {String((avatarIsMe ? user?.nickname : centerChatPeerName) || (avatarIsMe ? 'Y' : 'P')).trim().charAt(0).toUpperCase()}
+      </div>
+    );
+    const emojiGiftRow = (content) => (transparent ? (
+      <StyledChatMessageRow key={m.id} $side={side} style={side === 'me' ? { paddingRight: 42 } : { paddingLeft: 42 }}>
+        {content}
+      </StyledChatMessageRow>
+    ) : (
+      <StyledChatMessageRow key={m.id} $side={side}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, flexDirection: side === 'me' ? 'row-reverse' : 'row' }}>
+          {msgAvatar}
+          {content}
+        </div>
+      </StyledChatMessageRow>
+    ));
     if (giftData) {
-      // Alinea el regalo igual que las burbujas de texto (SupportMessageBubble),
-      // que llevan avatar 32px + gap 10px = 42px en el lado del emisor. El lado
-      // se resuelve tras aplicar la variante (estandar o inverted).
-      const side = isMe ? senderMe.side : senderPeer.side;
-      return (
-        <StyledChatMessageRow
-          key={m.id}
-          $side={side}
-          style={side === 'me' ? { paddingRight: 42 } : { paddingLeft: 42 }}
-        >
-          {renderGiftVisual(giftData)}
-        </StyledChatMessageRow>
-      );
+      return emojiGiftRow(renderGiftVisual(giftData));
     }
-    // Un solo emoji -> grande y sin globo (estilo WhatsApp). MISMO lado que el
-    // regalo: usar el `side` YA resuelto (invertido si aplica), NO el `isMe`
-    // crudo, o el emoji queda con el padding en el lado contrario al regalo.
     if (isSingleEmoji(m.body)) {
-      const side = isMe ? senderMe.side : senderPeer.side;
-      return (
-        <StyledChatMessageRow key={m.id} $side={side} style={side === 'me' ? { paddingRight: 42 } : { paddingLeft: 42 }}>
-          <span role="img" aria-label={(m.body || '').trim()} style={{ fontSize: 34, lineHeight: 1 }}>
-            {(m.body || '').trim()}
-          </span>
-        </StyledChatMessageRow>
+      return emojiGiftRow(
+        <span role="img" aria-label={(m.body || '').trim()} style={{ fontSize: 34, lineHeight: 1 }}>
+          {(m.body || '').trim()}
+        </span>
       );
     }
     return (

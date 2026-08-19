@@ -486,28 +486,35 @@ export default function VideoChatFavoritosCliente(props){
     const { transparent = false } = opts;
     const giftData = normalizeGiftMessage(m);
     const isMe = Number(m.senderId) === Number(user?.id);
+    // Rediseño Fase 2: emojis y regalos también llevan mini-avatar (inicial) al
+    // lado, como las burbujas de texto. En el overlay de llamada (transparent)
+    // se conserva el padding sin avatar para no recargar el vídeo.
+    const msgAvatar = (
+      <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 13, color: '#fff', background: isMe ? '#2f6b4a' : 'linear-gradient(135deg,#ff5c8a,#a78bfa)' }}>
+        {String((isMe ? user?.nickname : centerChatPeerName) || (isMe ? 'Y' : 'P')).trim().charAt(0).toUpperCase()}
+      </div>
+    );
+    const emojiGiftRow = (content) => (transparent ? (
+      <StyledChatMessageRow key={m.id} $side={isMe ? 'me' : 'peer'} style={isMe ? { paddingRight: 42 } : { paddingLeft: 42 }}>
+        {content}
+      </StyledChatMessageRow>
+    ) : (
+      <StyledChatMessageRow key={m.id} $side={isMe ? 'me' : 'peer'}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, flexDirection: isMe ? 'row-reverse' : 'row' }}>
+          {msgAvatar}
+          {content}
+        </div>
+      </StyledChatMessageRow>
+    ));
     if (giftData) {
-      // Alinea el regalo igual que las burbujas de texto (SupportMessageBubble),
-      // que llevan un avatar de 32px + gap 10px = 42px en el lado del emisor.
-      // Sin este padding el regalo sobresale ~42px respecto al texto.
-      return (
-        <StyledChatMessageRow
-          key={m.id}
-          $side={isMe ? 'me' : 'peer'}
-          style={isMe ? { paddingRight: 42 } : { paddingLeft: 42 }}
-        >
-          {renderGiftVisual(giftData)}
-        </StyledChatMessageRow>
-      );
+      return emojiGiftRow(renderGiftVisual(giftData));
     }
     // Un solo emoji -> grande y sin globo (estilo WhatsApp).
     if (isSingleEmoji(m.body)) {
-      return (
-        <StyledChatMessageRow key={m.id} $side={isMe ? 'me' : 'peer'} style={isMe ? { paddingRight: 42 } : { paddingLeft: 42 }}>
-          <span role="img" aria-label={(m.body || '').trim()} style={{ fontSize: 34, lineHeight: 1 }}>
-            {(m.body || '').trim()}
-          </span>
-        </StyledChatMessageRow>
+      return emojiGiftRow(
+        <span role="img" aria-label={(m.body || '').trim()} style={{ fontSize: 34, lineHeight: 1 }}>
+          {(m.body || '').trim()}
+        </span>
       );
     }
     return (
