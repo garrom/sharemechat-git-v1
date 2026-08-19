@@ -94,6 +94,15 @@ const BlogContent = ({
   // i18n.language. El backend filtra articulos por (locale, status).
   const { t } = useTranslation();
 
+  // Etiqueta de categoria localizada (ADR-022): resuelve la traduccion visible
+  // via 'blog:categoryLabels', con fallback al valor crudo. No altera la clave
+  // usada para agrupar/expandir (sigue siendo el valor almacenado).
+  const categoryLabel = (cat) => {
+    if (!cat) return cat;
+    const map = t('blog:categoryLabels', { returnObjects: true });
+    return (map && typeof map === 'object' && map[cat]) || cat;
+  };
+
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -392,7 +401,7 @@ const BlogContent = ({
                         <img src={a.heroImageUrl} alt={a.title || ''} loading="lazy" />
                       </ArticleCardImage>
                     ) : null}
-                    {a.category ? <ArticleBadge>{a.category}</ArticleBadge> : null}
+                    {a.category ? <ArticleBadge>{categoryLabel(a.category)}</ArticleBadge> : null}
                     <ArticleTitle>{a.title}</ArticleTitle>
                     <ArticleMeta>
                       {a.locale ? a.locale.toUpperCase() : ''}
@@ -443,7 +452,7 @@ const BlogContent = ({
                           onClick={() => toggleCategory(name)}
                           aria-expanded={isExpanded}
                         >
-                          <SidebarCategoryName>{name}</SidebarCategoryName>
+                          <SidebarCategoryName>{categoryLabel(name)}</SidebarCategoryName>
                           <SidebarCategoryCount>({catArticles.length})</SidebarCategoryCount>
                           <SidebarCategoryChevron $expanded={isExpanded}>▾</SidebarCategoryChevron>
                         </SidebarCategoryHeader>

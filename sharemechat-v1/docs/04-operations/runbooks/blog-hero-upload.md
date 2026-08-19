@@ -103,3 +103,4 @@ Borrar el fichero de `sharemechat-v1/ops/uploads-pending/blog/`. No commitear na
 ## Histórico
 
 - 2026-06-24: primer uso documentado (`alternativas-omegle-2026.webp`, invalidación `I8ZO82TNMXDEVAINYGV2XZJFF5`). Convenciones extraídas observando los 5 heros existentes en ese momento.
+- 2026-08-10: `omegle-alternative-reddit.webp` (artículo 7, pipeline FULL_ARTICLE_ORCHESTRATED). Recibida en `uploads-pending/` a 1619×971; redimensionada a 1672×941 (33440 B, `image/webp`). Subida a `s3://assets-sharemechat-prod/blog/`, invalidación CloudFront `IDYO3TB97M879UUIGNXCG4XBUW` (distId `E3UAOU6AUNI0CM`). Verificado `HTTP/1.1 200`. Causa raíz del incidente: el `hero_image_url` del editorial_input apuntaba a una key que aún no existía en S3 (imagen quedó en `uploads-pending`, nunca publicada) → borrador sin hero.
