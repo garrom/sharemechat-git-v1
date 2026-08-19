@@ -29,10 +29,30 @@ Reutiliza (sin duplicar): `LikeHeart`, `RoyaltyBadge`, `ModelReputationCard`
 
 ---
 
+## SIMETRÍA CLIENTE / MODELO (decisión operador 2026-08-19)
+
+El tab Favoritos existe en **dos dashboards con componentes paralelos**:
+- Cliente: `FavoritesClientList` + `VideoChatFavoritosCliente` (cliente ve modelos).
+- Modelo: `FavoritesModelList` + `VideoChatFavoritosModelo` (modelo ve clientes).
+
+**Ambos deben tener la MISMA ESTRUCTURA** (3 columnas: lista · chat · bloque
+derecho). El **contenido se adapta**, la estructura no:
+- **Bloque derecho en cliente** (viendo a una modelo): completo — foto/cover (con
+  difuminado), nombre, presencia, edad, likes/reputación, datos físicos, CTA
+  videollamada con €/min, regalos, ver perfil.
+- **Bloque derecho en modelo** (viendo a un cliente): **simplificado** — si no hay
+  foto → avatar de letra; **sin like, sin edad, sin datos físicos, sin tarifa**;
+  solo lo esencial (avatar + nombre + presencia + CTA videollamada). Respeta la
+  misma estructura de bloque, más sencillo.
+
+→ Cada fase se aplica a **cliente y modelo** (lockstep en las fases genéricas 1-2;
+la 3 con las dos variantes de bloque derecho).
+
 ## PLAN DEFINITIVO POR FASES (2026-08-19, decidido por la IA a petición del operador)
 
-- **Fase 1 — Columna izquierda.** ✅ HECHA y VALIDADA en TEST (2026-08-19, commit
-  `e725ca9a`). 100% frontend (verificado: `/messages/conversations` ya devuelve
+- **Fase 1 — Columna izquierda.** ✅ HECHA. Cliente validado en TEST (commit
+  `e725ca9a`); **modelo replicado** (`FavoritesModelList`, mismo estilo/fuente).
+  100% frontend (verificado: `/messages/conversations` ya devuelve
   `lastBody`/`lastAt`/`unreadCount`). Buscador, agrupación online/offline,
   preview + hora, no-leídos numérico, restyle. Pendiente en Fase 6: prefijo "Tú:".
 - **Fase 2 — Centro (restyle), aún a 2 columnas y 100% funcional.** Fondo oscuro,
