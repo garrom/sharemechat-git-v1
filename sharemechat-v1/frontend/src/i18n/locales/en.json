@@ -1198,6 +1198,7 @@
       "search": { "placeholder": "Search contact…" },
       "groups": { "online": "Online", "offline": "Offline" },
       "botSubtitle": "Assistant · always available",
+      "giftLabel": "Gift",
       "selectFavorite": "Select a favorite to open the conversation here.",
       "pendingInvitationMessage": "invited you to become mutual favorites. Accept to enable chat.",
       "acceptInvitation": "Accept invitation",

@@ -50,6 +50,15 @@ function formatConvTime(iso) {
   return d.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
 }
 
+// El backend serializa el último mensaje de un regalo como "Gift: <nombre>"
+// (o "Gift"). En el preview lo mostramos tipo messenger: 🎁 + nombre.
+function formatPreview(text) {
+  if (!text) return '';
+  if (text === 'Gift') return `🎁 ${i18n.t('dashboardClient.favorites.giftLabel')}`;
+  if (text.startsWith('Gift: ')) return `🎁 ${text.slice(6)}`;
+  return text;
+}
+
 function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, unread = 0, preview = '', lastAt = null, menuOpen = false }) {
   const [imgFailed, setImgFailed] = useState(false);
 
@@ -68,7 +77,7 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
   const displayName = isBot ? i18n.t('support.chat.agentName') : (user?.nickname || `Usuario #${user?.id}`);
   const avatarInitial = (displayName || '?').trim().charAt(0).toUpperCase() || '?';
   const hasRealAvatar = !!avatarUrl && !imgFailed;
-  const previewText = isBot ? i18n.t('dashboardClient.favorites.botSubtitle') : preview;
+  const previewText = isBot ? i18n.t('dashboardClient.favorites.botSubtitle') : formatPreview(preview);
   const timeText = isBot ? '' : formatConvTime(lastAt);
   const showUnread = !isBot && !isBlocked && Number(unread) > 0;
 
