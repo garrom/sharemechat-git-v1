@@ -27,9 +27,10 @@
     Override opcional de la URL base (por defecto se resuelve por entorno).
 
 .NOTES
-    Autenticacion (ADR-060): login admin por cookie HttpOnly. Credenciales desde
-    variables de entorno de usuario SMC_ADMIN_EMAIL / SMC_ADMIN_PASSWORD (nunca
-    por argv ni a disco). El endpoint hereda ROLE_ADMIN de /api/admin/**.
+    Autenticacion (ADR-060): login admin por cookie HttpOnly. Credenciales POR
+    ENTORNO desde variables de usuario SMC_ADMIN_EMAIL_<TEST|AUDIT|PROD> /
+    SMC_ADMIN_PASSWORD_<...> (nunca por argv ni a disco); cada entorno tiene su
+    propia BD y cuentas. El endpoint hereda ROLE_ADMIN de /api/admin/**.
 #>
 [CmdletBinding()]
 param(
@@ -114,10 +115,15 @@ $kbDir = Join-Path $PSScriptRoot '..\..\support-kb'
 $kbDir = [System.IO.Path]::GetFullPath($kbDir)
 if (-not (Test-Path $kbDir)) { throw "No existe el directorio de la BdC: $kbDir" }
 
-$adminEmail = [Environment]::GetEnvironmentVariable('SMC_ADMIN_EMAIL', 'User')
-$adminPass  = [Environment]::GetEnvironmentVariable('SMC_ADMIN_PASSWORD', 'User')
+# Credenciales admin POR ENTORNO: SMC_ADMIN_EMAIL_<TEST|AUDIT|PROD> / SMC_ADMIN_PASSWORD_<...>.
+# Cada entorno tiene su propia BD y sus propias cuentas: no se pisan al cambiar de -Environment.
+$envSuffix = $Environment.ToUpper()
+$emailVar = "SMC_ADMIN_EMAIL_$envSuffix"
+$passVar  = "SMC_ADMIN_PASSWORD_$envSuffix"
+$adminEmail = [Environment]::GetEnvironmentVariable($emailVar, 'User')
+$adminPass  = [Environment]::GetEnvironmentVariable($passVar, 'User')
 if (-not $adminEmail -or -not $adminPass) {
-    throw "Faltan credenciales admin. Define SMC_ADMIN_EMAIL y SMC_ADMIN_PASSWORD (User scope) antes de correr."
+    throw "Faltan credenciales admin para '$Environment'. Define $emailVar y $passVar (User scope) con una cuenta backoffice (ADMIN/SUPPORT) de ESE entorno antes de correr."
 }
 
 Write-Host "=== sync-support-kb :: $Environment ($apiBase) ==="
