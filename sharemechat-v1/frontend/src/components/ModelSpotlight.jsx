@@ -13,12 +13,14 @@
 //   GET /api/users/avatars?ids={id}     → foto (misma que la lista/cabecera)
 //   La presencia llega por prop (misma fuente Redis que el punto del listado).
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import styled from 'styled-components';
 import i18n from '../i18n';
 import { apiFetch } from '../config/http';
+import RoyaltyBadge from './RoyaltyBadge';
 
 const t = (k, o) => i18n.t(k, o);
+const badgeName = (code) => (code ? t(`modelProfileExpanded.badgeValues.${code}`, { defaultValue: code }) : null);
 
 const Panel = styled.div`
   display: flex;
@@ -136,12 +138,48 @@ const Cta = styled.button`
   .arrow { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 18px; }
 `;
 
+const Rep = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 12px 14px;
+`;
+
+const RepNum = styled.div`
+  flex: 1;
+  min-width: 0;
+  .k { font-size: 18px; font-weight: 800; color: #fff; line-height: 1; }
+  .s { font-size: 11.5px; color: #8b94a1; text-transform: uppercase; letter-spacing: .03em; margin-top: 2px; }
+`;
+
+const LikeBtn = styled.button`
+  flex: 0 0 auto;
+  border: 1px solid rgba(234,29,29,0.34);
+  background: ${({ $liked }) => ($liked ? 'rgba(234,29,29,0.20)' : 'rgba(234,29,29,0.12)')};
+  color: #ff8a8a;
+  border-radius: 11px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  &:disabled { opacity: .6; cursor: default; }
+`;
+
 const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = false, fmtEUR, saldo }) => {
   const [profile, setProfile] = useState(null);
   const [photo, setPhoto] = useState(null);
+  const [likes, setLikes] = useState(null);
+  const [busyLike, setBusyLike] = useState(false);
 
   useEffect(() => {
-    if (!userId) { setProfile(null); setPhoto(null); return; }
+    if (!userId) { setProfile(null); setPhoto(null); setLikes(null); return; }
     let cancelled = false;
     (async () => {
       try {
@@ -152,9 +190,22 @@ const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = fal
         const map = await apiFetch(`/users/avatars?ids=${encodeURIComponent(userId)}`);
         if (!cancelled) setPhoto((map && map[userId]) || null);
       } catch { if (!cancelled) setPhoto(null); }
+      try {
+        const l = await apiFetch(`/models/${userId}/likes`);
+        if (!cancelled) setLikes(l || null);
+      } catch { if (!cancelled) setLikes(null); }
     })();
     return () => { cancelled = true; };
   }, [userId]);
+
+  const toggleLike = useCallback(async () => {
+    if (!userId || busyLike) return;
+    setBusyLike(true);
+    try {
+      const s = await apiFetch(`/models/${userId}/likes/toggle`, { method: 'POST' });
+      setLikes(s);
+    } catch { /* silencioso */ } finally { setBusyLike(false); }
+  }, [userId, busyLike]);
 
   const pres = String(presence || 'offline').toLowerCase();
   const presMeta = pres === 'online'
@@ -205,7 +256,26 @@ const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = fal
           <span className="arrow">›</span>
         </Cta>
 
-        {/* Paso 3+: reputación/likes, datos físicos, regalos, ver perfil completo. */}
+        {likes && (
+          <Rep>
+            <RoyaltyBadge code={likes.badgeCode || 'TIARA'} size={38} title={badgeName(likes.badgeCode) || ''} />
+            <RepNum>
+              <div className="k">{Number(likes.count || 0).toLocaleString('es-ES')}</div>
+              <div className="s">{likes.badgeCode ? badgeName(likes.badgeCode) : t('modelReputation.noBadge', 'Aún sin insignia')}</div>
+            </RepNum>
+            <LikeBtn
+              type="button"
+              $liked={!!likes.hasLiked}
+              disabled={busyLike}
+              onClick={toggleLike}
+              aria-label={t(likes.hasLiked ? 'modelProfileExpanded.likes.unlike' : 'modelProfileExpanded.likes.like', 'Dar like')}
+            >
+              {likes.hasLiked ? '❤' : '🤍'} {t(likes.hasLiked ? 'modelProfileExpanded.likes.unlike' : 'modelProfileExpanded.likes.like', 'Dar like')}
+            </LikeBtn>
+          </Rep>
+        )}
+
+        {/* Paso 4+: datos físicos, regalos, ver perfil completo. */}
       </Body>
     </Panel>
   );
