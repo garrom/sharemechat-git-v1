@@ -531,7 +531,7 @@ const PerfilModel = () => {
                   <CardSubtitle>{t('perfilModel.physical.subtitle')}</CardSubtitle>
                 </CardHeader>
                 <CardBody>
-                  <FormGridNew>
+                  <FormGridNew $two>
                     <FormFieldNew>
                       <Label>{t('perfilModel.physical.bust')}</Label>
                       <Select name="bustSize" value={physical.bustSize} onChange={onChangePhysical}>

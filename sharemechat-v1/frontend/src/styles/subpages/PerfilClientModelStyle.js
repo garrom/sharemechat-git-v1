@@ -22,13 +22,26 @@ const successText = '#476755';
 const dangerBg = '#fbf1f1';
 const dangerBorder = '#dbbcbc';
 const dangerText = '#8f5b5b';
-const cardShadow = '0 10px 30px rgba(17, 24, 39, 0.06)';
+// Card 1 rediseño perfil (2026-08-19): acento rojo MUY sutil + sombra más
+// suave. No colorea la página; solo da un toque (barra de sección, chip de
+// rol, anillo del avatar, foco de campos) y algo de profundidad.
+const red = '#ea1d1d';
+const redSoft = '#fbeaea';
+const redLine = 'rgba(234, 29, 29, 0.28)';
+const cardShadow = '0 1px 2px rgba(17, 24, 39, 0.05), 0 8px 24px rgba(17, 24, 39, 0.06)';
 
+// Rediseño perfil (2026-08-19): botones como el mock — forma redondeada
+// (no pastilla), texto normal (no MAYÚSCULAS), tamaño coherente con los
+// campos. Solo aplica dentro de ProfileMain (perfiles cliente + modelo).
 const profileButtonStyles = `
-  min-height: 42px;
+  min-height: 40px;
   box-shadow: none;
-  letter-spacing: 0.05em;
-  font-size: 0.76rem;
+  border-radius: 10px;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0 18px;
   transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.05s ease;
 `;
 
@@ -66,11 +79,11 @@ export const FormRow = styled.div`
 `;
 
 export const Label = styled.label`
-  font-size: 0.84rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: #66717d;
+  color: #7b8494;
 `;
 
 export const Input = styled.input`
@@ -78,19 +91,20 @@ export const Input = styled.input`
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
-  min-height: 48px;
+  min-height: 40px;
+  font-size: 0.9rem;
   background: ${surface};
   border: 1px solid ${borderSoft};
   color: ${textMain};
-  border-radius: 14px;
+  border-radius: 10px;
 
   &::placeholder {
     color: #95a0ab;
   }
 
   &:focus {
-    border-color: #bcc6d1;
-    box-shadow: 0 0 0 3px rgba(53, 69, 86, 0.08);
+    border-color: ${red};
+    box-shadow: 0 0 0 3px rgba(234, 29, 29, 0.10);
   }
 
   &:read-only,
@@ -109,17 +123,18 @@ export const Select = styled.select`
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
-  min-height: 48px;
+  min-height: 40px;
+  font-size: 0.9rem;
   background: ${surface};
   border: 1px solid ${borderSoft};
   color: ${textMain};
-  border-radius: 14px;
+  border-radius: 10px;
   appearance: none;
   cursor: pointer;
 
   &:focus {
-    border-color: #bcc6d1;
-    box-shadow: 0 0 0 3px rgba(53, 69, 86, 0.08);
+    border-color: ${red};
+    box-shadow: 0 0 0 3px rgba(234, 29, 29, 0.10);
   }
 
   &:disabled {
@@ -136,19 +151,20 @@ export const Textarea = styled.textarea`
   width: 100%;
   max-width: 100%;
   resize: vertical;
-  min-height: 126px;
+  min-height: 84px;
+  font-size: 0.9rem;
   background: ${surface};
   border: 1px solid ${borderSoft};
   color: ${textMain};
-  border-radius: 16px;
+  border-radius: 12px;
 
   &::placeholder {
     color: #95a0ab;
   }
 
   &:focus {
-    border-color: #bcc6d1;
-    box-shadow: 0 0 0 3px rgba(53, 69, 86, 0.08);
+    border-color: ${red};
+    box-shadow: 0 0 0 3px rgba(234, 29, 29, 0.10);
   }
 `;
 
@@ -266,8 +282,8 @@ export const Video = styled.video`
 export const Hint = styled.p`
   margin-top: ${space.sm};
   color: ${textMuted};
-  font-size: 0.92rem;
-  line-height: 1.66;
+  font-size: 0.8rem;
+  line-height: 1.5;
 `;
 
 export const BackButton = styled.button`
@@ -320,18 +336,18 @@ export const OnboardingCard = styled.section`
 export const ProfileMain = styled.main`
   flex: 1;
   width: min(1180px, calc(100% - 40px));
-  margin: 24px auto 36px;
-  padding: 28px;
-  border-radius: 30px;
+  margin: 20px auto 36px;
+  padding: 20px;
+  border-radius: 18px;
   background: ${pageBg};
   border: 1px solid ${border};
-  box-shadow: 0 16px 42px rgba(17, 24, 39, 0.08);
+  box-shadow: 0 10px 30px rgba(17, 24, 39, 0.06);
 
   @media (max-width: ${bp.md}) {
     width: calc(100% - 20px);
     margin-top: 12px;
-    padding: 18px;
-    border-radius: 22px;
+    padding: 14px;
+    border-radius: 16px;
   }
 
   ${ProfilePrimaryButton} {
@@ -377,18 +393,18 @@ export const ProfileMain = styled.main`
 export const ProfileHeader = styled.section`
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 18px;
+  gap: 16px;
   align-items: center;
-  margin-bottom: 18px;
-  padding: 24px;
-  border-radius: 26px;
+  margin-bottom: 16px;
+  padding: 18px 20px;
+  border-radius: 16px;
   background: ${surface};
   border: 1px solid ${border};
   box-shadow: ${cardShadow};
 
   @media (max-width: ${bp.md}) {
     grid-template-columns: minmax(0, 1fr);
-    padding: 18px;
+    padding: 16px;
   }
 `;
 
@@ -403,16 +419,16 @@ export const ProfileHeaderAvatar = styled.div`
 `;
 
 export const Avatar = styled.div`
-  width: 88px;
-  height: 88px;
+  width: 68px;
+  height: 68px;
   border-radius: 999px;
   overflow: hidden;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(180deg, #eef2f5 0%, #dde4eb 100%);
-  border: 1px solid #d9e0e7;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  border: 0;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px ${redLine};
 `;
 
 export const AvatarImg = styled.img`
@@ -435,7 +451,7 @@ export const ProfileHeaderTitleRow = styled.div`
 `;
 
 export const ProfileHeaderName = styled.h1`
-  font-size: 1.45rem;
+  font-size: 1.28rem;
   margin: 0;
   line-height: 1.1;
   letter-spacing: -0.02em;
@@ -444,20 +460,20 @@ export const ProfileHeaderName = styled.h1`
 
 export const ChipRole = styled.span`
   border-radius: 999px;
-  padding: 6px 11px;
-  font-size: 0.72rem;
+  padding: 4px 10px;
+  font-size: 0.68rem;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  border: 1px solid #d8dee5;
-  background: ${surfaceMuted};
-  color: #51606f;
+  letter-spacing: 0.06em;
+  border: 1px solid ${redLine};
+  background: ${redSoft};
+  color: #9a2a2a;
 `;
 
 export const ProfileHeaderSubtitle = styled.p`
   margin: 0 0 10px;
-  font-size: 0.95rem;
-  line-height: 1.65;
+  font-size: 0.88rem;
+  line-height: 1.55;
   color: ${textMuted};
 `;
 
@@ -470,11 +486,11 @@ export const ProfileHeaderMeta = styled.div`
 
 export const MetaItem = styled.span`
   display: grid;
-  gap: 4px;
-  padding: 10px 12px;
-  min-width: 140px;
-  border-radius: 16px;
-  border: 1px solid ${border};
+  gap: 3px;
+  padding: 8px 12px;
+  min-width: 150px;
+  border-radius: 10px;
+  border: 1px solid ${borderSoft};
   background: ${surfaceMuted};
 `;
 
@@ -521,15 +537,15 @@ export const ProfileColSide = styled.div`
 
 export const ProfileCard = styled.section`
   background: ${surface};
-  border-radius: 24px;
+  border-radius: 16px;
   border: 1px solid ${border};
   box-shadow: ${cardShadow};
-  padding: 22px;
+  padding: 18px 20px;
   color: ${textMain};
 
   @media (max-width: ${bp.md}) {
-    border-radius: 18px;
-    padding: 18px;
+    border-radius: 14px;
+    padding: 16px;
   }
 `;
 
@@ -550,48 +566,67 @@ export const ContractNoticeCard = styled(ProfileCard)`
 `;
 
 export const CardHeader = styled.header`
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 `;
 
+// Rediseño perfil: título con barra de acento roja sutil delante.
 export const CardTitle = styled.h2`
-  margin: 0 0 6px;
-  font-size: 1.06rem;
+  margin: 0 0 5px;
+  font-size: 0.98rem;
+  font-weight: 800;
   line-height: 1.25;
+  letter-spacing: -0.01em;
   color: ${textMain};
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  &::before {
+    content: '';
+    width: 3px;
+    height: 15px;
+    border-radius: 2px;
+    background: ${red};
+    flex-shrink: 0;
+  }
 `;
 
 export const CardSubtitle = styled.p`
-  margin: 0;
-  font-size: 0.92rem;
-  line-height: 1.62;
+  margin: 0 0 0 12px;
+  font-size: 0.85rem;
+  line-height: 1.55;
   color: ${textMuted};
 `;
 
 export const CardBody = styled.div`
   margin-top: 4px;
   display: grid;
-  gap: 14px;
+  gap: 12px;
 `;
 
 export const CardFooter = styled.footer`
-  margin-top: 16px;
+  margin-top: 14px;
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   flex-wrap: wrap;
   gap: 12px;
 `;
 
 export const FormGridNew = styled.div`
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 14px;
+  grid-template-columns: ${({ $two }) => ($two ? 'repeat(2, minmax(0, 1fr))' : 'minmax(0, 1fr)')};
+  gap: 12px;
   width: 100%;
+
+  @media (max-width: ${bp.md}) {
+    grid-template-columns: minmax(0, 1fr);
+  }
 `;
 
 export const FormFieldNew = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 `;
 
 export const PhotoPreview = styled.div`
