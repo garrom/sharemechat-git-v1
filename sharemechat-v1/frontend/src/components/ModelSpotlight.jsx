@@ -18,7 +18,12 @@ import styled from 'styled-components';
 import i18n from '../i18n';
 import { apiFetch } from '../config/http';
 import RoyaltyBadge from './RoyaltyBadge';
-import GiftIcon, { isFaceGiftCode } from './gifts/GiftIcon';
+import GiftIcon from './gifts/GiftIcon';
+import {
+  StyledGiftConfirmOverlay,
+  StyledGiftConfirmCard,
+  StyledGiftConfirmActions,
+} from '../styles/pages-styles/VideochatStyles';
 
 const t = (k, o) => i18n.t(k, o);
 const badgeName = (code) => (code ? t(`modelProfileExpanded.badgeValues.${code}`, { defaultValue: code }) : null);
@@ -234,11 +239,12 @@ const VerPerfil = styled.button`
 const QGifts = styled.div`
   display: flex;
   gap: 7px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap; /* una sola fila, sin scroll (caben los 5 de pago) */
 `;
 
 const QChip = styled.button`
   position: relative;
+  flex: 0 0 auto;
   width: 44px;
   height: 44px;
   border-radius: 12px;
@@ -250,6 +256,19 @@ const QChip = styled.button`
   transition: transform .12s ease, border-color .12s ease;
   &:hover:not(:disabled) { transform: translateY(-3px); border-color: rgba(255,255,255,0.28); }
   &:disabled { opacity: .5; cursor: not-allowed; }
+
+  .pr {
+    position: absolute;
+    bottom: -5px;
+    right: -5px;
+    font-size: 8px;
+    font-weight: 800;
+    color: #2a1c04;
+    background: linear-gradient(180deg, #ffd778, #f5b942);
+    padding: 1px 5px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
 `;
 
 const enumLabel = (kind, code) =>
@@ -260,6 +279,7 @@ const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = fal
   const [photo, setPhoto] = useState(null);
   const [likes, setLikes] = useState(null);
   const [busyLike, setBusyLike] = useState(false);
+  const [confirmGift, setConfirmGift] = useState(null);
 
   useEffect(() => {
     if (!userId) { setProfile(null); setPhoto(null); setLikes(null); return; }
@@ -319,11 +339,10 @@ const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = fal
   if (profile?.bustSize) facts.push({ l: t('modelProfileExpanded.labels.bust', 'Pecho'), v: enumLabel('bust', profile.bustSize) });
   if (langTxt) facts.push({ l: t('modelProfileExpanded.labels.languages', 'Idioma'), v: langTxt });
 
-  // Regalos de acceso rápido: objetos GRATIS (envío directo, un toque). Los de
-  // pago (con confirmación) siguen en la barra 🎁 del chat.
-  const quickGifts = (gifts || []).filter(
-    (g) => String(g?.tier || 'QUICK').toUpperCase() !== 'PREMIUM' && !isFaceGiftCode(g?.code)
-  );
+  // Regalos del spotlight: los de PAGO (premium). Se envían con modal de
+  // confirmación (coste). Los gratis viven en la barra 🎁 del chat.
+  const paidGifts = (gifts || []).filter((g) => String(g?.tier || '').toUpperCase() === 'PREMIUM');
+  const fmt = (v) => (typeof fmtEUR === 'function' ? fmtEUR(v) : `${Number(v || 0).toFixed(2)} €`);
 
   return (
     <Panel>
@@ -402,26 +421,60 @@ const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = fal
           </Sec>
         )}
 
-        {quickGifts.length > 0 && (
+        {paidGifts.length > 0 && (
           <Sec>
             <SecH>{t('modelSpotlight.giftTitle', 'Enviar un regalo')}</SecH>
             <QGifts>
-              {quickGifts.map((g) => (
+              {paidGifts.map((g) => (
                 <QChip
                   key={g.id}
                   type="button"
                   disabled={!giftSendEnabled}
                   title={g.name}
                   aria-label={g.name}
-                  onClick={() => { if (giftSendEnabled && onSendGift) onSendGift(g.id); }}
+                  onClick={() => { if (giftSendEnabled) setConfirmGift(g); }}
                 >
                   <GiftIcon code={g.code} alt={g.name || ''} size={22} />
+                  <span className="pr">{fmt(g.cost)}</span>
                 </QChip>
               ))}
             </QGifts>
           </Sec>
         )}
       </Body>
+
+      {confirmGift && (() => {
+        const cost = Number(confirmGift.cost || 0);
+        const saldoN = Number(saldo || 0);
+        const insufficient = cost > saldoN;
+        const close = () => setConfirmGift(null);
+        const confirm = () => { if (insufficient) return; if (onSendGift) onSendGift(confirmGift.id); close(); };
+        return (
+          <StyledGiftConfirmOverlay onClick={(e) => { if (e.target === e.currentTarget) close(); }}>
+            <StyledGiftConfirmCard>
+              <GiftIcon code={confirmGift.code} alt={confirmGift.name || ''} size={92} />
+              <h3>{confirmGift.name}</h3>
+              <div className="gift-confirm__price">{fmt(confirmGift.cost)}</div>
+              <div className="gift-confirm__to">
+                {t('dashboardClient.videoChatFavoritosCliente.gifts.to', 'Para')} <strong>{name}</strong>
+              </div>
+              <div className="gift-confirm__bal" data-insufficient={insufficient}>
+                {insufficient
+                  ? t('dashboardClient.videoChatFavoritosCliente.gifts.insufficient', 'Saldo insuficiente')
+                  : `${t('dashboardClient.videoChatFavoritosCliente.gifts.balance', 'Saldo')} ${fmt(saldoN)} · ${t('dashboardClient.videoChatFavoritosCliente.gifts.remaining', 'te quedarán')} ${fmt(saldoN - cost)}`}
+              </div>
+              <StyledGiftConfirmActions>
+                <button type="button" data-role="cancel" onClick={close}>
+                  {t('common.cancel', 'Cancelar')}
+                </button>
+                <button type="button" data-role="confirm" disabled={insufficient} onClick={confirm}>
+                  {t('dashboardClient.videoChatFavoritosCliente.gifts.send', 'Enviar regalo')}
+                </button>
+              </StyledGiftConfirmActions>
+            </StyledGiftConfirmCard>
+          </StyledGiftConfirmOverlay>
+        );
+      })()}
     </Panel>
   );
 };
