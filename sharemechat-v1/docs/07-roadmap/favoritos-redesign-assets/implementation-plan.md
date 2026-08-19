@@ -55,9 +55,31 @@ la 3 con las dos variantes de bloque derecho).
   100% frontend (verificado: `/messages/conversations` ya devuelve
   `lastBody`/`lastAt`/`unreadCount`). Buscador, agrupación online/offline,
   preview + hora, no-leídos numérico, restyle. Pendiente en Fase 6: prefijo "Tú:".
-- **Fase 2 — Centro (restyle), aún a 2 columnas y 100% funcional.** Fondo oscuro,
-  cabecera styled (fuera de inline), burbujas P2P, separador de día, composer con 🎁,
-  retirar gift bar fija. **Se mantiene llamar + ver perfil en el centro.** Validar.
+- **Fase 2 — Centro (restyle), aún a 2 columnas y 100% funcional.** ✅ HECHA y
+  VALIDADA en TEST (cliente + modelo, 2026-08-19). Incluyó, además del alcance
+  base (fondo oscuro carbón+glow+trama, cabecera oscura, burbujas P2P grafito/
+  tarjeta oscura, separador de día, composer con 🎁 abriendo la barra correcta,
+  retirada de la gift bar fija; se mantiene llamar + ver perfil):
+  - **Fotos reales** en cabecera y avatares de mensaje (peer + yo) vía
+    `/users/avatars`, fallback a inicial (`SupportMessageBubble` soporta
+    `peerAvatarUrl`/`userAvatarUrl`; emojis/regalos también con mini-avatar).
+  - **Catálogo de regalos TODO emoji** (decisión operador): `GiftIcon` mapea
+    también el pago a emoji (`PREMIUM_CODE_TO_EMOJI`) + `resolveGiftEmoji` para
+    los efectos → homogeneidad de tamaño, sin SVG. Cambio **global** de `GiftIcon`.
+    El 🎁 abre la BARRA (GiftIcon + modal confirmación pago + efectos), NO el
+    `renderGiftPicker` (cargaba `.webp` viejas → retirado del flujo, código muerto
+    a limpiar en Fase 5). Ver [[project-gift-emoji-system]].
+  - **Preview de regalo en la lista** con emoji real (nombre→emoji del catálogo,
+    pasado como prop `gifts` a las listas), no "🎁 Nombre".
+  - **Chat Agente IA oscuro** (`SupportChat` prop `dark`, solo en favoritos; los
+    tickets/admin siguen claros).
+  - **Estado de carga/vacío del centro oscuro** (`StyledFavoritesShell` bg
+    `#0d1015`) — sin flash blanco los ~2s hasta auto-abrir Agente IA.
+  - **Auto-abrir Agente IA** al entrar en Favoritos sin chat activo (era #1 del
+    feedback; `handleGoFavorites` → `setPendingAutoSelectBot(true)` si no hay peer).
+  Bundle TEST final: `main.1169f6db.js`. GOTCHA de la sesión: `SupportChat.jsx`
+  se editó por error en el checkout principal (path anidado `sharemechat-v1/
+  sharemechat-v1/...`); revertido allí y reaplicado en el worktree.
 - **Fase 3 — Columna derecha (spotlight).** Añade la 3ª columna, cablea
   CTA videollamada / like / regalos / ver perfil, y **entonces** retira llamar +
   ver perfil del centro. Validar.
