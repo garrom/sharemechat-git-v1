@@ -1,6 +1,7 @@
 package com.sharemechat.support.controller;
 
 import com.sharemechat.support.config.ClaudeApiProperties;
+import com.sharemechat.support.dto.SupportKbSyncRequestDTO;
 import com.sharemechat.support.entity.SupportBotPrompt;
 import com.sharemechat.support.repository.SupportBotPromptRepository;
 import com.sharemechat.support.service.KnowledgeBaseService;
@@ -10,7 +11,9 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -91,6 +94,76 @@ public class KnowledgeBaseAdminController {
         body.put("cachedPromptCount", loaded);
         body.putAll(knowledgeBaseService.getStats());
         log.info("[KB-ADMIN] reload requested — {} active prompts now in cache", loaded);
+        return ResponseEntity.ok(body);
+    }
+
+    /**
+     * ADR-060: sincroniza la BdC desde la fuente en git (payload enviado por
+     * {@code sync-support-kb.ps1}). UPSERT idempotente + soft-delete + reload.
+     * Devuelve el diff (conteos + case_keys); nunca el {@code content} de un
+     * prompt (higiene ADR-044).
+     */
+    @PostMapping("/sync")
+    public ResponseEntity<Map<String, Object>> sync(@RequestBody SupportKbSyncRequestDTO request) {
+        if (request == null || request.getPrompts() == null || request.getPrompts().isEmpty()) {
+            Map<String, Object> err = new LinkedHashMap<>();
+            err.put("synced", false);
+            err.put("error", "empty_payload");
+            return ResponseEntity.badRequest().body(err);
+        }
+
+        List<KnowledgeBaseService.SyncInput> inputs = new ArrayList<>();
+        for (SupportKbSyncRequestDTO.Item it : request.getPrompts()) {
+            if (it == null || it.getCaseKey() == null || it.getCaseKey().isBlank()
+                    || it.getContent() == null) {
+                Map<String, Object> err = new LinkedHashMap<>();
+                err.put("synced", false);
+                err.put("error", "invalid_item_missing_case_key_or_content");
+                return ResponseEntity.badRequest().body(err);
+            }
+            String caseKey = it.getCaseKey().trim().toLowerCase();
+            String role = (it.getRole() == null || it.getRole().isBlank())
+                    ? deriveRole(caseKey)
+                    : it.getRole().trim().toUpperCase();
+            if (!"CLIENT".equals(role) && !"MODEL".equals(role) && !"BOTH".equals(role)) {
+                Map<String, Object> err = new LinkedHashMap<>();
+                err.put("synced", false);
+                err.put("error", "invalid_role:" + role);
+                return ResponseEntity.badRequest().body(err);
+            }
+            boolean active = it.getActive() == null || it.getActive();
+            inputs.add(new KnowledgeBaseService.SyncInput(
+                    caseKey, role, it.getContent(), it.getDescription(), active));
+        }
+
+        KnowledgeBaseService.SyncResult r = knowledgeBaseService.sync(inputs);
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("synced", true);
+        body.put("createdCount", r.created.size());
+        body.put("updatedCount", r.updated.size());
+        body.put("unchangedCount", r.unchanged.size());
+        body.put("deactivatedCount", r.deactivated.size());
+        body.put("created", r.created);
+        body.put("updated", r.updated);
+        body.put("unchanged", r.unchanged);
+        body.put("deactivated", r.deactivated);
+        body.putAll(knowledgeBaseService.getStats());
+        log.info("[KB-ADMIN] sync: created={} updated={} unchanged={} deactivated={}",
+                r.created.size(), r.updated.size(), r.unchanged.size(), r.deactivated.size());
+        return ResponseEntity.ok(body);
+    }
+
+    /**
+     * ADR-060: estado por {@code case_key} (version, active, updatedAt, hash
+     * SHA-256 del content) para el drift-check del script. No devuelve content.
+     */
+    @GetMapping("/state")
+    public ResponseEntity<Map<String, Object>> state() {
+        List<Map<String, Object>> prompts = knowledgeBaseService.state();
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("count", prompts.size());
+        body.put("prompts", prompts);
         return ResponseEntity.ok(body);
     }
 

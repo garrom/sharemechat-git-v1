@@ -2,114 +2,135 @@ package com.sharemechat.support.service;
 
 import com.sharemechat.support.entity.SupportBotPrompt;
 import com.sharemechat.support.repository.SupportBotPromptRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
+/**
+ * ADR-060: UPSERT idempotente ({@link KnowledgeBaseService#sync}) y estado con
+ * hashes ({@link KnowledgeBaseService#state}). Repo mockeado, sin contexto Spring.
+ */
 class KnowledgeBaseServiceTest {
 
-    private static SupportBotPrompt prompt(String caseKey, String role, String content, boolean active) {
+    private SupportBotPromptRepository repository;
+    private KnowledgeBaseService svc;
+
+    @BeforeEach
+    void setUp() {
+        repository = mock(SupportBotPromptRepository.class);
+        // reload() (invocado al final de sync) lee active=true; irrelevante para el diff.
+        when(repository.findAllByActive(true)).thenReturn(List.of());
+        svc = new KnowledgeBaseService(repository);
+    }
+
+    private static SupportBotPrompt row(String caseKey, String role, String content,
+                                        int version, boolean active) {
         SupportBotPrompt p = new SupportBotPrompt();
         p.setCaseKey(caseKey);
         p.setRole(role);
         p.setContent(content);
+        p.setVersion(version);
         p.setActive(active);
         return p;
     }
 
     @Test
-    @DisplayName("hydrateOnStartup + getPromptContent — happy path con 2 prompts activos")
-    void hydrateAndGet() {
-        SupportBotPromptRepository repo = mock(SupportBotPromptRepository.class);
-        when(repo.findAllByActive(true)).thenReturn(List.of(
-                prompt("comportamiento-agente-ia", "BOTH", "reglas del agente", true),
-                prompt("producto", "BOTH", "que es sharemechat", true)
-        ));
+    @DisplayName("sync: INSERT nuevo, UPDATE cambiado (bump version), UNCHANGED igual")
+    void sync_upsert_diff() {
+        SupportBotPrompt a = row("a", "BOTH", "content-a", 1, true);
+        SupportBotPrompt b = row("b", "BOTH", "content-b", 1, true);
+        when(repository.findAll()).thenReturn(new ArrayList<>(List.of(a, b)));
 
-        KnowledgeBaseService service = new KnowledgeBaseService(repo);
-        service.hydrateOnStartup();
+        List<KnowledgeBaseService.SyncInput> inputs = List.of(
+                new KnowledgeBaseService.SyncInput("a", "BOTH", "content-a", null, true),
+                new KnowledgeBaseService.SyncInput("b", "BOTH", "content-b-NEW", null, true),
+                new KnowledgeBaseService.SyncInput("c", "CLIENT", "content-c", null, true));
 
-        assertEquals(Optional.of("reglas del agente"),
-                service.getPromptContent("comportamiento-agente-ia"));
-        assertEquals(Optional.of("que es sharemechat"),
-                service.getPromptContent("producto"));
-        assertEquals(Optional.empty(), service.getPromptContent("no-existe"));
-        assertEquals(Optional.empty(), service.getPromptContent(null));
-        assertEquals(Optional.empty(), service.getPromptContent(""));
+        KnowledgeBaseService.SyncResult r = svc.sync(inputs);
+
+        assertEquals(List.of("c"), r.created);
+        assertEquals(List.of("b"), r.updated);
+        assertEquals(List.of("a"), r.unchanged);
+        assertTrue(r.deactivated.isEmpty());
+        assertEquals(2, b.getVersion(), "content cambiado debe subir version");
+        assertEquals(1, a.getVersion(), "sin cambios no toca version");
     }
 
     @Test
-    @DisplayName("reload — sustituye la caché con el snapshot actual del repo")
-    void reloadSwapsCache() {
-        SupportBotPromptRepository repo = mock(SupportBotPromptRepository.class);
+    @DisplayName("sync: cambio SOLO de metadatos actualiza sin bump de version")
+    void sync_metadata_only_no_version_bump() {
+        SupportBotPrompt a = row("a", "BOTH", "same-content", 5, true);
+        when(repository.findAll()).thenReturn(new ArrayList<>(List.of(a)));
 
-        when(repo.findAllByActive(true)).thenReturn(List.of(
-                prompt("producto", "BOTH", "v1", true)
-        ));
-        KnowledgeBaseService service = new KnowledgeBaseService(repo);
-        service.hydrateOnStartup();
-        assertEquals(Optional.of("v1"), service.getPromptContent("producto"));
+        // mismo content, distinta description
+        KnowledgeBaseService.SyncResult r = svc.sync(List.of(
+                new KnowledgeBaseService.SyncInput("a", "BOTH", "same-content", "nueva desc", true)));
 
-        when(repo.findAllByActive(true)).thenReturn(List.of(
-                prompt("producto", "BOTH", "v2", true),
-                prompt("onboarding-cliente", "CLIENT", "flujo alta", true)
-        ));
-        long loaded = service.reload();
-
-        assertEquals(2L, loaded);
-        assertEquals(Optional.of("v2"), service.getPromptContent("producto"));
-        assertEquals(Optional.of("flujo alta"), service.getPromptContent("onboarding-cliente"));
+        assertEquals(List.of("a"), r.updated);
+        assertEquals(5, a.getVersion(), "cambio de metadatos no sube version");
+        assertEquals("nueva desc", a.getDescription());
     }
 
     @Test
-    @DisplayName("getStats — devuelve conteos y timestamp tras carga; no expone content")
-    void statsExposeCountsNotContent() {
-        SupportBotPromptRepository repo = mock(SupportBotPromptRepository.class);
-        when(repo.findAllByActive(true)).thenReturn(List.of(
-                prompt("producto", "BOTH", "contenido no debe filtrarse por getStats", true)
-        ));
+    @DisplayName("sync: case_key ausente del payload -> soft-delete (active=false), nunca borra")
+    void sync_soft_delete_missing() {
+        SupportBotPrompt a = row("a", "BOTH", "x", 1, true);
+        when(repository.findAll()).thenReturn(new ArrayList<>(List.of(a)));
 
-        KnowledgeBaseService service = new KnowledgeBaseService(repo);
-        service.hydrateOnStartup();
-        Map<String, Object> stats = service.getStats();
+        KnowledgeBaseService.SyncResult r = svc.sync(List.of(
+                new KnowledgeBaseService.SyncInput("b", "BOTH", "y", null, true)));
 
-        assertEquals(1L, stats.get("cachedPromptCount"));
-        assertEquals(1L, stats.get("lastLoadedCount"));
-        assertNotNull(stats.get("lastLoadedAt"));
-        assertFalse(stats.values().stream()
-                        .anyMatch(v -> v instanceof String && ((String) v).contains("contenido")),
-                "getStats no debe exponer content");
+        assertEquals(List.of("b"), r.created);
+        assertEquals(List.of("a"), r.deactivated);
+        assertFalse(a.isActive(), "el ausente queda inactivo");
+        verify(repository, never()).delete(any());
+        verify(repository, never()).deleteById(any());
     }
 
     @Test
-    @DisplayName("filtra entradas con caseKey o content nulo")
-    void ignoresNulls() {
-        SupportBotPromptRepository repo = mock(SupportBotPromptRepository.class);
-        SupportBotPrompt nullKey = new SupportBotPrompt();
-        nullKey.setCaseKey(null);
-        nullKey.setContent("orphan");
-        SupportBotPrompt nullContent = new SupportBotPrompt();
-        nullContent.setCaseKey("empty");
-        nullContent.setContent(null);
-        when(repo.findAllByActive(true)).thenReturn(List.of(
-                prompt("ok", "BOTH", "valido", true),
-                nullKey,
-                nullContent
-        ));
+    @DisplayName("sync idempotente: segunda pasada sin cambios = 0 updates")
+    void sync_idempotent() {
+        SupportBotPrompt a = row("a", "BOTH", "content-a", 1, true);
+        when(repository.findAll()).thenReturn(new ArrayList<>(List.of(a)));
 
-        KnowledgeBaseService service = new KnowledgeBaseService(repo);
-        service.hydrateOnStartup();
+        KnowledgeBaseService.SyncResult r = svc.sync(List.of(
+                new KnowledgeBaseService.SyncInput("a", "BOTH", "content-a", null, true)));
 
-        assertEquals(Optional.of("valido"), service.getPromptContent("ok"));
-        assertEquals(Optional.empty(), service.getPromptContent("empty"));
-        // La caché estimada puede reportar sólo los entries efectivamente puestos
-        assertEquals(1L, service.getStats().get("cachedPromptCount"));
+        assertTrue(r.created.isEmpty());
+        assertTrue(r.updated.isEmpty());
+        assertEquals(List.of("a"), r.unchanged);
+        assertTrue(r.deactivated.isEmpty());
+    }
+
+    @Test
+    @DisplayName("state: devuelve hash SHA-256 del content, nunca el content")
+    void state_returns_hash_not_content() {
+        SupportBotPrompt a = row("a", "BOTH", "hello", 3, true);
+        when(repository.findAll()).thenReturn(new ArrayList<>(List.of(a)));
+
+        List<Map<String, Object>> st = svc.state();
+
+        assertEquals(1, st.size());
+        Map<String, Object> m = st.get(0);
+        assertEquals("a", m.get("caseKey"));
+        assertEquals(3, m.get("version"));
+        assertEquals(true, m.get("active"));
+        assertEquals(KnowledgeBaseService.sha256("hello"), m.get("contentHash"));
+        assertFalse(m.containsValue("hello"), "no debe filtrar el content");
+    }
+
+    @Test
+    @DisplayName("sha256: determinista y distinto por input")
+    void sha256_deterministic() {
+        assertEquals(KnowledgeBaseService.sha256("abc"), KnowledgeBaseService.sha256("abc"));
+        assertNotEquals(KnowledgeBaseService.sha256("abc"), KnowledgeBaseService.sha256("abd"));
+        assertNull(KnowledgeBaseService.sha256(null));
     }
 }
