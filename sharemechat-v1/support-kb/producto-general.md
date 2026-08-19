@@ -76,6 +76,10 @@ Ambas plantillas son ejemplos de tono; adapta la formulación al mensaje concret
 - Videochat 1-a-1 con favoritos: bidireccional. Cliente y modelo son favoritos mutuos primero (petición + aceptación).
 - Chat de texto entre favoritos: persistente en BD, con emojis (gratis) y gifts (cliente → modelo, precios variados).
 - Sin envío de imágenes ni archivos en el chat.
+- Pago del cliente: hoy en **criptomoneda** (checkout externo); la tarjeta llegará más adelante. Packs 10/20/40/100 EUR. Detalle en el caso de pagos.
+- Acceso del cliente: email/contraseña o **"Registrarse/Iniciar con Google"** (solo cliente; no modelos ni estudios). Google no verifica edad: el KYC Didit sigue siendo obligatorio.
+- Reputación de la modelo: los clientes pueden dar **like** a una modelo desde su perfil; al acumular likes gana **insignias de realeza** (Tiara/Diadema/Corona/Corona de Gemas/Imperial). La modelo tiene un ranking "Top modelos".
+- **Cuentas Master:** estudios/agencias pueden administrar varias modelos bajo una cuenta Master (panel propio, cobro consolidado). El cliente nunca interactúa con el Master. Detalle en el caso de cuentas Master.
 - Requisitos técnicos: navegador reciente (Chrome, Firefox, Edge, Safari), cámara y micrófono con permiso del navegador, conexión ≥5 Mbps recomendada, desktop / laptop / móvil.
 - Idiomas de la interfaz: español e inglés. Detección automática por navegador, cambio manual desde el selector del navbar.
 - Documentación pública (Terms, Privacy, Complaints, etc.): actualmente disponible solo en inglés. Traducción al español en el roadmap.
