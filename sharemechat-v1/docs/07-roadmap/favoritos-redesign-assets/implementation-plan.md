@@ -31,9 +31,10 @@ Reutiliza (sin duplicar): `LikeHeart`, `RoyaltyBadge`, `ModelReputationCard`
 
 ## PLAN DEFINITIVO POR FASES (2026-08-19, decidido por la IA a petición del operador)
 
-- **Fase 1 — Columna izquierda.** 100% frontend (verificado: `/messages/conversations`
-  ya devuelve `lastBody`/`lastAt`/`unreadCount`). Buscador, agrupación online/offline,
-  preview + hora, no-leídos numérico, restyle. Validar en TEST.
+- **Fase 1 — Columna izquierda.** ✅ HECHA y VALIDADA en TEST (2026-08-19, commit
+  `e725ca9a`). 100% frontend (verificado: `/messages/conversations` ya devuelve
+  `lastBody`/`lastAt`/`unreadCount`). Buscador, agrupación online/offline,
+  preview + hora, no-leídos numérico, restyle. Pendiente en Fase 6: prefijo "Tú:".
 - **Fase 2 — Centro (restyle), aún a 2 columnas y 100% funcional.** Fondo oscuro,
   cabecera styled (fuera de inline), burbujas P2P, separador de día, composer con 🎁,
   retirar gift bar fija. **Se mantiene llamar + ver perfil en el centro.** Validar.
@@ -43,9 +44,16 @@ Reutiliza (sin duplicar): `LikeHeart`, `RoyaltyBadge`, `ModelReputationCard`
 - **Fase 4 — Consistencia de perfiles** (cliente, modelo, `ModelProfileExpanded`):
   foto con difuminado + datos encima, "Dar like" vs "Me gusta", pill. Análisis-primero. Validar.
 - **Fase 5 — Móvil + modo videollamada (D22) + limpieza.** i18n incluido en cada fase.
+- **Fase 6 — Prefijo "Tú:" en el preview de la lista (micro-backend).** Completa la
+  Fase 1: añadir `lastSenderId` a `ConversationSummaryDTO` y poblarlo en
+  `MessageService.conversations()`; en el frontend, anteponer "Tú:" al preview
+  cuando `lastSenderId === yo`. Requiere **deploy de backend** (JAR), por eso va al
+  final y separado (no bloquea el resto del frente, que es 100% frontend). i18n:
+  `dashboardClient.favorites.previewYou` ("Tú:" / "You:").
 
-**Micro-deuda backend anotada:** para el prefijo "Tú:" en el preview de la lista,
-añadir `lastSenderId` a `ConversationSummaryDTO` (1 campo). Diferido; no bloquea Fase 1.
+> Nota: la Fase 6 puede adelantarse o retrasarse sin afectar a Fases 2–5; se
+> mantiene como fase explícita del plan (petición del operador: no dejarla como
+> deuda difusa "para luego").
 
 ---
 
