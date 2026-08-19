@@ -14,7 +14,8 @@ const Card = styled.div`
   background: #ffffff;
   border: 1px solid #e6e7ea;
   border-radius: 16px;
-  padding: 18px 18px 16px;
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.05), 0 8px 24px rgba(17, 24, 39, 0.06);
+  padding: 18px 20px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -23,8 +24,21 @@ const Card = styled.div`
 const Title = styled.h3`
   margin: 0;
   font-size: 0.98rem;
-  font-weight: 700;
-  color: #1f2933;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #1b2027;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  &::before {
+    content: '';
+    width: 3px;
+    height: 15px;
+    border-radius: 2px;
+    background: #ea1d1d;
+    flex-shrink: 0;
+  }
 `;
 
 const Head = styled.div`
