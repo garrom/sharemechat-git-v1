@@ -63,11 +63,14 @@ import {
   StyledCallOverlayBar,
   StyledCallOverlayControls,
   StyledCallOverlayGifts,
+  StyledDaySep,
+  StyledComposerBtn,
 } from '../../styles/pages-styles/VideochatStyles';
-import GiftIcon, { resolveGiftSlug, isFaceGiftCode } from '../../components/gifts/GiftIcon';
+import GiftIcon, { resolveGiftSlug, resolveGiftEmoji, isFaceGiftCode } from '../../components/gifts/GiftIcon';
 import GiftIconDefs from '../../components/gifts/GiftIconDefs';
 import EmojiTextPicker from '../../components/EmojiTextPicker';
 import { isSingleEmoji } from '../../utils/emojiUtils';
+import { apiFetch } from '../../config/http';
 import {
   ButtonLlamar,
   ButtonRegalo,
@@ -148,6 +151,22 @@ export default function VideoChatFavoritosModelo(props) {
     sendGiftMsg,
     fmtEUR,
   } = props;
+
+  // Rediseño Fase 2: fotos reales del chat (peer=contacto + yo) para cabecera y
+  // avatares de mensaje. Reusa /users/avatars. Fallback a inicial si no hay foto.
+  const [chatAvatars, setChatAvatars] = useState({});
+  useEffect(() => {
+    const ids = [selectedContactId, user?.id].filter(Boolean);
+    if (!ids.length) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const map = await apiFetch(`/users/avatars?ids=${encodeURIComponent(ids.join(','))}`);
+        if (!cancelled) setChatAvatars(map || {});
+      } catch { if (!cancelled) setChatAvatars({}); }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedContactId, user?.id]);
 
   const normalizeGiftFromMessage = (giftData) => {
     if (!giftData) return null;
@@ -290,12 +309,22 @@ export default function VideoChatFavoritosModelo(props) {
       animation: 'gfxGlow .9s ease-out forwards',
     }, 900);
 
-    const slug = resolveGiftSlug(code);
-    if (slug) {
-      spawn(`<svg><use href="#gi-${slug}"/></svg>`, {
+    // Homogeneidad emoji (2026-08-19): burst grande con emoji nativo, no SVG.
+    const bigEmoji = resolveGiftEmoji(code);
+    if (bigEmoji) {
+      spawn(bigEmoji, {
         left: (cx - 45) + 'px', top: (cy - 120) + 'px', width: '90px', height: '90px',
+        fontSize: '74px', lineHeight: '90px', textAlign: 'center',
         transformOrigin: 'bottom center', animation: 'gfxBigNorm 1.1s cubic-bezier(.22,1.4,.4,1) forwards',
       }, 1200);
+    } else {
+      const slug = resolveGiftSlug(code);
+      if (slug) {
+        spawn(`<svg><use href="#gi-${slug}"/></svg>`, {
+          left: (cx - 45) + 'px', top: (cy - 120) + 'px', width: '90px', height: '90px',
+          transformOrigin: 'bottom center', animation: 'gfxBigNorm 1.1s cubic-bezier(.22,1.4,.4,1) forwards',
+        }, 1200);
+      }
     }
 
     for (let c = 0; c < 40; c++) {
@@ -482,32 +511,42 @@ export default function VideoChatFavoritosModelo(props) {
   const buildBubble = (m, isMe, senderMe, senderPeer, opts = {}) => {
     const { transparent = false } = opts;
     const giftData = resolveGiftData(m);
+    // Lado y sender YA resueltos (invertidos si aplica). El avatar sigue la
+    // identidad del sender (P2P_ME=yo verde / P2P_PEER=contraparte degradado),
+    // como las burbujas de texto de SupportMessageBubble.
+    const side = isMe ? senderMe.side : senderPeer.side;
+    const sender = isMe ? senderMe.sender : senderPeer.sender;
+    const avatarIsMe = sender === 'P2P_ME';
+    // Rediseño Fase 2: emojis y regalos también llevan mini-avatar. En el
+    // overlay de llamada (transparent) se conserva el padding sin avatar.
+    const msgAvatarUrl = avatarIsMe ? chatAvatars[user?.id] : chatAvatars[selectedContactId];
+    const msgAvatar = msgAvatarUrl ? (
+      <img src={msgAvatarUrl} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, display: 'block' }} />
+    ) : (
+      <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 13, color: '#fff', background: avatarIsMe ? '#2f6b4a' : 'linear-gradient(135deg,#ff5c8a,#a78bfa)' }}>
+        {String((avatarIsMe ? user?.nickname : centerChatPeerName) || (avatarIsMe ? 'Y' : 'P')).trim().charAt(0).toUpperCase()}
+      </div>
+    );
+    const emojiGiftRow = (content) => (transparent ? (
+      <StyledChatMessageRow key={m.id} $side={side} style={side === 'me' ? { paddingRight: 42 } : { paddingLeft: 42 }}>
+        {content}
+      </StyledChatMessageRow>
+    ) : (
+      <StyledChatMessageRow key={m.id} $side={side}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, flexDirection: side === 'me' ? 'row-reverse' : 'row' }}>
+          {msgAvatar}
+          {content}
+        </div>
+      </StyledChatMessageRow>
+    ));
     if (giftData) {
-      // Alinea el regalo igual que las burbujas de texto (SupportMessageBubble),
-      // que llevan avatar 32px + gap 10px = 42px en el lado del emisor. El lado
-      // se resuelve tras aplicar la variante (estandar o inverted).
-      const side = isMe ? senderMe.side : senderPeer.side;
-      return (
-        <StyledChatMessageRow
-          key={m.id}
-          $side={side}
-          style={side === 'me' ? { paddingRight: 42 } : { paddingLeft: 42 }}
-        >
-          {renderGiftVisual(giftData)}
-        </StyledChatMessageRow>
-      );
+      return emojiGiftRow(renderGiftVisual(giftData));
     }
-    // Un solo emoji -> grande y sin globo (estilo WhatsApp). MISMO lado que el
-    // regalo: usar el `side` YA resuelto (invertido si aplica), NO el `isMe`
-    // crudo, o el emoji queda con el padding en el lado contrario al regalo.
     if (isSingleEmoji(m.body)) {
-      const side = isMe ? senderMe.side : senderPeer.side;
-      return (
-        <StyledChatMessageRow key={m.id} $side={side} style={side === 'me' ? { paddingRight: 42 } : { paddingLeft: 42 }}>
-          <span role="img" aria-label={(m.body || '').trim()} style={{ fontSize: 34, lineHeight: 1 }}>
-            {(m.body || '').trim()}
-          </span>
-        </StyledChatMessageRow>
+      return emojiGiftRow(
+        <span role="img" aria-label={(m.body || '').trim()} style={{ fontSize: 34, lineHeight: 1 }}>
+          {(m.body || '').trim()}
+        </span>
       );
     }
     return (
@@ -521,6 +560,8 @@ export default function VideoChatFavoritosModelo(props) {
         }}
         peerNickname={centerChatPeerName || ''}
         userNickname={user?.nickname || ''}
+        peerAvatarUrl={chatAvatars[selectedContactId] || null}
+        userAvatarUrl={chatAvatars[user?.id] || null}
         transparent={transparent}
         translation={isMe ? null : getTranslation(m.id)}
       />
@@ -576,10 +617,14 @@ export default function VideoChatFavoritosModelo(props) {
       ? { c: '#f59e0b', label: t('common.presence.busy', 'ocupado') }
       : { c: '#9ca3af', label: t('common.presence.offline', 'desconectado') };
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: '#111418', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, position: 'relative', zIndex: 6 }}>
-        <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#ff5c8a,#a78bfa)', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
-          {(centerChatPeerName || '?').charAt(0).toUpperCase()}
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px', background: '#14171d', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, position: 'relative', zIndex: 6 }}>
+        {chatAvatars[selectedContactId] ? (
+          <img src={chatAvatars[selectedContactId]} alt="" style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, display: 'block' }} />
+        ) : (
+          <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#ff5c8a,#a78bfa)', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+            {(centerChatPeerName || '?').charAt(0).toUpperCase()}
+          </div>
+        )}
         <div style={{ minWidth: 0, lineHeight: 1.25 }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: '#e7ebf0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {centerChatPeerName || ''}
@@ -602,6 +647,30 @@ export default function VideoChatFavoritosModelo(props) {
       { sender: 'P2P_PEER', side: 'peer' },
       opts,
     );
+  };
+
+  // Rediseño Fase 2: inserta separadores de día ("Hoy"/"Ayer"/fecha) en el hilo.
+  const renderMessagesWithDays = (msgs) => {
+    const out = [];
+    let lastDay = null;
+    (msgs || []).forEach((m) => {
+      const iso = m?.createdAt;
+      const d = iso ? new Date(iso) : null;
+      const key = d && !isNaN(d.getTime()) ? d.toDateString() : null;
+      if (key && key !== lastDay) {
+        const now = new Date();
+        const yest = new Date(now); yest.setDate(now.getDate() - 1);
+        const label = key === now.toDateString()
+          ? t('dashboardClient.favorites.day.today')
+          : key === yest.toDateString()
+          ? t('dashboardClient.favorites.day.yesterday')
+          : d.toLocaleDateString([], { day: '2-digit', month: 'long', year: 'numeric' });
+        out.push(<StyledDaySep key={`sep-${key}-${m.id}`}><span>{label}</span></StyledDaySep>);
+        lastDay = key;
+      }
+      out.push(renderChatMessage(m));
+    });
+    return out;
   };
 
   const renderChatMessageInverted = (m, opts) => {
@@ -687,7 +756,7 @@ export default function VideoChatFavoritosModelo(props) {
           <StyledFavoritesColumns>
             <StyledCenterPanel>
               {!hasActiveDetail ? (
-                <div style={{ color: '#adb5bd', textAlign: 'center' }}>
+                <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8b94a1', textAlign: 'center', padding: 16 }}>
                   {t('dashboardModel.favorites.selectFavorite')}
                 </div>
               ) : (
@@ -923,14 +992,19 @@ export default function VideoChatFavoritosModelo(props) {
                                 {allowChat ? t('dashboardModel.favorites.noMessagesYet') : t('dashboardModel.favorites.chatInactive')}
                               </div>
                             )}
-                            {centerMessages.map(renderChatMessage)}
+                            {renderMessagesWithDays(centerMessages)}
                           </StyledChatMessagesInner>
                         </StyledChatScroller>
 
-                        {allowChat && renderModelGiftBar()}
-
                         <StyledChatDockMessageComposer data-kind="favorites-chat">
                           <EmojiTextPicker onInsert={(e) => setCenterInput((v) => (v || '') + e)} disabled={!allowChat} />
+                          <StyledComposerBtn
+                            type="button"
+                            onClick={() => setShowCenterGifts && setShowCenterGifts((v) => !v)}
+                            disabled={!allowChat}
+                            title={t('dashboardClient.videoChatFavoritosCliente.actions.gifts', 'Regalos')}
+                            aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.gifts', 'Regalos')}
+                          >🎁</StyledComposerBtn>
                           <StyledChatInput
                             value={centerInput}
                             onChange={(e) => setCenterInput(e.target.value)}
@@ -953,6 +1027,11 @@ export default function VideoChatFavoritosModelo(props) {
                               <FontAwesomeIcon icon={faVideo} />
                             </ButtonLlamar>
                           </StyledChatDockActions>
+                          {showCenterGifts && allowChat && (
+                            <div style={{ position:'absolute', left:0, right:0, bottom:'100%', zIndex:12 }}>
+                              {renderModelGiftBar()}
+                            </div>
+                          )}
                         </StyledChatDockMessageComposer>
                       </StyledChatWhatsApp>
                     )}
@@ -1178,14 +1257,19 @@ export default function VideoChatFavoritosModelo(props) {
                             {allowChat ? t('dashboardModel.favorites.noMessagesYet') : t('dashboardModel.favorites.chatInactive')}
                           </div>
                         )}
-                        {centerMessages.map(renderChatMessage)}
+                        {renderMessagesWithDays(centerMessages)}
                       </StyledChatMessagesInner>
                     </StyledChatScroller>
 
-                    {allowChat && renderModelGiftBar()}
-
                     <StyledChatDockMessageComposer data-kind="favorites-chat">
                       <EmojiTextPicker onInsert={(e) => setCenterInput((v) => (v || '') + e)} disabled={!allowChat} />
+                      <StyledComposerBtn
+                        type="button"
+                        onClick={() => setShowCenterGifts && setShowCenterGifts((v) => !v)}
+                        disabled={!allowChat}
+                        title={t('dashboardClient.videoChatFavoritosCliente.actions.gifts', 'Regalos')}
+                        aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.gifts', 'Regalos')}
+                      >🎁</StyledComposerBtn>
                       <StyledChatInput
                         value={centerInput}
                         onChange={(e) => setCenterInput(e.target.value)}
@@ -1199,6 +1283,11 @@ export default function VideoChatFavoritosModelo(props) {
                         disabled={!allowChat}
                         onFocus={() => { setTimeout(() => modelCenterListRef.current?.scrollIntoView({ block: 'end' }), 50); }}
                       />
+                      {showCenterGifts && allowChat && (
+                        <div style={{ position:'absolute', left:0, right:0, bottom:'100%', zIndex:12 }}>
+                          {renderModelGiftBar()}
+                        </div>
+                      )}
                     </StyledChatDockMessageComposer>
                   </StyledChatWhatsApp>
                 )}

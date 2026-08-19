@@ -45,6 +45,22 @@ const CODE_TO_EMOJI = {
   basic: '\u{1F642}',  // sonrisa simple
 };
 
+// Regalos de PAGO: code de BD -> emoji unicode nativo.
+// Decisión de producto (2026-08-19): TODO el catálogo activo se pinta como emoji
+// nativo (gratis Y pago) para homogeneidad de tamaño/alineación — SVG y emoji no
+// casaban en tamaño. Los símbolos SVG de GiftIconDefs quedan como legacy no usado
+// por el catálogo vivo (se conservan por si un code no tuviera emoji).
+export const PREMIUM_CODE_TO_EMOJI = {
+  rosa: '🌹',
+  cocktail: '🍸',
+  teddy: '🧸',
+  gift: '🎁',
+  ring: '💍',
+  corona: '👑',
+  rocket: '🚀',
+  diamante: '💎',
+};
+
 // Objetos GRATIS de la barra: code de BD -> emoji unicode nativo (opcion A).
 // A diferencia de las caritas, estos SI son objetos y SIGUEN en la barra de
 // regalos (no en el selector 😊) -> por eso NO se anaden a FACE_GIFT_CODES.
@@ -75,6 +91,15 @@ export function hasLocalGiftIcon(slug) {
   return !!slug && GIFT_ICON_SLUGS.has(String(slug).toLowerCase());
 }
 
+// Emoji nativo del regalo por su code (gratis carita/objeto + pago). Se usa para
+// los efectos (burst) y cualquier sitio que necesite el caracter, para que TODO
+// sea emoji homogeneo (no SVG). null si el code no tiene emoji mapeado.
+export function resolveGiftEmoji(code) {
+  const c = code != null ? String(code).toLowerCase() : null;
+  if (!c) return null;
+  return CODE_TO_EMOJI[c] || OBJECT_CODE_TO_EMOJI[c] || PREMIUM_CODE_TO_EMOJI[c] || null;
+}
+
 export function resolveGiftSlug(code) {
   const c = code != null ? String(code).toLowerCase() : null;
   if (!c) return null;
@@ -92,7 +117,7 @@ export default function GiftIcon({ code, slug, alt = '', size = 48, className, s
   //    Va ANTES que el SVG: un objeto gratis (heart/star/...) se pinta emoji
   //    aunque tambien tenga slug SVG. Opcion A: el mismo objeto se ve igual lo
   //    mande el cliente (regalo real) o la modelo (chat/emoji en random).
-  const emojiChar = c ? (CODE_TO_EMOJI[c] || OBJECT_CODE_TO_EMOJI[c]) : null;
+  const emojiChar = c ? (CODE_TO_EMOJI[c] || OBJECT_CODE_TO_EMOJI[c] || PREMIUM_CODE_TO_EMOJI[c]) : null;
   if (emojiChar) {
     return (
       <span

@@ -339,6 +339,9 @@ export const StyledFavoritesShell = styled.div`
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  /* Rediseño Fase 2: fondo oscuro también en el estado de carga/vacío (los ~2s
+     hasta que se auto-abre el chat), para no ver una pantalla blanca. */
+  background-color: #0d1015;
 `;
 
 export const StyledFavoritesColumns = styled.div`
@@ -704,7 +707,46 @@ export const StyledChatWhatsApp = styled.div`
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background-color: #e9e3db;
+  /* Rediseño favoritos Fase 2 (2026-08-19): chat oscuro (un solo mundo con el
+     resto de la app), en vez del beige anterior. */
+  background-color: #0d1015;
+`;
+
+/* Separador de día en el hilo de chat favoritos (rediseño Fase 2). */
+export const StyledDaySep = styled.div`
+  display: flex;
+  justify-content: center;
+  margin: 2px 0 14px;
+
+  span {
+    font-size: 11px;
+    font-weight: 600;
+    color: #8b94a1;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 999px;
+    padding: 4px 12px;
+  }
+`;
+
+/* Botón-icono del composer (emoji-picker aparte lo hace su propio componente).
+   Se usa para el toggle de regalos (🎁) tras retirar la barra de regalos fija. */
+export const StyledComposerBtn = styled.button`
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.06);
+  color: #c3cad3;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .12s ease;
+  &:hover:not(:disabled) { background: rgba(255,255,255,0.12); }
+  &:disabled { opacity: .5; cursor: not-allowed; }
 `;
 
 
@@ -1064,8 +1106,11 @@ export const StyledGiftBar = styled.div`
   /* Favoritos (2026-08-17): barra clara arriba -> oscura abajo, se funde con
      el chat (parte superior del "bloque inferior" en degradado). */
   &[data-kind='favorites-gift-bar']:not([data-surface]) {
-    background: linear-gradient(180deg, #6b6f78 0%, #5a5e67 100%);
-    border-top: 0;
+    /* Rediseño Fase 2: tira de regalos oscura (se muestra al pulsar 🎁 sobre el
+       composer), en vez del degradado gris anterior. */
+    background: #14171d;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
   }
 
   /* Variante barra sobre el vídeo (rediseño llamada random cliente 2026-08-09):
@@ -1713,10 +1758,18 @@ export const StyledChatScroller = styled.div`
   /* fondo solo cuando se indique explícitamente */
   &[data-bg='whatsapp'] {
     border: none; /* sin borde en modo WhatsApp */
-    /* Fondo limpio y adulto (2026-08-17): se retira el patron SVG de
-       burbujas/estrellas/corazones (demasiado infantil). Neutro calido liso. */
-    background-image: none;
-    background-color: #e9e3db;
+    /* Rediseño favoritos Fase 2 (2026-08-19): carbón + glow rojo de marca
+       (dominante arriba-dcha + tenue abajo-izda) + violeta muy leve + trama
+       de rombos al ~4.5%. Rompe la monotonía del negro sin caer en lo
+       infantil (design-spec §4). */
+    background-color: #0d1015;
+    background-image:
+      radial-gradient(130% 62% at 84% -10%, rgba(234,29,29,0.22), transparent 58%),
+      radial-gradient(80% 55% at 6% 108%, rgba(234,29,29,0.10), transparent 55%),
+      radial-gradient(90% 50% at -5% 2%, rgba(167,139,250,0.08), transparent 55%),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='34' height='34' viewBox='0 0 34 34'><g fill='none' stroke='%23ffffff' stroke-opacity='0.045' stroke-width='1'><path d='M17 5 L23 17 L17 29 L11 17 Z'/><circle cx='17' cy='17' r='1.1' fill='%23ffffff' fill-opacity='0.05' stroke='none'/></g></svg>");
+    background-repeat: no-repeat, no-repeat, no-repeat, repeat;
+    background-attachment: local, local, local, local;
   }
 
   &[data-kind='favorites-chat'] {
@@ -2034,10 +2087,10 @@ export const StyledChatDockMessageComposer = styled(StyledChatDock)`
   }
 
   &[data-kind='favorites-chat'] {
-    border-top: 0;
-    /* Cierre del "bloque inferior" en degradado: continua desde la barra de
-       gifts (gris claro) hasta gris oscuro abajo (2026-08-17, grises no negro). */
-    background: linear-gradient(180deg, #5a5e67 0%, #2b2f36 100%);
+    /* Rediseño favoritos Fase 2 (2026-08-19): composer oscuro plano (panel-1),
+       en vez del degradado gris. */
+    border-top: 1px solid rgba(255,255,255,0.07);
+    background: #14171d;
     & > input {
       background: rgba(255,255,255,0.10);
       color: #f8fafc;

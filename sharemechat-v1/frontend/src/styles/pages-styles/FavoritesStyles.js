@@ -18,22 +18,22 @@ export const StateRow = styled.div`
 export const ItemCard = styled.li`
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px;
+  gap: 11px;
+  padding: 9px 10px;
   border: 1px solid transparent;
   border-radius: 12px;
   background: transparent;
   color: #e7ebf0;
   cursor: ${({ $clickable }) => ($clickable ? 'pointer' : 'default')};
-  margin-bottom: 2px;
+  margin-bottom: 1px;
   transition: background-color .12s ease, border-color .12s ease;
 
-  &:hover { background: rgba(255,255,255,0.06); }
+  &:hover { background: rgba(255,255,255,0.05); }
 
+  /* Rediseño favoritos (2026-08-19): selección con rojo de marca. */
   &[data-selected="true"]{
-    background: rgba(255,92,138,0.12);
-    border-color: rgba(255,92,138,0.28);
+    background: linear-gradient(90deg, rgba(234,29,29,0.15), rgba(234,29,29,0.03));
+    border-color: rgba(234,29,29,0.34);
   }
 `;
 
@@ -77,11 +77,92 @@ export const Info = styled.div`
 `;
 
 export const Name = styled.span`
+  flex: 1;
+  min-width: 0;
+  font-size: 14.5px;
   font-weight: 600;
-  color: #e7ebf0;
+  color: #e2e7ec;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis; /* ... si no cabe */
+`;
+
+/* Rediseño favoritos (2026-08-19): buscador, agrupación online/offline,
+   preview del último mensaje + hora + no-leídos numérico. */
+export const SearchBox = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 11px;
+  padding: 8px 12px;
+  margin: 0 2px 6px;
+
+  .ic { color: #8b94a1; font-size: 13px; }
+  input {
+    flex: 1; min-width: 0;
+    background: none; border: 0; outline: none;
+    color: #eaeef3; font-size: 13.5px;
+  }
+  input::placeholder { color: #8b94a1; }
+`;
+
+export const GroupLabel = styled.div`
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #8b94a1;
+  padding: 10px 8px 5px;
+`;
+
+export const ItemBody = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+export const ItemTopRow = styled.div`
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+`;
+
+export const ItemPrevRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 1px;
+`;
+
+export const Time = styled.span`
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: #8b94a1;
+`;
+
+export const Preview = styled.span`
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  color: #8b94a1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+export const UnreadBadge = styled.span`
+  flex: 0 0 auto;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #ea1d1d;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
 `;
 
 export const Meta = styled.div`
@@ -140,15 +221,17 @@ export const PresenceDot = styled.span`
 `;
 
 export const StatusDot = styled.span`
-  display: inline-block;
-  width: 10px;
-  height: 10px;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  flex: 0 0 auto;
-  background: #9ca3af;
+  border: 2.5px solid #0f1217;
+  background: #8891a0;
   &.online  { background: #22c55e; }
   &.busy    { background: #f59e0b; }
-  &.offline { background: #9ca3af; }
+  &.offline { background: #8891a0; }
 `;
 
 /* =========================

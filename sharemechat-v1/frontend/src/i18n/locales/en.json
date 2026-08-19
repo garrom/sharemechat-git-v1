@@ -1195,6 +1195,11 @@
     },
     "favorites": {
       "inCallLocked": "In call: the list is locked until you hang up.",
+      "search": { "placeholder": "Search contact…" },
+      "groups": { "online": "Online", "offline": "Offline" },
+      "botSubtitle": "Assistant · always available",
+      "giftLabel": "Gift",
+      "day": { "today": "Today", "yesterday": "Yesterday" },
       "selectFavorite": "Select a favorite to open the conversation here.",
       "pendingInvitationMessage": "invited you to become mutual favorites. Accept to enable chat.",
       "acceptInvitation": "Accept invitation",
@@ -1235,7 +1240,8 @@
         "fullscreen": "Fullscreen",
         "hangup": "Hang up",
         "sendMessage": "Send message",
-        "sendGift": "Send gift"
+        "sendGift": "Send gift",
+        "gifts": "Gifts"
       },
       "hints": {
         "activateCamera": "activate camera to start videochat",

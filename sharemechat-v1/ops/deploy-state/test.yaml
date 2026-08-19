@@ -6,22 +6,22 @@
 #
 schema_version: 1
 frontend_product:
-  cloudfront_invalidation_id: I2QFV7Z7Q0SQC26CVZCV5TX1D3
+  cloudfront_invalidation_id: I4ZGKD6MUXTKU0ZW0X1JAD8IRB
   verification:
-    method: deploy-frontend.ps1-live-build_2026-08-19T14:59:02Z
+    method: deploy-frontend.ps1-live-build_2026-08-19T20:24:49Z
     git_commit_provenance: recorded_by_deploy_script
     notes: Actualizado automaticamente por deploy-frontend.ps1 (Fase 1 paso 2a) tras smoke OK del propio script.
-  deployed_at: 2026-08-19T14:59:02Z
-  built_at: 2026-08-19T14:59:02Z
-  bundle_sha256: 328cf03e4b93c064f9df9a2e286625e1715ad98009f619fca3421905fd72e663
-  git_commit_short: d03c7f4c
-  git_commit: d03c7f4c0813ae0f21de01ad942c151e12e896ef
+  deployed_at: 2026-08-19T20:24:49Z
+  built_at: 2026-08-19T20:24:49Z
+  bundle_sha256: 396fea64bb7e0b91ecf320c229d78909f4cf3702275f14fa9871eb7a68a1b1db
+  git_commit_short: b7e99432
+  git_commit: b7e9943254493d96468532211d0b8c6c3fd16302
   cloudfront_distribution: E2Q4VNDDWD5QBU
   deployed_by: alain@LAPTOP-8UEIKVUT
   working_tree_clean: true
   bucket: sharemechat-frontend-test
-  bundle: main.b31613ff.js
-last_update_source: update-manifest-backend.ps1-fase1-paso2b
+  bundle: main.1169f6db.js
+last_update_source: deploy-frontend.ps1-fase1-paso2a
 last_update_by: alain@LAPTOP-8UEIKVUT
 environment: test
 backend:

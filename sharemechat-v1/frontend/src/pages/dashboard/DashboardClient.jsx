@@ -2267,6 +2267,9 @@ const DashboardClient = () => {
     const ok = await confirmarSalidaSesionActiva();
     if (!ok) return;
     stopAll();
+    // Abrir un chat por defecto (Agente IA) al entrar en Favoritos si no hay uno
+    // activo, para no mostrar el panel central vacío (feedback operador 2026-08-19).
+    if (!(Number(targetPeerId) > 0)) setPendingAutoSelectBot(true);
     setActiveTab('favoritos');
   };
 
@@ -3239,6 +3242,7 @@ const DashboardClient = () => {
                     autoSelectBot={pendingAutoSelectBot}
                     onAutoSelectHandled={() => setPendingAutoSelectBot(false)}
                     onOpenProfile={openModelProfile}
+                    gifts={gifts}
                   />
                 ):(
                   <div style={{padding:8,color:'#adb5bd'}}>{i18n.t('dashboardClient.favorites.inCallLocked')}</div>
@@ -3247,7 +3251,7 @@ const DashboardClient = () => {
             )}
             <StyledCenter data-mode={contactMode==='call'?'call':undefined}>
               {selectedFav?.isBot ? (
-                <SupportChat />
+                <SupportChat dark />
               ) : (
               <VideoChatFavoritosCliente
                 isMobile={isMobile}

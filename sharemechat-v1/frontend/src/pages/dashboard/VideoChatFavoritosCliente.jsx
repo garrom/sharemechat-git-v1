@@ -1,6 +1,7 @@
 // src/pages/dashboard/VideoChatFavoritosCliente.jsx
 import React,{useEffect,useRef,useState,useMemo} from 'react';
 import i18n from '../../i18n';
+import { apiFetch } from '../../config/http';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faPhoneSlash, faVideo, faPaperPlane, faExpand } from '@fortawesome/free-solid-svg-icons';
 import FavoritesClientList from '../favorites/FavoritesClientList';
@@ -18,11 +19,11 @@ import { StyledCenter,StyledFavoritesShell,StyledFavoritesColumns,StyledCenterPa
     StyledCallTopMeta,StyledCallTopMetaText,StyledCallTopActions,StyledCallLocalVideo,
     StyledCallComposer,StyledGiftsPanel,StyledGiftGrid,
     StyledGiftCatalog,StyledGiftSection,StyledGiftSectionTitle,StyledChatMessagesInner,StyledChatDockMessageComposer,StyledChatDockActions,
-    StyledGiftBar,StyledGiftTrack,StyledGiftChip,StyledGiftFxLayer,
+    StyledGiftBar,StyledGiftTrack,StyledGiftChip,StyledGiftFxLayer,StyledDaySep,StyledComposerBtn,
     StyledCallOverlayBar,StyledCallOverlayControls,StyledCallOverlayGifts,
     StyledGiftConfirmOverlay,StyledGiftConfirmCard,StyledGiftConfirmActions
 } from '../../styles/pages-styles/VideochatStyles';
-import GiftIcon, { resolveGiftSlug, isFaceGiftCode } from '../../components/gifts/GiftIcon';
+import GiftIcon, { resolveGiftSlug, resolveGiftEmoji, isFaceGiftCode } from '../../components/gifts/GiftIcon';
 import GiftIconDefs from '../../components/gifts/GiftIconDefs';
 import EmojiTextPicker from '../../components/EmojiTextPicker';
 import { isSingleEmoji } from '../../utils/emojiUtils';
@@ -46,11 +47,28 @@ export default function VideoChatFavoritosCliente(props){
       isMobile,handleOpenChatFromFavorites,favReload,selectedContactId,hasActiveDetail,hasCallTarget,setCtxUser,setCtxPos,centerChatPeerId,peerPresence,
       centerChatPeerName,centerMessages,centerLoading,centerListRef,chatEndRef,centerInput,setCenterInput,
       sendCenterMessage,allowChat,isPendingPanel,isSentPanel,acceptInvitation,rejectInvitation,gifts,giftRenderReady,
-      fmtEUR,showCenterGifts,sendGiftMsg,contactMode,enterCallMode,callStatus,callCameraActive,
+      fmtEUR,showCenterGifts,setShowCenterGifts,sendGiftMsg,contactMode,enterCallMode,callStatus,callCameraActive,
       callPeerId,callPeerName,callPeerAvatar,callRemoteVideoRef,callLocalVideoRef,callRemoteWrapRef,callListRef,
       handleCallActivateCamera,handleCallInvite,handleCallAccept,handleCallReject,handleCallEnd,toggleFullscreen,
       callError,backToList,user,onViewProfile,
       currentModelRate,currentSaldo} = props;
+
+  // Rediseño Fase 2: fotos reales del chat (peer + yo) para cabecera y avatares
+  // de mensaje. Reusa /users/avatars (mismo endpoint que la lista). Fallback a
+  // inicial si no hay foto.
+  const [chatAvatars, setChatAvatars] = useState({});
+  useEffect(() => {
+    const ids = [centerChatPeerId, user?.id].filter(Boolean);
+    if (!ids.length) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const map = await apiFetch(`/users/avatars?ids=${encodeURIComponent(ids.join(','))}`);
+        if (!cancelled) setChatAvatars(map || {});
+      } catch { if (!cancelled) setChatAvatars({}); }
+    })();
+    return () => { cancelled = true; };
+  }, [centerChatPeerId, user?.id]);
 
   const baseBalanceRef = useRef(null);
   useEffect(() => {
@@ -153,12 +171,23 @@ export default function VideoChatFavoritosCliente(props){
       animation: 'gfxGlow .9s ease-out forwards',
     }, 900);
 
-    const slug = resolveGiftSlug(code);
-    if (slug) {
-      spawn(`<svg><use href="#gi-${slug}"/></svg>`, {
+    // Homogeneidad emoji (2026-08-19): el burst grande usa el emoji nativo del
+    // regalo, no el SVG. Fallback al SVG solo si el code no tuviera emoji.
+    const bigEmoji = resolveGiftEmoji(code);
+    if (bigEmoji) {
+      spawn(bigEmoji, {
         left: (cx - 45) + 'px', top: (cy - 120) + 'px', width: '90px', height: '90px',
+        fontSize: '74px', lineHeight: '90px', textAlign: 'center',
         transformOrigin: 'bottom center', animation: 'gfxBigNorm 1.1s cubic-bezier(.22,1.4,.4,1) forwards',
       }, 1200);
+    } else {
+      const slug = resolveGiftSlug(code);
+      if (slug) {
+        spawn(`<svg><use href="#gi-${slug}"/></svg>`, {
+          left: (cx - 45) + 'px', top: (cy - 120) + 'px', width: '90px', height: '90px',
+          transformOrigin: 'bottom center', animation: 'gfxBigNorm 1.1s cubic-bezier(.22,1.4,.4,1) forwards',
+        }, 1200);
+      }
     }
 
     for (let c = 0; c < 40; c++) {
@@ -352,10 +381,14 @@ export default function VideoChatFavoritosCliente(props){
       ? { c: '#f59e0b', label: t('common.presence.busy', 'ocupado') }
       : { c: '#9ca3af', label: t('common.presence.offline', 'desconectado') };
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px 22px', background: 'linear-gradient(180deg, #2b2f36 0%, #6b6f78 100%)', borderBottom: 'none', flexShrink: 0, position: 'relative', zIndex: 6 }}>
-        <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#ff5c8a,#a78bfa)', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
-          {(centerChatPeerName || '?').charAt(0).toUpperCase()}
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px', background: '#14171d', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, position: 'relative', zIndex: 6 }}>
+        {chatAvatars[centerChatPeerId] ? (
+          <img src={chatAvatars[centerChatPeerId]} alt="" style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, display: 'block' }} />
+        ) : (
+          <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#ff5c8a,#a78bfa)', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+            {(centerChatPeerName || '?').charAt(0).toUpperCase()}
+          </div>
+        )}
         <div style={{ minWidth: 0, lineHeight: 1.25 }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: '#e7ebf0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {centerChatPeerName || ''}
@@ -486,28 +519,38 @@ export default function VideoChatFavoritosCliente(props){
     const { transparent = false } = opts;
     const giftData = normalizeGiftMessage(m);
     const isMe = Number(m.senderId) === Number(user?.id);
+    // Rediseño Fase 2: emojis y regalos también llevan mini-avatar (inicial) al
+    // lado, como las burbujas de texto. En el overlay de llamada (transparent)
+    // se conserva el padding sin avatar para no recargar el vídeo.
+    const msgAvatarUrl = isMe ? chatAvatars[user?.id] : chatAvatars[centerChatPeerId];
+    const msgAvatar = msgAvatarUrl ? (
+      <img src={msgAvatarUrl} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, display: 'block' }} />
+    ) : (
+      <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 13, color: '#fff', background: isMe ? '#2f6b4a' : 'linear-gradient(135deg,#ff5c8a,#a78bfa)' }}>
+        {String((isMe ? user?.nickname : centerChatPeerName) || (isMe ? 'Y' : 'P')).trim().charAt(0).toUpperCase()}
+      </div>
+    );
+    const emojiGiftRow = (content) => (transparent ? (
+      <StyledChatMessageRow key={m.id} $side={isMe ? 'me' : 'peer'} style={isMe ? { paddingRight: 42 } : { paddingLeft: 42 }}>
+        {content}
+      </StyledChatMessageRow>
+    ) : (
+      <StyledChatMessageRow key={m.id} $side={isMe ? 'me' : 'peer'}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, flexDirection: isMe ? 'row-reverse' : 'row' }}>
+          {msgAvatar}
+          {content}
+        </div>
+      </StyledChatMessageRow>
+    ));
     if (giftData) {
-      // Alinea el regalo igual que las burbujas de texto (SupportMessageBubble),
-      // que llevan un avatar de 32px + gap 10px = 42px en el lado del emisor.
-      // Sin este padding el regalo sobresale ~42px respecto al texto.
-      return (
-        <StyledChatMessageRow
-          key={m.id}
-          $side={isMe ? 'me' : 'peer'}
-          style={isMe ? { paddingRight: 42 } : { paddingLeft: 42 }}
-        >
-          {renderGiftVisual(giftData)}
-        </StyledChatMessageRow>
-      );
+      return emojiGiftRow(renderGiftVisual(giftData));
     }
     // Un solo emoji -> grande y sin globo (estilo WhatsApp).
     if (isSingleEmoji(m.body)) {
-      return (
-        <StyledChatMessageRow key={m.id} $side={isMe ? 'me' : 'peer'} style={isMe ? { paddingRight: 42 } : { paddingLeft: 42 }}>
-          <span role="img" aria-label={(m.body || '').trim()} style={{ fontSize: 34, lineHeight: 1 }}>
-            {(m.body || '').trim()}
-          </span>
-        </StyledChatMessageRow>
+      return emojiGiftRow(
+        <span role="img" aria-label={(m.body || '').trim()} style={{ fontSize: 34, lineHeight: 1 }}>
+          {(m.body || '').trim()}
+        </span>
       );
     }
     return (
@@ -521,10 +564,36 @@ export default function VideoChatFavoritosCliente(props){
         }}
         peerNickname={centerChatPeerName || ''}
         userNickname={user?.nickname || ''}
+        peerAvatarUrl={chatAvatars[centerChatPeerId] || null}
+        userAvatarUrl={chatAvatars[user?.id] || null}
         transparent={transparent}
         translation={isMe ? null : getTranslation(m.id)}
       />
     );
+  };
+
+  // Rediseño Fase 2: inserta separadores de día ("Hoy"/"Ayer"/fecha) en el hilo.
+  const renderMessagesWithDays = (msgs) => {
+    const out = [];
+    let lastDay = null;
+    (msgs || []).forEach((m) => {
+      const iso = m?.createdAt;
+      const d = iso ? new Date(iso) : null;
+      const key = d && !isNaN(d.getTime()) ? d.toDateString() : null;
+      if (key && key !== lastDay) {
+        const now = new Date();
+        const yest = new Date(now); yest.setDate(now.getDate() - 1);
+        const label = key === now.toDateString()
+          ? t('dashboardClient.favorites.day.today')
+          : key === yest.toDateString()
+          ? t('dashboardClient.favorites.day.yesterday')
+          : d.toLocaleDateString([], { day: '2-digit', month: 'long', year: 'numeric' });
+        out.push(<StyledDaySep key={`sep-${key}-${m.id}`}><span>{label}</span></StyledDaySep>);
+        lastDay = key;
+      }
+      out.push(renderChatMessage(m));
+    });
+    return out;
   };
 
   // Toggle "Ver original / Ver traduccion" que se renderiza en la cabecera
@@ -604,7 +673,7 @@ export default function VideoChatFavoritosCliente(props){
         <StyledFavoritesColumns>
           <StyledCenterPanel>
             {!hasActiveDetail?(
-              <div style={{color:'#adb5bd',textAlign:'center'}}>{t('dashboardClient.videoChatFavoritosCliente.empty.selectFavorite')}</div>
+              <div style={{flex:1,minHeight:0,display:'flex',alignItems:'center',justifyContent:'center',color:'#8b94a1',textAlign:'center',padding:16}}>{t('dashboardClient.videoChatFavoritosCliente.empty.selectFavorite')}</div>
             ):(
               <>
                 <StyledCenterBody>
@@ -815,14 +884,19 @@ export default function VideoChatFavoritosCliente(props){
                               {allowChat?t('dashboardClient.videoChatFavoritosCliente.empty.noMessages'):t('dashboardClient.videoChatFavoritosCliente.empty.chatInactive')}
                             </div>
                           )}
-                          {centerMessages.map(renderChatMessage)}
+                          {renderMessagesWithDays(centerMessages)}
                         </StyledChatMessagesInner>
                       </StyledChatScroller>
 
-                      {renderGiftBar()}
-
                       <StyledChatDockMessageComposer data-kind="favorites-chat">
                         <EmojiTextPicker onInsert={(e) => setCenterInput((v) => (v || '') + e)} disabled={!allowChat} />
+                        <StyledComposerBtn
+                          type="button"
+                          onClick={() => setShowCenterGifts && setShowCenterGifts((v) => !v)}
+                          disabled={!allowChat}
+                          title={t('dashboardClient.videoChatFavoritosCliente.actions.gifts', 'Regalos')}
+                          aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.gifts', 'Regalos')}
+                        >🎁</StyledComposerBtn>
                         <StyledChatInput
                           value={centerInput}
                           onChange={e=>setCenterInput(e.target.value)}
@@ -841,7 +915,11 @@ export default function VideoChatFavoritosCliente(props){
                             <FontAwesomeIcon icon={faVideo}/>
                           </ButtonLlamar>
                         </StyledChatDockActions>
-                        {showCenterGifts&&allowChat&&renderGiftPicker()}
+                        {showCenterGifts&&allowChat&&(
+                          <div style={{ position:'absolute', left:0, right:0, bottom:'100%', zIndex:12 }}>
+                            {renderGiftBar()}
+                          </div>
+                        )}
                       </StyledChatDockMessageComposer>
                     </StyledChatWhatsApp>
                   )}
@@ -1035,14 +1113,19 @@ export default function VideoChatFavoritosCliente(props){
                           {allowChat?'No hay mensajes todavía. ¡Escribe el primero!':'Este chat no está activo.'}
                         </div>
                       )}
-                      {centerMessages.map(renderChatMessage)}
+                      {renderMessagesWithDays(centerMessages)}
                     </StyledChatMessagesInner>
                   </StyledChatScroller>
 
-                  {renderGiftBar()}
-
                   <StyledChatDockMessageComposer data-kind="favorites-chat">
                     <EmojiTextPicker onInsert={(e) => setCenterInput((v) => (v || '') + e)} disabled={!allowChat} />
+                    <StyledComposerBtn
+                      type="button"
+                      onClick={() => setShowCenterGifts && setShowCenterGifts((v) => !v)}
+                      disabled={!allowChat}
+                      title={t('dashboardClient.videoChatFavoritosCliente.actions.gifts', 'Regalos')}
+                      aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.gifts', 'Regalos')}
+                    >🎁</StyledComposerBtn>
                     <StyledChatInput
                       value={centerInput}
                       onChange={e=>setCenterInput(e.target.value)}
@@ -1051,7 +1134,11 @@ export default function VideoChatFavoritosCliente(props){
                       disabled={!allowChat}
                       onFocus={()=>{setTimeout(()=>chatEndRef.current?.scrollIntoView({block:'end'}),50);}}
                     />
-                    {showCenterGifts&&allowChat&&renderGiftPicker()}
+                    {showCenterGifts&&allowChat&&(
+                      <div style={{ position:'absolute', left:0, right:0, bottom:'100%', zIndex:12 }}>
+                        {renderGiftBar()}
+                      </div>
+                    )}
                   </StyledChatDockMessageComposer>
                 </StyledChatWhatsApp>
               )}
