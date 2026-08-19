@@ -172,6 +172,38 @@ const LikeBtn = styled.button`
   &:disabled { opacity: .6; cursor: default; }
 `;
 
+const Sec = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const SecH = styled.div`
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: #8b94a1;
+`;
+
+const Facts = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+`;
+
+const Fact = styled.div`
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 11px;
+  padding: 9px 11px;
+  .fl { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: #8b94a1; font-weight: 700; }
+  .fv { font-size: 13.5px; color: #e6eaef; margin-top: 2px; }
+`;
+
+const enumLabel = (kind, code) =>
+  code ? t(`modelProfileExpanded.${kind}Values.${String(code).toUpperCase()}`, { defaultValue: String(code) }) : '';
+
 const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = false, fmtEUR, saldo }) => {
   const [profile, setProfile] = useState(null);
   const [photo, setPhoto] = useState(null);
@@ -225,6 +257,17 @@ const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = fal
   const saldoNum = saldo != null ? Number(saldo) : null;
   const balanceOk = (rate != null && saldoNum != null) ? saldoNum >= rate : null;
 
+  // Datos físicos (los que la modelo haya rellenado) + idioma.
+  const langTxt = (profile?.languages || [])
+    .map((l) => String(l?.langCode || '').toUpperCase())
+    .filter(Boolean)
+    .join(' · ');
+  const facts = [];
+  if (profile?.heightCm != null) facts.push({ l: t('modelProfileExpanded.labels.height', 'Altura'), v: `${profile.heightCm} cm` });
+  if (profile?.bodyType) facts.push({ l: t('modelProfileExpanded.labels.body', 'Cuerpo'), v: enumLabel('body', profile.bodyType) });
+  if (profile?.bustSize) facts.push({ l: t('modelProfileExpanded.labels.bust', 'Pecho'), v: enumLabel('bust', profile.bustSize) });
+  if (langTxt) facts.push({ l: t('modelProfileExpanded.labels.languages', 'Idioma'), v: langTxt });
+
   return (
     <Panel>
       <Cover>
@@ -275,7 +318,21 @@ const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = fal
           </Rep>
         )}
 
-        {/* Paso 4+: datos físicos, regalos, ver perfil completo. */}
+        {facts.length > 0 && (
+          <Sec>
+            <SecH>{t('modelProfileExpanded.sections.data', 'Datos')}</SecH>
+            <Facts>
+              {facts.map((f, i) => (
+                <Fact key={i}>
+                  <div className="fl">{f.l}</div>
+                  <div className="fv">{f.v}</div>
+                </Fact>
+              ))}
+            </Facts>
+          </Sec>
+        )}
+
+        {/* Paso 5+: regalos rápidos, ver perfil completo. */}
       </Body>
     </Panel>
   );
