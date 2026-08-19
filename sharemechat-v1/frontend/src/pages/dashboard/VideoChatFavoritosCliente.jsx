@@ -1,6 +1,7 @@
 // src/pages/dashboard/VideoChatFavoritosCliente.jsx
 import React,{useEffect,useRef,useState,useMemo} from 'react';
 import i18n from '../../i18n';
+import { apiFetch } from '../../config/http';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faPhoneSlash, faVideo, faPaperPlane, faExpand } from '@fortawesome/free-solid-svg-icons';
 import FavoritesClientList from '../favorites/FavoritesClientList';
@@ -51,6 +52,23 @@ export default function VideoChatFavoritosCliente(props){
       handleCallActivateCamera,handleCallInvite,handleCallAccept,handleCallReject,handleCallEnd,toggleFullscreen,
       callError,backToList,user,onViewProfile,
       currentModelRate,currentSaldo} = props;
+
+  // Rediseño Fase 2: fotos reales del chat (peer + yo) para cabecera y avatares
+  // de mensaje. Reusa /users/avatars (mismo endpoint que la lista). Fallback a
+  // inicial si no hay foto.
+  const [chatAvatars, setChatAvatars] = useState({});
+  useEffect(() => {
+    const ids = [centerChatPeerId, user?.id].filter(Boolean);
+    if (!ids.length) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const map = await apiFetch(`/users/avatars?ids=${encodeURIComponent(ids.join(','))}`);
+        if (!cancelled) setChatAvatars(map || {});
+      } catch { if (!cancelled) setChatAvatars({}); }
+    })();
+    return () => { cancelled = true; };
+  }, [centerChatPeerId, user?.id]);
 
   const baseBalanceRef = useRef(null);
   useEffect(() => {
@@ -353,9 +371,13 @@ export default function VideoChatFavoritosCliente(props){
       : { c: '#9ca3af', label: t('common.presence.offline', 'desconectado') };
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px', background: '#14171d', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, position: 'relative', zIndex: 6 }}>
-        <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#ff5c8a,#a78bfa)', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
-          {(centerChatPeerName || '?').charAt(0).toUpperCase()}
-        </div>
+        {chatAvatars[centerChatPeerId] ? (
+          <img src={chatAvatars[centerChatPeerId]} alt="" style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, display: 'block' }} />
+        ) : (
+          <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#ff5c8a,#a78bfa)', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+            {(centerChatPeerName || '?').charAt(0).toUpperCase()}
+          </div>
+        )}
         <div style={{ minWidth: 0, lineHeight: 1.25 }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: '#e7ebf0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {centerChatPeerName || ''}
@@ -489,7 +511,10 @@ export default function VideoChatFavoritosCliente(props){
     // Rediseño Fase 2: emojis y regalos también llevan mini-avatar (inicial) al
     // lado, como las burbujas de texto. En el overlay de llamada (transparent)
     // se conserva el padding sin avatar para no recargar el vídeo.
-    const msgAvatar = (
+    const msgAvatarUrl = isMe ? chatAvatars[user?.id] : chatAvatars[centerChatPeerId];
+    const msgAvatar = msgAvatarUrl ? (
+      <img src={msgAvatarUrl} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, display: 'block' }} />
+    ) : (
       <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 13, color: '#fff', background: isMe ? '#2f6b4a' : 'linear-gradient(135deg,#ff5c8a,#a78bfa)' }}>
         {String((isMe ? user?.nickname : centerChatPeerName) || (isMe ? 'Y' : 'P')).trim().charAt(0).toUpperCase()}
       </div>
@@ -528,6 +553,8 @@ export default function VideoChatFavoritosCliente(props){
         }}
         peerNickname={centerChatPeerName || ''}
         userNickname={user?.nickname || ''}
+        peerAvatarUrl={chatAvatars[centerChatPeerId] || null}
+        userAvatarUrl={chatAvatars[user?.id] || null}
         transparent={transparent}
         translation={isMe ? null : getTranslation(m.id)}
       />

@@ -57,6 +57,17 @@ const Avatar = styled.div`
   flex-shrink: 0;
 `;
 
+// Avatar con foto real (chat P2P favoritos): cae al Avatar de inicial si no hay
+// url. object-fit cover para recortar circular.
+const AvatarImg = styled.img`
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  display: block;
+`;
+
 const Bubble = styled.div`
   min-width: 120px;
   padding: 10px 14px;
@@ -222,6 +233,8 @@ const SupportMessageBubble = ({
   agentLabel = 'Agente IA',
   peerNickname = '',
   userNickname = '',
+  peerAvatarUrl = null,
+  userAvatarUrl = null,
   transparent = false,
   translation = null,
 }) => {
@@ -307,7 +320,9 @@ const SupportMessageBubble = ({
     // para una columna limpia (poco ancho en pantalla). En desktop / chat
     // normal se mantiene a la derecha como siempre.
     const meSide = transparent ? 'left' : 'right';
-    const meAvatar = <Avatar $bg="#2f6b4a">{initialOf(userNickname || 'Y')}</Avatar>;
+    const meAvatar = userAvatarUrl
+      ? <AvatarImg src={userAvatarUrl} alt="" />
+      : <Avatar $bg="#2f6b4a">{initialOf(userNickname || 'Y')}</Avatar>;
     return (
       <div>
         <Row $side={meSide}>
@@ -333,7 +348,9 @@ const SupportMessageBubble = ({
     return (
       <div>
         <Row $side="left">
-          <Avatar $bg="linear-gradient(135deg,#ff5c8a,#a78bfa)" $fg="#fff">{initialOf(peerNickname || 'P')}</Avatar>
+          {peerAvatarUrl
+            ? <AvatarImg src={peerAvatarUrl} alt="" />
+            : <Avatar $bg="linear-gradient(135deg,#ff5c8a,#a78bfa)" $fg="#fff">{initialOf(peerNickname || 'P')}</Avatar>}
           <ColumnWrap $side="left">
             {/* Rediseño favoritos Fase 2: burbuja de la contraparte tarjeta oscura elevada. */}
             <Bubble $bg="#1b2029" $fg="#e7ebf1" $border="rgba(255,255,255,0.07)" $tail="left" $transparent={transparent}>

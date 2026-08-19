@@ -70,6 +70,7 @@ import GiftIcon, { resolveGiftSlug, isFaceGiftCode } from '../../components/gift
 import GiftIconDefs from '../../components/gifts/GiftIconDefs';
 import EmojiTextPicker from '../../components/EmojiTextPicker';
 import { isSingleEmoji } from '../../utils/emojiUtils';
+import { apiFetch } from '../../config/http';
 import {
   ButtonLlamar,
   ButtonRegalo,
@@ -150,6 +151,22 @@ export default function VideoChatFavoritosModelo(props) {
     sendGiftMsg,
     fmtEUR,
   } = props;
+
+  // Rediseño Fase 2: fotos reales del chat (peer=contacto + yo) para cabecera y
+  // avatares de mensaje. Reusa /users/avatars. Fallback a inicial si no hay foto.
+  const [chatAvatars, setChatAvatars] = useState({});
+  useEffect(() => {
+    const ids = [selectedContactId, user?.id].filter(Boolean);
+    if (!ids.length) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const map = await apiFetch(`/users/avatars?ids=${encodeURIComponent(ids.join(','))}`);
+        if (!cancelled) setChatAvatars(map || {});
+      } catch { if (!cancelled) setChatAvatars({}); }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedContactId, user?.id]);
 
   const normalizeGiftFromMessage = (giftData) => {
     if (!giftData) return null;
@@ -492,7 +509,10 @@ export default function VideoChatFavoritosModelo(props) {
     const avatarIsMe = sender === 'P2P_ME';
     // Rediseño Fase 2: emojis y regalos también llevan mini-avatar. En el
     // overlay de llamada (transparent) se conserva el padding sin avatar.
-    const msgAvatar = (
+    const msgAvatarUrl = avatarIsMe ? chatAvatars[user?.id] : chatAvatars[selectedContactId];
+    const msgAvatar = msgAvatarUrl ? (
+      <img src={msgAvatarUrl} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, display: 'block' }} />
+    ) : (
       <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 13, color: '#fff', background: avatarIsMe ? '#2f6b4a' : 'linear-gradient(135deg,#ff5c8a,#a78bfa)' }}>
         {String((avatarIsMe ? user?.nickname : centerChatPeerName) || (avatarIsMe ? 'Y' : 'P')).trim().charAt(0).toUpperCase()}
       </div>
@@ -530,6 +550,8 @@ export default function VideoChatFavoritosModelo(props) {
         }}
         peerNickname={centerChatPeerName || ''}
         userNickname={user?.nickname || ''}
+        peerAvatarUrl={chatAvatars[selectedContactId] || null}
+        userAvatarUrl={chatAvatars[user?.id] || null}
         transparent={transparent}
         translation={isMe ? null : getTranslation(m.id)}
       />
@@ -586,9 +608,13 @@ export default function VideoChatFavoritosModelo(props) {
       : { c: '#9ca3af', label: t('common.presence.offline', 'desconectado') };
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px', background: '#14171d', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, position: 'relative', zIndex: 6 }}>
-        <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#ff5c8a,#a78bfa)', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
-          {(centerChatPeerName || '?').charAt(0).toUpperCase()}
-        </div>
+        {chatAvatars[selectedContactId] ? (
+          <img src={chatAvatars[selectedContactId]} alt="" style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, display: 'block' }} />
+        ) : (
+          <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#ff5c8a,#a78bfa)', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+            {(centerChatPeerName || '?').charAt(0).toUpperCase()}
+          </div>
+        )}
         <div style={{ minWidth: 0, lineHeight: 1.25 }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: '#e7ebf0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {centerChatPeerName || ''}
