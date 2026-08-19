@@ -198,8 +198,12 @@ foreach ($key in ($local.Keys | Sort-Object)) {
     }
 }
 $payload = @{ prompts = $prompts } | ConvertTo-Json -Depth 6
+# PowerShell 5.1: Invoke-RestMethod con -Body string re-codifica los multibyte
+# (acentos, €) fuera de UTF-8 y el backend rechaza el JSON. Enviamos el body como
+# BYTES UTF-8 explícitos para preservar el contenido intacto.
+$payloadBytes = [System.Text.Encoding]::UTF8.GetBytes($payload)
 $syncResp = Invoke-RestMethod -Uri "$apiBase/api/admin/knowledge-base/sync" -Method Post `
-    -ContentType 'application/json' -Body $payload -WebSession $sess
+    -ContentType 'application/json; charset=utf-8' -Body $payloadBytes -WebSession $sess
 
 Write-Host ""
 Write-Host "--- RESULTADO sync ($Environment) ---"
