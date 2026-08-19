@@ -1103,8 +1103,11 @@ export const StyledGiftBar = styled.div`
   /* Favoritos (2026-08-17): barra clara arriba -> oscura abajo, se funde con
      el chat (parte superior del "bloque inferior" en degradado). */
   &[data-kind='favorites-gift-bar']:not([data-surface]) {
-    background: linear-gradient(180deg, #6b6f78 0%, #5a5e67 100%);
-    border-top: 0;
+    /* Rediseño Fase 2: tira de regalos oscura (se muestra al pulsar 🎁 sobre el
+       composer), en vez del degradado gris anterior. */
+    background: #14171d;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
   }
 
   /* Variante barra sobre el vídeo (rediseño llamada random cliente 2026-08-09):

@@ -2267,6 +2267,9 @@ const DashboardClient = () => {
     const ok = await confirmarSalidaSesionActiva();
     if (!ok) return;
     stopAll();
+    // Abrir un chat por defecto (Agente IA) al entrar en Favoritos si no hay uno
+    // activo, para no mostrar el panel central vacío (feedback operador 2026-08-19).
+    if (!(Number(targetPeerId) > 0)) setPendingAutoSelectBot(true);
     setActiveTab('favoritos');
   };
 

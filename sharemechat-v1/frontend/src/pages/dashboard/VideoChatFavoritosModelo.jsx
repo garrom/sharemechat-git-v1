@@ -66,7 +66,7 @@ import {
   StyledDaySep,
   StyledComposerBtn,
 } from '../../styles/pages-styles/VideochatStyles';
-import GiftIcon, { resolveGiftSlug, isFaceGiftCode } from '../../components/gifts/GiftIcon';
+import GiftIcon, { resolveGiftSlug, resolveGiftEmoji, isFaceGiftCode } from '../../components/gifts/GiftIcon';
 import GiftIconDefs from '../../components/gifts/GiftIconDefs';
 import EmojiTextPicker from '../../components/EmojiTextPicker';
 import { isSingleEmoji } from '../../utils/emojiUtils';
@@ -309,12 +309,22 @@ export default function VideoChatFavoritosModelo(props) {
       animation: 'gfxGlow .9s ease-out forwards',
     }, 900);
 
-    const slug = resolveGiftSlug(code);
-    if (slug) {
-      spawn(`<svg><use href="#gi-${slug}"/></svg>`, {
+    // Homogeneidad emoji (2026-08-19): burst grande con emoji nativo, no SVG.
+    const bigEmoji = resolveGiftEmoji(code);
+    if (bigEmoji) {
+      spawn(bigEmoji, {
         left: (cx - 45) + 'px', top: (cy - 120) + 'px', width: '90px', height: '90px',
+        fontSize: '74px', lineHeight: '90px', textAlign: 'center',
         transformOrigin: 'bottom center', animation: 'gfxBigNorm 1.1s cubic-bezier(.22,1.4,.4,1) forwards',
       }, 1200);
+    } else {
+      const slug = resolveGiftSlug(code);
+      if (slug) {
+        spawn(`<svg><use href="#gi-${slug}"/></svg>`, {
+          left: (cx - 45) + 'px', top: (cy - 120) + 'px', width: '90px', height: '90px',
+          transformOrigin: 'bottom center', animation: 'gfxBigNorm 1.1s cubic-bezier(.22,1.4,.4,1) forwards',
+        }, 1200);
+      }
     }
 
     for (let c = 0; c < 40; c++) {
@@ -1017,7 +1027,11 @@ export default function VideoChatFavoritosModelo(props) {
                               <FontAwesomeIcon icon={faVideo} />
                             </ButtonLlamar>
                           </StyledChatDockActions>
-                          {showCenterGifts && allowChat && renderGiftPicker()}
+                          {showCenterGifts && allowChat && (
+                            <div style={{ position:'absolute', left:0, right:0, bottom:'100%', zIndex:12 }}>
+                              {renderModelGiftBar()}
+                            </div>
+                          )}
                         </StyledChatDockMessageComposer>
                       </StyledChatWhatsApp>
                     )}
@@ -1269,7 +1283,11 @@ export default function VideoChatFavoritosModelo(props) {
                         disabled={!allowChat}
                         onFocus={() => { setTimeout(() => modelCenterListRef.current?.scrollIntoView({ block: 'end' }), 50); }}
                       />
-                      {showCenterGifts && allowChat && renderGiftPicker()}
+                      {showCenterGifts && allowChat && (
+                        <div style={{ position:'absolute', left:0, right:0, bottom:'100%', zIndex:12 }}>
+                          {renderModelGiftBar()}
+                        </div>
+                      )}
                     </StyledChatDockMessageComposer>
                   </StyledChatWhatsApp>
                 )}
