@@ -3320,6 +3320,10 @@ const DashboardClient = () => {
                   canCall={hasCallTarget && allowChat}
                   fmtEUR={fmtEUR}
                   saldo={saldo}
+                  onOpenProfile={openModelProfile}
+                  onSendGift={sendGiftMsg}
+                  gifts={gifts}
+                  giftSendEnabled={allowChat}
                 />
               </StyledRightColumn>
             )}

@@ -568,6 +568,8 @@
   },
   "modelSpotlight": {
     "like": "Like",
+    "viewProfile": "ver perfil",
+    "giftTitle": "Enviar un regalo",
     "videocall": "Iniciar videollamada",
     "balanceOk": "saldo suficiente",
     "balanceLow": "saldo insuficiente",

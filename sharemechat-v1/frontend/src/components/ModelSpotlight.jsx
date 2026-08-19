@@ -18,6 +18,7 @@ import styled from 'styled-components';
 import i18n from '../i18n';
 import { apiFetch } from '../config/http';
 import RoyaltyBadge from './RoyaltyBadge';
+import GiftIcon, { isFaceGiftCode } from './gifts/GiftIcon';
 
 const t = (k, o) => i18n.t(k, o);
 const badgeName = (code) => (code ? t(`modelProfileExpanded.badgeValues.${code}`, { defaultValue: code }) : null);
@@ -214,10 +215,47 @@ const Fact = styled.div`
   .fv { font-size: 13.5px; color: #e6eaef; margin-top: 2px; }
 `;
 
+// "ver perfil" discreto: texto (no botón) junto a la presencia, en el cover.
+const VerPerfil = styled.button`
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: #e2e7ec;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: rgba(255,255,255,0.4);
+  &:hover { color: #fff; text-decoration-color: #fff; }
+`;
+
+const QGifts = styled.div`
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+`;
+
+const QChip = styled.button`
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: radial-gradient(circle at 50% 32%, rgba(255,255,255,0.09), rgba(255,255,255,0.02));
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: transform .12s ease, border-color .12s ease;
+  &:hover:not(:disabled) { transform: translateY(-3px); border-color: rgba(255,255,255,0.28); }
+  &:disabled { opacity: .5; cursor: not-allowed; }
+`;
+
 const enumLabel = (kind, code) =>
   code ? t(`modelProfileExpanded.${kind}Values.${String(code).toUpperCase()}`, { defaultValue: String(code) }) : '';
 
-const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = false, fmtEUR, saldo }) => {
+const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = false, fmtEUR, saldo, onOpenProfile, onSendGift, gifts = [], giftSendEnabled = false }) => {
   const [profile, setProfile] = useState(null);
   const [photo, setPhoto] = useState(null);
   const [likes, setLikes] = useState(null);
@@ -281,6 +319,12 @@ const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = fal
   if (profile?.bustSize) facts.push({ l: t('modelProfileExpanded.labels.bust', 'Pecho'), v: enumLabel('bust', profile.bustSize) });
   if (langTxt) facts.push({ l: t('modelProfileExpanded.labels.languages', 'Idioma'), v: langTxt });
 
+  // Regalos de acceso rápido: objetos GRATIS (envío directo, un toque). Los de
+  // pago (con confirmación) siguen en la barra 🎁 del chat.
+  const quickGifts = (gifts || []).filter(
+    (g) => String(g?.tier || 'QUICK').toUpperCase() !== 'PREMIUM' && !isFaceGiftCode(g?.code)
+  );
+
   return (
     <Panel>
       <Cover>
@@ -289,7 +333,20 @@ const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = fal
           <Name>{name}</Name>
           <Presence $c={presMeta.c}>
             <i />
-            {presMeta.label}{age ? ` · ${age} ${t('modelSpotlight.yearsSuffix', 'años')}` : ''}
+            <span>
+              {presMeta.label}{age ? ` · ${age} ${t('modelSpotlight.yearsSuffix', 'años')}` : ''}
+              {onOpenProfile && (
+                <>
+                  {' · '}
+                  <VerPerfil
+                    type="button"
+                    onClick={() => onOpenProfile({ id: userId, nickname: name, presence: pres })}
+                  >
+                    {t('modelSpotlight.viewProfile', 'ver perfil')}
+                  </VerPerfil>
+                </>
+              )}
+            </span>
           </Presence>
         </CoverInfo>
       </Cover>
@@ -345,7 +402,25 @@ const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = fal
           </Sec>
         )}
 
-        {/* Paso 5+: regalos rápidos, ver perfil completo. */}
+        {quickGifts.length > 0 && (
+          <Sec>
+            <SecH>{t('modelSpotlight.giftTitle', 'Enviar un regalo')}</SecH>
+            <QGifts>
+              {quickGifts.map((g) => (
+                <QChip
+                  key={g.id}
+                  type="button"
+                  disabled={!giftSendEnabled}
+                  title={g.name}
+                  aria-label={g.name}
+                  onClick={() => { if (giftSendEnabled && onSendGift) onSendGift(g.id); }}
+                >
+                  <GiftIcon code={g.code} alt={g.name || ''} size={22} />
+                </QChip>
+              ))}
+            </QGifts>
+          </Sec>
+        )}
       </Body>
     </Panel>
   );
