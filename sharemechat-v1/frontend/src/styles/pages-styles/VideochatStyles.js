@@ -339,6 +339,9 @@ export const StyledFavoritesShell = styled.div`
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  /* Rediseño Fase 2: fondo oscuro también en el estado de carga/vacío (los ~2s
+     hasta que se auto-abre el chat), para no ver una pantalla blanca. */
+  background-color: #0d1015;
 `;
 
 export const StyledFavoritesColumns = styled.div`

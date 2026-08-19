@@ -756,7 +756,7 @@ export default function VideoChatFavoritosModelo(props) {
           <StyledFavoritesColumns>
             <StyledCenterPanel>
               {!hasActiveDetail ? (
-                <div style={{ color: '#adb5bd', textAlign: 'center' }}>
+                <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8b94a1', textAlign: 'center', padding: 16 }}>
                   {t('dashboardModel.favorites.selectFavorite')}
                 </div>
               ) : (
