@@ -10,8 +10,14 @@ inline, canvas beige `#e9e3db`, gift bar gris, composer gris) → sensación de
 "varios mundos". El operador pidió rediseñar **desde cero respetando solo el
 navbar**.
 
-**Mock de referencia (aprobado):** `favoritos-redesign-assets/mocks/favoritos-nuevo.html`.
+**Mock de referencia (aprobado, v2 final):** `favoritos-redesign-assets/mocks/favoritos-final.html`.
 Los mocks de scratchpad son efímeros; este es la fuente de verdad.
+
+**Documentos hermanos:**
+- Valores exactos de estilo (tokens, tipografía, medidas por componente):
+  `favoritos-redesign-assets/design-spec.md`.
+- Plan de implementación por fases + mapa de ficheros:
+  `favoritos-redesign-assets/implementation-plan.md`.
 
 ---
 
@@ -97,17 +103,20 @@ Etiquetas: **[Nuevo]** no existe · **[Restyle]** existe, cambia aspecto ·
 
 ---
 
-## 4. Decisiones abiertas (a cerrar antes de implementar)
+## 4. Decisiones
 
-- **D1 — Ver perfil completo desde el spotlight.** La columna derecha no cabe el
-  perfil entero. Falta ubicar un acceso discreto a "Ver perfil completo" (el
-  `ModelProfileExpanded` que ya existe). Propuesta pendiente.
-- **D2 — Carga de la columna derecha.** Confirmado: se puebla al pulsar el
-  contacto en la lista (mismo disparo que abre el chat central). Reutiliza el
-  `getPublicProfile` + likes/reputación ya existentes.
-- **D3 — Fondo del chat.** Debe ser oscuro, pero se busca romper la monotonía del
-  negro plano (textura/patrón oscuro muy sutil). Explorar opciones.
-- **D22 — Modo llamada** (ver punto 22).
+- **D1 — Ver perfil completo desde el spotlight.** ✅ CERRADA. Botón ghost
+  discreto al final del spotlight ("Ver perfil completo ›"), abre el
+  `ModelProfileExpanded` existente. Ver `design-spec.md` §5.5.
+- **D2 — Carga de la columna derecha.** ✅ CERRADA. Se puebla al pulsar el
+  contacto en la lista (mismo disparo que abre el chat central). Reutiliza
+  `getPublicProfile` + likes/reputación existentes.
+- **D3 — Fondo del chat.** ✅ CERRADA. Carbón `#0d1015` + glow rojo de marca
+  (dominante arriba-derecha `.22` + tenue abajo-izquierda `.10`) + violeta muy
+  leve + trama de rombos blancos al ~4.5%. Valor exacto en `design-spec.md` §4.
+- **D22 — Modo llamada.** ⏳ ABIERTA. El mock no cubre el árbol de videollamada
+  (`StyledCallCardDesktop`); decidir si se rediseña en línea o se deja (ver
+  punto 22 e `implementation-plan.md` Fase 5).
 
 ---
 
