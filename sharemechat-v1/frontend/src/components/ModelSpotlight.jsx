@@ -411,7 +411,10 @@ const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = fal
           <Sec>
             <SecH>{t('modelProfileExpanded.sections.data', 'Datos')}</SecH>
             <Facts>
-              {facts.map((f, i) => (
+              {/* Solo 2 datos en el spotlight; el resto en "ver perfil". Por
+                  ahora los 2 primeros por prioridad (Altura, Cuerpo); pendiente
+                  hacerlo elegible por la modelo. */}
+              {facts.slice(0, 2).map((f, i) => (
                 <Fact key={i}>
                   <div className="fl">{f.l}</div>
                   <div className="fv">{f.v}</div>
