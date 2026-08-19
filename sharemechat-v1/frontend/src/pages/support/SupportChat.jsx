@@ -197,7 +197,21 @@ const typingBubbleStyle = {
  *   `sendMessage` va a la conv activa, no a la pinned; el guard visual
  *   evita que el user pierda su mensaje.
  */
-export default function SupportChat({ pinnedConversationId, readOnly, ticketContext } = {}) {
+// Fondo oscuro del chat (rediseño favoritos Fase 2): mismo carbón + glow rojo +
+// trama que StyledChatScroller, para que el chat de Agente IA en favoritos case
+// con los demás chats. Solo se aplica con la prop `dark` (no en tickets).
+const DARK_CHAT_BG = {
+  backgroundColor: '#0d1015',
+  backgroundImage: [
+    'radial-gradient(130% 62% at 84% -10%, rgba(234,29,29,0.22), transparent 58%)',
+    'radial-gradient(80% 55% at 6% 108%, rgba(234,29,29,0.10), transparent 55%)',
+    'radial-gradient(90% 50% at -5% 2%, rgba(167,139,250,0.08), transparent 55%)',
+    "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='34' height='34' viewBox='0 0 34 34'><g fill='none' stroke='%23ffffff' stroke-opacity='0.045' stroke-width='1'><path d='M17 5 L23 17 L17 29 L11 17 Z'/><circle cx='17' cy='17' r='1.1' fill='%23ffffff' fill-opacity='0.05' stroke='none'/></g></svg>\")",
+  ].join(', '),
+  backgroundRepeat: 'no-repeat, no-repeat, no-repeat, repeat',
+};
+
+export default function SupportChat({ pinnedConversationId, readOnly, ticketContext, dark = false } = {}) {
   const {
     messages,
     conversationId,
@@ -216,6 +230,15 @@ export default function SupportChat({ pinnedConversationId, readOnly, ticketCont
   const [escalateOpen, setEscalateOpen] = useState(false);
   const [sendHover, setSendHover] = useState(false);
   const messagesRef = useRef(null);
+
+  // Estilos oscuros (variante `dark`, chat Agente IA en favoritos). Sin dark,
+  // se conservan los claros originales (tickets, admin).
+  const cStyle = dark ? { ...containerStyle, ...DARK_CHAT_BG } : containerStyle;
+  const hStyle = dark ? { ...headerStyle, background: '#14171d', border: '1px solid rgba(255,255,255,0.08)', color: '#e7ebf0' } : headerStyle;
+  const mStyle = dark ? { ...messagesAreaStyle, background: 'transparent' } : messagesAreaStyle;
+  const iRowStyle = dark ? { ...inputRowStyle, borderTop: '1px solid rgba(255,255,255,0.08)' } : inputRowStyle;
+  const tStyle = dark ? { ...textareaStyle, background: 'rgba(255,255,255,0.08)', color: '#f8fafc', border: '1px solid transparent' } : textareaStyle;
+  const eStyle = dark ? { ...emptyStateStyle, color: '#9aa2ad' } : emptyStateStyle;
 
   // Auto-scroll al final cuando llegan mensajes o el LLM esta pensando.
   useEffect(() => {
@@ -266,7 +289,7 @@ export default function SupportChat({ pinnedConversationId, readOnly, ticketCont
   };
 
   return (
-    <div style={containerStyle}>
+    <div style={cStyle}>
       {/* Header solo en modo unpinned (chat casual /client Soporte). En modo
           pinned (ticket) 2026-08-07: no aporta — el título "Conversación con
           el equipo" fuera del chat ya identifica el contexto; el avatar bot
@@ -274,7 +297,7 @@ export default function SupportChat({ pinnedConversationId, readOnly, ticketCont
           técnico" es escalado dentro de escalado, redundante. La info del
           técnico asignado se propaga al banner de status humano abajo. */}
       {!pinnedConversationId && (
-        <header style={headerStyle}>
+        <header style={hStyle}>
           <SupportAvatar size={40} />
           <strong>{i18n.t('support.chat.agentName')}</strong>
           {!readOnly && (
@@ -324,12 +347,12 @@ export default function SupportChat({ pinnedConversationId, readOnly, ticketCont
         <div style={bannerDanger} role="alert">{error}</div>
       )}
 
-      <div style={messagesAreaStyle} ref={messagesRef}>
+      <div style={mStyle} ref={messagesRef}>
         {loading && (
-          <div style={emptyStateStyle}>…</div>
+          <div style={eStyle}>…</div>
         )}
         {!loading && messages.length === 0 && (
-          <div style={emptyStateStyle}>
+          <div style={eStyle}>
             {ticketContext
               ? i18n.t('support.chat.ticketEmptyState', {
                   name: ticketContext.userName || '',
@@ -364,9 +387,9 @@ export default function SupportChat({ pinnedConversationId, readOnly, ticketCont
           {i18n.t('support.chat.readOnlyBanner')}
         </div>
       ) : (
-        <div style={inputRowStyle}>
+        <div style={iRowStyle}>
           <textarea
-            style={textareaStyle}
+            style={tStyle}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}

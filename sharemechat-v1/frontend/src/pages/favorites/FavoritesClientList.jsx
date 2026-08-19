@@ -31,6 +31,7 @@ import {
 } from '../../styles/pages-styles/FavoritesStyles';
 
 import StatusBadge from '../../components/StatusBadge';
+import { resolveGiftEmoji } from '../../components/gifts/GiftIcon';
 import { useAppModals } from '../../components/useAppModals';
 import { useSession } from '../../components/SessionProvider';
 import { apiFetch } from '../../config/http';
@@ -55,14 +56,20 @@ function formatConvTime(iso) {
 // El backend serializa el último mensaje de un regalo como "Gift: <nombre>"
 // (o "Gift"). En el preview lo mostramos tipo messenger: 🎁 + nombre (y de paso
 // se elimina el literal inglés "Gift").
-function formatPreview(text) {
+function formatPreview(text, giftEmojiByName) {
   if (!text) return '';
   if (text === 'Gift') return `🎁 ${i18n.t('dashboardClient.favorites.giftLabel')}`;
-  if (text.startsWith('Gift: ')) return `🎁 ${text.slice(6)}`;
+  if (text.startsWith('Gift: ')) {
+    const name = text.slice(6);
+    const emoji = giftEmojiByName ? giftEmojiByName[name.trim().toLowerCase()] : null;
+    // Emoji real del regalo (resuelto por nombre desde el catálogo) en vez del
+    // 🎁 genérico; fallback a 🎁 si no se resuelve.
+    return emoji ? `${emoji} ${name}` : `🎁 ${name}`;
+  }
   return text;
 }
 
-function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, unread = 0, preview = '', lastAt = null, menuOpen = false }) {
+function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, unread = 0, preview = '', lastAt = null, giftEmojiByName = null, menuOpen = false }) {
   const [imgFailed, setImgFailed] = useState(false);
 
   useEffect(() => { setImgFailed(false); }, [avatarUrl]);
@@ -79,7 +86,7 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
   const displayName = isBot ? i18n.t('support.chat.agentName') : (user?.nickname || `Usuario #${user?.id}`);
   const avatarInitial = (displayName || '?').trim().charAt(0).toUpperCase() || '?';
   const hasRealAvatar = !!avatarUrl && !imgFailed;
-  const previewText = isBot ? i18n.t('dashboardClient.favorites.botSubtitle') : formatPreview(preview);
+  const previewText = isBot ? i18n.t('dashboardClient.favorites.botSubtitle') : formatPreview(preview, giftEmojiByName);
   const timeText = isBot ? '' : formatConvTime(lastAt);
   const showUnread = !isBot && !isBlocked && Number(unread) > 0;
 
@@ -158,7 +165,17 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
   );
 }
 
-export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selectedId = null, autoSelectBot = false, onAutoSelectHandled = null, onItemsChange = null, onOpenProfile = null }) {
+export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selectedId = null, autoSelectBot = false, onAutoSelectHandled = null, onItemsChange = null, onOpenProfile = null, gifts = [] }) {
+  // Mapa nombre-de-regalo -> emoji (del catálogo) para el preview de la lista.
+  const giftEmojiByName = useMemo(() => {
+    const map = {};
+    (gifts || []).forEach((g) => {
+      if (!g?.name) return;
+      const e = resolveGiftEmoji(g.code);
+      if (e) map[String(g.name).trim().toLowerCase()] = e;
+    });
+    return map;
+  }, [gifts]);
   const [items, setItems] = useState([]);
 
   // Exponer los items al padre (para que el header del chat lea la presencia
@@ -651,6 +668,7 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
       unread={unreadMap[u.id] || 0}
       preview={convMeta[u.id]?.lastBody || ''}
       lastAt={convMeta[u.id]?.lastAt || null}
+      giftEmojiByName={giftEmojiByName}
       menuOpen={menu.open && Number(menu.user?.id) === Number(u.id)}
       onSelect={(user) => {
         if (user?.blocked) return;

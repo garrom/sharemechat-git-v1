@@ -3565,6 +3565,7 @@ const DashboardModel = () => {
                     onItemsChange={setFavItems}
                     autoSelectBot={pendingAutoSelectBot}
                     onAutoSelectHandled={() => setPendingAutoSelectBot(false)}
+                    gifts={gifts}
                   />
                 ) : (
                   <div style={{padding:8,color:'#adb5bd'}}>{i18n.t('dashboardModel.favorites.inCallLocked')}</div>
@@ -3574,7 +3575,7 @@ const DashboardModel = () => {
 
             <StyledCenter data-mode={contactMode === 'call' ? 'call' : undefined}>
               {activeTab === 'favoritos' && selectedFav?.isBot ? (
-                <SupportChat />
+                <SupportChat dark />
               ) : activeTab === 'favoritos' && (
                 <VideoChatFavoritosModelo
                   isMobile={isMobile}
