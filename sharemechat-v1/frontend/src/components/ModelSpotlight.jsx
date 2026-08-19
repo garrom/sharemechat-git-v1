@@ -107,7 +107,36 @@ const Body = styled.div`
   min-height: 0;
 `;
 
-const ModelSpotlight = ({ userId, nickname, presence }) => {
+// CTA "Iniciar videollamada" (acción principal del spotlight).
+const Cta = styled.button`
+  display: block;
+  width: 100%;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  position: relative;
+  border-radius: 14px;
+  padding: 13px 16px;
+  color: #fff;
+  background: linear-gradient(180deg, #ea1d1d, #b91212);
+  box-shadow: 0 10px 24px rgba(234,29,29,0.28);
+
+  &:hover:not(:disabled) { filter: brightness(1.08); }
+  &:disabled {
+    background: rgba(255,255,255,0.06);
+    color: #7c8792;
+    box-shadow: none;
+    border: 1px solid rgba(255,255,255,0.08);
+    cursor: not-allowed;
+  }
+
+  .l1 { font-size: 15.5px; font-weight: 800; display: flex; align-items: center; gap: 9px; }
+  .l2 { font-size: 12px; color: rgba(255,255,255,0.82); margin-top: 2px; }
+  &:disabled .l2 { color: #7c8792; }
+  .arrow { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 18px; }
+`;
+
+const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = false, fmtEUR, saldo }) => {
   const [profile, setProfile] = useState(null);
   const [photo, setPhoto] = useState(null);
 
@@ -138,6 +167,13 @@ const ModelSpotlight = ({ userId, nickname, presence }) => {
   const initial = (name || '?').trim().charAt(0).toUpperCase() || '?';
   const age = profile?.age;
 
+  const rate = profile?.chosenRateEurPerMin != null ? Number(profile.chosenRateEurPerMin) : null;
+  const rateTxt = rate != null
+    ? (typeof fmtEUR === 'function' ? fmtEUR(rate) : `${rate.toFixed(2)} €`)
+    : null;
+  const saldoNum = saldo != null ? Number(saldo) : null;
+  const balanceOk = (rate != null && saldoNum != null) ? saldoNum >= rate : null;
+
   return (
     <Panel>
       <Cover>
@@ -151,8 +187,25 @@ const ModelSpotlight = ({ userId, nickname, presence }) => {
         </CoverInfo>
       </Cover>
       <Body>
-        {/* Paso 2+: CTA videollamada, reputación/likes, datos físicos, regalos,
-            ver perfil completo. */}
+        <Cta
+          type="button"
+          disabled={!canCall}
+          onClick={() => { if (canCall && onStartCall) onStartCall(); }}
+          title={!canCall ? t('modelSpotlight.callDisabled', 'Debéis ser favoritos aceptados para poder llamar') : ''}
+        >
+          <span className="l1">📹 {t('modelSpotlight.videocall', 'Iniciar videollamada')}</span>
+          {rateTxt && (
+            <span className="l2">
+              {rateTxt} / min
+              {balanceOk === true ? ` · ${t('modelSpotlight.balanceOk', 'saldo suficiente')}`
+                : balanceOk === false ? ` · ${t('modelSpotlight.balanceLow', 'saldo insuficiente')}`
+                : ''}
+            </span>
+          )}
+          <span className="arrow">›</span>
+        </Cta>
+
+        {/* Paso 3+: reputación/likes, datos físicos, regalos, ver perfil completo. */}
       </Body>
     </Panel>
   );

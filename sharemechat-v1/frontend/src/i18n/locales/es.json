@@ -566,6 +566,13 @@
       "RO": "Rumano"
     }
   },
+  "modelSpotlight": {
+    "videocall": "Iniciar videollamada",
+    "balanceOk": "saldo suficiente",
+    "balanceLow": "saldo insuficiente",
+    "callDisabled": "Debéis ser favoritos aceptados para poder llamar",
+    "yearsSuffix": "años"
+  },
   "modelReputation": {
     "title": "Tu reputación",
     "noBadge": "Aún sin insignia",

@@ -319,6 +319,11 @@ export const StyledRightColumn = styled(ColumnBlock)`
   min-width: 280px;
   padding: 12px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.14) transparent;
+  &::-webkit-scrollbar { width: 8px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 999px; }
 
   /* Rediseño Fase 3: spotlight de la modelo. Columna OSCURA (coherente con el
      resto), sin padding (el cover va edge-to-edge; el spotlight pone su propio
@@ -1780,8 +1785,14 @@ export const StyledChatScroller = styled.div`
     }
   }
 
+  /* Rediseño Fase 3: scrollbar oscuro y sutil (el claro por defecto rompía el
+     tema oscuro del chat). */
   scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.14) transparent;
   &::-webkit-scrollbar { width: 8px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 999px; }
+  &::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.20); }
 
   overscroll-behavior: contain;
 `;

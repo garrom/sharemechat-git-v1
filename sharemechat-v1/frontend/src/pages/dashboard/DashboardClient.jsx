@@ -3316,6 +3316,10 @@ const DashboardClient = () => {
                   userId={centerChatPeerId}
                   nickname={centerChatPeerName}
                   presence={peerPresence}
+                  onStartCall={enterCallMode}
+                  canCall={hasCallTarget && allowChat}
+                  fmtEUR={fmtEUR}
+                  saldo={saldo}
                 />
               </StyledRightColumn>
             )}
