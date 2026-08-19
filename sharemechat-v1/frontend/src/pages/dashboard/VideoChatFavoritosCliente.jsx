@@ -19,7 +19,7 @@ import { StyledCenter,StyledFavoritesShell,StyledFavoritesColumns,StyledCenterPa
     StyledCallTopMeta,StyledCallTopMetaText,StyledCallTopActions,StyledCallLocalVideo,
     StyledCallComposer,StyledGiftsPanel,StyledGiftGrid,
     StyledGiftCatalog,StyledGiftSection,StyledGiftSectionTitle,StyledChatMessagesInner,StyledChatDockMessageComposer,StyledChatDockActions,
-    StyledGiftBar,StyledGiftTrack,StyledGiftChip,StyledGiftFxLayer,StyledDaySep,StyledComposerBtn,
+    StyledGiftBar,StyledGiftTrack,StyledGiftChip,StyledGiftFxLayer,StyledDaySep,StyledComposerBtn,StyledComposerSend,
     StyledCallOverlayBar,StyledCallOverlayControls,StyledCallOverlayGifts,
     StyledGiftConfirmOverlay,StyledGiftConfirmCard,StyledGiftConfirmActions
 } from '../../styles/pages-styles/VideochatStyles';
@@ -905,16 +905,15 @@ export default function VideoChatFavoritosCliente(props){
                           disabled={!allowChat}
                           onFocus={()=>{setTimeout(()=>chatEndRef.current?.scrollIntoView({block:'end'}),50);}}
                         />
-                        <StyledChatDockActions>
-                          <ButtonLlamar
-                            onClick={enterCallMode}
-                            disabled={!hasCallTarget||!allowChat}
-                            title={t('dashboardClient.videoChatFavoritosCliente.actions.call')}
-                            aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.call')}
-                          >
-                            <FontAwesomeIcon icon={faVideo}/>
-                          </ButtonLlamar>
-                        </StyledChatDockActions>
+                        <StyledComposerSend
+                          type="button"
+                          onClick={sendCenterMessage}
+                          disabled={!allowChat}
+                          title={t('common.sendMessage')}
+                          aria-label={t('common.sendMessage')}
+                        >
+                          <FontAwesomeIcon icon={faPaperPlane}/>
+                        </StyledComposerSend>
                         {showCenterGifts&&allowChat&&(
                           <div style={{ position:'absolute', left:0, right:0, bottom:'100%', zIndex:12 }}>
                             {renderGiftBar()}

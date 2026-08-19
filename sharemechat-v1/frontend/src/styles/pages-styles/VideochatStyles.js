@@ -335,7 +335,10 @@ export const StyledRightColumn = styled(ColumnBlock)`
     padding: 0;
   }
 
-  @media (max-width: 1024px) { display: none; }
+  /* Rediseño Fase 3: visible en todo el layout desktop (>768). El CTA de
+     videollamada vive aquí; el botón de llamar se retira del composer, así que
+     la columna debe estar presente siempre que NO sea móvil. */
+  @media (max-width: 768px) { display: none; }
 `;
 
 
@@ -752,6 +755,27 @@ export const StyledComposerBtn = styled.button`
   transition: background .12s ease;
   &:hover:not(:disabled) { background: rgba(255,255,255,0.12); }
   &:disabled { opacity: .5; cursor: not-allowed; }
+`;
+
+/* Botón ENVIAR (rojo de marca) del composer favoritos. Sustituye al botón de
+   videollamada (que se movió al spotlight de la derecha, Fase 3). */
+export const StyledComposerSend = styled.button`
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  border: 0;
+  background: linear-gradient(180deg, #ea1d1d, #b91212);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(234,29,29,0.30);
+  transition: filter .12s ease, transform .12s ease;
+  &:hover:not(:disabled) { filter: brightness(1.08); }
+  &:active:not(:disabled) { transform: scale(.96); }
+  &:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
 `;
 
 

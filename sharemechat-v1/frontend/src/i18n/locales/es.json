@@ -567,6 +567,7 @@
     }
   },
   "modelSpotlight": {
+    "like": "Like",
     "videocall": "Iniciar videollamada",
     "balanceOk": "saldo suficiente",
     "balanceLow": "saldo insuficiente",

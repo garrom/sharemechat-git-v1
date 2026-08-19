@@ -158,17 +158,30 @@ const RepNum = styled.div`
 const LikeBtn = styled.button`
   flex: 0 0 auto;
   border: 1px solid rgba(234,29,29,0.34);
-  background: ${({ $liked }) => ($liked ? 'rgba(234,29,29,0.20)' : 'rgba(234,29,29,0.12)')};
-  color: #ff8a8a;
+  background: ${({ $liked }) => ($liked ? 'rgba(234,29,29,0.20)' : 'rgba(234,29,29,0.10)')};
+  color: ${({ $liked }) => ($liked ? '#ff8a8a' : '#c3cad3')};
   border-radius: 11px;
-  padding: 8px 12px;
+  padding: 8px 13px;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   white-space: nowrap;
+  transition: background .16s ease, border-color .16s ease, color .16s ease, transform .16s ease, box-shadow .16s ease;
+
+  .h { font-size: 15px; line-height: 1; transition: transform .16s ease; }
+
+  &:hover:not(:disabled) {
+    background: rgba(234,29,29,0.24);
+    border-color: rgba(234,29,29,0.60);
+    color: #ffb3b3;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(234,29,29,0.22);
+  }
+  &:hover:not(:disabled) .h { transform: scale(1.22); }
+  &:active:not(:disabled) { transform: translateY(0) scale(.97); }
   &:disabled { opacity: .6; cursor: default; }
 `;
 
@@ -311,9 +324,9 @@ const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = fal
               $liked={!!likes.hasLiked}
               disabled={busyLike}
               onClick={toggleLike}
-              aria-label={t(likes.hasLiked ? 'modelProfileExpanded.likes.unlike' : 'modelProfileExpanded.likes.like', 'Dar like')}
+              aria-label={t(likes.hasLiked ? 'modelProfileExpanded.likes.unlike' : 'modelProfileExpanded.likes.like', 'Like')}
             >
-              {likes.hasLiked ? '❤' : '🤍'} {t(likes.hasLiked ? 'modelProfileExpanded.likes.unlike' : 'modelProfileExpanded.likes.like', 'Dar like')}
+              <span className="h">{likes.hasLiked ? '❤' : '🤍'}</span> {t('modelSpotlight.like', 'Like')}
             </LikeBtn>
           </Rep>
         )}
