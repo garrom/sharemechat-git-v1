@@ -2,7 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronDown, faTrash, faBan, faUnlock,faFlag, faUser } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown, faTrash, faBan, faUnlock,faFlag, faUser, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons';
 import ModelProfileExpanded from '../subpages/ModelProfileExpanded';
 import SupportAvatar from '../../components/support/SupportAvatar';
 
@@ -12,11 +12,17 @@ import {
   ItemCard,
   Avatar,
   LetterAvatar,
-  Info,
   Name,
-  Badges,
   DotWrap,
   StatusDot,
+  SearchBox,
+  GroupLabel,
+  ItemBody,
+  ItemTopRow,
+  ItemPrevRow,
+  Time,
+  Preview,
+  UnreadBadge,
   FavMenuTrigger,
   FavMenu,
   FavMenuItem,
@@ -30,7 +36,23 @@ import { useSession } from '../../components/SessionProvider';
 import { apiFetch } from '../../config/http';
 import i18n from '../../i18n';
 
-function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, hasUnread = false, menuOpen = false }) {
+// Formatea la hora del último mensaje para el preview de la lista: hoy -> HH:mm,
+// esta semana -> día abreviado, resto -> dd/MM. Solo display (sin comparar con
+// backend para lógica), así que el desfase de zona no afecta.
+function formatConvTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const now = new Date();
+  if (d.toDateString() === now.toDateString()) {
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  const diffDays = Math.floor((now - d) / 86400000);
+  if (diffDays < 7) return d.toLocaleDateString([], { weekday: 'short' });
+  return d.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
+}
+
+function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, unread = 0, preview = '', lastAt = null, menuOpen = false }) {
   const [imgFailed, setImgFailed] = useState(false);
 
   useEffect(() => { setImgFailed(false); }, [avatarUrl]);
@@ -47,6 +69,9 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
   const displayName = isBot ? i18n.t('support.chat.agentName') : (user?.nickname || `Usuario #${user?.id}`);
   const avatarInitial = (displayName || '?').trim().charAt(0).toUpperCase() || '?';
   const hasRealAvatar = !!avatarUrl && !imgFailed;
+  const previewText = isBot ? i18n.t('dashboardClient.favorites.botSubtitle') : preview;
+  const timeText = isBot ? '' : formatConvTime(lastAt);
+  const showUnread = !isBot && !isBlocked && Number(unread) > 0;
 
   return (
     <ItemCard
@@ -61,16 +86,16 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
     >
       <DotWrap>
         {isBot ? (
-          <SupportAvatar size={38} />
+          <SupportAvatar size={44} />
         ) : hasRealAvatar ? (
           <Avatar
             src={avatarUrl}
             alt=""
-            $size={38}
+            $size={44}
             onError={() => setImgFailed(true)}
           />
         ) : (
-          <LetterAvatar $size={38} aria-hidden="true">{avatarInitial}</LetterAvatar>
+          <LetterAvatar $size={44} aria-hidden="true">{avatarInitial}</LetterAvatar>
         )}
         <StatusDot
           className={presence === 'busy' ? 'busy' : presence === 'online' ? 'online' : 'offline'}
@@ -78,30 +103,27 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
         />
       </DotWrap>
 
-      <Info>
-        <Name>{displayName}</Name>
-      </Info>
-
-      <Badges>
-        {isBot && (
-          <span style={{
-            fontSize: '0.65rem', fontWeight: 700,
-            padding: '2px 6px', borderRadius: 10,
-            background: '#dcfce7', color: '#166534',
-          }}>{i18n.t('support.chat.headerBadge')}</span>
-        )}
-        {!isBot && !isBlocked && invited !== 'accepted' && (
-          <StatusBadge value={invited} title={invited === 'sent' ? 'enviado' : invited} size={16} />
-        )}
-      </Badges>
-
-      {hasUnread && !isBlocked && !isBot && (
-        <div
-          style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#0d6efd', marginRight: 6 }}
-          aria-label="Tienes mensajes sin leer"
-          title="Tienes mensajes sin leer"
-        />
-      )}
+      <ItemBody>
+        <ItemTopRow>
+          <Name>{displayName}</Name>
+          {isBot ? (
+            <span style={{
+              fontSize: '0.6rem', fontWeight: 800, letterSpacing: '.03em',
+              padding: '2px 6px', borderRadius: 999,
+              background: '#d1f4df', color: '#0f5132', flex: '0 0 auto',
+            }}>{i18n.t('support.chat.headerBadge')}</span>
+          ) : (timeText && <Time>{timeText}</Time>)}
+        </ItemTopRow>
+        <ItemPrevRow>
+          <Preview>{previewText}</Preview>
+          {showUnread && (
+            <UnreadBadge aria-label={i18n.t('favorites.unread', { defaultValue: 'Sin leer' })}>{unread}</UnreadBadge>
+          )}
+          {!isBot && !isBlocked && invited !== 'accepted' && (
+            <StatusBadge value={invited} title={invited === 'sent' ? 'enviado' : invited} size={16} />
+          )}
+        </ItemPrevRow>
+      </ItemBody>
 
       {!isBot && (
         <FavMenuTrigger
@@ -138,6 +160,11 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
   const [avatarMap, setAvatarMap] = useState({});
   const [loading, setLoading] = useState(false);
   const [unreadMap, setUnreadMap] = useState({});
+  // Rediseño favoritos: meta por conversación (último mensaje + hora) para el
+  // preview de la lista. Fuente: /messages/conversations (lastBody/lastAt).
+  const [convMeta, setConvMeta] = useState({});
+  // Buscador de contactos (filtro cliente, sin backend).
+  const [query, setQuery] = useState('');
   const [menu, setMenu] = useState({ open: false, user: null, x: 0, y: 0 });
   const [blockedMap, setBlockedMap] = useState({});
   // Capa 2 Fase 4: modal "Ver perfil completo" del modelo seleccionado.
@@ -373,13 +400,20 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
         if (ignore) return;
 
         const map = {};
+        const meta = {};
         (data || []).forEach((conv) => {
           const peerId = Number(conv.peer ?? conv.peerId);
+          if (!peerId) return;
           const unread = Number(conv.unreadCount ?? 0);
-          if (peerId && unread > 0) map[peerId] = true;
+          if (unread > 0) map[peerId] = unread;
+          meta[peerId] = {
+            lastBody: conv.lastBody ?? conv.last_body ?? '',
+            lastAt: conv.lastAt ?? conv.last_at ?? null,
+          };
         });
 
         setUnreadMap(map);
+        setConvMeta(meta);
       } catch (e) {
         console.warn('[favorites] unread load error:', e?.message);
         if (!ignore) setUnreadMap({});
@@ -591,36 +625,74 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
   if (loading) return <StateRow>{i18n.t('favorites.states.loading')}</StateRow>;
   if (!items.length) return <StateRow>{i18n.t('favorites.states.empty')}</StateRow>;
 
+  const norm = (s) => (s || '').toLowerCase();
+  const matchesQuery = (u) => {
+    if (!query.trim()) return true;
+    const name = u?.isBot ? i18n.t('support.chat.agentName') : (u?.nickname || `Usuario #${u?.id}`);
+    return norm(name).includes(norm(query));
+  };
+
+  const renderFav = (u) => (
+    <FavListItem
+      key={u.id}
+      user={u}
+      avatarUrl={avatarMap?.[u.id] || null}
+      selected={Number(u.id) === Number(selectedId)}
+      unread={unreadMap[u.id] || 0}
+      preview={convMeta[u.id]?.lastBody || ''}
+      lastAt={convMeta[u.id]?.lastAt || null}
+      menuOpen={menu.open && Number(menu.user?.id) === Number(u.id)}
+      onSelect={(user) => {
+        if (user?.blocked) return;
+        // El bot se abre en el mismo panel central que un favorito humano.
+        // El dashboard renderiza SupportChatPanel cuando user.isBot=true
+        // en vez del chat P2P. El flag isBot viaja dentro del favUser via
+        // handleOpenChatFromFavorites -> setActivePeer -> selectedFav.
+        if (!user?.isBot) {
+          setUnreadMap((prev) => {
+            if (!prev?.[user.id]) return prev;
+            const next = { ...prev };
+            delete next[user.id];
+            return next;
+          });
+        }
+        onSelect?.(user);
+      }}
+      onOpenMenu={(user, rect) => openMenuFromRect(user, rect)}
+    />
+  );
+
+  // Filtro por buscador + agrupación online/offline. El bot (Agente IA) va
+  // siempre arriba, fuera de grupos. Dentro de cada grupo, orden por recencia
+  // del último mensaje.
+  const visible = (items || []).filter(matchesQuery);
+  const bot = visible.find((u) => u.isBot);
+  const humans = visible.filter((u) => !u.isBot);
+  const isOnline = (u) => ['online', 'busy'].includes(String(u?.presence || '').toLowerCase());
+  const byRecent = (a, b) => String(convMeta[b.id]?.lastAt || '').localeCompare(String(convMeta[a.id]?.lastAt || ''));
+  const online = humans.filter(isOnline).sort(byRecent);
+  const offline = humans.filter((u) => !isOnline(u)).sort(byRecent);
+
   return (
     <>
+      <SearchBox>
+        <span className="ic"><FontAwesomeIcon icon={faMagnifyingGlass} /></span>
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={i18n.t('dashboardClient.favorites.search.placeholder')}
+          aria-label={i18n.t('dashboardClient.favorites.search.placeholder')}
+        />
+      </SearchBox>
+
       <List>
-        {items.map((u) => (
-          <FavListItem
-            key={u.id}
-            user={u}
-            avatarUrl={avatarMap?.[u.id] || null}
-            selected={Number(u.id) === Number(selectedId)}
-            hasUnread={!!unreadMap[u.id]}
-            menuOpen={menu.open && Number(menu.user?.id) === Number(u.id)}
-            onSelect={(user) => {
-              if (user?.blocked) return;
-              // El bot se abre en el mismo panel central que un favorito humano.
-              // El dashboard renderiza SupportChatPanel cuando user.isBot=true
-              // en vez del chat P2P. El flag isBot viaja dentro del favUser via
-              // handleOpenChatFromFavorites -> setActivePeer -> selectedFav.
-              if (!user?.isBot) {
-                setUnreadMap((prev) => {
-                  if (!prev?.[user.id]) return prev;
-                  const next = { ...prev };
-                  delete next[user.id];
-                  return next;
-                });
-              }
-              onSelect?.(user);
-            }}
-            onOpenMenu={(user, rect) => openMenuFromRect(user, rect)}
-          />
-        ))}
+        {bot && renderFav(bot)}
+        {online.length > 0 && <GroupLabel>{i18n.t('dashboardClient.favorites.groups.online')}</GroupLabel>}
+        {online.map(renderFav)}
+        {offline.length > 0 && <GroupLabel>{i18n.t('dashboardClient.favorites.groups.offline')}</GroupLabel>}
+        {offline.map(renderFav)}
+        {visible.length === 0 && <StateRow>{i18n.t('favorites.states.empty')}</StateRow>}
       </List>
 
       {menuNode}

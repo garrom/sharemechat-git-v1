@@ -1195,6 +1195,9 @@
     },
     "favorites": {
       "inCallLocked": "En llamada: la lista se bloquea hasta colgar.",
+      "search": { "placeholder": "Buscar contacto…" },
+      "groups": { "online": "En línea", "offline": "Desconectadas" },
+      "botSubtitle": "Asistente · siempre disponible",
       "selectFavorite": "Selecciona un favorito para abrir la conversación aquí.",
       "pendingInvitationMessage": "te ha invitado a ser favoritos mutuos. Acepta para habilitar el chat.",
       "acceptInvitation": "Aceptar invitación",

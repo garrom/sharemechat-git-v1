@@ -29,6 +29,28 @@ Reutiliza (sin duplicar): `LikeHeart`, `RoyaltyBadge`, `ModelReputationCard`
 
 ---
 
+## PLAN DEFINITIVO POR FASES (2026-08-19, decidido por la IA a petición del operador)
+
+- **Fase 1 — Columna izquierda.** 100% frontend (verificado: `/messages/conversations`
+  ya devuelve `lastBody`/`lastAt`/`unreadCount`). Buscador, agrupación online/offline,
+  preview + hora, no-leídos numérico, restyle. Validar en TEST.
+- **Fase 2 — Centro (restyle), aún a 2 columnas y 100% funcional.** Fondo oscuro,
+  cabecera styled (fuera de inline), burbujas P2P, separador de día, composer con 🎁,
+  retirar gift bar fija. **Se mantiene llamar + ver perfil en el centro.** Validar.
+- **Fase 3 — Columna derecha (spotlight).** Añade la 3ª columna, cablea
+  CTA videollamada / like / regalos / ver perfil, y **entonces** retira llamar +
+  ver perfil del centro. Validar.
+- **Fase 4 — Consistencia de perfiles** (cliente, modelo, `ModelProfileExpanded`):
+  foto con difuminado + datos encima, "Dar like" vs "Me gusta", pill. Análisis-primero. Validar.
+- **Fase 5 — Móvil + modo videollamada (D22) + limpieza.** i18n incluido en cada fase.
+
+**Micro-deuda backend anotada:** para el prefijo "Tú:" en el preview de la lista,
+añadir `lastSenderId` a `ConversationSummaryDTO` (1 campo). Diferido; no bloquea Fase 1.
+
+---
+
+## (Notas de fases — detalle original)
+
 ## Fase 0 — Andamiaje 3ª columna (sin estilo fino)
 - En `DashboardClient.jsx`, bloque favoritos: montar una tercera columna a la
   derecha del `StyledCenter` cuando hay contacto seleccionado y NO es el bot.
