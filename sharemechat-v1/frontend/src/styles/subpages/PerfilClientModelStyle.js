@@ -30,11 +30,18 @@ const redSoft = '#fbeaea';
 const redLine = 'rgba(234, 29, 29, 0.28)';
 const cardShadow = '0 1px 2px rgba(17, 24, 39, 0.05), 0 8px 24px rgba(17, 24, 39, 0.06)';
 
+// Rediseño perfil (2026-08-19): botones como el mock — forma redondeada
+// (no pastilla), texto normal (no MAYÚSCULAS), tamaño coherente con los
+// campos. Solo aplica dentro de ProfileMain (perfiles cliente + modelo).
 const profileButtonStyles = `
-  min-height: 42px;
+  min-height: 40px;
   box-shadow: none;
-  letter-spacing: 0.05em;
-  font-size: 0.76rem;
+  border-radius: 10px;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0 18px;
   transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.05s ease;
 `;
 
@@ -598,9 +605,9 @@ export const CardBody = styled.div`
 `;
 
 export const CardFooter = styled.footer`
-  margin-top: 16px;
+  margin-top: 14px;
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   flex-wrap: wrap;
   gap: 12px;
 `;
