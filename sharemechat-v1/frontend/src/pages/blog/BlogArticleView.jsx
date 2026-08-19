@@ -154,6 +154,16 @@ export default function BlogArticleView() {
   // no de i18n.language. El componente se remonta al navegar entre locales.
   const { t } = useTranslation();
 
+  // Etiqueta de categoria localizada (ADR-022): la categoria es un valor
+  // compartido del articulo (invariante por idioma); su traduccion visible se
+  // resuelve en render via el mapa 'blog:categoryLabels', con fallback al valor
+  // crudo para categorias aun no mapeadas (no regresion).
+  const categoryLabel = (cat) => {
+    if (!cat) return cat;
+    const map = t('blog:categoryLabels', { returnObjects: true });
+    return (map && typeof map === 'object' && map[cat]) || cat;
+  };
+
   const [article, setArticle] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -618,7 +628,7 @@ export default function BlogArticleView() {
             <>
               <ArticleHero>
                 {article.category ? (
-                  <ArticleCategoryPill>{article.category}</ArticleCategoryPill>
+                  <ArticleCategoryPill>{categoryLabel(article.category)}</ArticleCategoryPill>
                 ) : null}
                 <ArticleHeroTitle>{article.title}</ArticleHeroTitle>
                 <ArticleMetaLine>
@@ -675,7 +685,7 @@ export default function BlogArticleView() {
                               <img src={r.heroImageUrl} alt={r.title || ''} loading="lazy" />
                             </RelatedCardImage>
                           ) : null}
-                          {r.category ? <RelatedCardBadge>{r.category}</RelatedCardBadge> : null}
+                          {r.category ? <RelatedCardBadge>{categoryLabel(r.category)}</RelatedCardBadge> : null}
                           <RelatedCardTitle>{r.title}</RelatedCardTitle>
                         </RelatedCard>
                       ))}

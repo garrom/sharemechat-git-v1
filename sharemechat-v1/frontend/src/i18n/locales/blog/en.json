@@ -49,5 +49,15 @@
     "titleSuffix": "SharemeChat",
     "seoTitleFallback": "Article",
     "retractedTitle": "Article retracted"
+  },
+  "categoryLabels": {
+    "Primeros pasos": "Getting started",
+    "Conexión y conversación": "Connection and conversation",
+    "Privacidad": "Privacy",
+    "Seguridad": "Safety",
+    "Pagos": "Payments",
+    "Modelos": "Models",
+    "Cultura videochat": "Video chat culture",
+    "Bienestar": "Wellbeing"
   }
 }
