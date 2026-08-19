@@ -13,9 +13,11 @@
       { "q": "¿Puedo terminar una sesión cuando quiera?", "a": "Sí. Puedes finalizar una sesión de vídeo en cualquier momento desde la propia interfaz." },
       { "q": "¿Qué pasa si se corta mi conexión?", "a": "Si hay un problema de conexión, la sesión se detiene automáticamente y solo se cuenta el tiempo real en que estuvo activa." },
       { "q": "¿Debo verificar mi edad?", "a": "Sí. SharemeChat es solo para mayores de 18 años. Todas las cuentas pasan por verificación de identidad y edad antes de poder interactuar." },
+      { "q": "¿Las modelos son reales y verificadas?", "a": "Sí. Tanto clientes como modelos pasan verificación de identidad y edad antes de poder interactuar. Las modelos superan una verificación más estricta (documento oficial + selfie + prueba de vida), así que hablas con personas reales y verificadas, no con bots." },
       { "q": "¿Puedo bloquear a alguien?", "a": "Sí. Si no quieres volver a interactuar con una persona, puedes bloquearla." },
       { "q": "¿Puedo reportar comportamientos inapropiados?", "a": "Sí. Dispones de herramientas para reportar conductas abusivas o sospechosas. Los reportes se revisan para mantener un entorno seguro." },
       { "q": "¿Es seguro SharemeChat?", "a": "La seguridad y la privacidad son prioritarias. La plataforma usa sistemas de moderación, herramientas de monitorización y salvaguardas técnicas para proteger a usuarios y modelos." },
+      { "q": "¿Son privadas las sesiones de videochat?", "a": "Sí. Cada sesión es un 1 a 1 privado entre las dos personas: no se retransmite ni se abre a terceros. Para mantener un entorno seguro, la plataforma cuenta con medidas de seguridad automáticas." },
       { "q": "¿Puedo trabajar como modelo?", "a": "Sí.", "to": "/modelos", "toLabel": "Más información para modelos" },
       { "q": "¿Dónde puedo leer las normas?", "a": "Puedes consultarlas en nuestras Normas de la comunidad y la información legal en los Términos del servicio.", "links": [ { "to": "/community-guidelines", "label": "Normas de la comunidad" }, { "to": "/legal?tab=terms", "label": "Términos del servicio" } ] }
     ]

@@ -13,9 +13,11 @@
       { "q": "Can I stop a session whenever I want?", "a": "Yes. You can end a video session at any moment from the interface." },
       { "q": "What happens if my connection drops?", "a": "If a connection problem occurs, the session stops automatically and only the time it was actually active is counted." },
       { "q": "Do I need to verify my age?", "a": "Yes. SharemeChat is strictly for adults 18+. Every account goes through identity and age verification before you can interact." },
+      { "q": "Are the models real and verified?", "a": "Yes. Both clients and models go through identity and age verification before they can interact. Models pass a stricter check (official document + selfie + liveness), so you're talking to real, verified people — not bots." },
       { "q": "Can I block someone?", "a": "Yes. If you don't want to interact with someone again, you can block them." },
       { "q": "Can I report inappropriate behaviour?", "a": "Yes. Reporting tools let you flag abusive or suspicious behaviour. Reports are reviewed to keep the environment safe." },
       { "q": "Is SharemeChat safe?", "a": "Safety and privacy are a priority. The platform uses moderation systems, monitoring tools and technical safeguards to protect both users and models." },
+      { "q": "Are video chat sessions private?", "a": "Yes. Each session is a private one-to-one between the two people: it isn't broadcast or opened to third parties. To keep the space safe, the platform relies on automated safety measures." },
       { "q": "Can I work as a model?", "a": "Yes.", "to": "/modelos", "toLabel": "Learn more for models" },
       { "q": "Where can I read the rules?", "a": "You can review them in our Community Guidelines and the legal information in our Terms of Service.", "links": [ { "to": "/community-guidelines", "label": "Community Guidelines" }, { "to": "/legal?tab=terms", "label": "Terms of Service" } ] }
     ]
