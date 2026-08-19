@@ -1,4 +1,25 @@
 {
+  "faqPage": {
+    "title": "Frequently Asked Questions",
+    "back": "← Back",
+    "intro": "Here we answer the most common questions about how SharemeChat works, and how sessions and payments operate.",
+    "items": [
+      { "q": "What is SharemeChat?", "a": "SharemeChat is a live 1-to-1 video chat platform where you connect with verified models in real time for private conversations inside the platform." },
+      { "q": "How does the video chat work?", "a": "Once registered, you start a live session and the system connects you with an available model. If you enjoy the conversation, you can add them to your contacts and talk again later." },
+      { "q": "Do I need to install anything?", "a": "No. SharemeChat works directly in your browser. You only need a webcam, an internet connection and a modern browser." },
+      { "q": "Is SharemeChat free?", "a": "Creating an account is free. Private video sessions use prepaid credits; there are no subscriptions." },
+      { "q": "How do payments work?", "a": "Sessions are paid with prepaid credits bought through one-time payments inside the platform. No subscriptions and no hidden charges." },
+      { "q": "Is payment secure?", "a": "Yes. Payments are handled by trusted providers, and sensitive details are managed by secure payment infrastructure." },
+      { "q": "Can I stop a session whenever I want?", "a": "Yes. You can end a video session at any moment from the interface." },
+      { "q": "What happens if my connection drops?", "a": "If a connection problem occurs, the session stops automatically and only the time it was actually active is counted." },
+      { "q": "Do I need to verify my age?", "a": "Yes. SharemeChat is strictly for adults 18+. Every account goes through identity and age verification before you can interact." },
+      { "q": "Can I block someone?", "a": "Yes. If you don't want to interact with someone again, you can block them." },
+      { "q": "Can I report inappropriate behaviour?", "a": "Yes. Reporting tools let you flag abusive or suspicious behaviour. Reports are reviewed to keep the environment safe." },
+      { "q": "Is SharemeChat safe?", "a": "Safety and privacy are a priority. The platform uses moderation systems, monitoring tools and technical safeguards to protect both users and models." },
+      { "q": "Can I work as a model?", "a": "Yes.", "to": "/modelos", "toLabel": "Learn more for models" },
+      { "q": "Where can I read the rules?", "a": "You can review them in our Community Guidelines and the legal information in our Terms of Service.", "links": [ { "to": "/community-guidelines", "label": "Community Guidelines" }, { "to": "/legal?tab=terms", "label": "Terms of Service" } ] }
+    ]
+  },
   "sessionHUD": {
     "client": {
       "rateTitle": "Model rate per minute",
