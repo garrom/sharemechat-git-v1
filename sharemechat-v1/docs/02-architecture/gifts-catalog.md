@@ -50,6 +50,13 @@ conversación, **gratis e ilimitados**, y **NO** son regalos: no están en la ta
 > Nota: `rosebud` (otra rosa gratis) se retiró — la rosa ya existe como regalo de
 > pago. Las emojis del `GiftIcon` deben coincidir con estos `code`.
 
+> **V56 (2026-08-20):** `V56__gifts_deactivate_legacy.sql` desactiva
+> (`active=0`) cualquier fila fuera de estos 13 `code`. En TEST/AUDIT quedaban
+> 8 "caras" legacy de tier `quick` (basic/flirty/hot/laugh/love/ok/sad/wow) que
+> el frontend ya ocultaba; ahora también salen del catálogo servido. En PROD es
+> no-op (arrancó vacío). Tras V55+V56, el catálogo **activo** es exactamente
+> estos 13. No se borran filas (FK de historial intactas), solo se desactivan.
+
 ## Esquema
 
 `gifts.code` es `VARCHAR(64) NOT NULL` con `UNIQUE KEY uq_gifts_code` (identidad
