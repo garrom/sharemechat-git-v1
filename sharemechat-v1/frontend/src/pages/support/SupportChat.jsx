@@ -248,6 +248,11 @@ export default function SupportChat({ pinnedConversationId, readOnly, ticketCont
 
   const rateLimited = !!rateLimitState.rateLimited;
   const humanHandling = resolutionStatus === 'HUMAN_HANDLING';
+  // El botón "Hablar con un técnico" debe quedar deshabilitado desde que se
+  // solicita (ESCALATED) hasta que se resuelva / nueva conversación, no solo
+  // cuando un humano ya reclamó (HUMAN_HANDLING). Antes se podía re-escalar en
+  // bucle mientras estaba en cola sin que el técnico hubiera intervenido.
+  const alreadyRequestedHuman = humanHandling || escalated || resolutionStatus === 'ESCALATED';
 
   const warningBanner = useMemo(() => {
     if (rateLimited) return null;
@@ -265,8 +270,8 @@ export default function SupportChat({ pinnedConversationId, readOnly, ticketCont
     : null;
 
   const canSend = !sending && !rateLimited && input.trim().length > 0;
-  const canEscalate = !sending && !!conversationId && !humanHandling;
-  const escalateTooltip = humanHandling
+  const canEscalate = !sending && !!conversationId && !alreadyRequestedHuman;
+  const escalateTooltip = alreadyRequestedHuman
     ? i18n.t('support.escalate.alreadyHumanHandling')
     : i18n.t('support.escalate.button');
 
