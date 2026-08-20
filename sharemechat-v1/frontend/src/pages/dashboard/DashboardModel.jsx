@@ -3663,7 +3663,6 @@ const DashboardModel = () => {
                   canCall={hasCallTarget && allowChat}
                   fmtEUR={fmtEUR}
                   giftShowcase={paidShowcase}
-                  peerSaldo={clientSaldo}
                 />
               </StyledRightColumn>
             )}
