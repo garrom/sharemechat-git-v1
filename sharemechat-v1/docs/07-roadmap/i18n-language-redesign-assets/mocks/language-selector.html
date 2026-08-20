@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mock — Selector de idioma unificado</title>
+<style>
+  :root { --nav:#111418; --trig:#020617; --menu:#171a20; --line:rgba(148,163,184,.32); --red:#ea1d1d; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#0b0d11; color:#e5e7eb; font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; padding:32px; }
+  .note { max-width:720px; margin:0 auto 18px; color:#9aa4b0; font-size:13.5px; }
+  .note b { color:#e5e7eb; font-weight:700; }
+  .frame { max-width:720px; margin:0 auto; }
+  .nav { background:var(--nav); border-radius:14px; padding:12px 18px; display:flex; align-items:center; justify-content:space-between; }
+  .brand { font-size:18px; font-weight:800; color:#fff; }
+  .brand span { color:var(--red); }
+  .right { display:flex; align-items:center; gap:12px; }
+  .icon { width:34px; height:34px; border-radius:50%; border:1px solid rgba(255,255,255,.18); display:grid; place-items:center; color:#cfd4db; }
+  .avatar { width:34px; height:34px; border-radius:50%; border:2px solid var(--red); display:grid; place-items:center; }
+  .lsel { position:relative; }
+  .trig { width:170px; display:flex; align-items:center; gap:8px; background:var(--trig); border:1px solid var(--line); color:#e5e7eb; border-radius:999px; padding:8px 13px; cursor:pointer; font-size:14px; }
+  .trig .flag { font-size:16px; }
+  .trig .lbl { flex:1; text-align:left; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .chev { transition:transform .15s ease; }
+  .menu { position:absolute; top:calc(100% + 8px); right:0; width:250px; background:var(--menu); border:1px solid var(--line); border-radius:14px; padding:7px; box-shadow:0 16px 40px rgba(0,0,0,.5); z-index:10; }
+  .opt { width:100%; display:flex; align-items:center; gap:11px; background:transparent; border:0; color:#cfd4db; border-radius:9px; padding:10px 11px; cursor:pointer; text-align:left; font-size:14px; }
+  .opt:hover { background:rgba(255,255,255,.05); }
+  .opt.sel { background:rgba(234,29,29,.14); color:#fff; }
+  .opt .flag { font-size:17px; }
+  .opt .name { flex:1; }
+  .opt .name b { font-weight:600; }
+  .opt .code { color:#8b94a1; text-transform:uppercase; font-size:11px; margin-left:5px; }
+  .opt .sub { display:block; font-size:11.5px; color:#8b94a1; margin-top:1px; }
+  .opt .check { color:var(--red); }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+  <div class="note">
+    Mock — <b>selector de idioma unificado</b> (estilo LiveJasmin). Un solo disparador
+    de <b>ancho fijo</b>: no crece al cambiar de idioma y escala a N idiomas sin tocar
+    el navbar. Al elegir un idioma se fija <b>UI + chat a la vez</b>. Haz clic para abrir.
+  </div>
+
+  <div class="frame">
+    <div class="nav">
+      <div class="brand">Shareme<span>Chat</span></div>
+      <div class="right">
+        <div class="icon" title="Soporte">?</div>
+        <div class="lsel">
+          <button class="trig" id="trig" aria-haspopup="listbox" aria-expanded="false">
+            <span class="flag" id="tflag">&#127466;&#127480;</span>
+            <span class="lbl" id="tlbl">Español</span>
+            <span class="chev" id="chev">&#9662;</span>
+          </button>
+          <div class="menu hidden" id="menu" role="listbox"></div>
+        </div>
+        <div class="avatar" title="Perfil">&#128100;</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  var LANGS = [
+    { code:'es', flag:'🇪🇸', name:'Español',    sub:'UI + chat' },
+    { code:'en', flag:'🇬🇧', name:'English',    sub:'UI + chat' },
+    { code:'fr', flag:'🇫🇷', name:'Français',   sub:'UI + chat (Fase 1)' },
+    { code:'de', flag:'🇩🇪', name:'Deutsch',    sub:'UI + chat (Fase 1)' },
+    { code:'it', flag:'🇮🇹', name:'Italiano',   sub:'UI + chat (Fase 4)' },
+    { code:'pt', flag:'🇵🇹', name:'Português',  sub:'UI + chat (Fase 4)' },
+    { code:'mg', flag:'🇲🇬', name:'Malagasy',   sub:'solo chat (idioma raro)' }
+  ];
+  var current = 'es';
+  var menu = document.getElementById('menu');
+  var trig = document.getElementById('trig');
+  var chev = document.getElementById('chev');
+  var tlbl = document.getElementById('tlbl');
+  var tflag = document.getElementById('tflag');
+  var open = false;
+
+  function render() {
+    menu.innerHTML = '';
+    LANGS.forEach(function (l) {
+      var sel = l.code === current;
+      var b = document.createElement('button');
+      b.className = 'opt' + (sel ? ' sel' : '');
+      b.setAttribute('role', 'option');
+      b.innerHTML =
+        '<span class="flag">' + l.flag + '</span>' +
+        '<span class="name"><b>' + l.name + '</b><span class="code">' + l.code + '</span>' +
+        '<span class="sub">' + l.sub + '</span></span>' +
+        (sel ? '<span class="check">&#10003;</span>' : '');
+      b.onclick = function () { current = l.code; tlbl.textContent = l.name; tflag.innerHTML = l.flag; toggle(false); };
+      menu.appendChild(b);
+    });
+  }
+  function toggle(v) {
+    open = (v === undefined) ? !open : v;
+    menu.classList.toggle('hidden', !open);
+    chev.style.transform = open ? 'rotate(180deg)' : 'none';
+    trig.setAttribute('aria-expanded', open);
+    if (open) render();
+  }
+  trig.onclick = function (e) { e.stopPropagation(); toggle(); };
+  document.addEventListener('click', function () { if (open) toggle(false); });
+  menu.onclick = function (e) { e.stopPropagation(); };
+  render();
+</script>
+</body>
+</html>
