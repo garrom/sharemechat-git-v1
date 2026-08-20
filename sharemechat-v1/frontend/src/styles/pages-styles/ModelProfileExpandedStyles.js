@@ -76,14 +76,89 @@ export const ProfileBody = styled.div`
   width: 100%;
 `;
 
+// Card 1 (2026-08-20): la cabecera pasa a ser un "cover" a lo ancho (misma
+// presentación que el spotlight de favoritos: foto grande con nombre/presencia
+// superpuestos sobre un velo degradado), y debajo los detalles. Antes era una
+// fila de 2 columnas (foto cuadrada | info).
 export const ProfileHeaderRow = styled.header`
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 22px;
-  align-items: flex-start;
+  gap: 16px;
+`;
 
-  @media (max-width: 720px) {
-    grid-template-columns: minmax(0, 1fr);
+// Cover: foto principal a todo el ancho con velo inferior y datos encima.
+export const Cover = styled.div`
+  position: relative;
+  width: 100%;
+  height: 340px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #0d1015;
+  border: 1px solid ${line};
+  cursor: ${({ $clickable }) => ($clickable ? 'pointer' : 'default')};
+
+  img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  /* Velo inferior para legibilidad del nombre/presencia superpuestos. */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(15,18,23,0) 40%, rgba(15,18,23,0.55) 72%, rgba(15,18,23,0.92) 100%);
+    pointer-events: none;
+  }
+
+  @media (max-width: 720px) { height: 300px; }
+`;
+
+// Avatar de letra cuando el modelo no tiene foto principal aprobada.
+export const CoverNoPhoto = styled.div`
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font-size: 96px;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, #ff5c8a, #a78bfa);
+  user-select: none;
+`;
+
+export const CoverInfo = styled.div`
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: 16px;
+  z-index: 2;
+`;
+
+export const CoverName = styled.h2`
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  word-break: break-word;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+`;
+
+export const CoverPresence = styled.div`
+  margin-top: 5px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: ${({ $online }) => ($online ? '#d7f7e3' : '#dfe4ea')};
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  i {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    flex: 0 0 auto;
+    background: ${({ $online }) => ($online ? green : '#9aa4b0')};
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.18);
   }
 `;
 
@@ -178,21 +253,36 @@ export const LikesRow = styled.div`
   flex-wrap: wrap;
 `;
 
+// Card 1 (2026-08-20): mismo diseño y hover que el "Like" del spotlight de
+// favoritos (borde/relleno rojos por estado, elevación + escala del corazón).
 export const LikeButton = styled.button`
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid ${({ $on }) => ($on ? 'rgba(234,29,29,0.5)' : lineSoft)};
-  background: ${({ $on }) => ($on ? 'rgba(234,29,29,0.14)' : surfaceMuted)};
-  color: ${textMain};
-  border-radius: 999px;
-  padding: 7px 14px;
+  border: 1px solid rgba(234, 29, 29, 0.34);
+  background: ${({ $on }) => ($on ? 'rgba(234,29,29,0.20)' : 'rgba(234,29,29,0.10)')};
+  color: ${({ $on }) => ($on ? '#ff8a8a' : '#c3cad3')};
+  border-radius: 11px;
+  padding: 8px 15px;
   font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease,
+    transform 0.16s ease, box-shadow 0.16s ease;
 
+  .heart { font-size: 1rem; line-height: 1; transition: transform 0.16s ease; }
+
+  &:hover:not(:disabled) {
+    background: rgba(234, 29, 29, 0.24);
+    border-color: rgba(234, 29, 29, 0.60);
+    color: #ffb3b3;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(234, 29, 29, 0.22);
+  }
+  &:hover:not(:disabled) .heart { transform: scale(1.22); }
+  &:active:not(:disabled) { transform: translateY(0) scale(0.97); }
   &:disabled { opacity: 0.6; cursor: default; }
-  .heart { color: ${red}; font-size: 1rem; line-height: 1; }
 `;
 
 export const RankChip = styled.span`

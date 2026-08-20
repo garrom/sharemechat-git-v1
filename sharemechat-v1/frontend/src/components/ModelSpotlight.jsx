@@ -322,7 +322,6 @@ const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = fal
 
   const name = nickname || profile?.nickname || '';
   const initial = (name || '?').trim().charAt(0).toUpperCase() || '?';
-  const age = profile?.age;
 
   const rate = profile?.chosenRateEurPerMin != null ? Number(profile.chosenRateEurPerMin) : null;
   const rateTxt = rate != null
@@ -358,7 +357,7 @@ const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = fal
           <Presence $c={presMeta.c}>
             <i />
             <span>
-              {presMeta.label}{age ? ` · ${age} ${t('modelSpotlight.yearsSuffix', 'años')}` : ''}
+              {presMeta.label}
               {onOpenProfile && (
                 <>
                   {' · '}
