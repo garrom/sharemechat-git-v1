@@ -1,6 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Switch, Route, Redirect } from 'react-router-dom';
 import i18n from './i18n';
+import { DEFAULT_LOCALE } from './i18n/localeConfig';
+import { PREFIXED_LOCALES } from './i18n/localeUtils';
 import RequireRole from './components/RequireRole';
 import DashboardClient from './pages/dashboard/DashboardClient';
 import DashboardModel from './pages/dashboard/DashboardModel';
@@ -94,20 +96,29 @@ function App() {
     : '/';
   const isBlogPath = initialPath === '/blog'
     || initialPath.startsWith('/blog/');
-  const matchesEn = !adminSurface
-    && !isBlogPath
-    && (initialPath === '/en' || initialPath.startsWith('/en/'));
-  const localeBasename = matchesEn ? '/en' : '/';
+  // Fase 1 i18n (2026-08-20): detector de basename generalizado a N idiomas.
+  // El locale activo se lee del prefijo de URL (/<locale>) para cada idioma no
+  // default; sin prefijo -> default (es). ES sigue sin prefijo.
+  let urlLocale = null;
+  if (!adminSurface && !isBlogPath) {
+    for (const loc of PREFIXED_LOCALES) {
+      if (initialPath === `/${loc}` || initialPath.startsWith(`/${loc}/`)) {
+        urlLocale = loc;
+        break;
+      }
+    }
+  }
+  const localeBasename = urlLocale ? `/${urlLocale}` : '/';
 
-  // /en/legal queda fuera del scope multilingue (ADR-022 D9: /legal se
-  // mantiene hardcoded en ingles, sin version bajo /en/). Redirigimos via
-  // location.replace para que el navegador retire el prefijo de la barra
-  // de URL. NO es navegacion SPA porque cruza basenames; el navegador
-  // recarga y vuelve a ejecutar este bloque con path "/legal" -> es.
-  if (matchesEn
-      && (initialPath === '/en/legal' || initialPath.startsWith('/en/legal/'))) {
+  // /<locale>/legal queda fuera del scope multilingue (ADR-022 D9: /legal se
+  // mantiene hardcoded en ingles, sin version localizada). Redirigimos via
+  // location.replace para que el navegador retire el prefijo de la barra de URL.
+  // NO es navegacion SPA porque cruza basenames; el navegador recarga y vuelve a
+  // ejecutar este bloque con path "/legal" -> default.
+  if (urlLocale
+      && (initialPath === `/${urlLocale}/legal` || initialPath.startsWith(`/${urlLocale}/legal/`))) {
     if (typeof window !== 'undefined') {
-      const stripped = initialPath.replace(/^\/en/, '');
+      const stripped = initialPath.slice(urlLocale.length + 1);
       window.location.replace(stripped + window.location.search + window.location.hash);
     }
     return null;
@@ -122,7 +133,7 @@ function App() {
   //    global del resto del producto (paquete 5).
   //  - En el resto del producto, sigue valiendo el detector `matchesEn`
   //    (basename `/en` global).
-  let expectedLocale = matchesEn ? 'en' : 'es';
+  let expectedLocale = urlLocale || DEFAULT_LOCALE;
   if (isBlogPath) {
     const parts = initialPath.split('/').filter(Boolean);
     // ['blog', 'es', 'mi-slug'] -> parts[1] = 'es'

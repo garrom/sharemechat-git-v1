@@ -2,13 +2,46 @@ export const LOCALE_STORAGE_KEY = 'sharemechat.uiLocale';
 
 export const FALLBACK_LOCALE = 'en';
 
-export const SUPPORTED_LOCALES = ['es','en'];
+// Locale por defecto (sin prefijo en la URL). El resto llevan prefijo /<locale>.
+export const DEFAULT_LOCALE = 'es';
 
-export const LOCALE_LABELS = SUPPORTED_LOCALES.reduce((acc,locale)=>{
-  acc[locale]=locale.toUpperCase();
+// Idiomas de UI (Nivel A): SOLO los que tenemos traducidos. Distinto del set de
+// idiomas de chat (SupportedChatLanguages, backend), que es amplio. Ampliar aquí
+// requiere su locale JSON + prefijo de URL + hreflang.
+// Fase 1 (2026-08-20): se añaden fr, de. Fase 4: it, pt, nl, pl.
+export const SUPPORTED_LOCALES = ['es', 'en', 'fr', 'de'];
+
+// Etiqueta corta (código) para el disparador del selector.
+export const LOCALE_LABELS = SUPPORTED_LOCALES.reduce((acc, locale) => {
+  acc[locale] = locale.toUpperCase();
   return acc;
-},{});
+}, {});
 
-export const getLocaleLabel = (locale)=>{
-  return LOCALE_LABELS[locale]||locale.toUpperCase();
+// Nombre nativo del idioma (lo que ve el usuario en la lista del selector).
+export const LOCALE_NATIVE_NAMES = {
+  es: 'Español',
+  en: 'English',
+  fr: 'Français',
+  de: 'Deutsch',
+};
+
+// Bandera (emoji) por idioma. Decorativa; el nombre nativo es el texto primario,
+// así que degrada bien si el dispositivo no renderiza banderas emoji.
+export const LOCALE_FLAGS = {
+  es: '🇪🇸',
+  en: '🇬🇧',
+  fr: '🇫🇷',
+  de: '🇩🇪',
+};
+
+export const getLocaleLabel = (locale) => {
+  return LOCALE_LABELS[locale] || String(locale || '').toUpperCase();
+};
+
+export const getLocaleNativeName = (locale) => {
+  return LOCALE_NATIVE_NAMES[locale] || getLocaleLabel(locale);
+};
+
+export const getLocaleFlag = (locale) => {
+  return LOCALE_FLAGS[locale] || '';
 };

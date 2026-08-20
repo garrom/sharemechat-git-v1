@@ -147,6 +147,20 @@
     }
   },
   "common": {
+    "locale": {
+      "label": "Idioma",
+      "blogNotTranslated": "El blog aún no está en este idioma"
+    },
+    "alerts": {
+      "callActive": "Tienes una LLAMADA activa. Pulsa STOP para salir.",
+      "sendFailed": "No se pudo enviar el mensaje. Reintenta.",
+      "chatDisconnected": "Chat de mensajes desconectado. Reabre el panel.",
+      "noRecipient": "No se pudo determinar el destinatario correcto.",
+      "noSelfChat": "No puedes chatear contigo mismo.",
+      "noDestWhileRandom": "No puedes seleccionar destino mientras hay streaming random activo.",
+      "noSelfCall": "No puedes llamarte a ti mismo.",
+      "noCentralChatWhileStreaming": "No puedes abrir el chat central mientras hay streaming. Pulsa Stop si quieres cambiar."
+    },
     "presence": {
       "online": "en línea",
       "busy": "ocupado",

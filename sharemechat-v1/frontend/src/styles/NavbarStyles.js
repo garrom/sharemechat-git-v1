@@ -256,6 +256,79 @@ export const LocaleButton = styled.button`
   }
 `;
 
+// === SELECTOR DE IDIOMA (dropdown, Fase 1 i18n 2026-08-20) ===
+// Disparador de ancho fijo: no crece al cambiar de idioma y escala a N idiomas.
+export const LocaleWrap = styled.div`
+  position: relative;
+  display: inline-flex;
+`;
+
+export const LocaleTrigger = styled.button`
+  appearance: none;
+  width: 148px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #020617;
+  color: #e5e7eb;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: ${radius.pill};
+  padding: 7px 12px;
+  cursor: pointer;
+  font-family: var(--font-nav);
+  font-size: 0.82rem;
+  line-height: 1;
+  transition: border-color .15s ease, background-color .15s ease;
+
+  &:hover { border-color: rgba(148, 163, 184, 0.85); }
+
+  .flag { font-size: 1rem; }
+  .lbl { flex: 1; text-align: left; font-weight: 800; letter-spacing: 0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chev { font-size: 0.7rem; opacity: .8; transition: transform .15s ease; }
+  &[aria-expanded="true"] .chev { transform: rotate(180deg); }
+`;
+
+export const LocaleMenu = styled.div`
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 232px;
+  background: #171a20;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+  z-index: 1200;
+  display: ${props => (props.$open ? 'block' : 'none')};
+`;
+
+export const LocaleOption = styled.button`
+  appearance: none;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: ${props => (props.$active ? 'rgba(234,29,29,0.14)' : 'transparent')};
+  color: ${props => (props.$active ? '#ffffff' : '#cfd4db')};
+  border: none;
+  border-radius: 9px;
+  padding: 9px 11px;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-nav);
+  font-size: 0.86rem;
+  line-height: 1.2;
+  transition: background-color .12s ease, color .12s ease;
+
+  &:hover:not(:disabled) { background: rgba(255, 255, 255, 0.05); }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .flag { font-size: 1.05rem; flex: 0 0 auto; }
+  .name { flex: 1; font-weight: 600; }
+  .code { color: #8b94a1; text-transform: uppercase; font-size: 0.7rem; font-weight: 700; }
+  .check { color: #ea1d1d; font-weight: 800; }
+`;
+
 // === HAMBURGUESA ===
 export const HamburgerButton = styled.button`
   display: none;
