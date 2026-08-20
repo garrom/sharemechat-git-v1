@@ -314,23 +314,31 @@ export const StyledCenterVideochat = styled(StyledCenter)`
 
 /** Columna derecha */
 export const StyledRightColumn = styled(ColumnBlock)`
-  flex: 0 0 22%;
-  max-width: 320px;
-  min-width: 220px;
+  flex: 0 0 320px;
+  max-width: 340px;
+  min-width: 280px;
   padding: 12px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.14) transparent;
+  &::-webkit-scrollbar { width: 8px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 999px; }
 
+  /* Rediseño Fase 3: spotlight de la modelo. Columna OSCURA (coherente con el
+     resto), sin padding (el cover va edge-to-edge; el spotlight pone su propio
+     padding interior). Antes era clara y estaba sin usar. */
   &[data-surface="favorites-premium"] {
-    background: linear-gradient(180deg, #f9fafb 0%, #f3f5f7 100%);
-    border: 1px solid #e6e7ea;
-    box-shadow: 0 10px 30px rgba(17, 24, 39, 0.06);
+    background: linear-gradient(180deg, #14171d 0%, #0f1217 100%);
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    padding: 0;
   }
 
-  @media (max-width: 1024px) { display: none; }
-
-  @media (min-width: 769px) and (max-width: 1024px) {
-    width: 25%;
-  }
+  /* Rediseño Fase 3: visible en todo el layout desktop (>768). El CTA de
+     videollamada vive aquí; el botón de llamar se retira del composer, así que
+     la columna debe estar presente siempre que NO sea móvil. */
+  @media (max-width: 768px) { display: none; }
 `;
 
 
@@ -747,6 +755,27 @@ export const StyledComposerBtn = styled.button`
   transition: background .12s ease;
   &:hover:not(:disabled) { background: rgba(255,255,255,0.12); }
   &:disabled { opacity: .5; cursor: not-allowed; }
+`;
+
+/* Botón ENVIAR (rojo de marca) del composer favoritos. Sustituye al botón de
+   videollamada (que se movió al spotlight de la derecha, Fase 3). */
+export const StyledComposerSend = styled.button`
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  border: 0;
+  background: linear-gradient(180deg, #ea1d1d, #b91212);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(234,29,29,0.30);
+  transition: filter .12s ease, transform .12s ease;
+  &:hover:not(:disabled) { filter: brightness(1.08); }
+  &:active:not(:disabled) { transform: scale(.96); }
+  &:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
 `;
 
 
@@ -1780,8 +1809,14 @@ export const StyledChatScroller = styled.div`
     }
   }
 
+  /* Rediseño Fase 3: scrollbar oscuro y sutil (el claro por defecto rompía el
+     tema oscuro del chat). */
   scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.14) transparent;
   &::-webkit-scrollbar { width: 8px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 999px; }
+  &::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.20); }
 
   overscroll-behavior: contain;
 `;

@@ -19,7 +19,7 @@ import { StyledCenter,StyledFavoritesShell,StyledFavoritesColumns,StyledCenterPa
     StyledCallTopMeta,StyledCallTopMetaText,StyledCallTopActions,StyledCallLocalVideo,
     StyledCallComposer,StyledGiftsPanel,StyledGiftGrid,
     StyledGiftCatalog,StyledGiftSection,StyledGiftSectionTitle,StyledChatMessagesInner,StyledChatDockMessageComposer,StyledChatDockActions,
-    StyledGiftBar,StyledGiftTrack,StyledGiftChip,StyledGiftFxLayer,StyledDaySep,StyledComposerBtn,
+    StyledGiftBar,StyledGiftTrack,StyledGiftChip,StyledGiftFxLayer,StyledDaySep,StyledComposerBtn,StyledComposerSend,
     StyledCallOverlayBar,StyledCallOverlayControls,StyledCallOverlayGifts,
     StyledGiftConfirmOverlay,StyledGiftConfirmCard,StyledGiftConfirmActions
 } from '../../styles/pages-styles/VideochatStyles';
@@ -395,15 +395,8 @@ export default function VideoChatFavoritosCliente(props){
           </div>
           <div style={{ fontSize: 11, color: pMeta.c }}>● {pMeta.label}</div>
         </div>
-        {onViewProfile && centerChatPeerId && (
-          <button
-            type="button"
-            onClick={() => onViewProfile({ id: centerChatPeerId, nickname: centerChatPeerName, presence: peerPresenceNorm })}
-            style={{ marginLeft: 12, fontSize: 12.5, color: '#fff', border: '1px solid rgba(255,255,255,0.5)', borderRadius: 999, padding: '5px 12px', cursor: 'pointer', background: 'rgba(255,255,255,0.10)', whiteSpace: 'nowrap', flexShrink: 0 }}
-          >
-            {t('dashboardClient.videoChatFavoritosCliente.actions.viewProfile', 'Ver perfil completo')}
-          </button>
-        )}
+        {/* "Ver perfil completo" se retiró de la cabecera (Fase 3): ahora vive
+            como "ver perfil" discreto en el spotlight de la derecha. */}
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
           {shouldShowTranslationToggle && <TranslationToggleButton />}
         </div>
@@ -905,16 +898,15 @@ export default function VideoChatFavoritosCliente(props){
                           disabled={!allowChat}
                           onFocus={()=>{setTimeout(()=>chatEndRef.current?.scrollIntoView({block:'end'}),50);}}
                         />
-                        <StyledChatDockActions>
-                          <ButtonLlamar
-                            onClick={enterCallMode}
-                            disabled={!hasCallTarget||!allowChat}
-                            title={t('dashboardClient.videoChatFavoritosCliente.actions.call')}
-                            aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.call')}
-                          >
-                            <FontAwesomeIcon icon={faVideo}/>
-                          </ButtonLlamar>
-                        </StyledChatDockActions>
+                        <StyledComposerSend
+                          type="button"
+                          onClick={sendCenterMessage}
+                          disabled={!allowChat}
+                          title={t('common.sendMessage')}
+                          aria-label={t('common.sendMessage')}
+                        >
+                          <FontAwesomeIcon icon={faPaperPlane}/>
+                        </StyledComposerSend>
                         {showCenterGifts&&allowChat&&(
                           <div style={{ position:'absolute', left:0, right:0, bottom:'100%', zIndex:12 }}>
                             {renderGiftBar()}

@@ -8,12 +8,15 @@
 //   <EmojiTextPicker onInsert={(e) => setCenterInput((v) => (v || '') + e)} disabled={!allowChat} />
 import React, { useState, useRef, useEffect } from 'react';
 
+// Nota: se excluyen a propósito los emojis que DUPLICAN los regalos-objeto
+// (❤️ corazón, 🔥 fuego, ✨ destello/estrella, 🌹 rosa, 💋 labios) para no
+// solapar "escribir emoji" con "enviar regalo".
 const EMOJIS = [
   '😀', '😁', '😂', '🤣', '😊', '😍', '😘', '😎',
   '🥰', '😜', '🤗', '🤩', '😌', '😏', '😉', '😳',
   '🤭', '🙈', '😴', '🥳', '😭', '😅', '🤔', '😻',
-  '🔥', '💦', '💋', '❤️', '💕', '💖', '💯', '✨',
-  '👍', '👏', '🙌', '👌', '🌹', '🍑', '🍆',
+  '💦', '💕', '💖', '💯',
+  '👍', '👏', '🙌', '👌', '🍑', '🍆',
 ];
 
 export default function EmojiTextPicker({ onInsert, disabled }) {

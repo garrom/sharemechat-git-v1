@@ -589,6 +589,16 @@
       "RO": "Romanian"
     }
   },
+  "modelSpotlight": {
+    "like": "Like",
+    "viewProfile": "view profile",
+    "giftTitle": "Send a gift",
+    "videocall": "Start video call",
+    "balanceOk": "enough balance",
+    "balanceLow": "not enough balance",
+    "callDisabled": "You must be accepted favorites to call",
+    "yearsSuffix": "yrs"
+  },
   "modelReputation": {
     "title": "Your reputation",
     "noBadge": "No badge yet",

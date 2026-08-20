@@ -5,6 +5,7 @@ import { getResolvedLocale } from '../../i18n/localeUtils';
 import { useHistory, useLocation } from 'react-router-dom';
 import Peer from 'simple-peer';
 import FavoritesClientList from '../favorites/FavoritesClientList';
+import ModelSpotlight from '../../components/ModelSpotlight';
 import ModelProfileExpanded from '../subpages/ModelProfileExpanded';
 import { useAppModals } from '../../components/useAppModals';
 import { useCallUi } from '../../components/CallUiContext';
@@ -3306,7 +3307,26 @@ const DashboardClient = () => {
               />
               )}
             </StyledCenter>
-            {/* Columna derecha vacia eliminada (rediseño favoritos puro): el chat gana ese ancho. */}
+            {/* Rediseño Fase 3: columna derecha = spotlight de la modelo (foto,
+                presencia, edad; CTA/likes/datos/regalos en pasos siguientes).
+                Solo con una modelo seleccionada (no el bot) y fuera de llamada. */}
+            {!isMobile && !showFavoritesFullCall && !selectedFav?.isBot && centerChatPeerId && (
+              <StyledRightColumn data-rail data-surface="favorites-premium">
+                <ModelSpotlight
+                  userId={centerChatPeerId}
+                  nickname={centerChatPeerName}
+                  presence={peerPresence}
+                  onStartCall={enterCallMode}
+                  canCall={hasCallTarget && allowChat}
+                  fmtEUR={fmtEUR}
+                  saldo={saldo}
+                  onOpenProfile={openModelProfile}
+                  onSendGift={sendGiftMsg}
+                  gifts={gifts}
+                  giftSendEnabled={allowChat}
+                />
+              </StyledRightColumn>
+            )}
           </>
         )}
       </StyledMainContent>

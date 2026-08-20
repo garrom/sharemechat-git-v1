@@ -5,6 +5,7 @@ import { getResolvedLocale } from '../../i18n/localeUtils';
 import { useHistory, useLocation } from 'react-router-dom';
 import Peer from 'simple-peer';
 import FavoritesModelList from '../favorites/FavoritesModelList';
+import ModelSpotlight from '../../components/ModelSpotlight';
 import { useAppModals } from '../../components/useAppModals';
 import { useCallUi } from '../../components/CallUiContext';
 import { checkPhysicalCamera, stopAllTracks } from '../../utils/virtualCameraGuard';
@@ -3632,7 +3633,23 @@ const DashboardModel = () => {
               )}
             </StyledCenter>
 
-            {/* Columna derecha vacia eliminada (rediseño favoritos puro): el chat gana ese ancho. */}
+            {/* Rediseño Fase 3: columna derecha = spotlight SIMPLE del cliente
+                (foto/avatar + nombre + presencia + CTA videollamada). El cliente
+                no tiene perfil público/likes/edad/tarifa, así que se muestra lo
+                que haya. Solo con un cliente seleccionado (no el bot) y fuera de
+                llamada. */}
+            {!isMobile && !showFavoritesFullCall && !selectedFav?.isBot && selectedContactId && (
+              <StyledRightColumn data-rail data-surface="favorites-premium">
+                <ModelSpotlight
+                  simple
+                  userId={selectedContactId}
+                  nickname={centerChatPeerName}
+                  presence={peerPresence}
+                  onStartCall={enterCallMode}
+                  canCall={hasCallTarget && allowChat}
+                />
+              </StyledRightColumn>
+            )}
           </>
         )}
       </StyledMainContent>
