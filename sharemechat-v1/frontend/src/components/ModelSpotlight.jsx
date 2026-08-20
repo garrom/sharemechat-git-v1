@@ -274,7 +274,7 @@ const QChip = styled.button`
 const enumLabel = (kind, code) =>
   code ? t(`modelProfileExpanded.${kind}Values.${String(code).toUpperCase()}`, { defaultValue: String(code) }) : '';
 
-const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = false, fmtEUR, saldo, onOpenProfile, onSendGift, gifts = [], giftSendEnabled = false }) => {
+const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = false, fmtEUR, saldo, onOpenProfile, onSendGift, gifts = [], giftSendEnabled = false, simple = false }) => {
   const [profile, setProfile] = useState(null);
   const [photo, setPhoto] = useState(null);
   const [likes, setLikes] = useState(null);
@@ -285,21 +285,24 @@ const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = fal
     if (!userId) { setProfile(null); setPhoto(null); setLikes(null); return; }
     let cancelled = false;
     (async () => {
-      try {
-        const p = await apiFetch(`/models/${userId}/public-profile`);
-        if (!cancelled) setProfile(p || null);
-      } catch { if (!cancelled) setProfile(null); }
+      // Foto/avatar siempre (cliente y modelo).
       try {
         const map = await apiFetch(`/users/avatars?ids=${encodeURIComponent(userId)}`);
         if (!cancelled) setPhoto((map && map[userId]) || null);
       } catch { if (!cancelled) setPhoto(null); }
+      // Perfil público + likes SOLO para modelos (el cliente no los tiene).
+      if (simple) { setProfile(null); setLikes(null); return; }
+      try {
+        const p = await apiFetch(`/models/${userId}/public-profile`);
+        if (!cancelled) setProfile(p || null);
+      } catch { if (!cancelled) setProfile(null); }
       try {
         const l = await apiFetch(`/models/${userId}/likes`);
         if (!cancelled) setLikes(l || null);
       } catch { if (!cancelled) setLikes(null); }
     })();
     return () => { cancelled = true; };
-  }, [userId]);
+  }, [userId, simple]);
 
   const toggleLike = useCallback(async () => {
     if (!userId || busyLike) return;
@@ -333,11 +336,13 @@ const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = fal
     .map((l) => String(l?.langCode || '').toUpperCase())
     .filter(Boolean)
     .join(' · ');
+  // Orden de prioridad: los 2 primeros son los que se muestran en el spotlight
+  // (fijados a Idioma + Cuerpo); el resto queda para "ver perfil".
   const facts = [];
-  if (profile?.heightCm != null) facts.push({ l: t('modelProfileExpanded.labels.height', 'Altura'), v: `${profile.heightCm} cm` });
-  if (profile?.bodyType) facts.push({ l: t('modelProfileExpanded.labels.body', 'Cuerpo'), v: enumLabel('body', profile.bodyType) });
-  if (profile?.bustSize) facts.push({ l: t('modelProfileExpanded.labels.bust', 'Pecho'), v: enumLabel('bust', profile.bustSize) });
   if (langTxt) facts.push({ l: t('modelProfileExpanded.labels.languages', 'Idioma'), v: langTxt });
+  if (profile?.bodyType) facts.push({ l: t('modelProfileExpanded.labels.body', 'Cuerpo'), v: enumLabel('body', profile.bodyType) });
+  if (profile?.heightCm != null) facts.push({ l: t('modelProfileExpanded.labels.height', 'Altura'), v: `${profile.heightCm} cm` });
+  if (profile?.bustSize) facts.push({ l: t('modelProfileExpanded.labels.bust', 'Pecho'), v: enumLabel('bust', profile.bustSize) });
 
   // Regalos del spotlight: los de PAGO (premium). Se envían con modal de
   // confirmación (coste). Los gratis viven en la barra 🎁 del chat.
