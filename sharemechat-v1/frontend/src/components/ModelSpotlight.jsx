@@ -271,10 +271,53 @@ const QChip = styled.button`
   }
 `;
 
+// Chip de "escaparate" de regalos de pago en la columna del MODELO: NO es
+// enviable (el modelo no envía regalos), es informativo. En color = el cliente
+// puede pagarlo ahora (saldo >= coste); en gris/atenuado = no le alcanza. Anima
+// a la modelo a pedir un regalo concreto que sabe que el cliente puede permitirse.
+const ShowChip = styled.div`
+  position: relative;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid ${({ $affordable }) => ($affordable ? 'rgba(234,29,29,0.45)' : 'rgba(255,255,255,0.08)')};
+  background: ${({ $affordable }) => ($affordable
+    ? 'radial-gradient(circle at 50% 32%, rgba(234,29,29,0.18), rgba(234,29,29,0.05))'
+    : 'rgba(255,255,255,0.03)')};
+  display: grid;
+  place-items: center;
+  filter: ${({ $affordable }) => ($affordable ? 'none' : 'grayscale(1)')};
+  opacity: ${({ $affordable }) => ($affordable ? 1 : 0.42)};
+  transition: filter .16s ease, opacity .16s ease, border-color .16s ease;
+
+  .pr {
+    position: absolute;
+    bottom: -5px;
+    right: -5px;
+    font-size: 8px;
+    font-weight: 800;
+    color: ${({ $affordable }) => ($affordable ? '#2a1c04' : '#c9ced6')};
+    background: ${({ $affordable }) => ($affordable
+      ? 'linear-gradient(180deg, #ffd778, #f5b942)'
+      : 'rgba(255,255,255,0.12)')};
+    padding: 1px 5px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+`;
+
+const ShowHint = styled.div`
+  font-size: 10.5px;
+  color: #8b94a1;
+  line-height: 1.35;
+  .dot { color: #f5b942; }
+`;
+
 const enumLabel = (kind, code) =>
   code ? t(`modelProfileExpanded.${kind}Values.${String(code).toUpperCase()}`, { defaultValue: String(code) }) : '';
 
-const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = false, fmtEUR, saldo, onOpenProfile, onSendGift, gifts = [], giftSendEnabled = false, simple = false }) => {
+const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = false, fmtEUR, saldo, onOpenProfile, onSendGift, gifts = [], giftSendEnabled = false, simple = false, giftShowcase = [], peerSaldo = null }) => {
   const [profile, setProfile] = useState(null);
   const [photo, setPhoto] = useState(null);
   const [likes, setLikes] = useState(null);
@@ -446,6 +489,34 @@ const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = fal
                 </QChip>
               ))}
             </QGifts>
+          </Sec>
+        )}
+
+        {/* Escaparate de regalos de pago (lado MODELO). Informativo: en color
+            los que el cliente puede pagar ahora con su saldo; en gris el resto. */}
+        {giftShowcase.length > 0 && (
+          <Sec>
+            <SecH>{t('modelSpotlight.showcaseTitle', 'Regalos que puede enviarte')}</SecH>
+            <QGifts>
+              {giftShowcase.map((g) => {
+                const cost = Number(g.cost || 0);
+                const affordable = peerSaldo != null && Number(peerSaldo) >= cost;
+                return (
+                  <ShowChip
+                    key={g.id}
+                    $affordable={affordable}
+                    title={`${g.name || ''} · ${fmt(g.cost)}`}
+                    aria-label={`${g.name || ''} · ${fmt(g.cost)}`}
+                  >
+                    <GiftIcon code={g.code} alt={g.name || ''} size={22} />
+                    <span className="pr">{fmt(g.cost)}</span>
+                  </ShowChip>
+                );
+              })}
+            </QGifts>
+            <ShowHint>
+              <span className="dot">●</span> {t('modelSpotlight.showcaseHint', 'En color: lo que puede permitirse ahora con su saldo')}
+            </ShowHint>
           </Sec>
         )}
       </Body>

@@ -181,6 +181,10 @@ const DashboardModel = () => {
   const [gifts, setGifts] = useState([]);
   const [giftsLoaded, setGiftsLoaded] = useState(false);
   const [giftRenderReady, setGiftRenderReady] = useState(false);
+  // Escaparate de regalos de PAGO en la columna derecha (spotlight del cliente).
+  // Solo lectura (el modelo no envía regalos); catálogo completo desde /gifts
+  // filtrado a PREMIUM. El picker enviable del modelo (`gifts`) sigue sin PAID.
+  const [paidShowcase, setPaidShowcase] = useState([]);
   // Fase 2: picker de regalos en chat P2P del modelo. Toggle desde
   // <ButtonRegalo> de VideoChatFavoritosModelo. El catalogo `gifts` ya
   // viene filtrado a FREE_EMOJI para MODEL desde /available.
@@ -1207,6 +1211,16 @@ const DashboardModel = () => {
         setGiftsLoaded(true);
       })
       .catch(()=> setGiftsLoaded(true));
+
+    // Escaparate (solo lectura): catálogo completo -> nos quedamos con los de
+    // pago (PREMIUM) para mostrarlos en el spotlight del cliente.
+    apiFetch('/gifts')
+      .then(arr=>{
+        const paid = (Array.isArray(arr)?arr:[])
+          .filter(g => String(g?.tier || '').toUpperCase() === 'PREMIUM');
+        setPaidShowcase(paid);
+      })
+      .catch(()=> setPaidShowcase([]));
 
   },[]);
 
@@ -3647,6 +3661,9 @@ const DashboardModel = () => {
                   presence={peerPresence}
                   onStartCall={enterCallMode}
                   canCall={hasCallTarget && allowChat}
+                  fmtEUR={fmtEUR}
+                  giftShowcase={paidShowcase}
+                  peerSaldo={clientSaldo}
                 />
               </StyledRightColumn>
             )}
