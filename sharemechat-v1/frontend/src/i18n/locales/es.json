@@ -553,7 +553,7 @@
       "availability": "Suele estar en línea"
     },
     "likes": {
-      "label": "Me gusta",
+      "label": "Like",
       "like": "Dar like",
       "unlike": "Quitar like",
       "badgeNone": "Aún sin insignia · sé la primera"
