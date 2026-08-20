@@ -120,14 +120,23 @@ export default function useSupportChat(options) {
     setLoading(true);
     setError(null);
     const historyP = supportApi.getHistory(conversationId);
-    const metaP = isPinned ? supportApi.getConversationMeta(conversationId) : Promise.resolve(null);
+    // Meta (resolutionStatus, asignacion) tambien en modo casual: asi, tras
+    // recargar, el boton "Hablar con un tecnico" refleja el estado real y queda
+    // deshabilitado si la conversacion ya esta ESCALATED / HUMAN_HANDLING.
+    const metaP = supportApi.getConversationMeta(conversationId);
     Promise.all([historyP, metaP])
       .then(([rows, metaResp]) => {
         if (token !== loadTokenRef.current) return;
         setMessages(Array.isArray(rows) ? rows : []);
         if (metaResp) {
-          setMeta(metaResp);
-          if (metaResp.resolutionStatus) setResolutionStatus(metaResp.resolutionStatus);
+          if (isPinned) setMeta(metaResp);
+          if (metaResp.resolutionStatus) {
+            setResolutionStatus(metaResp.resolutionStatus);
+            if (metaResp.resolutionStatus === 'ESCALATED'
+              || metaResp.resolutionStatus === 'HUMAN_HANDLING') {
+              setEscalated(true);
+            }
+          }
         }
       })
       .catch(() => {
