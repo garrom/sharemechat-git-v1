@@ -585,7 +585,7 @@ export const ProfileCard = styled.section`
 `;
 
 export const MediaCard = styled(ProfileCard)`
-  background: linear-gradient(180deg, #ffffff 0%, #fbfcfd 100%);
+  background: #ffffff;
 `;
 
 export const SecurityCard = styled(ProfileCard)`
@@ -666,30 +666,38 @@ export const FormFieldNew = styled.div`
 
 export const PhotoPreview = styled.div`
   width: 100%;
-  max-width: 240px;
-  border-radius: 18px;
+  max-width: 200px;
+  aspect-ratio: 3 / 4;
+  border-radius: 12px;
   overflow: hidden;
-  border: 1px solid ${border};
-  background: linear-gradient(180deg, #eef2f5 0%, #dde4eb 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  border: 1px solid ${borderSoft};
+  background: #0f1419;
 `;
 
 export const PhotoImg = styled.img`
   width: 100%;
-  height: auto;
+  height: 100%;
   object-fit: cover;
   display: block;
 `;
 
 export const PhotoEmpty = styled.p`
   margin: 0;
-  padding: 18px 16px;
-  border-radius: 16px;
-  background: ${surfaceMuted};
-  border: 1px dashed #d5dce4;
-  color: #6d7784;
-  font-size: 0.92rem;
-  line-height: 1.55;
+  width: 100%;
+  max-width: 200px;
+  aspect-ratio: 3 / 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 12px;
+  border-radius: 12px;
+  background: ${redSoft};
+  border: 1.5px dashed ${redLine};
+  color: ${red};
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1.4;
 `;
 
 export const PhotoActions = styled.div`

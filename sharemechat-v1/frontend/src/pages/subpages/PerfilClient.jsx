@@ -362,6 +362,15 @@ const PerfilClient = () => {
                     </FormFieldNew>
                   </FormGridNew>
                 </CardBody>
+                <CardFooter>
+                  <ProfilePrimaryButton
+                    type="button"
+                    onClick={handleSave}
+                    disabled={saving}
+                  >
+                    {saving ? t('profileCommon.actions.saving') : t('profileCommon.actions.saveChanges')}
+                  </ProfilePrimaryButton>
+                </CardFooter>
               </ProfileCard>
 
               <ProfileCard>
