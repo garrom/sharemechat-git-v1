@@ -1059,29 +1059,47 @@ export default function VideoChatFavoritosModelo(props) {
 
           {hasActiveDetail && (
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-              {contactMode !== 'call' && (
-                <StyledMobile3ColBar>
-                  <ButtonVolver
-                    type="button"
-                    onClick={backToList}
-                    aria-label={t('dashboardModel.favorites.backToList')}
-                    title={t('common.back')}
-                  >
-                    <FontAwesomeIcon icon={faArrowLeft} />
-                  </ButtonVolver>
-
-                  <StyledTopCenter>
-                    {allowChat && (
-                      <ButtonLlamar onClick={enterCallMode} title={t('dashboardModel.favorites.call.call')} aria-label={t('dashboardModel.favorites.call.call')}>
-                        <FontAwesomeIcon icon={faVideo} />
-                        {t('dashboardModel.favorites.startVideoChat')}
-                      </ButtonLlamar>
+              {contactMode !== 'call' && (() => {
+                // Cabecera móvil "spotlight-lite" simétrica al cliente: back +
+                // avatar + nombre + presencia + 📹 videollamada. Sin like ni "ver
+                // perfil" (el cliente no tiene esos componentes).
+                const pm = peerPresenceNorm === 'online'
+                  ? { c: '#22c55e', label: t('common.presence.online', 'en línea') }
+                  : peerPresenceNorm === 'busy'
+                  ? { c: '#f59e0b', label: t('common.presence.busy', 'ocupado') }
+                  : { c: '#9ca3af', label: t('common.presence.offline', 'desconectado') };
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', background: '#14171d', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
+                    <ButtonVolver type="button" onClick={backToList} aria-label={t('dashboardModel.favorites.backToList')} title={t('common.back')}>
+                      <FontAwesomeIcon icon={faArrowLeft} />
+                    </ButtonVolver>
+                    {chatAvatars[selectedContactId] ? (
+                      <img src={chatAvatars[selectedContactId]} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                    ) : (
+                      <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#ff5c8a,#a78bfa)', display: 'grid', placeItems: 'center', fontSize: 14, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                        {(centerChatPeerName || '?').charAt(0).toUpperCase()}
+                      </div>
                     )}
-                  </StyledTopCenter>
-
-                  <StyledConnectedText>{centerChatPeerName}</StyledConnectedText>
-                </StyledMobile3ColBar>
-              )}
+                    <div style={{ flex: 1, minWidth: 0, lineHeight: 1.2 }}>
+                      <div style={{ fontSize: 14.5, fontWeight: 700, color: '#f2f5f8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {centerChatPeerName}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: pm.c, display: 'flex', alignItems: 'center', gap: 5 }}>● {pm.label}</div>
+                    </div>
+                    {allowChat && (
+                      <button
+                        type="button"
+                        onClick={enterCallMode}
+                        title={t('dashboardModel.favorites.call.call')}
+                        aria-label={t('dashboardModel.favorites.call.call')}
+                        style={{ width: 38, height: 38, flex: '0 0 auto', borderRadius: 11, border: 0, background: 'linear-gradient(180deg,#ea1d1d,#b91212)', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 15, cursor: 'pointer', boxShadow: '0 6px 14px rgba(234,29,29,0.3)' }}
+                      >
+                        <FontAwesomeIcon icon={faVideo} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
 
               {contactMode === 'call' && (
                 <>
