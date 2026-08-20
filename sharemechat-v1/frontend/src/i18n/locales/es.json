@@ -607,6 +607,8 @@
     "videocall": "Iniciar videollamada",
     "balanceOk": "saldo suficiente",
     "balanceLow": "saldo insuficiente",
+    "lowBalance": "saldo bajo",
+    "rechargeToCall": "recarga para llamar",
     "callDisabled": "Debéis ser favoritos aceptados para poder llamar",
     "yearsSuffix": "años",
     "showcaseTitle": "Regalos que puede enviarte",
