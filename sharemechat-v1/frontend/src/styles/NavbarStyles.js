@@ -352,9 +352,18 @@ export const StyledNavAvatar = styled.img`
   height: 36px;
   border-radius: 50%;
   object-fit: cover;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  box-shadow: 0 0 0 2px rgba(0,0,0,0.05);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  /* Aro alrededor de la foto (mismo patrón que el avatar de "Perfil": gap +
+     anillo) pero en rojo de marca vivo, no el rosa suave del perfil. El gap usa
+     el color del navbar para leerse como separación limpia. */
+  box-shadow: 0 0 0 2px #111418, 0 0 0 4px rgba(234, 29, 29, 0.9);
   cursor: pointer;
+  transition: box-shadow 0.15s ease;
+
+  &:hover {
+    box-shadow: 0 0 0 2px #111418, 0 0 0 4px #ea1d1d,
+      0 4px 12px rgba(234, 29, 29, 0.35);
+  }
 `;
 
 export const StyledNavTab = styled.button`

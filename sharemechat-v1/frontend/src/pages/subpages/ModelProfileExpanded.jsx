@@ -35,11 +35,12 @@ import {
   PanelInner,
   ProfileBody,
   ProfileHeaderRow,
-  HeaderPhotoFrame,
-  HeaderEmptyPhoto,
+  Cover,
+  CoverNoPhoto,
+  CoverInfo,
+  CoverName,
+  CoverPresence,
   HeaderInfo,
-  Nickname,
-  OnlineBadge,
   RateBadge,
   Biography,
   InterestsLine,
@@ -252,24 +253,33 @@ const ModelProfileExpanded = ({ open, userId, fallbackNickname, presence, onClos
     );
   };
 
-  const renderHeader = () => (
+  const renderHeader = () => {
+    const initial = (displayedNickname || '?').trim().charAt(0).toUpperCase() || '?';
+    return (
     <ProfileHeaderRow>
-      <HeaderPhotoFrame
+      {/* Cover a lo ancho: foto principal con nombre + presencia superpuestos
+          (misma presentación que el spotlight de favoritos). Clic → lightbox. */}
+      <Cover
         $clickable={!!principalPic}
         onClick={() => { if (principalPic) setLightbox({ open: true, asset: principalPic }); }}
       >
         {principalPic ? (
           <img src={principalPic.url} alt={tk('modelProfileExpanded.alt.principalPhoto', { name: displayedNickname })} />
         ) : (
-          <HeaderEmptyPhoto>{tk('modelProfileExpanded.noPrincipalPhoto')}</HeaderEmptyPhoto>
+          <CoverNoPhoto aria-hidden="true">{initial}</CoverNoPhoto>
         )}
-      </HeaderPhotoFrame>
+        <CoverInfo>
+          <CoverName>{displayedNickname}</CoverName>
+          {presenceLabel && (
+            <CoverPresence $online={presenceOnline}>
+              <i />
+              <span>{presenceLabel}</span>
+            </CoverPresence>
+          )}
+        </CoverInfo>
+      </Cover>
 
       <HeaderInfo>
-        <Nickname>
-          {displayedNickname}
-          {presenceLabel && <OnlineBadge $online={presenceOnline}>{presenceLabel}</OnlineBadge>}
-        </Nickname>
         {renderLikes()}
         {rateLabel && <RateBadge>💎 {rateLabel}</RateBadge>}
         {profile?.biography && <Biography>{profile.biography}</Biography>}
@@ -298,7 +308,8 @@ const ModelProfileExpanded = ({ open, userId, fallbackNickname, presence, onClos
         )}
       </HeaderInfo>
     </ProfileHeaderRow>
-  );
+    );
+  };
 
   // Bloque "Suele estar en línea" (histograma). Siempre visible; si aún no
   // hay datos (arranque), muestra un placeholder en vez de ocultarse.
