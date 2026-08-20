@@ -101,14 +101,36 @@ solo ofrece es/en y los 3 conceptos están fragmentados/ocultos.
 
 ---
 
-## 2. Modelo unificado (decisión aprobada)
+## 2. Modelo de DOS niveles (decisión aprobada — refinada 2026-08-20)
 
-- **Un solo idioma por usuario** gobierna UI + chat. Al elegir "Français":
-  `ui_locale='fr'` (UI en francés) **y** ese mismo valor es el destino de traducción
-  de chat (el hook ya usa `preferred_chat_lang || ui_locale`, así que con `ui_locale`
-  basta).
-- `preferred_chat_lang` queda **redundante** → se depreca / auto-sincroniza; se
-  retira la `PreferredChatLangCard`.
+> Refinamiento del operador: "un idioma para todo" se cumple para los idiomas que
+> traducimos, pero **degrada con elegancia** para idiomas raros. Son dos preguntas
+> distintas, no dos selectores confusos.
+
+**Nivel A — Idioma de INTERFAZ (`ui_locale`, navbar):** "¿en qué idioma leo la UI?".
+Solo puede ser un idioma **traducido** → **set limitado** (es, en, fr, de, …). Vive
+en el navbar (selector dropdown).
+
+**Nivel B — Idioma PERSONAL (perfil):** "¿cuál es mi idioma / a qué idioma quiero
+mis chats?". Puede ser **cualquiera**, incluidos raros → **set amplio** (malgache,
+etc.). Vive en el Perfil. Se implementa como la **fila primaria de `user_languages`**
+(los idiomas que hablas, con uno principal). El principal = **destino de traducción
+de chat** + **idioma principal del perfil público**.
+
+Consecuencias:
+- **`preferred_chat_lang` DESAPARECE.** Destino de chat = `user_languages.primary ||
+  ui_locale`. Se retira la `PreferredChatLangCard`.
+- Para idiomas traducidos, A y B coinciden por defecto (un francés: UI=fr, personal=fr
+  → "todo en francés"). Para raros divergen sin incoherencia (malgache: UI=fr/en,
+  personal=mg → lee la UI en francés, chats traducidos a malgache, perfil dice
+  "habla malgache").
+- **Ejemplo Madagascar:** registro por IP → personal=`mg` (editable); navbar=`fr` (no
+  hay UI en malgache); chats entrantes → malgache; perfil público → "Malgache" (el
+  *nombre* del idioma sí se traduce a la UI del que mira).
+- **Regla anti-confusión:** el navbar solo cambia `ui_locale`. Al elegir en el navbar
+  un idioma traducido, si el personal estaba "en sync" con el ui_locale anterior, se
+  actualiza también (francés de un clic); si el personal es distinto a propósito
+  (malgache), NO se toca.
 - **Solo producto.** El **backoffice NO se traduce** (queda es/en).
 
 ---
@@ -157,9 +179,9 @@ solo ofrece es/en y los 3 conceptos están fragmentados/ocultos.
 
 ### Fase 1 — Idioma unificado + selector nuevo + UI en fr/de
 - **Backend**: ampliar la validación de `ui_locale` (nuevo `SupportedUiLocales` o
-  ampliar `normalizeUiLocale`) al set de UI. `ui_locale` ya es `VARCHAR(5)` → **sin
-  migración de esquema**. Deprecar `preferred_chat_lang` (auto-sincronizar con
-  `ui_locale`; el fallback ya lo cubre).
+  ampliar `normalizeUiLocale`) al **set de UI limitado** (Nivel A). `ui_locale` ya es
+  `VARCHAR(5)` → **sin migración de esquema**. **Deprecar `preferred_chat_lang`**:
+  el destino de chat pasa a `user_languages.primary || ui_locale` (Nivel B).
 - **Frontend**:
   - i18n: `SUPPORTED_LOCALES=[es,en,fr,de,…]`, `LOCALE_LABELS`, importar
     `fr.json`/`de.json`.
@@ -169,17 +191,25 @@ solo ofrece es/en y los 3 conceptos están fragmentados/ocultos.
   - **Auditar y envolver la cola de hardcodeados** (punto delicado #1).
 - **Sync script**: herramienta para rellenar claves faltantes por idioma (punto #5).
 
-### Fase 2 — Arreglar la incongruencia del perfil (`user_languages`)
-- Endpoint `PUT /me/languages` (editar `user_languages`) + card "Idiomas que hablo"
-  (modelo y cliente), con los 15 códigos.
+### Fase 2 — Idioma personal editable (Nivel B) + arreglar la incongruencia del perfil
+- Endpoint `PUT /me/languages` (editar `user_languages`) + card "Tu idioma / idiomas
+  que hablas" (modelo y cliente) con un **set AMPLIO** (los 15 + raros como `mg`), con
+  uno marcado **principal**. El principal = destino de chat + idioma del perfil.
+- Asegurar `labels` de nombre de idioma (`modelProfileExpanded.languages.<CODE>`) para
+  el set amplio, para que el perfil renderice el nombre en la UI del que mira.
 - Sincronizar/limpiar datos legacy (el `fr` de Guarris y similares).
-- Retirar `PreferredChatLangCard` (idioma ya unificado).
+- Retirar `PreferredChatLangCard` (fundido en Nivel B).
 - Añadir `ORDER BY` determinista a `findByUserId` (deuda menor detectada).
 
-### Fase 3 — Sugerencia inteligente en el registro (barato; ya tenemos los datos)
-- Proponer idioma por `Accept-Language` + `country_detected` (ambos ya se capturan
-  vía CDN headers, `CountryAccessService.resolveViewerCountry`) con banner sugerente,
-  sin imponer. Un usuario de Francia arranca con francés propuesto.
+### Fase 3 — Autodetección en el registro (barato; ya tenemos los datos)
+- Sembrar el **idioma personal (Nivel B, set amplio)** por `Accept-Language` +
+  `country_detected` (ambos ya se capturan vía CDN headers,
+  `CountryAccessService.resolveViewerCountry`). Un usuario de Madagascar arranca con
+  personal=`mg` (editable).
+- Fijar el **navbar `ui_locale` (Nivel A)** = el detectado **si está traducido**;
+  si no, fallback a `en` (o el más cercano que tengamos). Un malgache → UI en inglés,
+  personal en malgache.
+- Banner sugerente, sin imponer.
 
 ### Fase 4 — Ampliar idiomas de UI (it, pt, nl, pl) + traducción de chat a idiomas raros
 - Repetir el proceso de Fase 1 para los siguientes idiomas de UI.
