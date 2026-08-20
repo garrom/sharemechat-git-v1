@@ -101,14 +101,32 @@ public interface SupportConversationRepository
     /**
      * Listado con filtros opcionales. Si algun parametro es null, se ignora ese
      * filtro. {@code unassignedOnly=true} restringe a assigned_agent_id IS NULL.
+     *
+     * <p>ADR-054 (desenredo soporte/incidencias): excluye las conversaciones
+     * vinculadas a un ticket. El panel "Conversaciones" del backoffice es solo
+     * para el chat con el Agente IA; las incidencias viven en su propio panel.
+     * Sin esto se colaban convs ticket-bound (a veces en estados huerfanos sin
+     * accion posible).</p>
      */
     @Query("SELECT c FROM SupportConversation c " +
            "WHERE (:statusFilter IS NULL OR c.resolutionStatus = :statusFilter) " +
            "  AND (:agentFilter IS NULL OR c.assignedAgentId = :agentFilter) " +
            "  AND (:unassignedOnly = false OR c.assignedAgentId IS NULL) " +
+           "  AND c.id NOT IN (SELECT t.linkedConversationId FROM SupportTicket t " +
+           "                   WHERE t.linkedConversationId IS NOT NULL) " +
            "ORDER BY c.updatedAt DESC")
     Page<SupportConversation> findFiltered(@Param("statusFilter") String statusFilter,
                                             @Param("agentFilter") Long agentFilter,
                                             @Param("unassignedOnly") boolean unassignedOnly,
                                             Pageable pageable);
+
+    /**
+     * ADR-046 hardening (auto-resolucion por inactividad): conversaciones en un
+     * estado dado cuya ultima actividad ({@code updated_at}) es anterior al
+     * corte. El job filtra ademas por "ultimo mensaje no del usuario" antes de
+     * cerrar, para no cerrar conversaciones donde el usuario espera respuesta
+     * nuestra.
+     */
+    List<SupportConversation> findByResolutionStatusAndUpdatedAtBefore(
+            String resolutionStatus, LocalDateTime cutoff);
 }
