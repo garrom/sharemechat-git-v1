@@ -140,7 +140,10 @@ const Cta = styled.button`
 
   .l1 { font-size: 15.5px; font-weight: 800; display: flex; align-items: center; gap: 9px; }
   .l2 { font-size: 12px; color: rgba(255,255,255,0.82); margin-top: 2px; }
+  .l2 .warn { color: #ffd778; font-weight: 700; }
+  .l2 .danger { color: #ffe0e0; font-weight: 700; }
   &:disabled .l2 { color: #7c8792; }
+  &:disabled .l2 .warn, &:disabled .l2 .danger { color: #7c8792; font-weight: 400; }
   .arrow { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 18px; }
 `;
 
@@ -371,7 +374,18 @@ const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = fal
     ? (typeof fmtEUR === 'function' ? fmtEUR(rate) : `${rate.toFixed(2)} €`)
     : null;
   const saldoNum = saldo != null ? Number(saldo) : null;
-  const balanceOk = (rate != null && saldoNum != null) ? saldoNum >= rate : null;
+  // Aviso de saldo en el CTA: umbral plano de 3 € (no se compara con la tarifa,
+  // que resultaba engañoso: una llamada se cobra por minuto y se corta sola).
+  // saldo >= 3 € -> sin coletilla; 0 < saldo < 3 € -> "saldo bajo" (ámbar);
+  // saldo <= 0 -> "recarga para llamar".
+  const LOW_BALANCE_EUR = 3;
+  const balanceHint = saldoNum == null
+    ? null
+    : saldoNum <= 0
+    ? { txt: t('modelSpotlight.rechargeToCall', 'recarga para llamar'), tone: 'danger' }
+    : saldoNum < LOW_BALANCE_EUR
+    ? { txt: t('modelSpotlight.lowBalance', 'saldo bajo'), tone: 'warn' }
+    : null;
 
   // Datos físicos (los que la modelo haya rellenado) + idioma.
   const langTxt = (profile?.languages || [])
@@ -427,9 +441,7 @@ const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = fal
           {rateTxt && (
             <span className="l2">
               {rateTxt} / min
-              {balanceOk === true ? ` · ${t('modelSpotlight.balanceOk', 'saldo suficiente')}`
-                : balanceOk === false ? ` · ${t('modelSpotlight.balanceLow', 'saldo insuficiente')}`
-                : ''}
+              {balanceHint && <> · <span className={balanceHint.tone}>{balanceHint.txt}</span></>}
             </span>
           )}
           <span className="arrow">›</span>
