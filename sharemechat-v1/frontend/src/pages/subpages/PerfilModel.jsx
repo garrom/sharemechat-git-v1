@@ -439,6 +439,13 @@ const PerfilModel = () => {
           <ProfileGrid>
             {/* COLUMNA IZQUIERDA: DATOS */}
             <ProfileColMain>
+              {/* Rediseño UX: fotos/vídeos como HERO (arriba), es el activo nº1
+                  del modelo. Antes iba lo último. El sistema no cambia. */}
+              <MyAssetsManager
+                contractBlocked={contractBlocked}
+                onAssetsChange={onAssetsChange}
+              />
+
               <ProfileCard>
                 <CardHeader>
                   <CardTitle>{t('profileCommon.sections.basicData.title')}</CardTitle>
@@ -578,11 +585,6 @@ const PerfilModel = () => {
                 </CardFooter>
               </ProfileCard>
 
-              {/* GESTOR MULTI-ASSET (Capa 2) — reemplaza las 2 MediaCard antiguas */}
-              <MyAssetsManager
-                contractBlocked={contractBlocked}
-                onAssetsChange={onAssetsChange}
-              />
             </ProfileColMain>
 
             {/* COLUMNA DERECHA: SEGURIDAD Y CUENTA */}

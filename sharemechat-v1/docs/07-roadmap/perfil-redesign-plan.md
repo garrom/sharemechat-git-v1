@@ -78,6 +78,11 @@ Etiquetas: **[Aspecto]** solo estilo · **[Estructura]** reordenar/mover ·
    badge de estado con color, estrella de principal roja, "+" con borde discontinuo
    rojo). **La lógica no cambia**: mismos slots (5/2), estados, menú, modal, lightbox.
 9. **[Aspecto]** Foto **aspect 3/4**, vídeo **aspect 16/9** en los slots (presentación).
+10. **[Aspecto]** **Modal de subida de ficheros** (feo actualmente): restyle del
+    contenido (`UploadBody`/`UploadPickerRow`/`UploadPreviewBox`/`UploadNoticeBox`)
+    a la estética limpia — zona de "elegir archivo" clara, preview grande con marco,
+    aviso de revisión discreto, botones coherentes. **NO se toca** el flujo (selección,
+    validación formato/tamaño, submit multipart, cierre).
 
 *(Cliente: los mismos criterios; su foto única se restylea sin tocar la lógica de
 select/upload/delete.)*

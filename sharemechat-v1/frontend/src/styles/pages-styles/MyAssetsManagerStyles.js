@@ -1,6 +1,10 @@
 // Estilos del gestor multi-asset (Capa 2): 5 fotos + 2 videos por modelo.
 // Diseñado para integrarse dentro de PerfilModel.jsx como bloque.
-// Sigue tokens y patrones visuales de PerfilClientModelStyle.
+// Rediseño UX perfil (2026-08-20): SOLO ASPECTO. La lógica del gestor
+// (endpoints, validación, límites, revisión, principal, modal, lightbox) NO se
+// toca; aquí solo se restylea a la estética del mock (foto 3/4, vídeo 16/9,
+// badges de estado con color, estrella principal roja, "+" rojo, título con
+// barra de acento roja).
 
 import styled from 'styled-components';
 
@@ -8,124 +12,148 @@ const surface = '#ffffff';
 const surfaceMuted = '#f8fafb';
 const border = '#e6e7ea';
 const borderSoft = '#dde3ea';
-const textMain = '#1f2933';
-const textMuted = '#5b6470';
+const textMain = '#1b2027';
+const textMuted = '#8b93a1';
 const accent = '#354556';
-const cardShadow = '0 10px 30px rgba(17, 24, 39, 0.06)';
+const cardShadow = '0 1px 2px rgba(16,20,30,0.04), 0 8px 24px rgba(16,20,30,0.05)';
 
-// Status colors
-const okBg = '#edf6ef';
-const okBorder = '#bfd6c6';
-const okText = '#476755';
-const warnBg = '#fdf6e3';
-const warnBorder = '#e9d8a6';
-const warnText = '#7a5a1f';
+// Marca
+const red = '#ea1d1d';
+const redSoft = '#fbeaea';
+const redLine = 'rgba(234,29,29,0.28)';
+
+// Status colors (badge con relleno de color, sobre el thumbnail)
+const okBg = 'rgba(31,157,87,0.95)';
+const okText = '#ffffff';
+const warnBg = 'rgba(224,176,49,0.97)';
+const warnText = '#3a2a02';
+const dangerBgSolid = 'rgba(176,64,47,0.97)';
+const dangerTextSolid = '#ffffff';
+// Nota de rechazo (bloque bajo el slot): tono claro legible
 const dangerBg = '#fbf1f1';
 const dangerBorder = '#dbbcbc';
 const dangerText = '#8f5b5b';
 
 export const ManagerSection = styled.section`
-  margin-top: 18px;
+  margin-top: 0;
   display: grid;
-  gap: 18px;
+  gap: 16px;
 `;
 
 export const ManagerCard = styled.section`
-  background: linear-gradient(180deg, #ffffff 0%, #fbfcfd 100%);
-  border-radius: 24px;
+  background: ${surface};
+  border-radius: 14px;
   border: 1px solid ${border};
   box-shadow: ${cardShadow};
-  padding: 22px;
+  padding: 18px 20px;
   color: ${textMain};
 
   @media (max-width: 768px) {
-    border-radius: 18px;
-    padding: 18px;
+    border-radius: 14px;
+    padding: 16px;
   }
 `;
 
 export const ManagerCardHeader = styled.header`
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 `;
 
+/* Título con barra de acento roja (coherente con las secciones del perfil). */
 export const ManagerCardTitle = styled.h3`
-  margin: 0 0 6px;
-  font-size: 1.06rem;
+  margin: 0 0 3px;
+  font-size: 0.98rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
   line-height: 1.25;
   color: ${textMain};
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  &::before {
+    content: '';
+    width: 3px;
+    height: 15px;
+    border-radius: 2px;
+    background: ${red};
+    flex-shrink: 0;
+  }
 `;
 
 export const ManagerCardSubtitle = styled.p`
-  margin: 0;
-  font-size: 0.92rem;
-  line-height: 1.62;
+  margin: 0 0 0 12px;
+  font-size: 0.8rem;
+  line-height: 1.55;
   color: ${textMuted};
 `;
 
-// Grid de slots: 5 fotos en flex-wrap, 2 vídeos en flex-wrap.
-// Cada slot tiene tamaño fijo para evitar saltos de layout.
+/* Grid de slots: flex-wrap; cada slot se dimensiona por ancho (5 fotos / 2
+   vídeos por fila) y su alto lo marca el aspect-ratio. */
 export const SlotsGrid = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
-  margin-top: 8px;
+  gap: 10px;
+  margin-top: 10px;
 `;
 
-// Slot base (ocupado o vacío). Tamaño común.
-const SLOT_PIC_SIZE = '140px';
-const SLOT_VIDEO_SIZE = '200px';
-
+/* Slot base (ocupado). 5 fotos por fila (aspect 3/4) o 2 vídeos (aspect 16/9). */
 export const SlotBase = styled.div`
   position: relative;
-  width: ${({ $kind }) => ($kind === 'video' ? SLOT_VIDEO_SIZE : SLOT_PIC_SIZE)};
-  height: ${SLOT_PIC_SIZE};
-  border-radius: 16px;
+  flex: 0 0 auto;
+  width: ${({ $kind }) => ($kind === 'video' ? 'calc((100% - 10px) / 2)' : 'calc((100% - 40px) / 5)')};
+  aspect-ratio: ${({ $kind }) => ($kind === 'video' ? '16 / 9' : '3 / 4')};
+  border-radius: 12px;
   background: ${surfaceMuted};
   border: 1px solid ${borderSoft};
-  /* Fase 7: SIN overflow:hidden aquí; el thumb hijo ya recorta su
-     imagen al border-radius. Mantener overflow:hidden en el SlotBase
-     cortaba el SlotMenuDropdown (180px) en slots PIC (140px), dejando
-     el texto "Eliminar" cortado a "minar". En slots VIDEO (200px) no
-     se notaba porque el dropdown sí cabía dentro del slot. */
   display: flex;
   align-items: center;
   justify-content: center;
+
+  @media (max-width: 640px) {
+    width: ${({ $kind }) => ($kind === 'video' ? 'calc((100% - 10px) / 2)' : 'calc((100% - 20px) / 3)')};
+  }
 `;
 
 export const SlotEmpty = styled.button`
-  width: ${({ $kind }) => ($kind === 'video' ? SLOT_VIDEO_SIZE : SLOT_PIC_SIZE)};
-  height: ${SLOT_PIC_SIZE};
-  border-radius: 16px;
-  border: 1px dashed #c5cdd6;
-  background: ${surfaceMuted};
-  color: #6d7784;
+  flex: 0 0 auto;
+  width: ${({ $kind }) => ($kind === 'video' ? 'calc((100% - 10px) / 2)' : 'calc((100% - 40px) / 5)')};
+  aspect-ratio: ${({ $kind }) => ($kind === 'video' ? '16 / 9' : '3 / 4')};
+  border-radius: 12px;
+  border: 1.5px dashed ${redLine};
+  background: ${redSoft};
+  color: ${red};
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  font-size: 0.86rem;
-  font-weight: 600;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  gap: 2px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 4px;
+  transition: filter 0.15s ease, border-color 0.15s ease;
 
   &:hover:not(:disabled) {
-    background: #eef2f6;
-    border-color: #aab4c0;
-    color: #3a4554;
+    filter: brightness(0.99);
+    border-color: rgba(234,29,29,0.5);
   }
 
   &:disabled {
     cursor: not-allowed;
     opacity: 0.55;
   }
+
+  @media (max-width: 640px) {
+    width: ${({ $kind }) => ($kind === 'video' ? 'calc((100% - 10px) / 2)' : 'calc((100% - 20px) / 3)')};
+  }
 `;
 
 export const SlotPlusIcon = styled.span`
-  font-size: 1.8rem;
+  font-size: 1.5rem;
   line-height: 1;
   font-weight: 400;
-  color: #889099;
+  color: ${red};
 `;
 
 // Thumbnail del asset ocupado
@@ -135,7 +163,7 @@ export const SlotThumb = styled.div`
   background: #0f1419;
   cursor: pointer;
   overflow: hidden;
-  border-radius: 16px;
+  border-radius: 12px;
 
   img,
   video {
@@ -146,48 +174,44 @@ export const SlotThumb = styled.div`
   }
 `;
 
-// Estrella de "principal" sobreimpresa en la esquina superior izquierda
+// Estrella "principal" (esquina superior izquierda) — roja de marca
 export const SlotPrincipalBadge = styled.span`
   position: absolute;
-  top: 8px;
-  left: 8px;
-  width: 28px;
-  height: 28px;
+  top: 6px;
+  left: 6px;
+  width: 22px;
+  height: 22px;
   border-radius: 999px;
-  background: rgba(255, 196, 0, 0.95);
-  color: #5a3d00;
-  font-size: 16px;
+  background: rgba(234,29,29,0.92);
+  color: #ffffff;
+  font-size: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
   pointer-events: none;
+  z-index: 2;
 `;
 
-// Badge de estado (Aprobado / Pendiente / Rechazado), esquina inferior izquierda
+// Badge de estado (Aprobado / Pendiente / Rechazado) — esquina superior derecha,
+// relleno de color sobre el thumbnail.
 export const SlotStatusBadge = styled.span`
   position: absolute;
-  bottom: 8px;
-  left: 8px;
-  right: 40px;
-  padding: 4px 8px;
+  top: 6px;
+  right: 6px;
+  padding: 2px 7px;
   border-radius: 999px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
-  text-align: center;
   background: ${({ $variant }) =>
-    $variant === 'approved' ? okBg : $variant === 'rejected' ? dangerBg : warnBg};
+    $variant === 'approved' ? okBg : $variant === 'rejected' ? dangerBgSolid : warnBg};
   color: ${({ $variant }) =>
-    $variant === 'approved' ? okText : $variant === 'rejected' ? dangerText : warnText};
-  border: 1px solid
-    ${({ $variant }) =>
-      $variant === 'approved' ? okBorder : $variant === 'rejected' ? dangerBorder : warnBorder};
+    $variant === 'approved' ? okText : $variant === 'rejected' ? dangerTextSolid : warnText};
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   pointer-events: none;
+  z-index: 2;
 `;
 
 // Botón "..." en esquina inferior derecha
@@ -195,23 +219,24 @@ export const SlotMenuButton = styled.button`
   position: absolute;
   bottom: 6px;
   right: 6px;
-  width: 32px;
-  height: 32px;
+  width: 26px;
+  height: 26px;
   border-radius: 999px;
-  background: rgba(20, 26, 35, 0.78);
+  background: rgba(15, 20, 25, 0.6);
   color: #f6f8fa;
   border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 700;
   line-height: 1;
+  z-index: 2;
   transition: background 0.15s ease;
 
   &:hover:not(:disabled) {
-    background: rgba(20, 26, 35, 0.95);
+    background: rgba(15, 20, 25, 0.85);
   }
 
   &:disabled {
@@ -223,13 +248,13 @@ export const SlotMenuButton = styled.button`
 // Dropdown del menú "..." (posicionado sobre el slot)
 export const SlotMenuDropdown = styled.div`
   position: absolute;
-  bottom: 44px;
+  bottom: 38px;
   right: 6px;
   background: ${surface};
   border: 1px solid ${border};
   border-radius: 12px;
   box-shadow: 0 6px 20px rgba(17, 24, 39, 0.16);
-  min-width: 180px;
+  min-width: 170px;
   z-index: 10;
   overflow: hidden;
 `;
@@ -282,39 +307,49 @@ export const SlotRejectionNote = styled.div`
 export const ManagerHint = styled.p`
   margin: 10px 0 0;
   color: ${textMuted};
-  font-size: 0.88rem;
-  line-height: 1.62;
+  font-size: 0.8rem;
+  line-height: 1.55;
 `;
 
 export const ManagerMessage = styled.p`
   margin: 8px 0 0;
   padding: 10px 14px;
-  border-radius: 14px;
+  border-radius: 12px;
   font-size: 0.9rem;
   line-height: 1.55;
-  background: ${({ $type }) => ($type === 'error' ? dangerBg : okBg)};
-  border: 1px solid ${({ $type }) => ($type === 'error' ? '#e7c7c7' : okBorder)};
-  color: ${({ $type }) => ($type === 'error' ? dangerText : okText)};
+  background: ${({ $type }) => ($type === 'error' ? dangerBg : '#edf6ef')};
+  border: 1px solid ${({ $type }) => ($type === 'error' ? '#e7c7c7' : '#bfd6c6')};
+  color: ${({ $type }) => ($type === 'error' ? dangerText : '#476755')};
 `;
 
-// Upload modal: contenido custom dentro de ModalBase
+/* ---- Modal de subida (contenido dentro de ModalBase) — restyle ---- */
 export const UploadBody = styled.div`
   display: grid;
   gap: 14px;
 `;
 
+// Zona "elegir archivo": dropzone clara, punteada, con acento rojo al hover.
 export const UploadPickerRow = styled.div`
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  flex-direction: column;
   align-items: center;
+  gap: 10px;
+  padding: 20px 16px;
+  border: 1.5px dashed ${redLine};
+  background: ${redSoft};
+  border-radius: 14px;
+  text-align: center;
+
+  button {
+    ${''}
+  }
 `;
 
 export const UploadFileTag = styled.span`
-  background: ${surfaceMuted};
+  background: ${surface};
   border: 1px solid ${border};
-  padding: 6px 10px;
-  border-radius: 10px;
+  padding: 6px 12px;
+  border-radius: 999px;
   font-size: 0.82rem;
   color: ${textMain};
   max-width: 100%;
@@ -323,10 +358,10 @@ export const UploadFileTag = styled.span`
 
 export const UploadPreviewBox = styled.div`
   width: 100%;
-  max-height: 320px;
+  max-height: 340px;
   border-radius: 14px;
   overflow: hidden;
-  background: ${surfaceMuted};
+  background: #0f1419;
   border: 1px solid ${borderSoft};
   display: flex;
   align-items: center;
@@ -336,20 +371,22 @@ export const UploadPreviewBox = styled.div`
   video {
     width: 100%;
     height: auto;
-    max-height: 320px;
+    max-height: 340px;
     object-fit: contain;
     display: block;
   }
 `;
 
+// Aviso de revisión: discreto, con barra de acento roja.
 export const UploadNoticeBox = styled.p`
   margin: 0;
-  padding: 10px 14px;
-  background: #eef3f6;
-  border: 1px solid #d9e0e7;
-  color: #475668;
-  border-radius: 12px;
-  font-size: 0.86rem;
+  padding: 10px 12px 10px 14px;
+  background: ${surfaceMuted};
+  border: 1px solid ${border};
+  border-left: 3px solid ${red};
+  color: ${textMuted};
+  border-radius: 10px;
+  font-size: 0.82rem;
   line-height: 1.55;
 `;
 
