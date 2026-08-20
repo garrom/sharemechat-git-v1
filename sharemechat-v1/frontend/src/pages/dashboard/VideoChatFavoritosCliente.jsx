@@ -941,21 +941,52 @@ export default function VideoChatFavoritosCliente(props){
 
         {hasActiveDetail&&(
           <div style={{display:'flex',flexDirection:'column',flex:1,minHeight:0}}>
-            {contactMode!=='call'&&(
-              <StyledMobile3ColBar>
-                <ButtonVolver type="button" onClick={backToList} aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.backToList')} title={t('common.back')}>
-                  <FontAwesomeIcon icon={faArrowLeft}/>
-                </ButtonVolver>
-                <StyledTopCenter>
-                  {allowChat&&(
-                    <ButtonLlamar onClick={enterCallMode} title={t('dashboardClient.videoChatFavoritosCliente.actions.call')} aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.call')}>
-                      {t('dashboardClient.videoChatFavoritosCliente.actions.startVideoChat')}
-                    </ButtonLlamar>
+            {contactMode!=='call'&&(() => {
+              // Cabecera móvil "spotlight-lite" (rediseño Fase 3): back + avatar +
+              // nombre (toca -> ver perfil) + presencia + ❤ like + 📹 videollamada.
+              // Sustituye a la barra [back / boton texto / nombre].
+              const pm = peerPresenceNorm === 'online'
+                ? { c: '#22c55e', label: t('common.presence.online', 'en línea') }
+                : peerPresenceNorm === 'busy'
+                ? { c: '#f59e0b', label: t('common.presence.busy', 'ocupado') }
+                : { c: '#9ca3af', label: t('common.presence.offline', 'desconectado') };
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', background: '#14171d', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
+                  <ButtonVolver type="button" onClick={backToList} aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.backToList')} title={t('common.back')}>
+                    <FontAwesomeIcon icon={faArrowLeft}/>
+                  </ButtonVolver>
+                  {chatAvatars[centerChatPeerId] ? (
+                    <img src={chatAvatars[centerChatPeerId]} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                  ) : (
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#ff5c8a,#a78bfa)', display: 'grid', placeItems: 'center', fontSize: 14, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                      {(centerChatPeerName || '?').charAt(0).toUpperCase()}
+                    </div>
                   )}
-                </StyledTopCenter>
-                <StyledConnectedText>{centerChatPeerName}</StyledConnectedText>
-              </StyledMobile3ColBar>
-            )}
+                  <div
+                    onClick={() => onViewProfile && centerChatPeerId && onViewProfile({ id: centerChatPeerId, nickname: centerChatPeerName, presence: peerPresenceNorm })}
+                    style={{ flex: 1, minWidth: 0, lineHeight: 1.2, cursor: onViewProfile ? 'pointer' : 'default' }}
+                  >
+                    <div style={{ fontSize: 14.5, fontWeight: 700, color: '#f2f5f8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {centerChatPeerName}
+                      {onViewProfile && <span style={{ color: '#8b94a1', fontSize: 11, fontWeight: 600, flexShrink: 0 }}>▸ {t('modelSpotlight.viewProfile', 'ver perfil')}</span>}
+                    </div>
+                    <div style={{ fontSize: 11.5, color: pm.c, display: 'flex', alignItems: 'center', gap: 5 }}>● {pm.label}</div>
+                  </div>
+                  {centerChatPeerId && <LikeHeart modelUserId={centerChatPeerId} />}
+                  {allowChat && (
+                    <button
+                      type="button"
+                      onClick={enterCallMode}
+                      title={t('dashboardClient.videoChatFavoritosCliente.actions.call')}
+                      aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.call')}
+                      style={{ width: 38, height: 38, flex: '0 0 auto', borderRadius: 11, border: 0, background: 'linear-gradient(180deg,#ea1d1d,#b91212)', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 15, cursor: 'pointer', boxShadow: '0 6px 14px rgba(234,29,29,0.3)' }}
+                    >
+                      <FontAwesomeIcon icon={faVideo}/>
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
 
             {contactMode==='call'&&(
               <>
