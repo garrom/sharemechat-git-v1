@@ -608,7 +608,9 @@
     "balanceOk": "enough balance",
     "balanceLow": "not enough balance",
     "callDisabled": "You must be accepted favorites to call",
-    "yearsSuffix": "yrs"
+    "yearsSuffix": "yrs",
+    "showcaseTitle": "Gifts they can send you",
+    "showcaseHint": "In color: what they can afford right now with their balance"
   },
   "modelReputation": {
     "title": "Your reputation",

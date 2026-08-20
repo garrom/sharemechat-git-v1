@@ -225,7 +225,6 @@ const ModelProfileExpanded = ({ open, userId, fallbackNickname, presence, onClos
   // ----- Bloques de render -----
   // Card 1 Fase 3: likes + insignia (donde el mock tenía las estrellas).
   const renderLikes = () => {
-    const count = likeState?.count ?? 0;
     const liked = !!likeState?.hasLiked;
     const badge = likeState?.badgeCode || null;
     const badgeName = badge ? tk(`modelProfileExpanded.badgeValues.${badge}`, { defaultValue: badge }) : null;
@@ -239,7 +238,7 @@ const ModelProfileExpanded = ({ open, userId, fallbackNickname, presence, onClos
           aria-label={tk(liked ? 'modelProfileExpanded.likes.unlike' : 'modelProfileExpanded.likes.like')}
         >
           <span className="heart">{liked ? '❤' : '🤍'}</span>
-          {tk('modelProfileExpanded.likes.label')} · {Number(count).toLocaleString('es-ES')}
+          {tk('modelProfileExpanded.likes.label')}
         </LikeButton>
         {badge ? (
           <RankChip>
