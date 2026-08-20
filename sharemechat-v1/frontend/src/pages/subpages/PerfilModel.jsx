@@ -37,6 +37,9 @@ import {
   ProfileHeaderName,
   ChipRole,
   ProfileHeaderSubtitle,
+  CompletenessWrap,
+  CompletenessBar,
+  CompletenessText,
   ProfileHeaderMeta,
   MetaItem,
   MetaLabel,
@@ -103,6 +106,8 @@ const PerfilModel = () => {
   // Capa 2: avatar del header derivado del asset PIC principal APPROVED.
   // El MyAssetsManager nos lo entrega vía onAssetsChange en cada refresh.
   const [headerAvatarUrl, setHeaderAvatarUrl] = useState(null);
+  // Rediseño UX Fase 1: lista completa de assets (para calcular completitud).
+  const [allAssets, setAllAssets] = useState([]);
 
   // Contrato (solo UX de ROLE_MODEL)
   const [contractLoading, setContractLoading] = useState(false);
@@ -324,6 +329,7 @@ const PerfilModel = () => {
   // Callback que MyAssetsManager invoca tras cada carga/cambio.
   // El avatar del header es la URL del asset PIC principal APPROVED.
   const onAssetsChange = (assets) => {
+    setAllAssets(Array.isArray(assets) ? assets : []);
     if (!Array.isArray(assets)) {
       setHeaderAvatarUrl(null);
       return;
@@ -340,6 +346,23 @@ const PerfilModel = () => {
 
   const displayName = form.nickname || form.name || form.email || t('perfilModel.displayName');
   const contractBlocked = contractInfo?.acceptedCurrent === false;
+
+  // Rediseño UX Fase 1: completitud del perfil (pesos D3). foto principal 30% ·
+  // ≥1 vídeo 20% · biografía 15% · ≥2 datos físicos 15% · intereses 10% · nickname 10%.
+  const hasPrincipalPhoto = !!headerAvatarUrl;
+  const hasVideo = allAssets.some((a) => a.assetType === 'VIDEO');
+  const physFilled = ['bustSize', 'heightCm', 'buttSize', 'bodyType']
+    .filter((k) => String(physical[k] || '').trim() !== '').length;
+  const complChecks = [
+    { ok: hasPrincipalPhoto, w: 30, tip: 'photo' },
+    { ok: hasVideo, w: 20, tip: 'video' },
+    { ok: !!String(form.biography || '').trim(), w: 15, tip: 'bio' },
+    { ok: physFilled >= 2, w: 15, tip: 'physical' },
+    { ok: !!String(form.interests || '').trim(), w: 10, tip: 'interests' },
+    { ok: !!String(form.nickname || '').trim(), w: 10, tip: 'nickname' },
+  ];
+  const completeness = complChecks.reduce((s, c) => s + (c.ok ? c.w : 0), 0);
+  const nextTip = complChecks.find((c) => !c.ok);
 
   return (
     <PageShell>
@@ -375,6 +398,15 @@ const PerfilModel = () => {
             <ProfileHeaderSubtitle>
               {t('perfilModel.header.subtitle')}
             </ProfileHeaderSubtitle>
+            <CompletenessWrap>
+              <CompletenessBar $pct={completeness}><i /></CompletenessBar>
+              <CompletenessText>
+                <b>{completeness}%</b> {t('profileCommon.completeness.complete', 'completo')}
+                {nextTip && (
+                  <>{' · '}<span className="go">{t(`profileCommon.completeness.tip.${nextTip.tip}`)}</span></>
+                )}
+              </CompletenessText>
+            </CompletenessWrap>
             <ProfileHeaderMeta>
               <MetaItem>
                 <MetaLabel>{t('profileCommon.labels.status')}</MetaLabel>
@@ -486,6 +518,15 @@ const PerfilModel = () => {
                     </FormFieldNew>
                   </FormGridNew>
                 </CardBody>
+                <CardFooter>
+                  <ProfilePrimaryButton
+                    type="button"
+                    onClick={handleSave}
+                    disabled={saving}
+                  >
+                    {saving ? t('profileCommon.actions.saving') : t('profileCommon.actions.saveChanges')}
+                  </ProfilePrimaryButton>
+                </CardFooter>
               </ProfileCard>
 
               <ProfileCard>

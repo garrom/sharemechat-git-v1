@@ -255,6 +255,17 @@
   },
   "profileCommon": {
     "accountTitle": "Cuenta",
+    "completeness": {
+      "complete": "completo",
+      "tip": {
+        "photo": "sube una foto",
+        "video": "añade un vídeo para destacar",
+        "bio": "escribe tu biografía",
+        "physical": "completa tus datos físicos",
+        "interests": "añade tus intereses",
+        "nickname": "elige un nickname"
+      }
+    },
     "loading": {
       "default": "Cargando..."
     },

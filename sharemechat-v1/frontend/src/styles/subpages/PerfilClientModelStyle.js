@@ -337,11 +337,13 @@ export const ProfileMain = styled.main`
   flex: 1;
   width: min(1180px, calc(100% - 40px));
   margin: 20px auto 36px;
-  padding: 20px;
-  border-radius: 18px;
-  background: ${pageBg};
-  border: 1px solid ${border};
-  box-shadow: 0 10px 30px rgba(17, 24, 39, 0.06);
+  padding: 0;
+  border-radius: 0;
+  /* Rediseño UX perfil (D1): panel plano (transparente); las cards van directas
+     sobre el marco claro, como el mock. Antes: panel claro con borde+sombra. */
+  background: transparent;
+  border: none;
+  box-shadow: none;
 
   @media (max-width: ${bp.md}) {
     width: calc(100% - 20px);
@@ -475,6 +477,39 @@ export const ProfileHeaderSubtitle = styled.p`
   font-size: 0.88rem;
   line-height: 1.55;
   color: ${textMuted};
+`;
+
+/* Rediseño UX perfil (Fase 1): barra de completitud en la cabecera. */
+export const CompletenessWrap = styled.div`
+  margin: 4px 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+`;
+
+export const CompletenessBar = styled.div`
+  flex: 1;
+  min-width: 180px;
+  height: 8px;
+  border-radius: 999px;
+  background: #e9edf2;
+  overflow: hidden;
+
+  > i {
+    display: block;
+    height: 100%;
+    width: ${({ $pct }) => `${Math.max(4, Math.min(100, Number($pct) || 0))}%`};
+    background: linear-gradient(90deg, #f0b331, ${red});
+    transition: width 0.35s ease;
+  }
+`;
+
+export const CompletenessText = styled.div`
+  font-size: 0.8rem;
+  color: ${textMuted};
+  b { color: ${textMain}; }
+  .go { color: ${red}; font-weight: 700; }
 `;
 
 export const ProfileHeaderMeta = styled.div`

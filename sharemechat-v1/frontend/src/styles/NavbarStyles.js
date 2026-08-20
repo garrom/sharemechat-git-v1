@@ -92,8 +92,10 @@ export const PageShell = styled.div`
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #111418;
-  color: #e0e0e0;
+  /* Rediseño UX perfil (2026-08-20, D1): marco claro (antes #111418 oscuro).
+     Solo lo usan las páginas de perfil; el navbar tiene su propio fondo oscuro. */
+  background: #eef0f4;
+  color: #1b2027;
 `;
 
 // === TEXTO ===

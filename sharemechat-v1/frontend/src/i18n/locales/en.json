@@ -255,6 +255,17 @@
   },
   "profileCommon": {
     "accountTitle": "Account",
+    "completeness": {
+      "complete": "complete",
+      "tip": {
+        "photo": "upload a photo",
+        "video": "add a video to stand out",
+        "bio": "write your bio",
+        "physical": "fill in your physical details",
+        "interests": "add your interests",
+        "nickname": "choose a nickname"
+      }
+    },
     "loading": {
       "default": "Loading..."
     },
