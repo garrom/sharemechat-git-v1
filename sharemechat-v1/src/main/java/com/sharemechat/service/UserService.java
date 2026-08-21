@@ -419,36 +419,129 @@ public class UserService {
             throw new IllegalArgumentException("uiLocale no válido");
         }
 
+        String oldUiLocale = user.getUiLocale();
         user.setUiLocale(normalizedUiLocale);
         user.setUpdatedAt(LocalDateTime.now());
-
         User updatedUser = userRepository.save(user);
+
+        // Fase 2 i18n: sync Nivel A->B. Si el idioma personal PRIMARIO coincidía
+        // con el ui_locale ANTERIOR (estaban en sync), lo movemos también al
+        // nuevo -> "francés de un clic". Si el personal es distinto a propósito
+        // (p. ej. malgache con UI en francés), no se toca.
+        syncPrimaryLanguageWithUiLocale(updatedUser, oldUiLocale, normalizedUiLocale);
+
         return mapToDTO(updatedUser);
     }
 
+    // Fase 2 i18n (2026-08-21): mantiene el idioma personal primario alineado con
+    // el idioma de UI cuando estaban sincronizados (caso común "todo en X").
+    private void syncPrimaryLanguageWithUiLocale(User user, String oldUiLocale, String newUiLocale) {
+        if (oldUiLocale == null || newUiLocale == null
+                || oldUiLocale.equalsIgnoreCase(newUiLocale)) return;
+        java.util.List<UserLanguage> langs = userLanguageRepository.findByUserId(user.getId());
+        UserLanguage primary = langs.stream()
+                .filter(UserLanguage::isPrimary).findFirst().orElse(null);
+        if (primary == null || !oldUiLocale.equalsIgnoreCase(primary.getLangCode())) {
+            return; // no estaba en sync -> respetar la elección personal
+        }
+        String targetCode = newUiLocale.toLowerCase(Locale.ROOT);
+        UserLanguage existingTarget = langs.stream()
+                .filter(l -> targetCode.equalsIgnoreCase(l.getLangCode()))
+                .findFirst().orElse(null);
+        if (existingTarget != null && existingTarget.getId() != null
+                && !existingTarget.getId().equals(primary.getId())) {
+            // Ya habla el nuevo idioma: solo mover el flag primario (evita chocar
+            // con el UNIQUE(user_id, lang_code)).
+            primary.setPrimary(false);
+            primary.setUpdatedAt(LocalDateTime.now());
+            existingTarget.setPrimary(true);
+            existingTarget.setUpdatedAt(LocalDateTime.now());
+            userLanguageRepository.save(primary);
+            userLanguageRepository.save(existingTarget);
+        } else {
+            // No lo habla aún: renombrar el primario al nuevo idioma.
+            primary.setLangCode(targetCode);
+            primary.setUpdatedAt(LocalDateTime.now());
+            userLanguageRepository.save(primary);
+        }
+    }
+
     /**
-     * pending-hardening §5.3: setter para el idioma preferido de chat P2P.
-     * Acepta null / blank para volver al fallback (uiLocale). Valida contra
-     * {@link com.sharemechat.constants.SupportedChatLanguages}.
+     * Fase 2 i18n (2026-08-21): reemplaza los idiomas hablados del usuario
+     * ({@code user_languages}) por la lista dada. Valida cada código contra
+     * {@link com.sharemechat.constants.SupportedChatLanguages}, deduplica y exige
+     * exactamente un primario (si ninguno viene marcado, el primero de la lista).
+     * El primario es el destino de traducción de chat + idioma principal del
+     * perfil público. Sustituye al antiguo updatePreferredChatLang.
      */
     @Transactional
-    public UserDTO updatePreferredChatLang(String email, String preferredChatLang) {
+    public UserDTO updateUserLanguages(String email, java.util.List<UserLanguageDTO> input) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
+        if (input == null || input.isEmpty()) {
+            throw new IllegalArgumentException("Debes indicar al menos un idioma");
+        }
 
-        String normalized = null;
-        if (preferredChatLang != null && !preferredChatLang.trim().isEmpty()) {
-            normalized = com.sharemechat.constants.SupportedChatLanguages.normalize(preferredChatLang);
-            if (normalized == null) {
-                throw new IllegalArgumentException("preferredChatLang no soportado: " + preferredChatLang);
+        // Normalizar + validar + dedup preservando orden. code -> level.
+        java.util.LinkedHashMap<String, String> wanted = new java.util.LinkedHashMap<>();
+        String primaryCode = null;
+        for (UserLanguageDTO in : input) {
+            if (in == null) continue;
+            String code = com.sharemechat.constants.SupportedChatLanguages.normalize(in.getLangCode());
+            if (code == null) {
+                throw new IllegalArgumentException("Idioma no soportado: " + in.getLangCode());
+            }
+            if (!wanted.containsKey(code)) {
+                wanted.put(code, in.getLevel());
+            }
+            if (in.isPrimary()) {
+                primaryCode = code;
+            }
+        }
+        if (wanted.isEmpty()) {
+            throw new IllegalArgumentException("Debes indicar al menos un idioma");
+        }
+        if (primaryCode == null) {
+            primaryCode = wanted.keySet().iterator().next();
+        }
+        final String finalPrimary = primaryCode;
+
+        java.util.List<UserLanguage> existing = userLanguageRepository.findByUserId(user.getId());
+        java.util.Map<String, UserLanguage> byCode = new java.util.HashMap<>();
+        for (UserLanguage e : existing) {
+            byCode.put(e.getLangCode().toLowerCase(Locale.ROOT), e);
+        }
+
+        // Borrar las que ya no están (códigos disjuntos de los deseados -> sin
+        // colisión con UNIQUE(user_id, lang_code)).
+        for (UserLanguage e : existing) {
+            if (!wanted.containsKey(e.getLangCode().toLowerCase(Locale.ROOT))) {
+                userLanguageRepository.delete(e);
             }
         }
 
-        user.setPreferredChatLang(normalized);
-        user.setUpdatedAt(LocalDateTime.now());
+        // Upsert de las deseadas, fijando el primario.
+        int weight = 100;
+        for (java.util.Map.Entry<String, String> en : wanted.entrySet()) {
+            String code = en.getKey();
+            UserLanguage ul = byCode.get(code);
+            if (ul == null) {
+                ul = new UserLanguage();
+                ul.setUserId(user.getId());
+                ul.setLangCode(code);
+                ul.setCreatedAt(LocalDateTime.now());
+                ul.setPreferenceWeight(weight);
+            }
+            ul.setPrimary(code.equals(finalPrimary));
+            ul.setLevel(en.getValue());
+            ul.setUpdatedAt(LocalDateTime.now());
+            userLanguageRepository.save(ul);
+            weight -= 10;
+        }
 
-        User updatedUser = userRepository.save(user);
-        return mapToDTO(updatedUser);
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
+        return mapToDTO(user);
     }
 
     @Transactional
@@ -809,7 +902,19 @@ public class UserService {
         dto.setUnsubscribe(user.getUnsubscribe());
         dto.setCreatedAt(user.getCreatedAt());
         dto.setUiLocale(user.getUiLocale());
-        dto.setPreferredChatLang(user.getPreferredChatLang());
+        // Fase 2 i18n (2026-08-21): idioma personal = user_languages (primario
+        // primero). El primario es el destino de traducción de chat.
+        java.util.List<UserLanguage> userLangs = user.getId() == null
+                ? java.util.Collections.emptyList()
+                : userLanguageRepository.findByUserIdOrderByPrimaryDescPreferenceWeightDescIdAsc(user.getId());
+        dto.setLanguages(userLangs.stream()
+                .map(l -> new com.sharemechat.dto.UserLanguageDTO(l.getLangCode(), l.isPrimary(), l.getLevel()))
+                .toList());
+        dto.setPrimaryLanguage(userLangs.stream()
+                .filter(UserLanguage::isPrimary)
+                .map(UserLanguage::getLangCode)
+                .findFirst()
+                .orElse(null));
 
         dto.setAccountStatus(user.getAccountStatus());
         dto.setSuspendedUntil(user.getSuspendedUntil());

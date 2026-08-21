@@ -7,7 +7,7 @@ import { useAppModals } from '../../components/useAppModals';
 import i18n from '../../i18n';
 import LocaleSwitcher from '../../components/LocaleSwitcher';
 import LinkedAccountsCard from '../../components/LinkedAccountsCard';
-import PreferredChatLangCard from '../../components/PreferredChatLangCard';
+import MyLanguagesCard from '../../components/MyLanguagesCard';
 import { isGoogleOAuthEnabled } from '../../config/runtimeEnv';
 
 // Navbar unificado
@@ -497,7 +497,7 @@ const PerfilClient = () => {
               {/* pending-hardening §5.3 (2026-08-08): selector idioma
                   preferido para chat P2P. Se auto-oculta si la feature de
                   traduccion no esta habilitada en el entorno. */}
-              <PreferredChatLangCard />
+              <MyLanguagesCard />
 
               <SecurityCard>
                 <CardHeader>

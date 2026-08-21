@@ -7,7 +7,7 @@ import { getTranslationConfig } from '../api/translationApi';
  * ADR-059 Fase 4 (frontend): tests del hook `useTranslationSettings` (traductor
  * P2P, §5.3). Carga la config de traducción (async), persiste el toggle
  * `showOriginal` en localStorage, y resuelve `viewerLang` con precedencia
- * (preferredChatLang > uiLocale). Mock del seam `getTranslationConfig`;
+ * (primaryLanguage > uiLocale). Mock del seam `getTranslationConfig`;
  * localStorage real de jsdom.
  */
 
@@ -66,8 +66,8 @@ describe('useTranslationSettings', () => {
     expect(window.localStorage.getItem(KEY)).toBe('false');
   });
 
-  test('viewerLang: preferredChatLang gana sobre uiLocale; null si ninguno', async () => {
-    render(<Host viewerUser={{ preferredChatLang: 'fr', uiLocale: 'es' }} />);
+  test('viewerLang: primaryLanguage gana sobre uiLocale; null si ninguno', async () => {
+    render(<Host viewerUser={{ primaryLanguage: 'fr', uiLocale: 'es' }} />);
     await flush();
     expect(ts.viewerLang).toBe('fr');
 
