@@ -633,9 +633,10 @@ const PerfilModel = () => {
               {/* Card 1 Fase C: reputación (likes + insignia + progreso) + acceso al ranking. */}
               <ModelReputationCard onOpenRanking={() => setRankingOpen(true)} />
 
-              {/* pending-hardening §5.3 (2026-08-08): selector idioma
-                  preferido para chat P2P. Se auto-oculta si la feature de
-                  traduccion no esta habilitada en el entorno. */}
+              {/* Fase 2 i18n (2026-08-21): card "Tu idioma" (Nivel B). El idioma
+                  personal (16 opciones incl. malgache) = destino de traducción
+                  de chat + idioma del perfil. Se auto-oculta si la traducción
+                  no está habilitada en el entorno. */}
               <MyLanguagesCard />
 
               <SecurityCard>
