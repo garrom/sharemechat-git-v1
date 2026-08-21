@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import i18n from '../i18n';
 import { getTranslationConfig, updateMyLanguages } from '../api/translationApi';
 import { useSession } from './SessionProvider';
@@ -12,16 +12,20 @@ import {
 } from '../styles/subpages/PerfilClientModelStyle';
 
 /**
- * Fase 2 i18n (2026-08-21): card "Idiomas que hablo" (Nivel B). Reemplaza a
- * PreferredChatLangCard. El usuario marca los idiomas que habla y CUÁL es su
- * idioma principal. El principal es el destino de traducción de chat + el
- * idioma principal del perfil público.
+ * Fase 2 i18n (2026-08-21): card "Tu idioma" (Nivel B). Reemplaza a
+ * PreferredChatLangCard. UN SOLO idioma por usuario: el que habla con fluidez.
+ * Es el destino de traducción de chat + el idioma principal del perfil público.
  *
- * Backend: PUT /api/users/me/languages con [{ langCode, primary }]. La lista de
- * idiomas soportados viene de /api/messages/translation-config (los 15 + mg).
+ * Decisión del operador (2026-08-21): single-select (no multi). Con un solo
+ * idioma dominante, TODOS los mensajes recibidos se traducen a él, sin la
+ * ambigüedad del multi (p. ej. "hablo algo de francés" -> no se traduciría).
  *
- * Nombres nativos hardcoded (más UX-friendly que códigos). Sincronizar con
- * SupportedChatLanguages.CODES del backend.
+ * Distinto del idioma de INTERFAZ (navbar, 5 idiomas): aquí caben los 15 + mg,
+ * así que una modelo malgache puede tener el chat en malgache aunque vea la
+ * página en inglés.
+ *
+ * Backend: PUT /api/users/me/languages con una lista de UN elemento
+ * [{ langCode, primary: true }]. Lista de idiomas de /messages/translation-config.
  */
 const LANG_LABELS = {
   es: 'Español', en: 'English', pt: 'Português', fr: 'Français', it: 'Italiano',
@@ -34,19 +38,17 @@ export default function MyLanguagesCard() {
   const { user, refresh } = useSession();
 
   const [supported, setSupported] = useState([]);
-  const [selected, setSelected] = useState([]); // array de langCode
-  const [primary, setPrimary] = useState(null);
+  const [value, setValue] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
 
-  // Inicializa la selección desde el usuario (user.languages del /me).
+  // Valor inicial: el idioma primario del usuario; si no, su uiLocale.
   useEffect(() => {
     const langs = Array.isArray(user?.languages) ? user.languages : [];
-    setSelected(langs.map((l) => l.langCode));
-    const prim = langs.find((l) => l.primary);
-    setPrimary(prim ? prim.langCode : (langs[0] ? langs[0].langCode : null));
+    const prim = langs.find((l) => l.primary) || langs[0];
+    setValue(prim ? prim.langCode : ((user && (user.uiLocale || user.ui_locale)) || ''));
   }, [user]);
 
   useEffect(() => {
@@ -61,127 +63,51 @@ export default function MyLanguagesCard() {
     return () => { cancelled = true; };
   }, []);
 
-  const isSelected = useCallback((code) => selected.includes(code), [selected]);
-
-  const toggle = useCallback((code) => {
-    setMsg(''); setError('');
-    setSelected((prev) => {
-      if (prev.includes(code)) {
-        const next = prev.filter((c) => c !== code);
-        setPrimary((p) => (p === code ? (next[0] || null) : p));
-        return next;
-      }
-      const next = [...prev, code];
-      setPrimary((p) => (p == null ? code : p));
-      return next;
-    });
-  }, []);
-
-  const choosePrimary = useCallback((code) => {
-    setMsg(''); setError('');
-    if (!selected.includes(code)) return;
-    setPrimary(code);
-  }, [selected]);
-
-  const onSave = useCallback(async () => {
-    setMsg(''); setError('');
-    if (selected.length === 0) {
-      setError(t('myLanguages.errorEmpty', 'Elige al menos un idioma que hables.'));
-      return;
-    }
-    const prim = primary && selected.includes(primary) ? primary : selected[0];
-    const payload = selected.map((code) => ({ langCode: code, primary: code === prim }));
-    setSaving(true);
+  const onChange = useCallback(async (ev) => {
+    const val = ev.target.value;
+    if (!val) return;
+    setValue(val);
+    setMsg(''); setError(''); setSaving(true);
     try {
-      await updateMyLanguages(payload);
+      await updateMyLanguages([{ langCode: val, primary: true }]);
       await refresh();
-      setMsg(t('myLanguages.savedOk', 'Idiomas guardados.'));
+      setMsg(t('myLanguages.savedOk', 'Idioma guardado.'));
     } catch (e) {
-      setError((e && e.message) || t('myLanguages.saveError', 'No se pudieron guardar los idiomas.'));
+      setError((e && e.message) || t('myLanguages.saveError', 'No se pudo guardar el idioma.'));
     } finally {
       setSaving(false);
     }
-  }, [selected, primary, refresh, t]);
-
-  // Orden: los soportados, con los seleccionados arriba para comodidad.
-  const ordered = useMemo(() => {
-    const sel = supported.filter((c) => selected.includes(c));
-    const rest = supported.filter((c) => !selected.includes(c));
-    return [...sel, ...rest];
-  }, [supported, selected]);
+  }, [refresh, t]);
 
   if (loading || supported.length === 0) return null;
 
   return (
     <ProfileCard>
       <CardHeader>
-        <CardTitle>{t('myLanguages.title', 'Idiomas que hablo')}</CardTitle>
+        <CardTitle>{t('myLanguages.title', 'Tu idioma')}</CardTitle>
         <CardSubtitle>
           {t('myLanguages.subtitle',
-            'Marca los idiomas que hablas y cuál es tu idioma principal. El principal es el que se muestra en tu perfil y al que se traducen tus chats.')}
+            'El idioma que hablas con fluidez. Se muestra en tu perfil y es al que se traducen tus chats.')}
         </CardSubtitle>
       </CardHeader>
       <CardBody>
         {msg && <Hint role="status" style={{ color: '#166534' }}>{msg}</Hint>}
         {error && <Hint role="alert" style={{ color: '#b45309' }}>{error}</Hint>}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxWidth: 360 }}>
-          {ordered.map((code) => {
-            const sel = isSelected(code);
-            const isPrimary = sel && primary === code;
-            return (
-              <div
-                key={code}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 10, padding: '7px 8px',
-                  borderRadius: 8, border: '1px solid #e6e7ea',
-                  background: sel ? '#fbeaea' : '#fff',
-                }}
-              >
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, cursor: 'pointer', fontSize: 14 }}>
-                  <input
-                    type="checkbox"
-                    checked={sel}
-                    disabled={saving}
-                    onChange={() => toggle(code)}
-                  />
-                  <span>{LANG_LABELS[code] || code}</span>
-                  <span style={{ color: '#8b94a1', fontSize: 11, textTransform: 'uppercase' }}>{code}</span>
-                </label>
-                <label
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 5, fontSize: 12,
-                    color: sel ? '#1f2933' : '#c3c8cf',
-                    cursor: sel ? 'pointer' : 'default', whiteSpace: 'nowrap',
-                  }}
-                  title={t('myLanguages.primaryHint', 'Idioma principal')}
-                >
-                  <input
-                    type="radio"
-                    name="primary-language"
-                    checked={isPrimary}
-                    disabled={!sel || saving}
-                    onChange={() => choosePrimary(code)}
-                  />
-                  {t('myLanguages.primary', 'principal')}
-                </label>
-              </div>
-            );
-          })}
-        </div>
-
-        <button
-          type="button"
-          onClick={onSave}
+        <select
+          value={value}
+          onChange={onChange}
           disabled={saving}
+          aria-label={t('myLanguages.title', 'Tu idioma')}
           style={{
-            marginTop: 12, padding: '8px 16px', fontSize: 14, fontWeight: 700,
-            color: '#fff', background: '#ea1d1d', border: 'none', borderRadius: 8,
-            cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.7 : 1,
+            width: '100%', maxWidth: 320, padding: '8px 10px', fontSize: 14,
+            borderRadius: 8, border: '1px solid #e6e7ea', background: '#fff',
           }}
         >
-          {saving ? t('common.saving', 'Guardando…') : t('myLanguages.save', 'Guardar idiomas')}
-        </button>
+          {supported.map((code) => (
+            <option key={code} value={code}>{LANG_LABELS[code] || code}</option>
+          ))}
+        </select>
       </CardBody>
     </ProfileCard>
   );

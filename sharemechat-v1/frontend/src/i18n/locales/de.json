@@ -4644,13 +4644,9 @@
     }
   },
   "myLanguages": {
-    "title": "Sprachen, die ich spreche",
-    "subtitle": "Wählen Sie die Sprachen aus, die Sie sprechen, und legen Sie Ihre Hauptsprache fest. Ihre Hauptsprache ist diejenige, die in Ihrem Profil angezeigt wird und in die Ihre Chats übersetzt werden.",
-    "primary": "wesentlich",
-    "primaryHint": "Primärsprache",
-    "save": "Sprachen speichern",
-    "savedOk": "Gespeicherte Sprachen.",
-    "saveError": "Die Sprachen konnten nicht gespeichert werden.",
-    "errorEmpty": "Wählen Sie mindestens eine Sprache, die Sie sprechen."
+    "title": "Ihre Sprache",
+    "subtitle": "Die Sprache, die Sie fließend sprechen. Sie wird in Ihrem Profil angezeigt und ist die Sprache, in die Ihre Chats übersetzt werden.",
+    "savedOk": "Sprache gespeichert.",
+    "saveError": "Die Sprache konnte nicht gerettet werden."
   }
 }

@@ -4644,13 +4644,9 @@
     }
   },
   "myLanguages": {
-    "title": "Línguas que falo",
-    "subtitle": "Selecione os idiomas que você fala e qual é o seu idioma principal. Seu idioma principal é aquele que aparece no seu perfil e para o qual suas conversas são traduzidas.",
-    "primary": "principal",
-    "primaryHint": "Língua principal",
-    "save": "Salvar idiomas",
-    "savedOk": "Idiomas salvos.",
-    "saveError": "Os idiomas não puderam ser salvos.",
-    "errorEmpty": "Escolha pelo menos um idioma que você fale."
+    "title": "Seu idioma",
+    "subtitle": "O idioma que você fala fluentemente. Ele é exibido no seu perfil e é o idioma para o qual suas conversas são traduzidas.",
+    "savedOk": "Idioma salvo.",
+    "saveError": "O idioma não pôde ser salvo."
   }
 }

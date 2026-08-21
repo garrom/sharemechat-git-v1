@@ -4644,13 +4644,9 @@
     }
   },
   "myLanguages": {
-    "title": "Idiomas que hablo",
-    "subtitle": "Marca los idiomas que hablas y cuál es tu idioma principal. El principal es el que se muestra en tu perfil y al que se traducen tus chats.",
-    "primary": "principal",
-    "primaryHint": "Idioma principal",
-    "save": "Guardar idiomas",
-    "savedOk": "Idiomas guardados.",
-    "saveError": "No se pudieron guardar los idiomas.",
-    "errorEmpty": "Elige al menos un idioma que hables."
+    "title": "Tu idioma",
+    "subtitle": "El idioma que hablas con fluidez. Se muestra en tu perfil y es al que se traducen tus chats.",
+    "savedOk": "Idioma guardado.",
+    "saveError": "No se pudo guardar el idioma."
   }
 }
