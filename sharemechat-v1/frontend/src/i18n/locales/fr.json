@@ -211,8 +211,8 @@
       "label": "Langue",
       "blogNotTranslated": "Le blog n'est pas encore disponible dans cette langue.",
       "suggest": "SharemeChat est également en {{lang}}.",
-      "switch": "Changement",
-      "dismiss": "Éliminer",
+      "switch": "Changer",
+      "dismiss": "Ignorer",
       "suggestAria": "Suggestion de langue"
     },
     "alerts": {
@@ -220,9 +220,9 @@
       "sendFailed": "Le message n'a pas pu être envoyé. Veuillez réessayer.",
       "chatDisconnected": "La conversation a été interrompue. Veuillez rouvrir le panneau.",
       "noRecipient": "Le destinataire exact n'a pas pu être déterminé.",
-      "noSelfChat": "On ne peut pas discuter avec soi-même.",
+      "noSelfChat": "Vous ne pouvez pas discuter avec vous-même.",
       "noDestWhileRandom": "Vous ne pouvez pas sélectionner de destination lorsque la diffusion aléatoire est active.",
-      "noSelfCall": "Tu ne peux pas t'appeler toi-même.",
+      "noSelfCall": "Vous ne pouvez pas vous appeler vous-même.",
       "noCentralChatWhileStreaming": "Vous ne pouvez pas ouvrir le chat principal pendant la diffusion. Appuyez sur Arrêter si vous souhaitez changer de mode."
     },
     "presence": {
@@ -240,7 +240,7 @@
     "sendMessage": "Envoyer un message",
     "networkError": "Erreur réseau",
     "loading": "Chargement…",
-    "saving": "Économie…",
+    "saving": "Enregistrement…",
     "ratePerMin": "{{rate}} €/min",
     "actions": {
       "addToFavorites": "Ajouter aux favoris",
@@ -631,7 +631,7 @@
       "availability": "Il est généralement en ligne"
     },
     "likes": {
-      "label": "Comme",
+      "label": "Like",
       "like": "Comme",
       "unlike": "Supprimer le j'aime",
       "badgeNone": "Toujours sans badge · Soyez le premier"
@@ -709,13 +709,13 @@
     }
   },
   "modelSpotlight": {
-    "like": "Comme",
+    "like": "Like",
     "viewProfile": "Voir le profil",
     "giftTitle": "Envoyer un cadeau",
     "videocall": "Démarrer un appel vidéo",
     "balanceOk": "équilibre suffisant",
     "balanceLow": "fonds insuffisants",
-    "lowBalance": "équilibre bas",
+    "lowBalance": "solde faible",
     "rechargeToCall": "recharge pour les appels",
     "callDisabled": "Vous devez être un favori accepté pour pouvoir appeler",
     "yearsSuffix": "années",

@@ -212,7 +212,7 @@
       "blogNotTranslated": "Der Blog ist in dieser Sprache noch nicht verfügbar.",
       "suggest": "SharemeChat ist auch in {{lang}}.",
       "switch": "Ändern",
-      "dismiss": "Ausschließen",
+      "dismiss": "Schließen",
       "suggestAria": "Sprachvorschlag"
     },
     "alerts": {
@@ -220,9 +220,9 @@
       "sendFailed": "Die Nachricht konnte nicht gesendet werden. Bitte versuchen Sie es erneut.",
       "chatDisconnected": "Der Nachrichten-Chat wurde getrennt. Bitte öffnen Sie das Bedienfeld erneut.",
       "noRecipient": "Der korrekte Empfänger konnte nicht ermittelt werden.",
-      "noSelfChat": "Man kann nicht mit sich selbst chatten.",
+      "noSelfChat": "Sie können nicht mit sich selbst chatten.",
       "noDestWhileRandom": "Bei aktiviertem Zufallsstreaming kann kein Ziel ausgewählt werden.",
-      "noSelfCall": "Du kannst dich nicht selbst anrufen.",
+      "noSelfCall": "Sie können sich nicht selbst anrufen.",
       "noCentralChatWhileStreaming": "Der zentrale Chat kann während des Streams nicht geöffnet werden. Drücke „Stopp“, um zu wechseln."
     },
     "presence": {
@@ -231,16 +231,16 @@
       "offline": "offline"
     },
     "close": "Schließen",
-    "cancel": "Stornieren",
+    "cancel": "Abbrechen",
     "other": "Andere",
     "exit": "Hinausgehen",
-    "back": "Zurückkehren",
+    "back": "Zurück",
     "hangup": "Aufhängen",
     "fullscreen": "Vollbildmodus",
     "sendMessage": "Nachricht senden",
     "networkError": "Netzwerkfehler",
     "loading": "Wird geladen…",
-    "saving": "Speichern…",
+    "saving": "Wird gespeichert…",
     "ratePerMin": "{{rate}} €/min",
     "actions": {
       "addToFavorites": "Zu Favoriten hinzufügen",
@@ -631,7 +631,7 @@
       "availability": "Er ist normalerweise online"
     },
     "likes": {
-      "label": "Wie",
+      "label": "Like",
       "like": "Wie",
       "unlike": "Entfernen Sie wie",
       "badgeNone": "Noch ohne Abzeichen · Sei der/die Erste"
@@ -709,13 +709,13 @@
     }
   },
   "modelSpotlight": {
-    "like": "Wie",
+    "like": "Like",
     "viewProfile": "Profil ansehen",
     "giftTitle": "Verschenken",
     "videocall": "Videoanruf starten",
     "balanceOk": "ausreichendes Gleichgewicht",
     "balanceLow": "unzureichende Mittel",
-    "lowBalance": "niedriges Gleichgewicht",
+    "lowBalance": "niedriges Guthaben",
     "rechargeToCall": "Guthaben für Anrufe aufladen",
     "callDisabled": "Man muss ein akzeptierter Favorit sein, um anrufen zu können.",
     "yearsSuffix": "Jahre",
@@ -4648,9 +4648,9 @@
     }
   },
   "myLanguages": {
-    "title": "Ihr Chat wird übersetzt zu",
+    "title": "Ihr Chat wird übersetzt in",
     "subtitle": "Der Chatverlauf wird automatisch in die von Ihnen gewählte Sprache übersetzt.",
     "savedOk": "Sprache gespeichert.",
-    "saveError": "Die Sprache konnte nicht gerettet werden."
+    "saveError": "Die Sprache konnte nicht gespeichert werden."
   }
 }
