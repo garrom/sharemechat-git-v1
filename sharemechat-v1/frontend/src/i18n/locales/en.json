@@ -4644,13 +4644,9 @@
     }
   },
   "myLanguages": {
-    "title": "Languages I speak",
-    "subtitle": "Select the languages you speak and which one is your main language. The main one is shown on your profile and is what your chats are translated to.",
-    "primary": "main",
-    "primaryHint": "Main language",
-    "save": "Save languages",
-    "savedOk": "Languages saved.",
-    "saveError": "Couldn't save your languages.",
-    "errorEmpty": "Pick at least one language you speak."
+    "title": "Your language",
+    "subtitle": "The language you speak fluently. It's shown on your profile and your chats are translated into it.",
+    "savedOk": "Language saved.",
+    "saveError": "Couldn't save your language."
   }
 }

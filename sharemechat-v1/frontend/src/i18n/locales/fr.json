@@ -4644,13 +4644,9 @@
     }
   },
   "myLanguages": {
-    "title": "Langues que je parle",
-    "subtitle": "Sélectionnez les langues que vous parlez et indiquez votre langue principale. Votre langue principale est celle affichée sur votre profil et celle dans laquelle vos conversations sont traduites.",
-    "primary": "majeur",
-    "primaryHint": "Langue principale",
-    "save": "Enregistrer les langues",
-    "savedOk": "Langues enregistrées.",
-    "saveError": "Les langues n'ont pas pu être sauvegardées.",
-    "errorEmpty": "Choisissez au moins une langue que vous parlez."
+    "title": "Votre langue",
+    "subtitle": "La langue que vous parlez couramment. Elle est affichée sur votre profil et c'est dans cette langue que vos conversations sont traduites.",
+    "savedOk": "Langue enregistrée.",
+    "saveError": "La langue n'a pas pu être enregistrée."
   }
 }
