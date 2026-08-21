@@ -943,25 +943,35 @@ export const CookieBar = styled.div`
   right:0;
   bottom:0;
   z-index:2000;
-  padding:14px 24px;
+  padding:10px 20px;
   background:#111111;
   border-top:1px solid #333333;
   display:flex;
   flex-wrap:wrap;
   align-items:center;
   justify-content:space-between;
-  gap:12px;
+  gap:10px 14px;
   box-sizing:border-box;
-  font-size:0.85rem;
+  font-size:0.8rem;
+
+  @media (max-width:560px){
+    padding:11px 14px;
+    gap:9px;
+  }
 `;
 
 export const CookieText = styled.p`
   flex:1 1 320px;
   margin:0;
-  line-height:1.5;
+  line-height:1.45;
   color:#f9fafb;
   strong{font-weight:700;}
   a{color:#ffffff;text-decoration:underline;}
+
+  @media (max-width:560px){
+    flex-basis:100%;
+    font-size:0.78rem;
+  }
 `;
 
 export const CookieActions = styled.div`
@@ -969,22 +979,32 @@ export const CookieActions = styled.div`
   flex-wrap:wrap;
   align-items:center;
   justify-content:flex-end;
-  gap:10px;
+  gap:8px;
+
+  @media (max-width:560px){
+    width:100%;
+  }
 `;
 
 export const CookieBtnSecondary = styled.button`
   appearance:none;
-  border:1px solid #ffffff;
+  border:1px solid #4a4a4a;
   background:transparent;
-  color:#ffffff;
-  font-size:0.85rem;
+  color:#eef0f3;
+  font-size:0.8rem;
   font-weight:600;
-  padding:8px 16px;
-  border-radius:2px;
+  padding:7px 13px;
+  border-radius:3px;
   cursor:pointer;
   white-space:nowrap;
   transition:background .16s ease,color .16s ease,border-color .16s ease;
-  &:hover{background:#ffffff10;}
+  &:hover{background:#ffffff10;border-color:#6a6a6a;}
+
+  @media (max-width:560px){
+    flex:1 1 0;
+    text-align:center;
+    white-space:normal;
+  }
 `;
 
 export const CookieBtnPrimary = styled.button`
@@ -992,29 +1012,42 @@ export const CookieBtnPrimary = styled.button`
   border:none;
   background:#ffffff;
   color:#000000;
-  font-size:0.85rem;
+  font-size:0.8rem;
   font-weight:700;
-  padding:8px 18px;
-  border-radius:2px;
+  padding:7px 15px;
+  border-radius:3px;
   cursor:pointer;
   white-space:nowrap;
   transition:background .16s ease,transform .06s ease,box-shadow .16s ease;
   &:hover{background:#f3f3f3;box-shadow:0 4px 14px rgba(0,0,0,0.35);}
   &:active{transform:translateY(1px);}
+
+  @media (max-width:560px){
+    flex:1 1 0;
+    text-align:center;
+    white-space:normal;
+  }
 `;
 
 export const CookieLinkPlain = styled.button`
   appearance:none;
   border:none;
   background:transparent;
-  color:#e5e7eb;
-  font-size:0.83rem;
+  color:#cfd3d9;
+  font-size:0.79rem;
   text-decoration:underline;
   cursor:pointer;
   padding:0;
-  margin-left:10px;
+  margin-left:6px;
   white-space:nowrap;
   &:hover{color:#ffffff;}
+
+  @media (max-width:560px){
+    flex-basis:100%;
+    text-align:center;
+    margin-left:0;
+    padding-top:2px;
+  }
 `;
 
 /* OVERLAY CTA HOME – SOLO MÓVIL (encima del vídeo) */

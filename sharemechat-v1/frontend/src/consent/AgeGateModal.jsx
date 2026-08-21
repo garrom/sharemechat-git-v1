@@ -32,7 +32,7 @@ const Backdrop = styled.div`
 
 const Modal = styled.div`
   width: 100%;
-  max-width: 592px;
+  max-width: 480px;
   max-height: calc(100vh - 28px - var(--agegate-safe-bottom));
   margin: 0 auto auto;
   padding: 16px 16px 16px;
@@ -244,24 +244,25 @@ const AcknowledgeToggle = styled.button`
 
 const AcknowledgeIndicator = styled.span`
   position: relative;
-  flex: 0 0 18px;
-  width: 18px;
-  height: 18px;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
   margin-top: 1px;
   border-radius: 999px;
-  border: 1px solid ${p => (p.$active ? 'rgba(226, 201, 181, 0.48)' : 'rgba(176, 157, 144, 0.28)')};
-  background: ${p => (p.$active ? 'linear-gradient(180deg, rgba(184, 134, 110, 0.9) 0%, rgba(118, 75, 62, 0.92) 100%)' : 'rgba(255, 255, 255, 0.03)')};
-  box-shadow: ${p => (p.$active ? '0 0 0 3px rgba(149, 94, 76, 0.1)' : 'none')};
+  border: 2px solid #ea1d1d;
+  background: ${p => (p.$active ? '#ea1d1d' : 'rgba(234, 29, 29, 0.10)')};
+  box-shadow: 0 0 0 4px rgba(234, 29, 29, 0.13);
+  transition: background 0.15s ease;
 
   &::after {
     content: '';
     position: absolute;
-    left: 5px;
-    top: 3px;
-    width: 4px;
-    height: 8px;
-    border-right: 2px solid rgba(255, 248, 241, 0.96);
-    border-bottom: 2px solid rgba(255, 248, 241, 0.96);
+    left: 6px;
+    top: 3.5px;
+    width: 5px;
+    height: 9px;
+    border-right: 2px solid rgba(255, 255, 255, 0.98);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.98);
     transform: rotate(45deg);
     opacity: ${p => (p.$active ? 1 : 0)};
     transition: opacity 0.14s ease;
@@ -308,27 +309,41 @@ const ButtonRow = styled.div`
 `;
 
 const Button = styled.button`
-  min-width: ${p => (p.variant === 'primary' ? '212px' : '112px')};
+  min-width: ${p => (p.variant === 'primary' ? '200px' : '112px')};
   padding: 9px 14px;
-  border: 1px solid ${p => (p.variant === 'primary' ? 'rgba(197, 165, 142, 0.24)' : 'rgba(176, 157, 144, 0.14)')};
+  border: 1px solid ${p => {
+    if (p.variant !== 'primary') return 'rgba(176, 157, 144, 0.14)';
+    return p.disabled ? 'rgba(176, 157, 144, 0.12)' : '#ea1d1d';
+  }};
   border-radius: 999px;
   cursor: pointer;
-  opacity: ${p => (p.disabled ? 0.56 : 1)};
+  opacity: 1;
   pointer-events: ${p => (p.disabled ? 'none' : 'auto')};
   font-size: 0.8rem;
   font-weight: 600;
-  color: ${p => (p.variant === 'primary' ? '#fbf3eb' : 'rgba(234, 223, 214, 0.86)')};
-  background: ${p => (p.variant === 'primary'
-    ? 'linear-gradient(135deg, rgba(126, 79, 64, 0.98) 0%, rgba(166, 120, 95, 0.98) 100%)'
-    : 'rgba(255, 255, 255, 0.03)')};
+  color: ${p => {
+    if (p.variant !== 'primary') return 'rgba(234, 223, 214, 0.86)';
+    return p.disabled ? 'rgba(234, 223, 214, 0.34)' : '#ffffff';
+  }};
+  background: ${p => {
+    if (p.variant !== 'primary') return 'rgba(255, 255, 255, 0.03)';
+    return p.disabled
+      ? 'rgba(255, 255, 255, 0.04)'
+      : 'linear-gradient(135deg, #c0161b 0%, #ea1d1d 100%)';
+  }};
+  box-shadow: ${p => (p.variant === 'primary' && !p.disabled ? '0 8px 22px rgba(234, 29, 29, 0.26)' : 'none')};
   transition: background 0.16s ease, transform 0.06s ease, box-shadow 0.16s ease, border-color 0.16s ease;
 
   &:hover {
-    background: ${p => (p.variant === 'primary'
-      ? 'linear-gradient(135deg, rgba(141, 90, 73, 0.98) 0%, rgba(183, 136, 108, 0.98) 100%)'
-      : 'rgba(255, 255, 255, 0.05)')};
-    box-shadow: ${p => (p.variant === 'primary' ? '0 10px 24px rgba(114, 73, 57, 0.2)' : 'none')};
-    border-color: ${p => (p.variant === 'primary' ? 'rgba(209, 180, 158, 0.3)' : 'rgba(201, 173, 154, 0.22)')};
+    background: ${p => {
+      if (p.variant !== 'primary') return 'rgba(255, 255, 255, 0.05)';
+      return p.disabled ? 'rgba(255, 255, 255, 0.04)' : 'linear-gradient(135deg, #d21419 0%, #f5241f 100%)';
+    }};
+    box-shadow: ${p => (p.variant === 'primary' && !p.disabled ? '0 10px 26px rgba(234, 29, 29, 0.32)' : 'none')};
+    border-color: ${p => {
+      if (p.variant !== 'primary') return 'rgba(201, 173, 154, 0.22)';
+      return p.disabled ? 'rgba(176, 157, 144, 0.12)' : '#f5241f';
+    }};
   }
 
   &:active {
