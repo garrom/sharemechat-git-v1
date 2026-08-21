@@ -4,22 +4,82 @@
     "back": "← Back",
     "intro": "Here we answer the most common questions about how SharemeChat works, and how sessions and payments operate.",
     "items": [
-      { "q": "What is SharemeChat?", "a": "SharemeChat is a live 1-to-1 video chat platform where you connect with verified models in real time for private conversations inside the platform." },
-      { "q": "How does the video chat work?", "a": "Once registered, you start a live session and the system connects you with an available model. If you enjoy the conversation, you can add them to your contacts and talk again later." },
-      { "q": "Do I need to install anything?", "a": "No. SharemeChat works directly in your browser. You only need a webcam, an internet connection and a modern browser." },
-      { "q": "Is SharemeChat free?", "a": "Creating an account is free. Private video sessions use prepaid credits; there are no subscriptions." },
-      { "q": "How do payments work?", "a": "Sessions are paid with prepaid credits bought through one-time payments inside the platform. No subscriptions and no hidden charges." },
-      { "q": "Is payment secure?", "a": "Yes. Payments are handled by trusted providers, and sensitive details are managed by secure payment infrastructure." },
-      { "q": "Can I stop a session whenever I want?", "a": "Yes. You can end a video session at any moment from the interface." },
-      { "q": "What happens if my connection drops?", "a": "If a connection problem occurs, the session stops automatically and only the time it was actually active is counted." },
-      { "q": "Do I need to verify my age?", "a": "Yes. SharemeChat is strictly for adults 18+. Every account goes through identity and age verification before you can interact." },
-      { "q": "Are the models real and verified?", "a": "Yes. Both clients and models go through identity and age verification before they can interact. Models pass a stricter check (official document + selfie + liveness), so you're talking to real, verified people — not bots." },
-      { "q": "Can I block someone?", "a": "Yes. If you don't want to interact with someone again, you can block them." },
-      { "q": "Can I report inappropriate behaviour?", "a": "Yes. Reporting tools let you flag abusive or suspicious behaviour. Reports are reviewed to keep the environment safe." },
-      { "q": "Is SharemeChat safe?", "a": "Safety and privacy are a priority. The platform uses moderation systems, monitoring tools and technical safeguards to protect both users and models." },
-      { "q": "Are video chat sessions private?", "a": "Yes. Each session is a private one-to-one between the two people: it isn't broadcast or opened to third parties. To keep the space safe, the platform relies on automated safety measures." },
-      { "q": "Can I work as a model?", "a": "Yes.", "to": "/modelos", "toLabel": "Learn more for models" },
-      { "q": "Where can I read the rules?", "a": "You can review them in our Community Guidelines and the legal information in our Terms of Service.", "links": [ { "to": "/community-guidelines", "label": "Community Guidelines" }, { "to": "/legal?tab=terms", "label": "Terms of Service" } ] }
+      {
+        "q": "What is SharemeChat?",
+        "a": "SharemeChat is a live 1-to-1 video chat platform where you connect with verified models in real time for private conversations inside the platform."
+      },
+      {
+        "q": "How does the video chat work?",
+        "a": "Once registered, you start a live session and the system connects you with an available model. If you enjoy the conversation, you can add them to your contacts and talk again later."
+      },
+      {
+        "q": "Do I need to install anything?",
+        "a": "No. SharemeChat works directly in your browser. You only need a webcam, an internet connection and a modern browser."
+      },
+      {
+        "q": "Is SharemeChat free?",
+        "a": "Creating an account is free. Private video sessions use prepaid credits; there are no subscriptions."
+      },
+      {
+        "q": "How do payments work?",
+        "a": "Sessions are paid with prepaid credits bought through one-time payments inside the platform. No subscriptions and no hidden charges."
+      },
+      {
+        "q": "Is payment secure?",
+        "a": "Yes. Payments are handled by trusted providers, and sensitive details are managed by secure payment infrastructure."
+      },
+      {
+        "q": "Can I stop a session whenever I want?",
+        "a": "Yes. You can end a video session at any moment from the interface."
+      },
+      {
+        "q": "What happens if my connection drops?",
+        "a": "If a connection problem occurs, the session stops automatically and only the time it was actually active is counted."
+      },
+      {
+        "q": "Do I need to verify my age?",
+        "a": "Yes. SharemeChat is strictly for adults 18+. Every account goes through identity and age verification before you can interact."
+      },
+      {
+        "q": "Are the models real and verified?",
+        "a": "Yes. Both clients and models go through identity and age verification before they can interact. Models pass a stricter check (official document + selfie + liveness), so you're talking to real, verified people — not bots."
+      },
+      {
+        "q": "Can I block someone?",
+        "a": "Yes. If you don't want to interact with someone again, you can block them."
+      },
+      {
+        "q": "Can I report inappropriate behaviour?",
+        "a": "Yes. Reporting tools let you flag abusive or suspicious behaviour. Reports are reviewed to keep the environment safe."
+      },
+      {
+        "q": "Is SharemeChat safe?",
+        "a": "Safety and privacy are a priority. The platform uses moderation systems, monitoring tools and technical safeguards to protect both users and models."
+      },
+      {
+        "q": "Are video chat sessions private?",
+        "a": "Yes. Each session is a private one-to-one between the two people: it isn't broadcast or opened to third parties. To keep the space safe, the platform relies on automated safety measures."
+      },
+      {
+        "q": "Can I work as a model?",
+        "a": "Yes.",
+        "to": "/modelos",
+        "toLabel": "Learn more for models"
+      },
+      {
+        "q": "Where can I read the rules?",
+        "a": "You can review them in our Community Guidelines and the legal information in our Terms of Service.",
+        "links": [
+          {
+            "to": "/community-guidelines",
+            "label": "Community Guidelines"
+          },
+          {
+            "to": "/legal?tab=terms",
+            "label": "Terms of Service"
+          }
+        ]
+      }
     ]
   },
   "sessionHUD": {
@@ -580,10 +640,34 @@
       "IMPERIAL": "Imperial"
     },
     "sexValue": "Female",
-    "bustValues": { "SMALL": "Small", "MEDIUM": "Medium", "LARGE": "Large", "XLARGE": "Extra large" },
-    "buttValues": { "SMALL": "Small", "MEDIUM": "Medium", "LARGE": "Large", "XLARGE": "Extra large" },
-    "bodyValues": { "SLIM": "Slim", "ATHLETIC": "Athletic", "AVERAGE": "Average", "CURVY": "Curvy", "BBW": "BBW" },
-    "days": { "1": "Monday", "2": "Tuesday", "3": "Wednesday", "4": "Thursday", "5": "Friday", "6": "Saturday", "7": "Sunday" },
+    "bustValues": {
+      "SMALL": "Small",
+      "MEDIUM": "Medium",
+      "LARGE": "Large",
+      "XLARGE": "Extra large"
+    },
+    "buttValues": {
+      "SMALL": "Small",
+      "MEDIUM": "Medium",
+      "LARGE": "Large",
+      "XLARGE": "Extra large"
+    },
+    "bodyValues": {
+      "SLIM": "Slim",
+      "ATHLETIC": "Athletic",
+      "AVERAGE": "Average",
+      "CURVY": "Curvy",
+      "BBW": "BBW"
+    },
+    "days": {
+      "1": "Monday",
+      "2": "Tuesday",
+      "3": "Wednesday",
+      "4": "Thursday",
+      "5": "Friday",
+      "6": "Saturday",
+      "7": "Sunday"
+    },
     "availability": {
       "note": "Observed typical availability · Central European Time (Europe/Madrid)",
       "empty": "No connection data yet. It will fill in as the model comes online.",
@@ -611,7 +695,13 @@
       "RU": "Russian",
       "PL": "Polish",
       "NL": "Dutch",
-      "RO": "Romanian"
+      "RO": "Romanian",
+      "JA": "Japanese",
+      "ZH": "Chinese",
+      "KO": "Korean",
+      "AR": "Arabic",
+      "TR": "Turkish",
+      "MG": "Malagasy"
     }
   },
   "modelSpotlight": {
@@ -1257,11 +1347,19 @@
     },
     "favorites": {
       "inCallLocked": "In call: the list is locked until you hang up.",
-      "search": { "placeholder": "Search contact…" },
-      "groups": { "online": "Online", "offline": "Offline" },
+      "search": {
+        "placeholder": "Search contact…"
+      },
+      "groups": {
+        "online": "Online",
+        "offline": "Offline"
+      },
       "botSubtitle": "Assistant · always available",
       "giftLabel": "Gift",
-      "day": { "today": "Today", "yesterday": "Yesterday" },
+      "day": {
+        "today": "Today",
+        "yesterday": "Yesterday"
+      },
       "selectFavorite": "Select a favorite to open the conversation here.",
       "pendingInvitationMessage": "invited you to become mutual favorites. Accept to enable chat.",
       "acceptInvitation": "Accept invitation",
@@ -4028,12 +4126,30 @@
       "kicker": "Your way, with backup.",
       "sub": "A private one-on-one video chat, with both sides verified and payouts under control. You set the rules of your work.",
       "items": {
-        "price": { "title": "You set the price", "text": "Set your per-minute rate once you reach your first earnings goal." },
-        "hours": { "title": "At your pace", "text": "You work within time windows and pick the ones that suit you best." },
-        "verified": { "title": "Verified clients", "text": "Age and identity checked on both sides of the camera." },
-        "payments": { "title": "Paid on time", "text": "Secure payouts, no hidden fees or surprises." },
-        "oneToOne": { "title": "One-on-one, not a showcase", "text": "Private sessions: more intimate and better paid than open cam." },
-        "tiers": { "title": "You grow by tiers", "text": "The more you bill, the better the tier: better share and higher rates." }
+        "price": {
+          "title": "You set the price",
+          "text": "Set your per-minute rate once you reach your first earnings goal."
+        },
+        "hours": {
+          "title": "At your pace",
+          "text": "You work within time windows and pick the ones that suit you best."
+        },
+        "verified": {
+          "title": "Verified clients",
+          "text": "Age and identity checked on both sides of the camera."
+        },
+        "payments": {
+          "title": "Paid on time",
+          "text": "Secure payouts, no hidden fees or surprises."
+        },
+        "oneToOne": {
+          "title": "One-on-one, not a showcase",
+          "text": "Private sessions: more intimate and better paid than open cam."
+        },
+        "tiers": {
+          "title": "You grow by tiers",
+          "text": "The more you bill, the better the tier: better share and higher rates."
+        }
       }
     },
     "earn": {
@@ -4526,5 +4642,15 @@
     "errors": {
       "saveFailed": "Could not save changes. Please try again."
     }
+  },
+  "myLanguages": {
+    "title": "Languages I speak",
+    "subtitle": "Select the languages you speak and which one is your main language. The main one is shown on your profile and is what your chats are translated to.",
+    "primary": "main",
+    "primaryHint": "Main language",
+    "save": "Save languages",
+    "savedOk": "Languages saved.",
+    "saveError": "Couldn't save your languages.",
+    "errorEmpty": "Pick at least one language you speak."
   }
 }

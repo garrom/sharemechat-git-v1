@@ -91,7 +91,7 @@ public class ModelService {
             throw new UserNotFoundException("Modelo no disponible");
         }
 
-        List<UserLanguage> langs = userLanguageRepository.findByUserId(userId);
+        List<UserLanguage> langs = userLanguageRepository.findByUserIdOrderByPrimaryDescPreferenceWeightDescIdAsc(userId);
         List<ModelPublicProfileDTO.LanguageEntry> languageEntries = langs.stream()
                 .map(l -> new ModelPublicProfileDTO.LanguageEntry(
                         l.getLangCode(),

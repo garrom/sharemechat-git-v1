@@ -238,18 +238,18 @@ public class UserController {
         return ResponseEntity.ok(updatedUser);
     }
 
-    // pending-hardening §5.3: setter del idioma preferido para chat P2P.
-    // Acepta null / blank en el body para volver al fallback (uiLocale).
-    // Valida contra SupportedChatLanguages; devuelve 400 si no es soportado.
-    @PutMapping("/me/preferred-chat-lang")
-    public ResponseEntity<?> updateMyPreferredChatLang(@RequestBody Map<String, String> body,
-                                                       Authentication authentication) {
+    // Fase 2 i18n (2026-08-21): editar los idiomas que habla el usuario
+    // (user_languages). Body: lista [{langCode, primary, level?}]. Exactamente
+    // uno primario (el destino de traducción de chat + idioma del perfil).
+    // Sustituye a PUT /me/preferred-chat-lang. 400 si algún código no es soportado.
+    @PutMapping("/me/languages")
+    public ResponseEntity<?> updateMyLanguages(@RequestBody java.util.List<com.sharemechat.dto.UserLanguageDTO> body,
+                                               Authentication authentication) {
         if (authentication == null || authentication.getName() == null) {
             return ResponseEntity.status(401).body(null);
         }
-        String preferredChatLang = body != null ? body.get("preferredChatLang") : null;
         try {
-            UserDTO updatedUser = userService.updatePreferredChatLang(authentication.getName(), preferredChatLang);
+            UserDTO updatedUser = userService.updateUserLanguages(authentication.getName(), body);
             return ResponseEntity.ok(updatedUser);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of(

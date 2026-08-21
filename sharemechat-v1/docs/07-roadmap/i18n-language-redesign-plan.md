@@ -192,14 +192,28 @@ Consecuencias:
 - **Sync script**: herramienta para rellenar claves faltantes por idioma (punto #5).
 
 ### Fase 2 — Idioma personal editable (Nivel B) + arreglar la incongruencia del perfil
-- Endpoint `PUT /me/languages` (editar `user_languages`) + card "Tu idioma / idiomas
-  que hablas" (modelo y cliente) con un **set AMPLIO** (los 15 + raros como `mg`), con
-  uno marcado **principal**. El principal = destino de chat + idioma del perfil.
-- Asegurar `labels` de nombre de idioma (`modelProfileExpanded.languages.<CODE>`) para
-  el set amplio, para que el perfil renderice el nombre en la UI del que mira.
-- Sincronizar/limpiar datos legacy (el `fr` de Guarris y similares).
-- Retirar `PreferredChatLangCard` (fundido en Nivel B).
-- Añadir `ORDER BY` determinista a `findByUserId` (deuda menor detectada).
+**Decisiones cerradas 2026-08-21:** A) retirar el USO de `preferred_chat_lang` (el chat
+pasa a leer el primario de `user_languages`); B) el card offrece los 15 de
+`SupportedChatLanguages` **+ mg** (malgache); C) implementar el sync Nivel A→B en esta
+fase; D) la **columna** `preferred_chat_lang` se **depreca** ahora (sin uso) y su DROP se
+agenda en **Fase 5 (limpieza final)** tras validar 2-4.
+
+- `SupportedChatLanguages.CODES` **+ mg** (el backend ya traduce a cualquiera:
+  `MessageTranslationService.normalizeLang` no gatea; solo trunca).
+- Endpoint `PUT /me/languages` (editar `user_languages`) + card **"Idiomas que hablo"**
+  (reemplaza `PreferredChatLangCard`, en `PerfilClient:500` y `PerfilModel:639`): multi-
+  select de los idiomas soportados + uno marcado **principal**. El principal = destino de
+  chat + idioma principal del perfil.
+- `UserDTO`: + `languages[]` + `primaryLanguage`; − `preferredChatLang`.
+  `useTranslationSettings`: `viewerLang = primaryLanguage || uiLocale`.
+- `UserService.updateUserLanguages(email, lista)` (transaccional, valida, 1 primario);
+  − `updatePreferredChatLang`. Sync A→B en `updateUiLocale` (si el primario == ui_locale
+  anterior, actualizarlo al nuevo).
+- `labels` de nombre de idioma (`modelProfileExpanded.languages.<CODE>`) para el set
+  (faltan ja, zh, ko, ar, tr, mg) en es/en + propagar a fr/de/pt vía sync.
+- `ORDER BY` determinista en `findByUserId` (primario primero); usado por el perfil.
+- Incongruencia Guarris: se arregla **con el card** (podrá editar); su `fr` pasa a ser un
+  idioma personal válido. **No hace falta migración de datos.**
 
 ### Fase 3 — Autodetección en el registro (barato; ya tenemos los datos)
 - Sembrar el **idioma personal (Nivel B, set amplio)** por `Accept-Language` +
@@ -212,9 +226,18 @@ Consecuencias:
 - Banner sugerente, sin imponer.
 
 ### Fase 4 — Ampliar idiomas de UI (it, pt, nl, pl) + traducción de chat a idiomas raros
-- Repetir el proceso de Fase 1 para los siguientes idiomas de UI.
-- **Chat**: ampliar `SupportedChatLanguages` (o abrirlo) para idiomas raros
-  (malgache, etc.) — coste marginal cero en motor.
+- Repetir el proceso de Fase 1 para los siguientes idiomas de UI. (`pt` ya hecho en
+  Fase 1-bis, 2026-08-21.)
+- **Chat**: ampliar `SupportedChatLanguages` para más idiomas raros bajo demanda —
+  coste marginal cero en motor.
+
+### Fase 5 — Limpieza final (tras validar 1-4)
+Tareas de deprecación agendadas explícitamente (NO "algún día"): se ejecutan cuando
+1-4 estén probadas y estables.
+- **DROP** de la columna `users.preferred_chat_lang` (migración `V<n>`), ya sin uso
+  desde Fase 2. Reapuntar/verificar que nada la lee antes.
+- Retirar cualquier código muerto de la deprecación (endpoint viejo, DTO, etc.).
+- Barrido final de labels de idioma faltantes y consistencia i18n.
 
 ---
 

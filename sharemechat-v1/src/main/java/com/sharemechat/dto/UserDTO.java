@@ -27,7 +27,11 @@ public class UserDTO {
     private Boolean unsubscribe;
     private LocalDateTime createdAt;
     private String uiLocale;
-    private String preferredChatLang;
+    // Fase 2 i18n (2026-08-21): idioma personal editable (user_languages). El
+    // `primaryLanguage` (el primario de la lista) es el destino de traducción de
+    // chat. Sustituye a `preferredChatLang` (columna deprecada, drop en Fase 5).
+    private List<UserLanguageDTO> languages;
+    private String primaryLanguage;
 
     private String accountStatus;
     private LocalDateTime suspendedUntil;
@@ -120,8 +124,11 @@ public class UserDTO {
     public String getUiLocale() { return uiLocale; }
     public void setUiLocale(String uiLocale) { this.uiLocale = uiLocale; }
 
-    public String getPreferredChatLang() { return preferredChatLang; }
-    public void setPreferredChatLang(String preferredChatLang) { this.preferredChatLang = preferredChatLang; }
+    public List<UserLanguageDTO> getLanguages() { return languages; }
+    public void setLanguages(List<UserLanguageDTO> languages) { this.languages = languages; }
+
+    public String getPrimaryLanguage() { return primaryLanguage; }
+    public void setPrimaryLanguage(String primaryLanguage) { this.primaryLanguage = primaryLanguage; }
 
     public String getAccountStatus() { return accountStatus; }
     public void setAccountStatus(String accountStatus) { this.accountStatus = accountStatus; }

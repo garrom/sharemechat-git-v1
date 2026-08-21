@@ -51,10 +51,10 @@ export function useTranslationSettings(viewerUser) {
     setShowOriginal(!showOriginal);
   }, [showOriginal, setShowOriginal]);
 
-  // Idioma del viewer para traducir mensajes recibidos. Prioriza
-  // preferredChatLang (setter explicito del perfil) sobre uiLocale (idioma
-  // de la UI, seteado en registro/switcher). Null si ninguno esta poblado.
-  const viewerLang = (viewerUser && (viewerUser.preferredChatLang || viewerUser.uiLocale)) || null;
+  // Idioma del viewer para traducir mensajes recibidos. Fase 2 i18n: prioriza
+  // el idioma personal PRIMARIO (user_languages, card "Idiomas que hablo") sobre
+  // el uiLocale (idioma de la interfaz). Null si ninguno esta poblado.
+  const viewerLang = (viewerUser && (viewerUser.primaryLanguage || viewerUser.uiLocale)) || null;
 
   return {
     loading,

@@ -18,10 +18,14 @@ export async function translateBatch(ids, lang) {
   });
 }
 
-export async function updatePreferredChatLang(preferredChatLang) {
-  return apiFetch('/users/me/preferred-chat-lang', {
+// Fase 2 i18n (2026-08-21): edita los idiomas que habla el usuario
+// (user_languages). `languages` = [{ langCode, primary, level? }], con
+// exactamente uno primary=true (destino de traducción de chat + idioma del
+// perfil). Sustituye a updatePreferredChatLang.
+export async function updateMyLanguages(languages) {
+  return apiFetch('/users/me/languages', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ preferredChatLang: preferredChatLang || null }),
+    body: JSON.stringify(Array.isArray(languages) ? languages : []),
   });
 }

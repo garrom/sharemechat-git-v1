@@ -26,7 +26,12 @@ public final class SupportedChatLanguages {
 
     public static final List<String> CODES = List.of(
             "es", "en", "pt", "fr", "it", "de", "nl",
-            "pl", "ru", "ja", "zh", "ko", "ar", "tr", "ro"
+            "pl", "ru", "ja", "zh", "ko", "ar", "tr", "ro",
+            // Fase 2 i18n (2026-08-21): idioma raro seleccionable como idioma
+            // PERSONAL/de chat (modelos de Madagascar). El motor traduce a
+            // cualquiera (normalizeLang no gatea); esta lista solo controla qué
+            // se OFRECE en el card "Idiomas que hablo".
+            "mg"
     );
 
     private static final Set<String> CODES_SET = Set.copyOf(CODES);

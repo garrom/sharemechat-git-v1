@@ -63,7 +63,7 @@ import {
 } from '../../styles/subpages/PerfilClientModelStyle';
 
 import MyAssetsManager from './MyAssetsManager';
-import PreferredChatLangCard from '../../components/PreferredChatLangCard';
+import MyLanguagesCard from '../../components/MyLanguagesCard';
 import ModelReputationCard from '../../components/ModelReputationCard';
 import ModelRankingModal from '../../components/ModelRankingModal';
 import ModelProfileExpanded from './ModelProfileExpanded';
@@ -636,7 +636,7 @@ const PerfilModel = () => {
               {/* pending-hardening §5.3 (2026-08-08): selector idioma
                   preferido para chat P2P. Se auto-oculta si la feature de
                   traduccion no esta habilitada en el entorno. */}
-              <PreferredChatLangCard />
+              <MyLanguagesCard />
 
               <SecurityCard>
                 <CardHeader>

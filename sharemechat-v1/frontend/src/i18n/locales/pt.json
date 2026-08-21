@@ -1,5 +1,8 @@
 {
   "faqPage": {
+    "title": "Perguntas frequentes",
+    "back": "← Voltar",
+    "intro": "Aqui respondemos às perguntas mais frequentes sobre o funcionamento do SharemeChat, sessões e pagamentos.",
     "items": [
       {
         "q": "O que é o SharemeChat?",
@@ -64,6 +67,8 @@
         "toLabel": "Mais informações sobre os modelos"
       },
       {
+        "q": "Onde posso ler as regras?",
+        "a": "Você pode encontrá-las em nossas Diretrizes da Comunidade e as informações legais nos Termos de Serviço.",
         "links": [
           {
             "to": "/diretrizes-da-comunidade",
@@ -73,14 +78,9 @@
             "to": "/legal?tab=termos",
             "label": "Termos de serviço"
           }
-        ],
-        "q": "Onde posso ler as regras?",
-        "a": "Você pode encontrá-las em nossas Diretrizes da Comunidade e as informações legais nos Termos de Serviço."
+        ]
       }
-    ],
-    "title": "Perguntas frequentes",
-    "back": "← Voltar",
-    "intro": "Aqui respondemos às perguntas mais frequentes sobre o funcionamento do SharemeChat, sessões e pagamentos."
+    ]
   },
   "sessionHUD": {
     "client": {
@@ -133,48 +133,48 @@
       "menuTitle": "Menu"
     },
     "quickMatching": {
+      "eyebrow": "Conexão rápida",
+      "title": "Pare de procurar. Deixe a faísca acender.",
+      "body": "Participe de novas conversas sem precisar vasculhar inúmeros perfis. Tudo foi pensado para tornar a descoberta de alguém rápida, fácil e simples.",
       "pills": {
         "fastDiscovery": "Descoberta rápida e aleatória",
         "lessBrowsing": "Menos busca, mais descobertas.",
         "instantPath": "Caminho direto para a conversa"
       },
-      "eyebrow": "Conexão rápida",
-      "title": "Pare de procurar. Deixe a faísca acender.",
-      "body": "Participe de novas conversas sem precisar vasculhar inúmeros perfis. Tudo foi pensado para tornar a descoberta de alguém rápida, fácil e simples.",
       "imageAltMain": "Casal conversando descontraidamente em um bar com iluminação aconchegante.",
       "imageAltMini": "Simulação de uma chamada de vídeo individual mostrando o jogador na tela."
     },
     "clearFlow": {
+      "eyebrow": "Tudo flui",
+      "title": "Tudo fica mais fácil quando a interface é simples.",
+      "body": "A experiência foi projetada para ser simples, clara e confortável em todas as telas. Menos atrito significa mais foco no momento presente e menos tempo gasto tentando entender como tudo funciona.",
       "pills": {
         "cleanerInteractions": "Interações claras do início ao fim.",
         "simpleActions": "Ações simples, respostas claras",
         "smoothOnAnyDevice": "Projetado para funcionar perfeitamente em qualquer dispositivo."
       },
-      "eyebrow": "Tudo flui",
-      "title": "Tudo fica mais fácil quando a interface é simples.",
-      "body": "A experiência foi projetada para ser simples, clara e confortável em todas as telas. Menos atrito significa mais foco no momento presente e menos tempo gasto tentando entender como tudo funciona.",
       "imageAltMain": "Pessoa que utiliza o SharemeChat em três dispositivos: celular, tablet e laptop."
     },
     "confidence": {
+      "eyebrow": "Privado e protegido",
+      "title": "Confie em cada conversa.",
+      "body": "A sensação de que sua privacidade está protegida muda a forma como você se conecta. Com um ambiente mais tranquilo, controle mais claro e o suporte de sistemas de moderação, cada interação parece mais segura.",
       "pills": {
         "privateByDesign": "Mais privacidade por princípio.",
         "trustSignals": "Confiança respaldada pela tecnologia",
         "cleanerSpace": "Um espaço mais limpo para interações reais."
       },
-      "eyebrow": "Privado e protegido",
-      "title": "Confie em cada conversa.",
-      "body": "A sensação de que sua privacidade está protegida muda a forma como você se conecta. Com um ambiente mais tranquilo, controle mais claro e o suporte de sistemas de moderação, cada interação parece mais segura.",
       "imageAltMain": "Representação visual de segurança com um centro acolhedor que evoca confiança."
     },
     "unexpectedChemistry": {
+      "eyebrow": "Química Inesperada",
+      "title": "Às vezes, a conexão certa surge quando você para de forçá-la.",
+      "body": "Nem toda conversa importante começa com um plano perfeito. Às vezes, começa com uma conexão espontânea, uma afinidade inesperada e o desejo de ficar um pouco mais.",
       "pills": {
         "naturalDiscovery": "Uma descoberta que parece natural.",
         "realPotential": "Partidas inesperadas com potencial real",
         "genuineSpark": "Espaço para que surja uma faísca de verdade."
       },
-      "eyebrow": "Química Inesperada",
-      "title": "Às vezes, a conexão certa surge quando você para de forçá-la.",
-      "body": "Nem toda conversa importante começa com um plano perfeito. Às vezes, começa com uma conexão espontânea, uma afinidade inesperada e o desejo de ficar um pouco mais.",
       "imageAltChica1": "Retrato de uma mulher com estilo natural",
       "imageAltChica2": "Retrato de uma mulher olhando calmamente para a câmera.",
       "imageAltChico1": "Retrato de um homem com uma expressão amável.",
@@ -186,24 +186,24 @@
       "startVideoChat": "Iniciar videochamada"
     },
     "hero": {
-      "actions": {
-        "start": "Iniciar videochamada",
-        "howItWorks": "Veja como funciona"
-      },
-      "slot": {
-        "top": "Modelos principais",
-        "new": "Novo modelo",
-        "random": "Descobrir"
-      },
       "eyebrow": "Conexão privada individual",
       "titlePrefix": "Bate-papo por vídeo com",
       "titleAccent": "modelos reais",
       "subtitle": "Conecte-se instantaneamente em uma experiência privada e personalizada, criada para gerar confiança desde o primeiro segundo.",
       "meta": "Pessoas reais, conversas reais e um ambiente projetado para que tudo flua sem problemas e sem distrações.",
+      "actions": {
+        "start": "Iniciar videochamada",
+        "howItWorks": "Veja como funciona"
+      },
       "freeTrial": "Cadastre-se e experimente GRÁTIS.",
       "loading": "Carregando modelos…",
       "prevAria": "Modelo anterior",
-      "nextAria": "Próximo modelo"
+      "nextAria": "Próximo modelo",
+      "slot": {
+        "top": "Modelos principais",
+        "new": "Novo modelo",
+        "random": "Descobrir"
+      }
     }
   },
   "common": {
@@ -226,6 +226,18 @@
       "busy": "ocupado",
       "offline": "offline"
     },
+    "close": "Fechar",
+    "cancel": "Cancelar",
+    "other": "Outro",
+    "exit": "Sair",
+    "back": "Retornar",
+    "hangup": "Pendurar",
+    "fullscreen": "Tela cheia",
+    "sendMessage": "Enviar mensagem",
+    "networkError": "Erro de rede",
+    "loading": "Carregando…",
+    "saving": "Salvando…",
+    "ratePerMin": "{{rate}} €/min",
     "actions": {
       "addToFavorites": "Adicionar aos favoritos",
       "search": "Procurar"
@@ -253,18 +265,18 @@
       "infoAriaLabel": "Mais informações"
     },
     "media": {
+      "cameraRequired": "Primeiro, ligue a câmera.",
+      "cameraRequiredForCall": "Primeiro, ative a câmera para fazer uma chamada.",
+      "noActiveCamera": "Não há nenhuma câmera ativa.",
+      "cameraActivationFailed": "Não foi possível ativar a câmera. Verifique as permissões e tente novamente.",
+      "cameraAccessFailed": "Não foi possível acessar a câmera.",
       "virtualCameraBlocked": {
         "title": "Câmera virtual detectada",
         "message": "Detectamos que sua câmera atual é uma câmera virtual ({{device}}). Por segurança e para garantir uma interação ao vivo real, o SharemeChat permite apenas transmissões com câmeras físicas.",
         "genericMessage": "Detectamos uma câmera virtual como fonte de vídeo. Por motivos de segurança e para garantir a interação em tempo real, o SharemeChat permite apenas transmissões com câmeras físicas.",
         "guidance": "Desative o OBS, ManyCam, Snap Camera ou qualquer software similar e selecione sua webcam física nas configurações do navegador.",
         "unknownDevice": "Não foi possível identificar sua câmera. Certifique-se de conceder as permissões necessárias e usar sua webcam física, não uma virtual."
-      },
-      "cameraRequired": "Primeiro, ligue a câmera.",
-      "cameraRequiredForCall": "Primeiro, ative a câmera para fazer uma chamada.",
-      "noActiveCamera": "Não há nenhuma câmera ativa.",
-      "cameraActivationFailed": "Não foi possível ativar a câmera. Verifique as permissões e tente novamente.",
-      "cameraAccessFailed": "Não foi possível acessar a câmera."
+      }
     },
     "chat": {
       "errors": {
@@ -282,21 +294,11 @@
         "showOriginal": "Ver original",
         "showTranslations": "Mostrar traduções"
       }
-    },
-    "close": "Fechar",
-    "cancel": "Cancelar",
-    "other": "Outro",
-    "exit": "Sair",
-    "back": "Retornar",
-    "hangup": "Pendurar",
-    "fullscreen": "Tela cheia",
-    "sendMessage": "Enviar mensagem",
-    "networkError": "Erro de rede",
-    "loading": "Carregando…",
-    "saving": "Salvando…",
-    "ratePerMin": "{{rate}} €/min"
+    }
   },
   "linkedAccounts": {
+    "title": "Contas vinculadas",
+    "subtitle": "Adicione provedores externos para acesso sem senha.",
     "google": {
       "linked": "ligado",
       "notLinked": "não vinculado",
@@ -323,12 +325,12 @@
       "invalidToken": "Não foi possível verificar sua conta do Google.",
       "needsPasswordFirst": "Defina uma senha antes de desvincular o Google, ou você perderá o acesso.",
       "passwordAlreadySet": "Você já possui uma senha. Utilize o fluxo de alteração de senha."
-    },
-    "title": "Contas vinculadas",
-    "subtitle": "Adicione provedores externos para acesso sem senha."
+    }
   },
   "profileCommon": {
+    "accountTitle": "Conta",
     "completeness": {
+      "complete": "completo",
       "tip": {
         "photo": "Carregar uma foto",
         "video": "Adicione um vídeo aos destaques.",
@@ -336,8 +338,7 @@
         "physical": "Preencha seus dados físicos",
         "interests": "Adicione seus interesses",
         "nickname": "escolha um apelido"
-      },
-      "complete": "completo"
+      }
     },
     "loading": {
       "default": "Carregando..."
@@ -407,10 +408,11 @@
     "alt": {
       "profilePhoto": "Foto de perfil",
       "currentProfilePhoto": "Foto de perfil atual"
-    },
-    "accountTitle": "Conta"
+    }
   },
   "perfilClient": {
+    "displayName": "Seu perfil",
+    "role": "Cliente",
     "header": {
       "subtitle": "Gerencie seus dados pessoais e a foto que as modelos verão."
     },
@@ -432,11 +434,11 @@
     "hints": {
       "interests": "Separe os interesses com vírgulas. Usamos isso para sugerir modelos melhores.",
       "photoFormat": "Formato recomendado: JPG/PNG. A imagem será recortada automaticamente para melhor visualização em dispositivos móveis."
-    },
-    "displayName": "Seu perfil",
-    "role": "Cliente"
+    }
   },
   "perfilModel": {
+    "displayName": "Seu perfil de modelo",
+    "role": "Modelo",
     "physical": {
       "title": "Dados físicos",
       "subtitle": "Essas informações serão exibidas aos clientes no seu perfil público. Preencha apenas os campos que desejar.",
@@ -487,6 +489,10 @@
       "videoFormat": "Formato recomendado: MP4. Tamanho adequado para carregamento rápido."
     },
     "contract": {
+      "title": "Modelo de contrato atualizado",
+      "subtitle": "Uma nova versão do contrato foi publicada. Você precisa aceitá-la para continuar gerenciando sua foto de perfil e vídeo.",
+      "currentVersion": "Versão atual:",
+      "confirmAccept": "O contrato modelo foi atualizado. Você precisa aceitar a nova versão para continuar gerenciando seu perfil de modelo.\n\nDeseja aceitá-lo agora?",
       "actions": {
         "viewContract": "Ver contrato",
         "accepting": "Aceitando...",
@@ -499,11 +505,7 @@
         "accept": "O contrato não pôde ser aceito.",
         "acceptBeforeUpload": "Você precisa aceitar a nova versão do contrato modelo antes de enviar os arquivos.",
         "acceptBeforeEditFiles": "Você deve aceitar a nova versão do contrato modelo antes de modificar qualquer arquivo."
-      },
-      "title": "Modelo de contrato atualizado",
-      "subtitle": "Uma nova versão do contrato foi publicada. Você precisa aceitá-la para continuar gerenciando sua foto de perfil e vídeo.",
-      "currentVersion": "Versão atual:",
-      "confirmAccept": "O contrato modelo foi atualizado. Você precisa aceitar a nova versão para continuar gerenciando seu perfil de modelo.\n\nDeseja aceitá-lo agora?"
+      }
     },
     "media": {
       "success": {
@@ -599,11 +601,15 @@
       },
       "loading": "Carregando galeria...",
       "loadError": "Não foi possível enviar seus arquivos."
-    },
-    "displayName": "Seu perfil de modelo",
-    "role": "Modelo"
+    }
   },
   "modelProfileExpanded": {
+    "title": "Perfil de {{name}}",
+    "titleDefault": "Perfil do modelo",
+    "fallbackNickname": "Modelo",
+    "loading": "Carregando perfil...",
+    "unavailable": "Este modelo não está mais disponível.",
+    "noPrincipalPhoto": "Nenhuma foto disponível",
     "labels": {
       "interests": "Interesses",
       "age": "Idade",
@@ -633,6 +639,7 @@
       "GEMS_CROWN": "Coroa de gemas",
       "IMPERIAL": "Imperial"
     },
+    "sexValue": "Mulheres",
     "bustValues": {
       "SMALL": "Pequeno",
       "MEDIUM": "Média",
@@ -688,15 +695,14 @@
       "RU": "russo",
       "PL": "polonês",
       "NL": "Holandês",
-      "RO": "romeno"
-    },
-    "title": "Perfil de {{name}}",
-    "titleDefault": "Perfil do modelo",
-    "fallbackNickname": "Modelo",
-    "loading": "Carregando perfil...",
-    "unavailable": "Este modelo não está mais disponível.",
-    "noPrincipalPhoto": "Nenhuma foto disponível",
-    "sexValue": "Mulheres"
+      "RO": "romeno",
+      "JA": "japonês",
+      "ZH": "chinês",
+      "KO": "coreano",
+      "AR": "árabe",
+      "TR": "turco",
+      "MG": "malgaxe"
+    }
   },
   "modelSpotlight": {
     "like": "Como",
@@ -830,6 +836,10 @@
       "submit": "Solicitar cancelamento"
     },
     "unsubscribe": {
+      "title": "Cancelar inscrição",
+      "reasonLabel": "Selecione o motivo da sua saída:",
+      "warning": "Ao cancelar a assinatura, você não poderá mais acessar seu histórico de bate-papo e sua conta será encerrada de acordo com a política atual da plataforma.",
+      "submit": "Cancelar inscrição",
       "options": {
         "notMatching": {
           "title": "Não consigo encontrar boas combinações.",
@@ -851,37 +861,33 @@
           "title": "Outro",
           "desc": "Prefiro não especificar."
         }
-      },
-      "title": "Cancelar inscrição",
-      "reasonLabel": "Selecione o motivo da sua saída:",
-      "warning": "Ao cancelar a assinatura, você não poderá mais acessar seu histórico de bate-papo e sua conta será encerrada de acordo com a política atual da plataforma.",
-      "submit": "Cancelar inscrição"
+      }
     },
     "report": {
-      "options": {
-        "abuse": "Abuso / Comportamento Inapropriado",
-        "harassment": "Assédio/Intimidação",
-        "fraud": "Fraude / Golpe / Falsificação de identidade",
-        "minor": "Possível menor",
-        "other": "Outro"
-      },
       "title": "Denunciar abuso",
       "descriptionRequiredTitle": "Descrição necessária",
       "descriptionRequiredMessage": "Se você escolher \"Outro\", adicione uma breve descrição.",
       "descriptionLabel": "Descrição (opcional, mas recomendada):",
       "descriptionPlaceholder": "Descreva brevemente o que aconteceu…",
       "alsoBlock": "Bloqueie também este usuário.",
-      "submit": "Enviar relatório"
+      "submit": "Enviar relatório",
+      "options": {
+        "abuse": "Abuso / Comportamento Inapropriado",
+        "harassment": "Assédio/Intimidação",
+        "fraud": "Fraude / Golpe / Falsificação de identidade",
+        "minor": "Possível menor",
+        "other": "Outro"
+      }
     },
     "block": {
+      "title": "Bloquear",
+      "reasonLabel": "Escolha um motivo para bloquear {{displayName}}:",
+      "submit": "Bloquear",
       "options": {
         "pause": "Faça uma pausa por um tempo.",
         "never": "Não quero ver este usuário.",
         "other": "Outros motivos"
-      },
-      "title": "Bloquear",
-      "reasonLabel": "Escolha um motivo para bloquear {{displayName}}:",
-      "submit": "Bloquear"
+      }
     }
   },
   "favorites": {
@@ -924,10 +930,14 @@
   },
   "consent": {
     "ageGate": {
+      "badge": "Classificação Indicativa: 18+ (Apenas para Adultos)",
+      "title": "Apenas para adultos",
+      "subtitle": "SharemeChat é uma plataforma privada de bate-papo por vídeo individual para adultos. Você precisa confirmar sua idade para continuar.",
       "zeroTolerance": {
         "title": "Tolerância zero para menores de idade.",
         "body": "O acesso é estritamente limitado a adultos. Qualquer envolvimento de menores em conteúdo, transmissões ou interações é estritamente proibido e resultará em medidas imediatas."
       },
+      "conditionsTitle": "Ao continuar, você confirma que:",
       "conditions": {
         "age": "Você tem 18 anos de idade ou mais e é legalmente maior de idade.",
         "noMinorAccess": "Você não permitirá que menores de idade acessem a plataforma a partir do seu dispositivo ou conta.",
@@ -951,6 +961,7 @@
         "privacy": "política de Privacidade",
         "suffix": "."
       },
+      "auditNote": "Esta confirmação é registada para fins de segurança e auditoria. Versão legal: {{version}}.",
       "actions": {
         "exit": "Sair",
         "saving": "Confirmação de salvamento...",
@@ -958,12 +969,7 @@
       },
       "errors": {
         "recordFailed": "A confirmação não pôde ser registrada. Tente novamente."
-      },
-      "badge": "Classificação Indicativa: 18+ (Apenas para Adultos)",
-      "title": "Apenas para adultos",
-      "subtitle": "SharemeChat é uma plataforma privada de bate-papo por vídeo individual para adultos. Você precisa confirmar sua idade para continuar.",
-      "conditionsTitle": "Ao continuar, você confirma que:",
-      "auditNote": "Esta confirmação é registada para fins de segurança e auditoria. Versão legal: {{version}}."
+      }
     }
   },
   "auth": {
@@ -972,6 +978,8 @@
       "register": "Cadastre-se"
     },
     "login": {
+      "title": "Conecte-se",
+      "titleModel": "Modelo de login",
       "status": {
         "successRedirecting": "Acesso efetuado com sucesso. Redirecionando…"
       },
@@ -996,11 +1004,11 @@
         "serviceUnavailable": "Serviço não disponível.",
         "generic": "Erro ao fazer login",
         "invalidUserType": "Tipo de usuário inválido"
-      },
-      "title": "Conecte-se",
-      "titleModel": "Modelo de login"
+      }
     },
     "forgotPasswordPage": {
+      "title": "Recuperar senha",
+      "subtitle": "Insira seu e-mail e enviaremos um link para redefinir sua senha.",
       "actions": {
         "submit": "Enviar link",
         "loading": "Enviando…"
@@ -1008,11 +1016,11 @@
       "status": {
         "success": "Se o seu endereço de e-mail estiver cadastrado no SharemeChat, você receberá um link para redefinir sua senha em alguns minutos.",
         "connectionError": "Erro de conexão. Tente novamente."
-      },
-      "title": "Recuperar senha",
-      "subtitle": "Insira seu e-mail e enviaremos um link para redefinir sua senha."
+      }
     },
     "resetPasswordPage": {
+      "title": "Defina uma nova senha.",
+      "subtitle": "Digite e confirme sua nova senha para concluir a alteração.",
       "placeholders": {
         "password": "Nova senha (mín. 8)",
         "confirmPassword": "Repita a nova senha."
@@ -1037,11 +1045,11 @@
         "tokenInvalid": "Token ausente ou inválido.",
         "submit": "A senha não pôde ser redefinida.",
         "connection": "Erro de conexão. Tente novamente."
-      },
-      "title": "Defina uma nova senha.",
-      "subtitle": "Digite e confirme sua nova senha para concluir a alteração."
+      }
     },
     "changePasswordPage": {
+      "title": "Alterar a senha",
+      "subtitle": "Por motivos de segurança, digite novamente sua senha atual.",
       "labels": {
         "currentPassword": "Senha atual",
         "newPassword": "Nova Senha",
@@ -1075,21 +1083,20 @@
         "completeFields": "Preencha todos os campos.",
         "passwordMismatch": "A nova senha e sua repetição não coincidem.",
         "submit": "Erro ao alterar a senha"
-      },
-      "title": "Alterar a senha",
-      "subtitle": "Por motivos de segurança, digite novamente sua senha atual."
+      }
     },
     "google": {
+      "orSeparator": "qualquer",
       "errors": {
         "emailCollision": "Já existe uma conta com este endereço de e-mail. Inicie sessão com a sua palavra-passe e ligue a sua conta Google a partir do seu perfil.",
         "noAccount": "Você não tem uma conta. Cadastre-se primeiro no Google usando o formulário de inscrição.",
         "accountInactive": "Esta conta não está ativa. Entre em contato com o suporte se acreditar que isso é um erro.",
         "unavailable": "O login com o Google não está disponível no momento.",
         "invalidToken": "Não foi possível verificar sua conta do Google. Tente novamente."
-      },
-      "orSeparator": "qualquer"
+      }
     },
     "registerClient": {
+      "title": "Registro",
       "placeholders": {
         "nickname": "Apelido",
         "email": "E-mail",
@@ -1119,10 +1126,10 @@
       "success": {
         "title": "Confira sua caixa de entrada.",
         "message": "Enviamos um e-mail para confirmar sua conta. Por favor, verifique sua caixa de entrada e, caso não o encontre, verifique sua pasta de spam."
-      },
-      "title": "Registro"
+      }
     },
     "registerModel": {
+      "title": "Registro de modelo",
       "placeholders": {
         "nickname": "Apelido",
         "email": "E-mail",
@@ -1156,10 +1163,11 @@
       "success": {
         "title": "Confira sua caixa de entrada.",
         "message": "Enviamos um e-mail para confirmar sua conta. Por favor, verifique sua caixa de entrada e, caso não o encontre, verifique sua pasta de spam."
-      },
-      "title": "Registro de modelo"
+      }
     },
     "registerMaster": {
+      "title": "Registro mestre",
+      "intro": "Cadastre-se como Master no SharemeChat. Pessoa física, sem necessidade de empresa.",
       "sections": {
         "personal": "Dados pessoais (obrigatórios)",
         "company": "Detalhes da empresa (opcional)"
@@ -1211,11 +1219,14 @@
       "success": {
         "title": "Conta principal criada",
         "message": "Enviamos um e-mail para você verificar sua conta. Depois disso, você poderá assinar o Contrato Principal e concluir o processo de KYC (Conheça Seu Cliente)."
-      },
-      "title": "Registro mestre",
-      "intro": "Cadastre-se como Master no SharemeChat. Pessoa física, sem necessidade de empresa."
+      }
     },
     "masterActivation": {
+      "title": "Ative sua conta modelo.",
+      "greeting": "Parabéns!",
+      "intro": "O Studio {{studioName}} enviou-lhe um convite para se juntar à sua equipa de modelos.",
+      "callToAction": "Escolha uma senha segura.",
+      "studioFallback": "que te convida",
       "labels": {
         "password": "Nova Senha",
         "confirmPassword": "Repita a senha"
@@ -1242,12 +1253,7 @@
       "errors": {
         "connection": "Erro de conexão. Tente novamente.",
         "generic": "A conta não pôde ser ativada."
-      },
-      "title": "Ative sua conta modelo.",
-      "greeting": "Parabéns!",
-      "intro": "O Studio {{studioName}} enviou-lhe um convite para se juntar à sua equipa de modelos.",
-      "callToAction": "Escolha uma senha segura.",
-      "studioFallback": "que te convida"
+      }
     }
   },
   "dashboardClient": {
@@ -1272,11 +1278,20 @@
       "profile": "Perfil"
     },
     "history": {
+      "title": "Histórico de transações",
+      "subtitle": "Recargas, gastos, bônus e presentes. Guarde esse histórico caso seu banco solicite comprovantes.",
+      "refresh": "Atualizar",
+      "loading": "Carregando...",
+      "errorLoad": "Não foi possível carregar o histórico.",
       "activeFilter": {
         "label": "Filtro",
         "from": "desde {{d}}",
         "to": "hasta {{d}}"
       },
+      "noRows": "Não existem transações para os filtros aplicados.",
+      "pageInfo": "Página {{page}} de {{total}} · {{count}} transacciones",
+      "prev": "Antigo",
+      "next": "Seguindo",
       "filter": {
         "category": "Categoria",
         "from": "De",
@@ -1310,16 +1325,7 @@
       },
       "detail": {
         "pack": "Pacote {{pack}}"
-      },
-      "title": "Histórico de transações",
-      "subtitle": "Recargas, gastos, bônus e presentes. Guarde esse histórico caso seu banco solicite comprovantes.",
-      "refresh": "Atualizar",
-      "loading": "Carregando...",
-      "errorLoad": "Não foi possível carregar o histórico.",
-      "noRows": "Não existem transações para os filtros aplicados.",
-      "pageInfo": "Página {{page}} de {{total}} · {{count}} transacciones",
-      "prev": "Antigo",
-      "next": "Seguindo"
+      }
     },
     "favoriteAlerts": {
       "title": "Favoritos",
@@ -1340,6 +1346,7 @@
       "modelBlocked": "Modelo bloqueado."
     },
     "favorites": {
+      "inCallLocked": "Em regime de sobreaviso: a lista fica bloqueada até o término da chamada.",
       "search": {
         "placeholder": "Estou buscando contato…"
       },
@@ -1347,10 +1354,26 @@
         "online": "On-line",
         "offline": "Desconectado"
       },
+      "botSubtitle": "Assistente · sempre disponível",
+      "giftLabel": "Presente",
       "day": {
         "today": "Hoje",
         "yesterday": "Ontem"
       },
+      "selectFavorite": "Selecione uma opção favorita para iniciar a conversa aqui.",
+      "pendingInvitationMessage": "Você foi convidado(a) para ser um(a) favorito(a) mútuo(a). Aceite para ativar o bate-papo.",
+      "acceptInvitation": "Aceitar convite",
+      "rejectInvitation": "Recusar convite",
+      "invitationSent": "Convite enviado. Aguardando resposta de {{name}}.",
+      "chatEnabledWhenAccepted": "O chat será ativado quando eu aceitar seu convite.",
+      "balanceLabel": "Equilíbrio:",
+      "messagePlaceholder": "Escreva uma mensagem…",
+      "incomingCall": "Ele está te chamando de {{name}}…",
+      "noMessagesYet": "Ainda não há mensagens. Seja o primeiro!",
+      "chatInactive": "Este chat não está ativo.",
+      "backToList": "Voltar à lista",
+      "startVideoChat": "Iniciar videochamada",
+      "pendingInvitationMobile": "{{name}} convidou você para ser um favorito mútuo. Aceite para ativar o bate-papo.",
       "call": {
         "activateCamera": "Ativar câmera",
         "acceptedRequired": "Você precisa ser um favorito aceito para poder ligar.",
@@ -1365,26 +1388,10 @@
         "remote": "Remoto",
         "startCallHint": "Pressione o botão para iniciar a chamada.",
         "callingUser": "Chamando {{name}}…"
-      },
-      "inCallLocked": "Em regime de sobreaviso: a lista fica bloqueada até o término da chamada.",
-      "botSubtitle": "Assistente · sempre disponível",
-      "giftLabel": "Presente",
-      "selectFavorite": "Selecione uma opção favorita para iniciar a conversa aqui.",
-      "pendingInvitationMessage": "Você foi convidado(a) para ser um(a) favorito(a) mútuo(a). Aceite para ativar o bate-papo.",
-      "acceptInvitation": "Aceitar convite",
-      "rejectInvitation": "Recusar convite",
-      "invitationSent": "Convite enviado. Aguardando resposta de {{name}}.",
-      "chatEnabledWhenAccepted": "O chat será ativado quando eu aceitar seu convite.",
-      "balanceLabel": "Equilíbrio:",
-      "messagePlaceholder": "Escreva uma mensagem…",
-      "incomingCall": "Ele está te chamando de {{name}}…",
-      "noMessagesYet": "Ainda não há mensagens. Seja o primeiro!",
-      "chatInactive": "Este chat não está ativo.",
-      "backToList": "Voltar à lista",
-      "startVideoChat": "Iniciar videochamada",
-      "pendingInvitationMobile": "{{name}} convidou você para ser um favorito mútuo. Aceite para ativar o bate-papo."
+      }
     },
     "videoChatRandomCliente": {
+      "promoTeaserTitle": "{{name}} · teaser",
       "actions": {
         "activateCamera": "Ativar câmera",
         "viewTeaser": "Assista ao teaser",
@@ -1412,8 +1419,7 @@
       },
       "errors": {
         "loadPromoVideos": "Erro ao carregar vídeos do modelo"
-      },
-      "promoTeaserTitle": "{{name}} · teaser"
+      }
     },
     "videoChatFavoritosCliente": {
       "actions": {
@@ -1469,6 +1475,10 @@
   },
   "complaint": {
     "public": {
+      "title": "Apresentar uma queixa",
+      "intro": "Este formulário permite que você denuncie conteúdo ou conduta que considere violar nossas regras ou a legislação aplicável. Analisaremos sua denúncia em até 5 dias úteis. Se você fornecer seu endereço de e-mail, enviaremos uma confirmação de recebimento e a decisão final.",
+      "category": "Categoria",
+      "categoryChoose": "Selecione uma categoria",
       "categories": {
         "CSAM": "Material de abuso sexual infantil (CSAM)",
         "NON_CONSENSUAL": "Conteúdo não consensual",
@@ -1481,17 +1491,6 @@
         "FRAUD": "Fraude/golpe",
         "OTHER": "Outro"
       },
-      "errors": {
-        "categoryRequired": "Selecione uma categoria.",
-        "descriptionRequired": "A descrição é obrigatória.",
-        "badRequest": "Os dados estão ausentes ou são inválidos. Por favor, verifique os campos obrigatórios.",
-        "tooManyRequests": "Você enviou muitos relatórios em um curto período de tempo usando sua conexão. Tente novamente mais tarde.",
-        "generic": "Não foi possível enviar o relatório. Tente novamente mais tarde."
-      },
-      "title": "Apresentar uma queixa",
-      "intro": "Este formulário permite que você denuncie conteúdo ou conduta que considere violar nossas regras ou a legislação aplicável. Analisaremos sua denúncia em até 5 dias úteis. Se você fornecer seu endereço de e-mail, enviaremos uma confirmação de recebimento e a decisão final.",
-      "category": "Categoria",
-      "categoryChoose": "Selecione uma categoria",
       "description": "Descrição",
       "descriptionPlaceholder": "Descreva o ocorrido com o máximo de detalhes possível: o que você viu, quando, em que contexto…",
       "descriptionHelp": "Até 2000 caracteres. Não inclua dados pessoais sensíveis que não sejam estritamente necessários.",
@@ -1504,7 +1503,14 @@
       "submit": "Apresentar reclamação",
       "submitting": "Enviando…",
       "successTitle": "Reclamação recebida",
-      "successBody": "Hemos registrado tu denuncia con el identificador #{{id}}. La revisaremos en un plazo máximo de 5 días hábiles. Gracias por ayudarnos a mantener la plataforma segura."
+      "successBody": "Hemos registrado tu denuncia con el identificador #{{id}}. La revisaremos en un plazo máximo de 5 días hábiles. Gracias por ayudarnos a mantener la plataforma segura.",
+      "errors": {
+        "categoryRequired": "Selecione uma categoria.",
+        "descriptionRequired": "A descrição é obrigatória.",
+        "badRequest": "Os dados estão ausentes ou são inválidos. Por favor, verifique os campos obrigatórios.",
+        "tooManyRequests": "Você enviou muitos relatórios em um curto período de tempo usando sua conexão. Tente novamente mais tarde.",
+        "generic": "Não foi possível enviar o relatório. Tente novamente mais tarde."
+      }
     }
   },
   "dashboardModel": {
@@ -1519,6 +1525,13 @@
       "hint": "Você pode continuar usando o restante do aplicativo (suporte, histórico, perfil). Lembre-se de que conteúdo adulto não é permitido durante o período de teste. Se você acredita que isso foi um engano, entre em contato com o suporte."
     },
     "billing": {
+      "title": "Cobrança",
+      "subtitle": "Transmissões ao vivo, presentes e saques. Guarde esse histórico caso precise de provas.",
+      "errorLoad": "Não foi possível carregar a fatura.",
+      "noRows": "Não há operações para os filtros aplicados.",
+      "pageInfo": "Página {{page}} de {{total}} · {{count}} operaciones",
+      "prev": "Antigo",
+      "next": "Seguindo",
       "activeFilter": {
         "label": "Filtro",
         "from": "desde {{d}}",
@@ -1556,15 +1569,9 @@
       },
       "badge": {
         "attributedMaster": "Um Mestre"
-      },
-      "title": "Cobrança",
-      "subtitle": "Transmissões ao vivo, presentes e saques. Guarde esse histórico caso precise de provas.",
-      "errorLoad": "Não foi possível carregar a fatura.",
-      "noRows": "Não há operações para os filtros aplicados.",
-      "pageInfo": "Página {{page}} de {{total}} · {{count}} operaciones",
-      "prev": "Antigo",
-      "next": "Seguindo"
+      }
     },
+    "moderationNotice": "Sua sessão é monitorada automaticamente de acordo com nossas políticas de segurança e termos de serviço.",
     "moderationWarning": {
       "noFace": "Volte para o enquadramento. Sua câmera não consegue detectar seu rosto.",
       "frozen": "Sua câmera parece estar travada. Atualize a página ou reative sua câmera.",
@@ -1650,14 +1657,14 @@
         "error": "Erro: {{error}}"
       },
       "history": {
+        "title": "Registro",
+        "hint": "Evolução por data.",
+        "empty": "Sem histórico.",
         "table": {
           "date": "Data",
           "tier": "Nível",
           "minutes30d": "Minutos nos últimos 30 dias"
-        },
-        "title": "Registro",
-        "hint": "Evolução por data.",
-        "empty": "Sem histórico."
+        }
       },
       "billing": {
         "title": "Cobrança",
@@ -1718,7 +1725,16 @@
         "proOff": "Vocês não aceitam mais clientes em período de teste.",
         "proError": "Não foi possível atualizar a opção. Tente novamente."
       },
+      "reloadButton": "Atualizar",
       "underMaster": {
+        "title": "Seu elenco sob o estúdio",
+        "hint": "Gerenciado pela conta do Studio {{name}}.",
+        "fallbackName": "Seu estúdio",
+        "line1": "{{tier}} – Estás en este tramo",
+        "line2": "El Estudio recibe {{tramo}}% en tramo {{tier}}",
+        "line3": "La modelo recibe el {{pactado}}% del {{tramo}}% en {{tier}}",
+        "tiersTitle": "Seções de estudo e limiares",
+        "tiersHint": "Ao subir de nível (faturamento bruto de 30 dias do Studio), você pode escolher uma tarifa dentro da faixa permitida.",
         "headers": {
           "tier": "Esticar",
           "threshold": "Limiar (30 dias)",
@@ -1727,17 +1743,11 @@
         "kpi": {
           "label": "Acumulado líquido",
           "hint": "O que seu estúdio lhe deve. O pagamento é feito fora da plataforma."
-        },
-        "title": "Seu elenco sob o estúdio",
-        "hint": "Gerenciado pela conta do Studio {{name}}.",
-        "fallbackName": "Seu estúdio",
-        "line1": "{{tier}} – Estás en este tramo",
-        "line2": "El Estudio recibe {{tramo}}% en tramo {{tier}}",
-        "line3": "La modelo recibe el {{pactado}}% del {{tramo}}% en {{tier}}",
-        "tiersTitle": "Seções de estudo e limiares",
-        "tiersHint": "Ao subir de nível (faturamento bruto de 30 dias do Studio), você pode escolher uma tarifa dentro da faixa permitida."
+        }
       },
       "progress": {
+        "title": "Progresso em direção à próxima seção",
+        "hint": "Visualização do caminho para a próxima etapa.",
         "currentCol": {
           "title": "Sua situação",
           "tramoLabel": "Seção atual:",
@@ -1749,22 +1759,19 @@
           "requirementLabel": "Exigência:",
           "remainingLabel": "Você está sentindo falta de:",
           "maxTier": "Você atingiu o nível máximo. Não há próximo passo."
-        },
-        "title": "Progresso em direção à próxima seção",
-        "hint": "Visualização do caminho para a próxima etapa."
+        }
       },
       "reference": {
+        "title": "Segmentos do programa",
+        "hint": "Tabela completa. Seu segmento atual está destacado.",
+        "youAreHere": "· sua seção",
         "headers": {
           "tier": "Esticar",
           "threshold": "Limite",
           "share": "Modelo de lucro percentual",
           "rateRange": "Preço"
-        },
-        "title": "Segmentos do programa",
-        "hint": "Tabela completa. Seu segmento atual está destacado.",
-        "youAreHere": "· sua seção"
-      },
-      "reloadButton": "Atualizar"
+        }
+      }
     },
     "payout": {
       "sessionExpiredTitle": "Sessão",
@@ -1786,21 +1793,6 @@
       "actions": {
         "sendGift": "Enviar um presente"
       },
-      "call": {
-        "activateCamera": "Ativar câmera",
-        "acceptedRequired": "Você precisa ser um favorito aceito para poder ligar.",
-        "activateCameraHint": "Ative sua câmera",
-        "selectContactFirst": "Selecione um contato para ligar.",
-        "callUser": "Ligue para {{name}}",
-        "defaultUser": "Usuário",
-        "call": "Chamar",
-        "startVideoCallHint": "Pressione o botão para iniciar a chamada de vídeo.",
-        "callingRinging": "Chamando {{name}}… (tocando)",
-        "connecting": "Conectando…",
-        "remote": "Remoto",
-        "startCallHint": "Pressione o botão para iniciar a chamada.",
-        "callingUser": "Chamando {{name}}…"
-      },
       "inCallLocked": "Em regime de sobreaviso: a lista fica bloqueada até o término da chamada.",
       "selectFavorite": "Selecione uma opção favorita para iniciar a conversa aqui.",
       "pendingInvitationMessage": "Você foi convidado(a) para ser um favorito mútuo. Aceite para ativar o bate-papo.",
@@ -1815,7 +1807,22 @@
       "chatInactive": "Este chat não está ativo.",
       "backToList": "Voltar à lista",
       "startVideoChat": "Iniciar videochamada",
-      "pendingInvitationMobile": "{{name}} convidou você para ser um favorito mútuo. Aceite para ativar o bate-papo."
+      "pendingInvitationMobile": "{{name}} convidou você para ser um favorito mútuo. Aceite para ativar o bate-papo.",
+      "call": {
+        "activateCamera": "Ativar câmera",
+        "acceptedRequired": "Você precisa ser um favorito aceito para poder ligar.",
+        "activateCameraHint": "Ative sua câmera",
+        "selectContactFirst": "Selecione um contato para ligar.",
+        "callUser": "Ligue para {{name}}",
+        "defaultUser": "Usuário",
+        "call": "Chamar",
+        "startVideoCallHint": "Pressione o botão para iniciar a chamada de vídeo.",
+        "callingRinging": "Chamando {{name}}… (tocando)",
+        "connecting": "Conectando…",
+        "remote": "Remoto",
+        "startCallHint": "Pressione o botão para iniciar a chamada.",
+        "callingUser": "Chamando {{name}}…"
+      }
     },
     "videoChatFavoritosModelo": {
       "actions": {
@@ -1855,8 +1862,7 @@
         "nextTramo": "Próxima seção:",
         "maxTier": "Você está no alcance máximo."
       }
-    },
-    "moderationNotice": "Sua sessão é monitorada automaticamente de acordo com nossas políticas de segurança e termos de serviço."
+    }
   },
   "dashboardUserClient": {
     "nav": {
@@ -1926,6 +1932,7 @@
       "next": "Não foi possível solicitar NEXT."
     },
     "videoChatRandomUser": {
+      "promoTeaserTitle": "{{name}} · teaser",
       "teaser": {
         "chatLocked": "Torne-se cliente para conversar e enviar presentes.",
         "cta": "Torne-se um cliente",
@@ -1955,11 +1962,11 @@
       },
       "errors": {
         "loadPromoVideos": "Erro ao carregar vídeos do modelo"
-      },
-      "promoTeaserTitle": "{{name}} · teaser"
+      }
     }
   },
   "dashboardUserModel": {
+    "title": "Conclua a verificação do seu modelo.",
     "nav": {
       "openMenu": "Abrir menu",
       "menu": "Menu"
@@ -1971,12 +1978,12 @@
       "defaultName": "Modelo"
     },
     "info": {
+      "verificationStatus": "Estado de verificación: {{status}}",
       "statuses": {
         "pending": "Brinco",
         "approved": "Aprovado",
         "rejected": "Recusado"
-      },
-      "verificationStatus": "Estado de verificación: {{status}}"
+      }
     },
     "actions": {
       "logout": "Sair",
@@ -1994,6 +2001,10 @@
       "resendError": "Não foi possível reenviar o e-mail de validação."
     },
     "contract": {
+      "mustAcceptMessage": "Antes de prosseguir, você deve aceitar o contrato modelo legal.",
+      "viewPdf": "Ver contrato (PDF)",
+      "checkbox": "Li e concordo com o contrato modelo.",
+      "mustAcceptFirst": "Você precisa aceitar o contrato primeiro.",
       "actions": {
         "accept": "Eu aceito o contrato.",
         "accepting": "Confirmação de aceitação…"
@@ -2005,11 +2016,7 @@
       "errors": {
         "load": "Não foi possível carregar o contrato legal. Tente novamente.",
         "accept": "A aceitação não pôde ser registrada. Tente novamente."
-      },
-      "mustAcceptMessage": "Antes de prosseguir, você deve aceitar o contrato modelo legal.",
-      "viewPdf": "Ver contrato (PDF)",
-      "checkbox": "Li e concordo com o contrato modelo.",
-      "mustAcceptFirst": "Você precisa aceitar o contrato primeiro."
+      }
     },
     "awaitingAdmin": {
       "heroTitle": "Verificação recebida",
@@ -2027,6 +2034,8 @@
       "refreshAction": "Concluí a atualização."
     },
     "kyc": {
+      "activeMethod": "Método KYC ativo:",
+      "notAvailable": "N / D",
       "modes": {
         "veriff": "Verificar",
         "manual": "Manual",
@@ -2044,17 +2053,18 @@
       "errors": {
         "unsupportedMode": "Modo KYC não suportado: {{mode}}",
         "load": "Não foi possível obter o fluxo KYC. Tente novamente."
-      },
-      "activeMethod": "Método KYC ativo:",
-      "notAvailable": "N / D"
+      }
     },
     "footerHint": {
       "prefix": "Após a validação pelo administrador, sua conta será transferida para",
       "role": "MODELO"
-    },
-    "title": "Conclua a verificação do seu modelo."
+    }
   },
   "modelDocuments": {
+    "title": "Verificação de identidade",
+    "subtitle": "Faça o upload de fotos do seu documento e de um arquivo de verificação para que possamos aprovar seu perfil de modelo.",
+    "currentStatus": "Estado atual da revisão",
+    "reviewHint": "Por favor, verifique se as fotos estão nítidas e as informações legíveis. Nossa equipe analisará as informações o mais breve possível.",
     "summary": {
       "uploaded": "Enviado",
       "filesUploaded": "{{count}}/{{total}} archivos subidos",
@@ -2084,58 +2094,54 @@
       "deleteFile": "Excluir este arquivo?"
     },
     "veriff": {
+      "title": "Verificação de identidade (Verificar)",
+      "subtitle": "Você está sendo redirecionado para o provedor de verificação.",
+      "loading": "Abrindo verificação…",
+      "hint": "Caso o problema persista, o administrador pode ativar o fluxo KYC manual.",
       "actions": {
         "retry": "Tentar novamente"
       },
       "errors": {
         "start": "Não foi possível iniciar o processo de verificação com o Veriff."
-      },
-      "title": "Verificação de identidade (Verificar)",
-      "subtitle": "Você está sendo redirecionado para o provedor de verificação.",
-      "loading": "Abrindo verificação…",
-      "hint": "Caso o problema persista, o administrador pode ativar o fluxo KYC manual."
+      }
     },
     "front": {
-      "actions": {
-        "upload": "Aumentar",
-        "delete": "Eliminar"
-      },
       "title": "Documento (frente)",
       "subtitle": "Faça o upload da frente do seu documento de identidade.",
       "hint": "Formatos aceitos: JPG/PNG. Certifique-se de que todos os dados estejam legíveis.",
-      "confirmDelete": "Remover a imagem da frente do documento?"
-    },
-    "back": {
+      "confirmDelete": "Remover a imagem da frente do documento?",
       "actions": {
         "upload": "Aumentar",
         "delete": "Eliminar"
-      },
+      }
+    },
+    "back": {
       "title": "Documento (verso)",
       "subtitle": "Faça o upload do verso do seu documento de identidade.",
       "hint": "Formatos aceitos: JPG/PNG. Verifique se não há reflexos ou cortes na imagem.",
-      "confirmDelete": "Remover a imagem do verso do documento?"
-    },
-    "verificationFile": {
+      "confirmDelete": "Remover a imagem do verso do documento?",
       "actions": {
         "upload": "Aumentar",
         "delete": "Eliminar"
-      },
+      }
+    },
+    "verificationFile": {
       "title": "Selfie com documento de identidade ou comprovante de pagamento",
       "subtitle": "Você pode enviar uma foto sua com o documento visível ou um PDF de verificação.",
       "linkLabel": "Visualizar arquivo de verificação",
       "hint": "Aceita arquivos JPG/PNG ou PDF. Certifique-se de que seu rosto e o documento estejam claramente visíveis.",
-      "confirmDelete": "Excluir o arquivo de verificação?"
+      "confirmDelete": "Excluir o arquivo de verificação?",
+      "actions": {
+        "upload": "Aumentar",
+        "delete": "Eliminar"
+      }
     },
     "nextSteps": {
       "title": "O que acontece a seguir?",
       "prefix": "Após a verificação da sua identidade, você poderá concluir o seu cadastro.",
       "role": "Perfil do modelo",
       "suffix": "Faça o upload da foto de perfil e do vídeo de apresentação na seção Perfil."
-    },
-    "title": "Verificação de identidade",
-    "subtitle": "Faça o upload de fotos do seu documento e de um arquivo de verificação para que possamos aprovar seu perfil de modelo.",
-    "currentStatus": "Estado atual da revisão",
-    "reviewHint": "Por favor, verifique se as fotos estão nítidas e as informações legíveis. Nossa equipe analisará as informações o mais breve possível."
+    }
   },
   "emailVerification": {
     "banner": {
@@ -2143,17 +2149,27 @@
       "cta": "Encaminhar e-mail"
     },
     "modal": {
+      "title": "Verifique seu e-mail",
+      "body": "Você precisa verificar seu e-mail para continuar. Enviamos um e-mail com um link quando você se cadastrou. Se não conseguir encontrá-lo, podemos reenviá-lo.",
+      "close": "Fechar",
       "resend": {
         "cta": "Encaminhar e-mail",
         "success": "E-mail encaminhado. Verifique sua caixa de entrada (incluindo a pasta de spam).",
         "error": "Não foi possível reenviar. Tente novamente em alguns minutos."
-      },
-      "title": "Verifique seu e-mail",
-      "body": "Você precisa verificar seu e-mail para continuar. Enviamos um e-mail com um link quando você se cadastrou. Se não conseguir encontrá-lo, podemos reenviá-lo.",
-      "close": "Fechar"
+      }
     }
   },
   "modelKyc": {
+    "title": "Verificação de identidade",
+    "navTitle": "Verificação de identidade",
+    "back": "Retornar",
+    "intro": "Para concluir seu cadastro como modelo, precisamos verificar sua identidade e se você é maior de idade. A verificação é feita por meio de uma câmera e do seu documento de identidade: nosso provedor (Didit, certificado na UE) lê seu documento e verifica se ele corresponde ao seu rosto por meio de uma selfie.",
+    "whyLegal": "Isso é exigido pelas regulamentações de proteção infantil e controle de conteúdo adulto nos mercados em que atuamos (EU DSA, UK OSA, US Free Speech Coalition v. Paxton). Não é opcional.",
+    "consentTitle": "Consentimento para processamento biométrico e de identidade",
+    "consentText": "Dou meu consentimento explícito para que meu documento de identidade e dados biométricos faciais (imagem do meu rosto) sejam processados pela Didit (processadora de dados, UE) para fins de verificação da minha identidade e maioridade, em conformidade com o Artigo 9.2.a do RGPD. Os dados serão armazenados pelo período necessário para cumprir as obrigações legais aplicáveis e, em seguida, serão excluídos. Posso revogar meu consentimento a qualquer momento entrando em contato com privacy@sharemechat.com; nesse caso, não poderei concluir o cadastro como modelo.",
+    "consentReadMore": "Mais informações na política de privacidade.",
+    "startButton": "Iniciar verificação",
+    "startingButton": "Começando…",
     "errors": {
       "generic": "Não foi possível iniciar o processo de verificação. Tente novamente em alguns minutos.",
       "alreadyApproved": "Sua verificação já foi aprovada; não é necessário repeti-la."
@@ -2164,30 +2180,9 @@
       "timeout": "O processo de verificação está demorando mais do que o normal. Por favor, volte ao painel e atualize a página em alguns minutos.",
       "rejected": "Verificação rejeitada. Contate o suporte.",
       "back": "Voltar ao painel de controle"
-    },
-    "title": "Verificação de identidade",
-    "navTitle": "Verificação de identidade",
-    "back": "Retornar",
-    "intro": "Para concluir seu cadastro como modelo, precisamos verificar sua identidade e se você é maior de idade. A verificação é feita por meio de uma câmera e do seu documento de identidade: nosso provedor (Didit, certificado na UE) lê seu documento e verifica se ele corresponde ao seu rosto por meio de uma selfie.",
-    "whyLegal": "Isso é exigido pelas regulamentações de proteção infantil e controle de conteúdo adulto nos mercados em que atuamos (EU DSA, UK OSA, US Free Speech Coalition v. Paxton). Não é opcional.",
-    "consentTitle": "Consentimento para processamento biométrico e de identidade",
-    "consentText": "Dou meu consentimento explícito para que meu documento de identidade e dados biométricos faciais (imagem do meu rosto) sejam processados pela Didit (processadora de dados, UE) para fins de verificação da minha identidade e maioridade, em conformidade com o Artigo 9.2.a do RGPD. Os dados serão armazenados pelo período necessário para cumprir as obrigações legais aplicáveis e, em seguida, serão excluídos. Posso revogar meu consentimento a qualquer momento entrando em contato com privacy@sharemechat.com; nesse caso, não poderei concluir o cadastro como modelo.",
-    "consentReadMore": "Mais informações na política de privacidade.",
-    "startButton": "Iniciar verificação",
-    "startingButton": "Começando…"
+    }
   },
   "clientKyc": {
-    "errors": {
-      "generic": "Não foi possível iniciar o processo de verificação. Tente novamente em alguns minutos.",
-      "alreadyApproved": "Sua verificação já foi aprovada; não é necessário repeti-la."
-    },
-    "processing": {
-      "title": "Verificando sua idade...",
-      "subtitle": "Aguarde alguns segundos enquanto processamos sua verificação.",
-      "timeout": "O processo de verificação está demorando mais do que o normal. Por favor, volte ao painel e atualize a página em alguns minutos.",
-      "rejected": "Verificação rejeitada. Contate o suporte.",
-      "back": "Voltar ao painel de controle"
-    },
     "title": "Verifique sua idade em 1 minuto",
     "navTitle": "Verificação de idade",
     "back": "Retornar",
@@ -2198,9 +2193,22 @@
     "consentReadMore": "Mais informações na política de privacidade.",
     "consentAcceptLabel": "Eu aceito o consentimento biométrico.",
     "startButton": "Iniciar verificação",
-    "startingButton": "Começando…"
+    "startingButton": "Começando…",
+    "errors": {
+      "generic": "Não foi possível iniciar o processo de verificação. Tente novamente em alguns minutos.",
+      "alreadyApproved": "Sua verificação já foi aprovada; não é necessário repeti-la."
+    },
+    "processing": {
+      "title": "Verificando sua idade...",
+      "subtitle": "Aguarde alguns segundos enquanto processamos sua verificação.",
+      "timeout": "O processo de verificação está demorando mais do que o normal. Por favor, volte ao painel e atualize a página em alguns minutos.",
+      "rejected": "Verificação rejeitada. Contate o suporte.",
+      "back": "Voltar ao painel de controle"
+    }
   },
   "liveness": {
+    "title": "Verificação ao vivo",
+    "subtitle": "Antes de conectar, precisamos verificar se você está em frente à câmera neste momento.",
     "prompts": {
       "PRESENCE_PROMPT": "Quando estiver pronto, pressione \"Iniciar\" e olhe para a câmera por 3 segundos.",
       "BLINK_PROMPT": "Quando estiver pronto, pressione \"Iniciar\" e pisque duas vezes enquanto olha para a câmera.",
@@ -2225,9 +2233,7 @@
       "cooldown": "Você excedeu o número de tentativas permitidas. Aguarde alguns minutos e tente novamente.",
       "captureError": "Não foi possível capturar a imagem da sua câmera. Verifique se ela está ativa e tente novamente.",
       "error": "Ocorreu um erro. Tente novamente."
-    },
-    "title": "Verificação ao vivo",
-    "subtitle": "Antes de conectar, precisamos verificar se você está em frente à câmera neste momento."
+    }
   },
   "admin": {
     "finance": {
@@ -2238,6 +2244,7 @@
         "invalidAmount": "Valor inválido",
         "reasonRequired": "É necessário apresentar justificativa."
       },
+      "empty": "Sem dados.",
       "cards": {
         "grossBilling": {
           "meta": "Receita total antes da distribuição aos modelos.",
@@ -2261,12 +2268,15 @@
         }
       },
       "refund": {
+        "description": "Devolve o saldo diretamente ao CLIENTE por meio de uma operação manual no livro-razão.",
+        "success": "Refund aplicado correctamente. User #{{userId}} - Amount {{amount}} - New balance {{balance}}",
         "notes": {
           "title": "Notas:",
           "appliesClient": "- Aplica-se somente a usuários com a função CLIENTE.",
           "ledgerEntry": "- Não modifica transações anteriores; cria uma nova transação contábil do tipo MANUAL_REFUND.",
           "balanceOnly": "- Não aumenta o total a pagar; apenas devolve o saldo disponível."
         },
+        "title": "Manual de reembolso",
         "fields": {
           "userId": "ID do usuário (CLIENTE)",
           "userIdPlaceholder": "Exemplo: 68",
@@ -2279,20 +2289,17 @@
           "apply": "Solicitar reembolso",
           "applying": "Solicitar reembolso…",
           "clear": "Limpar"
-        },
-        "description": "Devolve o saldo diretamente ao CLIENTE por meio de uma operação manual no livro-razão.",
-        "success": "Refund aplicado correctamente. User #{{userId}} - Amount {{amount}} - New balance {{balance}}",
-        "title": "Manual de reembolso"
+        }
       },
       "title": {
         "full": "Operações Financeiras",
         "summary": "Financiar",
         "adjustments": "Ajustes financeiros"
-      },
-      "empty": "Sem dados."
+      }
     },
     "audit": {
       "accounting": {
+        "description": "Revisão determinística baseada em livro-razão:",
         "checks": {
           "txWithoutBalance": "Transações sem saldo",
           "balanceVsLedger": "Saldo vs. Razão (SOMA vs. último saldo)",
@@ -2307,14 +2314,14 @@
           "rowsCount": "{{count}} filas",
           "empty": "Nenhuma anomalia detectada."
         },
+        "note": "Use o recurso \"Dry Run\" em produção para inspeção. Altere para \"Dry Run = false\" somente quando desejar persistir anomalias.",
         "errors": {
           "run": "Erro ao executar a auditoria",
           "loadAnomalies": "Anomalias de carregamento de erros"
-        },
-        "description": "Revisão determinística baseada em livro-razão:",
-        "note": "Use o recurso \"Dry Run\" em produção para inspeção. Altere para \"Dry Run = false\" somente quando desejar persistir anomalias."
+        }
       },
       "runtimeHealth": {
+        "description": "Procure por inconsistências entre a memória de tempo de execução, o Redis e o banco de dados:",
         "checks": {
           "activePairWithoutDbStream": "Emparelhamento RANDOM ativo na memória sem fluxo ativo em DBDD",
           "activeCallWithoutDbStream": "Chamada ativa na memória sem fluxo, chamada ativa no banco de dados",
@@ -2337,14 +2344,14 @@
           "rowsCount": "{{count}} filas",
           "empty": "Nenhuma anomalia de integridade em tempo de execução detectada."
         },
+        "note": "Use-o para detectar discrepâncias entre o tempo de execução e a persistência. Em ambientes de pré-produção, execute-o em um teste a seco.",
         "errors": {
           "run": "Erro ao executar o Runtime Health",
           "loadAnomalies": "Anomalias de carregamento de erros"
-        },
-        "description": "Procure por inconsistências entre a memória de tempo de execução, o Redis e o banco de dados:",
-        "note": "Use-o para detectar discrepâncias entre o tempo de execução e a persistência. Em ambientes de pré-produção, execute-o em um teste a seco."
+        }
       },
       "sessionIntegrity": {
+        "description": "Procure por inconsistências no ciclo de vida dos fluxos RANDOM e CALLING:",
         "checks": {
           "closedWithoutEnded": "Transmissão encerrada sem evento ENDED",
           "confirmedWithoutConfirmedEvent": "Transmissão confirmada sem evento CONFIRMADO",
@@ -2360,21 +2367,20 @@
           "rowsCount": "{{count}} filas",
           "empty": "Nenhuma anomalia detectada."
         },
+        "note": "Essa execução mantém as anomalias SI_ para revisão posterior. Ela não modifica fluxos, não fecha sessões nem altera a lógica de negócios.",
         "errors": {
           "run": "Erro ao executar a auditoria de integridade da sessão",
           "loadAnomalies": "Anomalias de integridade da sessão de carregamento de erros"
-        },
-        "description": "Procure por inconsistências no ciclo de vida dos fluxos RANDOM e CALLING:",
-        "note": "Essa execução mantém as anomalias SI_ para revisão posterior. Ela não modifica fluxos, não fecha sessões nem altera a lógica de negócios."
+        }
       },
       "incident": {
+        "description": "Este departamento está preparado para uma visão operacional de incidentes críticos:",
         "checks": {
           "recentSevere": "Incidentes graves recentes",
           "recentCritical": "Anomalias críticas recentes",
           "quickSummary": "Resumo rápido da operação",
           "manualEntry": "Entrada de pesquisa manual"
         },
-        "description": "Este departamento está preparado para uma visão operacional de incidentes críticos:",
         "note": "Painel de controle pronto. Aguardando conexão com a visualização priorizada de incidentes e alertas."
       },
       "panel": {
@@ -2437,6 +2443,7 @@
         "subtitlePending": "O modelo receberá um e-mail com o motivo selecionado e o recurso não estará mais visível até que um novo recurso aprovado seja carregado.",
         "subtitleRetroactive": "Esta ação reverte uma aprovação anterior: a linha APROVADA histórica é mantida, uma nova linha REJEITADA é criada e o ativo é desativado. O modelo receberá um e-mail com o motivo selecionado."
       },
+      "title": "Moderação de ativos do modelo",
       "statusLabels": {
         "CANCELLED": "Cancelado pelo modelo"
       },
@@ -2455,10 +2462,10 @@
         "detailPlaceholder": "Explique brevemente o motivo. Ele aparecerá no e-mail para a modelo.",
         "extraNote": "Nota adicional (opcional)",
         "extraNotePlaceholder": "Comentário interno opcional para o modelo."
-      },
-      "title": "Moderação de ativos do modelo"
+      }
     },
     "shell": {
+      "userFallback": "Escritório administrativo",
       "brand": {
         "eyebrow": "Ferramentas internas",
         "title": "SharemeChat",
@@ -2483,6 +2490,7 @@
       },
       "sections": {
         "primary": {
+          "label": "Principal",
           "items": {
             "overview": {
               "label": "Visão geral",
@@ -2492,10 +2500,10 @@
               "label": "Operações",
               "meta": "Tempo de execução, sessões em andamento e atividade em tempo real."
             }
-          },
-          "label": "Principal"
+          }
         },
         "business": {
+          "label": "Operação comercial",
           "items": {
             "models": {
               "label": "Modelos",
@@ -2513,10 +2521,10 @@
               "label": "Ajustes financeiros",
               "meta": "Reembolsos manuais e transações sensíveis."
             }
-          },
-          "label": "Operação comercial"
+          }
         },
         "control": {
+          "label": "Controle e administração",
           "items": {
             "control": {
               "label": "Controle interno",
@@ -2530,8 +2538,7 @@
               "label": "Administração",
               "meta": "Banco de dados preparado para usuários e permissões do backoffice."
             }
-          },
-          "label": "Controle e administração"
+          }
         }
       },
       "views": {
@@ -2590,10 +2597,12 @@
         "recoveryHint": "Após concluir a validação, faça login novamente no painel administrativo para recuperar o acesso normal à visão geral, moderação, finanças e aos demais módulos internos.",
         "success": "Reenviamos o e-mail de validação para você.",
         "error": "Não foi possível reenviar o e-mail de validação."
-      },
-      "userFallback": "Escritório administrativo"
+      }
     },
     "auth": {
+      "loading": "Carregando acesso interno...",
+      "pageTitle": "Backoffice do SharemeChat",
+      "pageSubtitle": "Acesso interno.",
       "form": {
         "title": "Acesso interno",
         "subtitle": "Insira suas credenciais de acesso ao backoffice."
@@ -2618,12 +2627,12 @@
       },
       "modal": {
         "emailNotVerified": {
+          "title": "E-mail não verificado",
+          "body": "Você precisa validar seu e-mail antes de acessar a área administrativa.",
           "actions": {
             "later": "Mais tarde",
             "resend": "Encaminhar e-mail"
-          },
-          "title": "E-mail não verificado",
-          "body": "Você precisa validar seu e-mail antes de acessar a área administrativa."
+          }
         }
       },
       "resend": {
@@ -2631,10 +2640,7 @@
         "successMessage": "Reenviamos o e-mail de validação para você.",
         "errorTitle": "Não poderia ser ressentido.",
         "errorMessage": "Não foi possível reenviar o e-mail de validação."
-      },
-      "loading": "Carregando acesso interno...",
-      "pageTitle": "Backoffice do SharemeChat",
-      "pageSubtitle": "Acesso interno."
+      }
     },
     "verification": {
       "pageTitle": "Backoffice do SharemeChat",
@@ -2649,6 +2655,7 @@
       "errors": {
         "load": "Não foi possível carregar a visão geral."
       },
+      "loadingSync": "sincronizando",
       "metrics": {
         "activeStreams": {
           "label": "Fluxos ativos",
@@ -2679,6 +2686,7 @@
         "note": "Esta página inicial reutiliza dados já disponíveis no painel de controle atual. Ela serve como ponto de entrada operacional e ainda não substitui os módulos de detalhes."
       },
       "quickActions": {
+        "title": "Acesso rápido",
         "operations": {
           "title": "Operações em tempo real",
           "meta": "Visualize a atividade em tempo de execução, os fluxos ativos e as ações de corte."
@@ -2694,10 +2702,10 @@
         "finance": {
           "title": "Financiar",
           "meta": "Consulte o resumo econômico e o desempenho principal."
-        },
-        "title": "Acesso rápido"
+        }
       },
       "priority": {
+        "title": "Itens com prioridade pendente",
         "pendingModels": {
           "title": "{{count}} modelos pendentes de revisão",
           "meta": "É recomendável revisar a documentação de integração e as pendências.",
@@ -2721,8 +2729,7 @@
         "noPending": {
           "title": "Não há itens pendentes com prioridade visível.",
           "meta": "Os dados exibidos nesta página inicial não detectam nenhuma fila relevante ou problema pendente."
-        },
-        "title": "Itens com prioridade pendente"
+        }
       },
       "statusSummary": {
         "title": "Integração e status",
@@ -2740,10 +2747,12 @@
         "title": "Fundamentos do novo back office",
         "body": "A nova página inicial agora inclui visão geral, operações, modelos, moderação, finanças, controle interno, dados internos e administração. Os módulos existentes permanecem ativos dentro desta estrutura enquanto sua lógica interna é reformulada.",
         "note": "Nenhuma nova infraestrutura é introduzida nesta fase. Blocos sem uma fonte dedicada permanecem marcados como transições ou espaços reservados operacionais."
-      },
-      "loadingSync": "sincronizando"
+      }
     },
     "stats": {
+      "title": "Estatísticas",
+      "updating": "Atualizando…",
+      "updatedAt": "Actualizado: {{time}}",
       "errors": {
         "load": "Não foi possível carregar as estatísticas administrativas."
       },
@@ -2760,16 +2769,17 @@
       "coverage": {
         "title": "Cobertura",
         "body": "Aleatório em tempo de execução, chamadas diretas em tempo de execução e fluxos persistentes."
-      },
-      "title": "Estatísticas",
-      "updating": "Atualizando…",
-      "updatedAt": "Actualizado: {{time}}"
+      }
     },
     "profile": {
       "wrapper": {
         "title": "Conta administrativa",
         "subtitle": "Informações básicas sobre a conta autenticada e como alterar sua senha."
       },
+      "notAvailable": "Não disponível",
+      "noEffectiveRoles": "Sem funções eficazes",
+      "emailVerifiedYes": "Si, {{date}}",
+      "emailVerifiedNo": "Não",
       "basicData": {
         "title": "Dados básicos"
       },
@@ -2784,46 +2794,44 @@
         "userId": "ID do usuário"
       },
       "password": {
+        "title": "Alteração de senha",
+        "description": "Essa alteração afeta apenas sua conta Backoffice autenticada e utiliza o fluxo de usuário autenticado atual.",
         "fields": {
           "current": "Senha atual",
           "next": "Nova Senha",
           "confirm": "Confirme a nova senha"
         },
+        "hint": "A nova senha deve ter no mínimo 10 caracteres e não pode conter espaços.",
         "actions": {
           "submit": "Alterar a senha",
           "submitting": "Atualizando..."
         },
+        "success": "Senha atualizada com sucesso.",
         "errors": {
           "missingFields": "Preencha os três campos de senha.",
           "mismatch": "A nova senha e a confirmação não coincidem.",
           "minLength": "A nova senha deve ter pelo menos 10 caracteres.",
           "noSpaces": "A nova senha não pode conter espaços.",
           "update": "A senha não pôde ser atualizada."
-        },
-        "title": "Alteração de senha",
-        "description": "Essa alteração afeta apenas sua conta Backoffice autenticada e utiliza o fluxo de usuário autenticado atual.",
-        "hint": "A nova senha deve ter no mínimo 10 caracteres e não pode conter espaços.",
-        "success": "Senha atualizada com sucesso."
-      },
-      "notAvailable": "Não disponível",
-      "noEffectiveRoles": "Sem funções eficazes",
-      "emailVerifiedYes": "Si, {{date}}",
-      "emailVerifiedNo": "Não"
+        }
+      }
     },
     "moderation": {
       "wrapper": {
         "title": "Casos de moderação",
         "subtitle": "Análise de relatórios e tomada de decisão operacional sobre incidentes em aberto."
       },
+      "title": "Moderação",
+      "intro": "Visão operacional de relatórios internos. Permite filtrar incidentes, revisar detalhes e documentar decisões administrativas com melhor contexto para suporte e controle interno.",
       "filters": {
+        "status": "Estado",
         "options": {
           "ALL": "Todos",
           "OPEN": "ABRIR",
           "REVIEWING": "REVISÃO",
           "RESOLVED": "RESOLVIDO",
           "REJECTED": "REJEITADO"
-        },
-        "status": "Estado"
+        }
       },
       "actions": {
         "loading": "Carregando...",
@@ -2846,6 +2854,7 @@
         "reviewedBy": "Avaliado por",
         "reviewedAt": "Revisado"
       },
+      "empty": "Nenhum relato.",
       "detail": {
         "selectedTitle": "Detalle report #{{id}}",
         "emptyTitle": "Selecione um relatório para revisar.",
@@ -2855,6 +2864,8 @@
         "notesPlaceholder": "Resuma os critérios, as evidências e a justificativa da decisão...",
         "noNotes": "Sem anotações."
       },
+      "readOnlySupport": "Modo somente leitura para SUPORTE. A revisão de sanções é reservada para ADMINISTRADORES.",
+      "reviewHint": "Use a opção REVISÃO enquanto o caso ainda estiver aberto. As ações AVISO, SUSPENSÃO e BANIMENTO forçam o encerramento para RESOLVIDO.",
       "common": {
         "yes": "Sim",
         "no": "Não"
@@ -2875,12 +2886,7 @@
         "loadReports": "Relatórios de erro",
         "loadReport": "Relatório de erro ao carregar",
         "saveReview": "Revisão de salvamento de erro"
-      },
-      "title": "Moderação",
-      "intro": "Visão operacional de relatórios internos. Permite filtrar incidentes, revisar detalhes e documentar decisões administrativas com melhor contexto para suporte e controle interno.",
-      "empty": "Nenhum relato.",
-      "readOnlySupport": "Modo somente leitura para SUPORTE. A revisão de sanções é reservada para ADMINISTRADORES.",
-      "reviewHint": "Use a opção REVISÃO enquanto o caso ainda estiver aberto. As ações AVISO, SUSPENSÃO e BANIMENTO forçam o encerramento para RESOLVIDO."
+      }
     },
     "streams": {
       "wrapper": {
@@ -2908,6 +2914,9 @@
         "reloadDetail": "Detalhes da recarga",
         "closeDetail": "Detalhes completos"
       },
+      "resultsCount": "{{count}} streams",
+      "readOnlySupport": "Modo somente leitura para SUPORTE. O bloqueio de fluxo é reservado para ADMINISTRADOR.",
+      "confirmKill": "Interromper esse fluxo agora?",
       "table": {
         "id": "EU IA",
         "type": "Cara",
@@ -2918,6 +2927,7 @@
         "status": "Estado",
         "stuck": "PRESO"
       },
+      "empty": "Nenhuma transmissão ativa.",
       "detail": {
         "title": "Detalle stream #{{id}}",
         "type": "Cara",
@@ -2931,14 +2941,14 @@
         "stuck": "Preso"
       },
       "events": {
+        "title": "Eventos",
+        "empty": "Nenhum evento.",
         "table": {
           "date": "Data",
           "event": "Evento",
           "reason": "Razão",
           "metadata": "Metadados"
-        },
-        "title": "Eventos",
-        "empty": "Nenhum evento."
+        }
       },
       "common": {
         "no": "Não"
@@ -2947,11 +2957,7 @@
         "loadList": "Erro ao carregar fluxos ativos",
         "loadDetail": "Erro ao carregar detalhes do fluxo",
         "kill": "Erro ao cortar o fluxo"
-      },
-      "resultsCount": "{{count}} streams",
-      "readOnlySupport": "Modo somente leitura para SUPORTE. O bloqueio de fluxo é reservado para ADMINISTRADOR.",
-      "confirmKill": "Interromper esse fluxo agora?",
-      "empty": "Nenhuma transmissão ativa."
+      }
     },
     "db": {
       "errors": {
@@ -2962,6 +2968,7 @@
         "loading": "Carregando…",
         "noData": "Sem dados"
       },
+      "title": "Exploração técnica bruta",
       "columns": {
         "table": "Quadro"
       },
@@ -2970,8 +2977,7 @@
       },
       "filters": {
         "last": "Mais recente"
-      },
-      "title": "Exploração técnica bruta"
+      }
     },
     "dashboard": {
       "viewCopy": {
@@ -3049,6 +3055,7 @@
         "noPermissionChecklistTooltip": "Não é possível atualizar a lista de verificação.",
         "permanentlyRejected": "Rejeitado permanentemente"
       },
+      "title": "Modelos",
       "checklist": {
         "front": "Frontal",
         "back": "Traseira",
@@ -3081,8 +3088,7 @@
         "unsubscribed": "Baixo",
         "invalidId": "ID inválido",
         "readOnly": "Somente leitura"
-      },
-      "title": "Modelos"
+      }
     },
     "administration": {
       "errors": {
@@ -3386,6 +3392,8 @@
       "streams": "Fluxos ativos"
     },
     "complaints": {
+      "title": "Reclamações",
+      "subtitle": "Monitoramento de canal público e SLA (5 dias úteis)",
       "filters": {
         "status": "Estado",
         "category": "Categoria",
@@ -3428,11 +3436,12 @@
         "newStatus": "Novo estado",
         "decisionCode": "Código de decisão",
         "notes": "Notas"
-      },
-      "title": "Reclamações",
-      "subtitle": "Monitoramento de canal público e SLA (5 dias úteis)"
+      }
     },
     "compliance": {
+      "title": "Conformidade",
+      "subtitle": "Painel executivo + detalhamento quadro a quadro + URL de evidência temporária",
+      "generatedAt": "Gerado:",
       "actions": {
         "reload": "Recarregar",
         "csv": "Baixar CSV (últimos 30 dias)",
@@ -3471,16 +3480,30 @@
         "frames": "Linha do tempo dos quadros",
         "reviews": "Avaliações geradas",
         "noReviews": "Sem avaliações (todos os quadros VERDES)."
-      },
-      "title": "Conformidade",
-      "subtitle": "Painel executivo + detalhamento quadro a quadro + URL de evidência temporária",
-      "generatedAt": "Gerado:"
+      }
     },
     "modelBans": {
+      "title": "Bancos modelo",
+      "subtitle": "Revisão manual de suspensões automáticas por violações do período de teste.",
       "sidebar": {
         "label": "Bancos modelo",
         "meta": "Análise da suspensão automática"
       },
+      "reload": "Recarregar",
+      "back": "Retornar",
+      "empty": "(nenhum resultado para este filtro)",
+      "active": "Ativo",
+      "expired": "Expirado",
+      "pendingReview": "Aguardando revisão",
+      "reviewed": "Revisado",
+      "yes": "Sim",
+      "no": "Não",
+      "detailBtn": "Detalhe",
+      "viewEvidence": "Veja a evidência (imagem)",
+      "evidenceExpires": "Expira em:",
+      "evidenceHint": "URL temporária assinada do frame que desencadeou o ataque original.",
+      "noEvidence": "Nenhuma evidência disponível (bucket não configurado ou frame não capturado).",
+      "noStrikes": "(nenhum risco na janela)",
       "filter": {
         "pendingReview": "Aguardando revisão",
         "active": "Ativos",
@@ -3510,26 +3533,11 @@
       "confirm": {
         "lift": "Levantar a proibição e notificar a modelo por e-mail?",
         "keep": "Confirmar (manter) a proibição após revisão?"
-      },
-      "title": "Bancos modelo",
-      "subtitle": "Revisão manual de suspensões automáticas por violações do período de teste.",
-      "reload": "Recarregar",
-      "back": "Retornar",
-      "empty": "(nenhum resultado para este filtro)",
-      "active": "Ativo",
-      "expired": "Expirado",
-      "pendingReview": "Aguardando revisão",
-      "reviewed": "Revisado",
-      "yes": "Sim",
-      "no": "Não",
-      "detailBtn": "Detalhe",
-      "viewEvidence": "Veja a evidência (imagem)",
-      "evidenceExpires": "Expira em:",
-      "evidenceHint": "URL temporária assinada do frame que desencadeou o ataque original.",
-      "noEvidence": "Nenhuma evidência disponível (bucket não configurado ou frame não capturado).",
-      "noStrikes": "(nenhum risco na janela)"
+      }
     },
     "streamModeration": {
+      "title": "Moderação de streaming",
+      "subtitle": "Configuração da fila humana, sessões ativas e pipeline de moderação de IA",
       "subTabs": {
         "queue": "Linha",
         "sessions": "Sessões",
@@ -3541,6 +3549,13 @@
         "rejected": "Rejeitado"
       },
       "queue": {
+        "priority": "Prioridade",
+        "severity": "Gravidade",
+        "category": "Categoria",
+        "score": "Pontuação",
+        "streamId": "ID do fluxo",
+        "frameTimestamp": "Quadro",
+        "createdAt": "Criado",
         "actions": {
           "approve": "Aprovar",
           "reject": "Declínio"
@@ -3550,14 +3565,7 @@
           "severity": "Gravidade",
           "category": "Categoria",
           "all": "Todos"
-        },
-        "priority": "Prioridade",
-        "severity": "Gravidade",
-        "category": "Categoria",
-        "score": "Pontuação",
-        "streamId": "ID do fluxo",
-        "frameTimestamp": "Quadro",
-        "createdAt": "Criado"
+        }
       },
       "modal": {
         "reject": {
@@ -3580,24 +3588,24 @@
         "degradedSince": "Degradado de"
       },
       "config": {
+        "activeMode": "Modo ativo",
+        "note": "Observação",
+        "save": "Manter",
         "modal": {
           "title": "Alterar modo ativo",
           "warning": "Alterar o modo ativo afeta todos os ambientes.",
           "cancel": "Cancelar",
           "confirm": "Confirme a alteração."
-        },
-        "activeMode": "Modo ativo",
-        "note": "Observação",
-        "save": "Manter"
+        }
       },
       "errors": {
         "loadFailed": "Erro ao carregar",
         "actionFailed": "Erro ao executar a ação"
-      },
-      "title": "Moderação de streaming",
-      "subtitle": "Configuração da fila humana, sessões ativas e pipeline de moderação de IA"
+      }
     },
     "masters": {
+      "title": "Mestrado (Estudos)",
+      "subtitle": "Lista, integração e detalhes dos estudos registrados",
       "sidebar": {
         "label": "Mestres",
         "meta": "Estudos e modelos sob sua conta"
@@ -3677,11 +3685,11 @@
       "errors": {
         "load": "Não foi possível carregar a lista de estudos.",
         "loadDetail": "Não foi possível carregar os detalhes do estudo."
-      },
-      "title": "Mestrado (Estudos)",
-      "subtitle": "Lista, integração e detalhes dos estudos registrados"
+      }
     },
     "support": {
+      "title": "Médio",
+      "subtitle": "Conversas intensificadas e identidades de serviço",
       "sidebar": {
         "label": "Médio",
         "meta": "Suporte humano para conversas que exigiram intervenção humana."
@@ -3703,19 +3711,19 @@
         "send": "Enviar"
       },
       "filters": {
+        "status": "Estado:",
         "statusOptions": {
           "ALL": "Todos",
           "ESCALATED_UNASSIGNED": "Escaladas sem reivindicação",
           "HUMAN_HANDLING": "Em atenção",
           "RESOLVED": "Resolvido"
         },
+        "agent": "Agente:",
         "agentOptions": {
           "all": "Todos",
           "me": "Meus casos",
           "unassigned": "Não atribuído"
         },
-        "status": "Estado:",
-        "agent": "Agente:",
         "pageSize": "Por página:"
       },
       "columns": {
@@ -3745,19 +3753,19 @@
         "pageOf": "Página {{page}} de {{total}}"
       },
       "detail": {
+        "back": "← Voltar à lista",
+        "empty": "Nenhuma mensagem nesta conversa.",
+        "sending": "Enviando…",
+        "chars": "{{count}}/{{max}}",
+        "inputPlaceholder": "Digite sua resposta. Pressione Enter para enviar, Shift+Enter para iniciar uma nova linha.",
+        "attendedBy": "Atendido por {{displayName}} desde {{when}}",
         "metadata": {
           "user": "Usuário",
           "escalatedAt": "Escalada",
           "reason": "Razão",
           "assignedTo": "Designado para",
           "msgsCount": "Número de mensagens"
-        },
-        "back": "← Voltar à lista",
-        "empty": "Nenhuma mensagem nesta conversa.",
-        "sending": "Enviando…",
-        "chars": "{{count}}/{{max}}",
-        "inputPlaceholder": "Digite sua resposta. Pressione Enter para enviar, Shift+Enter para iniciar uma nova linha.",
-        "attendedBy": "Atendido por {{displayName}} desde {{when}}"
+        }
       },
       "modal": {
         "claim": {
@@ -3861,6 +3869,11 @@
       },
       "notifications": {},
       "tickets": {
+        "title": "Incidentes",
+        "subtitle": "Ingressos abertos por clientes com possível compensação financeira.",
+        "refresh": "Atualizar",
+        "loading": "Carregando…",
+        "empty": "Não há incidentes a reportar.",
         "filters": {
           "category": "Categoria",
           "status": "Estado",
@@ -3943,15 +3956,8 @@
           "verifyFailed": "A verificação não pôde ser realizada.",
           "transitionFailed": "O status não pôde ser alterado.",
           "compensateFailed": "A compensação não pôde ser aplicada."
-        },
-        "title": "Incidentes",
-        "subtitle": "Ingressos abertos por clientes com possível compensação financeira.",
-        "refresh": "Atualizar",
-        "loading": "Carregando…",
-        "empty": "Não há incidentes a reportar."
-      },
-      "title": "Médio",
-      "subtitle": "Conversas intensificadas e identidades de serviço"
+        }
+      }
     }
   },
   "seo": {
@@ -3993,16 +3999,16 @@
       "button": "Médio"
     },
     "chat": {
-      "systemAssigned": {
-        "bannerHint": "Um técnico da equipe de suporte está cuidando do seu caso.",
-        "fallback": "Seu caso foi encaminhado para a equipe de suporte."
-      },
       "agentName": "Agente de IA",
       "headerBadge": "24 horas por dia, 7 dias por semana",
       "emptyState": "Olá, sou o agente de IA do SharemeChat. Como posso ajudar?",
       "inputPlaceholder": "Escreva sua mensagem...",
       "sendButton": "Enviar",
       "typing": "Agente de IA digitando...",
+      "systemAssigned": {
+        "bannerHint": "Um técnico da equipe de suporte está cuidando do seu caso.",
+        "fallback": "Seu caso foi encaminhado para a equipe de suporte."
+      },
       "readOnlyBanner": "Este problema foi resolvido. Você pode visualizar o histórico, mas não pode enviar mais mensagens.",
       "teamPending": "Equipe de Suporte",
       "assignedByName": "{{name}} está cuidando do seu caso.",
@@ -4026,6 +4032,13 @@
       "generic": "Ocorreu um erro. Se o problema persistir, entre em contato com o suporte."
     },
     "tickets": {
+      "navbar": "Meus incidentes",
+      "title": "Meus incidentes",
+      "subtitle": "Reporte um problema de rastreabilidade e possível compensação.",
+      "newButton": "Novo incidente",
+      "empty": "Você ainda não reportou nenhum incidente.",
+      "refresh": "Atualizar",
+      "loading": "Carregando...",
       "listHeaders": {
         "id": "#",
         "category": "Categoria",
@@ -4090,14 +4103,7 @@
         "rateLimited": "Você atingiu o limite de incidentes abertos ou criados recentemente.",
         "descriptionRequired": "A descrição é obrigatória.",
         "categoryRequired": "Selecione uma categoria."
-      },
-      "navbar": "Meus incidentes",
-      "title": "Meus incidentes",
-      "subtitle": "Reporte um problema de rastreabilidade e possível compensação.",
-      "newButton": "Novo incidente",
-      "empty": "Você ainda não reportou nenhum incidente.",
-      "refresh": "Atualizar",
-      "loading": "Carregando..."
+      }
     }
   },
   "modelLanding": {
@@ -4116,6 +4122,9 @@
       "imageAlt": "Modelo SharemeChat"
     },
     "benefits": {
+      "label": "Por que o SharemeChat?",
+      "kicker": "Do seu jeito, com apoio.",
+      "sub": "Uma videochamada privada individual, com ambas as partes verificadas e pagamentos sob controle. Você define as regras do seu trabalho.",
       "items": {
         "price": {
           "title": "Você define o preço.",
@@ -4141,23 +4150,20 @@
           "title": "Você cresce em etapas.",
           "text": "Quanto mais faturas, melhor o nível: melhor distribuição e taxas mais altas."
         }
-      },
-      "label": "Por que o SharemeChat?",
-      "kicker": "Do seu jeito, com apoio.",
-      "sub": "Uma videochamada privada individual, com ambas as partes verificadas e pagamentos sob controle. Você define as regras do seu trabalho."
+      }
     },
     "earn": {
       "title": "Você é pago pelo seu tempo.",
       "text": "O cliente paga pelos minutos que você passa ao vivo e você recebe sua parte de cada sessão, sem intermediários entre seu trabalho e seu pagamento."
     },
     "trust": {
+      "label": "Com todas as garantias",
       "lines": {
         "age": "Plataforma destinada apenas a adultos (maiores de 18 anos), com verificação real.",
         "gdpr": "Seus dados estão protegidos de acordo com o RGPD (Regulamento Geral sobre a Proteção de Dados).",
         "control": "Você controla o que mostra e para quem.",
         "support": "Apoio humano quando você precisar."
-      },
-      "label": "Com todas as garantias"
+      }
     },
     "ctaFinal": {
       "title": "Pronto para começar?",
@@ -4178,6 +4184,7 @@
       "ctaSecondary": "Como funciona"
     },
     "howItWorks": {
+      "title": "Como funciona",
       "step1": {
         "title": "1. Registro como Mestre",
         "text": "Cadastre-se como Master em minutos, sem necessidade de empresa. A plataforma realiza a verificação e ativa sua conta."
@@ -4189,10 +4196,10 @@
       "step3": {
         "title": "3. Retiradas multicanal",
         "text": "Diversas formas de pagamento disponíveis. Sem exclusividade de canal — cada Master escolhe a sua."
-      },
-      "title": "Como funciona"
+      }
     },
     "benefits": {
+      "title": "O que o programa de mestrado oferece?",
       "items": {
         "b1": {
           "title": "Sem taxas",
@@ -4206,10 +4213,10 @@
           "title": "Otimize sua renda",
           "text": "Verificação de usuário em 1 minuto, detector de presença de modelos e muitas vantagens para maximizar sua renda."
         }
-      },
-      "title": "O que o programa de mestrado oferece?"
+      }
     },
     "faq": {
+      "title": "Perguntas frequentes",
       "items": {
         "q1": {
           "q": "Preciso registrar uma empresa?",
@@ -4223,8 +4230,7 @@
           "q": "Em que países posso operar?",
           "a": "O programa de mestrado é internacional. Os métodos de desistência e os requisitos de verificação são ajustados ao país durante a inscrição."
         }
-      },
-      "title": "Perguntas frequentes"
+      }
     },
     "ctaFinal": {
       "title": "Pronto para começar a usar a conta Master?",
@@ -4283,26 +4289,26 @@
       "empty": "Ainda não há movimentações registradas."
     },
     "topModels": {
+      "title": "Modelos mais ativos",
+      "empty": "Não há atividade na janela selecionada.",
+      "windowToday": "Hoje",
+      "window7d": "Últimos 7 dias",
+      "window30d": "Últimos 30 dias",
       "cols": {
         "id": "EU IA",
         "nickname": "Apelido",
         "lastActivity": "Última atividade",
         "total": "Total gerado"
-      },
-      "title": "Modelos mais ativos",
-      "empty": "Não há atividade na janela selecionada.",
-      "windowToday": "Hoje",
-      "window7d": "Últimos 7 dias",
-      "window30d": "Últimos 30 dias"
+      }
     },
     "tiers": {
+      "title": "Seções de estudo e limiares",
+      "hint": "Ao subir de nível (faturamento bruto de 30 dias do Studio), seus modelos podem escolher uma tarifa dentro da faixa permitida.",
       "cols": {
         "tier": "Esticar",
         "threshold": "Limiar (30 dias)",
         "rateRange": "Preço permitido"
-      },
-      "title": "Seções de estudo e limiares",
-      "hint": "Ao subir de nível (faturamento bruto de 30 dias do Studio), seus modelos podem escolher uma tarifa dentro da faixa permitida."
+      }
     },
     "placeholders": {
       "payout": "Solicitação de saque multicanal — ativada na próxima entrega."
@@ -4315,20 +4321,22 @@
         "hint": "Retiro mínimo por solicitud: {{min}}. Máximo por solicitud: {{max}}. Los retiros los procesa el equipo manualmente hasta que se activen los canales automatizados."
       },
       "form": {
+        "title": "Solicitar cancelamento",
+        "subtitle": "Por favor, indique o valor e a forma de pagamento de sua preferência. Um agente analisará sua solicitação.",
         "amount": {
           "label": "Valor (EUR)",
           "placeholder": "Insira um valor",
           "help": "Entre {{min}} y {{max}}. Solo importes enteros."
         },
         "channel": {
+          "label": "Canal preferido",
+          "help": "Referência comercial. O canal específico será confirmado com a equipe durante o processamento da solicitação.",
           "options": {
             "paxum": "Paxum",
             "yoursafe": "Seu seguro",
             "crypto": "Criptomoedas (NOWPayments)",
             "sepa": "Transferência SEPA manual"
-          },
-          "label": "Canal preferido",
-          "help": "Referência comercial. O canal específico será confirmado com a equipe durante o processamento da solicitação."
+          }
         },
         "method": {
           "label": "Método de pagamento",
@@ -4340,8 +4348,6 @@
           "placeholder": "Adicione quaisquer referências úteis (número da fatura, conta de destino, etc.).",
           "help": "{{chars}}/500 caracteres."
         },
-        "title": "Solicitar cancelamento",
-        "subtitle": "Por favor, indique o valor e a forma de pagamento de sua preferência. Um agente analisará sua solicitação.",
         "submit": "Solicitar cancelamento",
         "submitting": "Enviando…",
         "successBody": "Solicitação registrada por {{amount}} {{id}}. A equipe analisará a operação e confirmará a aprovação por e-mail."
@@ -4351,6 +4357,8 @@
         "submit": "Não foi possível registrar a solicitação. Verifique o valor e tente novamente."
       },
       "methods": {
+        "title": "Métodos de pagamento",
+        "subtitle": "Cadastre as contas nas quais deseja receber seus saques. O método marcado como principal será usado por padrão.",
         "empty": {
           "title": "Você ainda não cadastrou nenhum método de pagamento.",
           "hint": "Adicione uma conta para poder solicitar seus saques mais rapidamente."
@@ -4373,11 +4381,18 @@
           "delete": "Eliminar",
           "setDefault": "Marcar como principal"
         },
+        "confirmDelete": "Eliminar o método \"{{label}}\"?",
         "modal": {
           "newTitle": "Novo método de pagamento",
           "editTitle": "Editar método de pagamento"
         },
         "form": {
+          "rail": "Canal",
+          "alias": "Apelido (opcional)",
+          "aliasPlaceholder": "Exemplo: Paxum Principal",
+          "setDefault": "Marcar como método principal",
+          "save": "Manter",
+          "saving": "Salvando…",
           "accountRefLabel": {
             "PAXUM": "Envie um e-mail para Paxum",
             "YOURSAFE": "IBAN Yoursafe",
@@ -4395,26 +4410,19 @@
             "YOURSAFE": "IBAN da sua conta Yoursafe. 15 a 34 caracteres alfanuméricos.",
             "NOWPAYMENTS_CRYPTO": "Endereço da carteira onde você deseja receber as criptomoedas. Verifique o formato antes de salvar.",
             "SEPA_MANUAL": "IBAN da conta bancária. 15 a 34 caracteres alfanuméricos."
-          },
-          "rail": "Canal",
-          "alias": "Apelido (opcional)",
-          "aliasPlaceholder": "Exemplo: Paxum Principal",
-          "setDefault": "Marcar como método principal",
-          "save": "Manter",
-          "saving": "Salvando…"
+          }
         },
         "errors": {
           "load": "Não foi possível carregar os métodos de pagamento.",
           "save": "O método não pôde ser salvo. Por favor, revise os dados.",
           "delete": "O método não pôde ser removido.",
           "setDefault": "Não pôde ser marcado como principal."
-        },
-        "title": "Métodos de pagamento",
-        "subtitle": "Cadastre as contas nas quais deseja receber seus saques. O método marcado como principal será usado por padrão.",
-        "confirmDelete": "Eliminar o método \"{{label}}\"?"
+        }
       }
     },
     "historial": {
+      "title": "Histórico de transações",
+      "subtitle": "Transmissão de rendimentos e pedidos de levantamento da sua conta Master.",
       "filters": {
         "range": "Faixa",
         "from": "De",
@@ -4461,11 +4469,11 @@
       },
       "errors": {
         "load": "Não foi possível carregar o histórico."
-      },
-      "title": "Histórico de transações",
-      "subtitle": "Transmissão de rendimentos e pedidos de levantamento da sua conta Master."
+      }
     },
     "modelos": {
+      "title": "Modelos de estudo",
+      "inviteButton": "Modelo de convite",
       "empty": {
         "title": "Você ainda não convidou nenhuma modelo.",
         "hint": "Use o \"Modelo de convite\" para enviar o e-mail de cadastro. O modelo completa a verificação de identidade e o perfil de forma independente."
@@ -4494,6 +4502,8 @@
         "activate": "Ativar",
         "deactivate": "Desativar"
       },
+      "confirmActivate": "Ativar {{nickname}}? O modelo poderá começar a transmitir na sua conta Master.",
+      "confirmDeactivate": "Desativar {{nickname}}? Ele deixará de poder transmitir até que você o reative.",
       "flash": {
         "invited": "Convite registrado com sucesso.",
         "activated": "{{nickname}} foi ativado.",
@@ -4505,12 +4515,6 @@
         "toggle": "Não foi possível atualizar o estado do modelo."
       },
       "invite": {
-        "errors": {
-          "emailInvalid": "Insira um endereço de e-mail válido.",
-          "nicknameRequired": "O apelido deve ter pelo menos 3 caracteres.",
-          "sharePctRange": "A porcentagem acordada deve ser um número inteiro entre 0 e 100.",
-          "generic": "O convite não pôde ser enviado. Tente novamente."
-        },
         "title": "Convide uma modelo para sua conta Master.",
         "subtitle": "Enviaremos um e-mail de cadastro para ela. Ela deverá concluir a verificação de identidade e o cadastro do perfil.",
         "email": "E-mail da modelo",
@@ -4521,13 +4525,15 @@
         "sharePctPlaceholder": "Exemplo: 20",
         "sharePctHint": "Percentagem que a modelo receberá com base nos seus rendimentos brutos. Pode ajustar este valor posteriormente na tabela.",
         "submit": "Enviar convite",
-        "submitting": "Enviando…"
+        "submitting": "Enviando…",
+        "errors": {
+          "emailInvalid": "Insira um endereço de e-mail válido.",
+          "nicknameRequired": "O apelido deve ter pelo menos 3 caracteres.",
+          "sharePctRange": "A porcentagem acordada deve ser um número inteiro entre 0 e 100.",
+          "generic": "O convite não pôde ser enviado. Tente novamente."
+        }
       },
       "editShare": {
-        "errors": {
-          "pctRange": "A porcentagem deve ser um número inteiro entre 0 e 100.",
-          "generic": "A porcentagem acordada não pôde ser atualizada."
-        },
         "title": "Editar % acordado internamente",
         "subtitle": "Ajusta el porcentaje que percibirá {{nickname}} sobre su facturación.",
         "pct": "% de concordância (0 – 100)",
@@ -4535,15 +4541,25 @@
         "notes": "Notas (opcional)",
         "notesPlaceholder": "Motivo da mudança, referência, etc.",
         "submit": "Manter",
-        "submitting": "Salvando…"
-      },
-      "title": "Modelos de estudo",
-      "inviteButton": "Modelo de convite",
-      "confirmActivate": "Ativar {{nickname}}? O modelo poderá começar a transmitir na sua conta Master.",
-      "confirmDeactivate": "Desativar {{nickname}}? Ele deixará de poder transmitir até que você o reative."
+        "submitting": "Salvando…",
+        "errors": {
+          "pctRange": "A porcentagem deve ser um número inteiro entre 0 e 100.",
+          "generic": "A porcentagem acordada não pôde ser atualizada."
+        }
+      }
     }
   },
   "masterKyc": {
+    "navTitle": "Verificação mestre KYC",
+    "back": "Retornar",
+    "title": "Verificação de identidade (KYC)",
+    "intro": "Para concluir sua matrícula no mestrado, precisamos verificar sua identidade (como pessoa física). A verificação é feita por meio de câmera e documento: nosso provedor (Didit, certificado na UE) lê seu documento de identidade e verifica se ele corresponde ao seu rosto por meio de uma selfie.",
+    "whyLegal": "Isso é exigido pelas normas antifraude e de Conheça Seu Cliente (KYC) aplicáveis ao programa Master. Não é opcional.",
+    "consentTitle": "Consentimento para processamento biométrico e de identidade",
+    "consentText": "Dou meu consentimento explícito para que meu documento de identidade e dados biométricos faciais (imagem do meu rosto) sejam processados pela Didit (processadora de dados, UE) com a finalidade de verificar minha identidade como Mestre, de acordo com o Artigo 9.2.a do RGPD. Os dados serão armazenados pelo período necessário para cumprir as obrigações legais aplicáveis e, em seguida, serão excluídos. Posso revogar meu consentimento a qualquer momento entrando em contato com privacy@sharemechat.com; nesse caso, não poderei concluir meu cadastro como Mestre.",
+    "consentAck": "Li e concordo com o termo de consentimento para o processamento de dados biométricos e de identidade.",
+    "startButton": "Iniciar verificação",
+    "startingButton": "Começando…",
     "errors": {
       "generic": "Não foi possível iniciar a verificação. Tente novamente.",
       "alreadyApproved": "Sua identidade já foi verificada.",
@@ -4556,26 +4572,9 @@
       "timeout": "A verificação ainda não foi concluída. Tente novamente em alguns minutos a partir do seu painel de controle.",
       "back": "Voltar ao painel"
     },
-    "navTitle": "Verificação mestre KYC",
-    "back": "Retornar",
-    "title": "Verificação de identidade (KYC)",
-    "intro": "Para concluir sua matrícula no mestrado, precisamos verificar sua identidade (como pessoa física). A verificação é feita por meio de câmera e documento: nosso provedor (Didit, certificado na UE) lê seu documento de identidade e verifica se ele corresponde ao seu rosto por meio de uma selfie.",
-    "whyLegal": "Isso é exigido pelas normas antifraude e de Conheça Seu Cliente (KYC) aplicáveis ao programa Master. Não é opcional.",
-    "consentTitle": "Consentimento para processamento biométrico e de identidade",
-    "consentText": "Dou meu consentimento explícito para que meu documento de identidade e dados biométricos faciais (imagem do meu rosto) sejam processados pela Didit (processadora de dados, UE) com a finalidade de verificar minha identidade como Mestre, de acordo com o Artigo 9.2.a do RGPD. Os dados serão armazenados pelo período necessário para cumprir as obrigações legais aplicáveis e, em seguida, serão excluídos. Posso revogar meu consentimento a qualquer momento entrando em contato com privacy@sharemechat.com; nesse caso, não poderei concluir meu cadastro como Mestre.",
-    "consentAck": "Li e concordo com o termo de consentimento para o processamento de dados biométricos e de identidade.",
-    "startButton": "Iniciar verificação",
-    "startingButton": "Começando…",
     "consentReadMore": "Mais informações na política de privacidade."
   },
   "masterContract": {
-    "status": {
-      "accepted": "Contrato assinado com sucesso. Redirecionando…"
-    },
-    "errors": {
-      "loadFailed": "O contrato atual não pôde ser carregado. Tente novamente mais tarde.",
-      "acceptFailed": "A assinatura n��o pôde ser registrada. Tente novamente."
-    },
     "navTitle": "Contrato principal",
     "back": "Retornar",
     "title": "Assinatura do Contrato Principal",
@@ -4585,10 +4584,22 @@
     "acceptCheckbox": "Li o contrato e aceito seus termos.",
     "submitButton": "Assinar contrato",
     "submittingButton": "Assinando…",
+    "status": {
+      "accepted": "Contrato assinado com sucesso. Redirecionando…"
+    },
+    "errors": {
+      "loadFailed": "O contrato atual não pôde ser carregado. Tente novamente mais tarde.",
+      "acceptFailed": "A assinatura n��o pôde ser registrada. Tente novamente."
+    },
     "mustOpenPdfFirst": "Você deve abrir e revisar o PDF do contrato antes de assiná-lo.",
     "pdfOpenedOk": "Abra o PDF — agora você pode marcar e assinar."
   },
   "perfilMaster": {
+    "navTitle": "Perfil principal",
+    "back": "Voltar ao painel",
+    "title": "Dados do perfil principal",
+    "role": "MESTRE",
+    "empty": "—",
     "header": {
       "subtitle": "Você gerencia um estúdio e os modelos que trabalham sob sua conta."
     },
@@ -4630,11 +4641,16 @@
     },
     "errors": {
       "saveFailed": "As alterações não puderam ser salvas. Tente novamente."
-    },
-    "navTitle": "Perfil principal",
-    "back": "Voltar ao painel",
-    "title": "Dados do perfil principal",
-    "role": "MESTRE",
-    "empty": "—"
+    }
+  },
+  "myLanguages": {
+    "title": "Línguas que falo",
+    "subtitle": "Selecione os idiomas que você fala e qual é o seu idioma principal. Seu idioma principal é aquele que aparece no seu perfil e para o qual suas conversas são traduzidas.",
+    "primary": "principal",
+    "primaryHint": "Língua principal",
+    "save": "Salvar idiomas",
+    "savedOk": "Idiomas salvos.",
+    "saveError": "Os idiomas não puderam ser salvos.",
+    "errorEmpty": "Escolha pelo menos um idioma que você fale."
   }
 }
