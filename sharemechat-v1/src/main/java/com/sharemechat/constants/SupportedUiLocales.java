@@ -24,7 +24,7 @@ public final class SupportedUiLocales {
 
     public static final String DEFAULT = "es";
 
-    public static final List<String> CODES = List.of("es", "en", "fr", "de");
+    public static final List<String> CODES = List.of("es", "en", "fr", "de", "pt");
 
     private static final Set<String> CODES_SET = Set.copyOf(CODES);
 

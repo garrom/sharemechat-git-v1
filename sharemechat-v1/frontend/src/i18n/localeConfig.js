@@ -8,8 +8,9 @@ export const DEFAULT_LOCALE = 'es';
 // Idiomas de UI (Nivel A): SOLO los que tenemos traducidos. Distinto del set de
 // idiomas de chat (SupportedChatLanguages, backend), que es amplio. Ampliar aquí
 // requiere su locale JSON + prefijo de URL + hreflang.
-// Fase 1 (2026-08-20): se añaden fr, de. Fase 4: it, pt, nl, pl.
-export const SUPPORTED_LOCALES = ['es', 'en', 'fr', 'de'];
+// Fase 1 (2026-08-20): fr, de. + pt (2026-08-21, cobertura América: ES+PT+EN,
+// abre modelos de Brasil). Siguientes: it, nl, pl.
+export const SUPPORTED_LOCALES = ['es', 'en', 'fr', 'de', 'pt'];
 
 // Etiqueta corta (código) para el disparador del selector.
 export const LOCALE_LABELS = SUPPORTED_LOCALES.reduce((acc, locale) => {
@@ -23,6 +24,7 @@ export const LOCALE_NATIVE_NAMES = {
   en: 'English',
   fr: 'Français',
   de: 'Deutsch',
+  pt: 'Português',
 };
 
 // Selector con badge de código (no bandera emoji: degrada a letras
