@@ -209,7 +209,11 @@
   "common": {
     "locale": {
       "label": "Idioma",
-      "blogNotTranslated": "El blog aún no está en este idioma"
+      "blogNotTranslated": "El blog aún no está en este idioma",
+      "suggest": "SharemeChat también está en {{lang}}.",
+      "switch": "Cambiar",
+      "dismiss": "Descartar",
+      "suggestAria": "Sugerencia de idioma"
     },
     "alerts": {
       "callActive": "Tienes una LLAMADA activa. Pulsa STOP para salir.",

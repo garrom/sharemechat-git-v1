@@ -209,7 +209,11 @@
   "common": {
     "locale": {
       "label": "Linguagem",
-      "blogNotTranslated": "O blog ainda não está disponível neste idioma."
+      "blogNotTranslated": "O blog ainda não está disponível neste idioma.",
+      "suggest": "SharemeChat também está em {{lang}}.",
+      "switch": "Mudar",
+      "dismiss": "Exclua",
+      "suggestAria": "Sugestão de idioma"
     },
     "alerts": {
       "callActive": "Você tem uma chamada ativa. Pressione PARAR para sair.",
@@ -4644,9 +4648,9 @@
     }
   },
   "myLanguages": {
-    "savedOk": "Idioma salvo.",
-    "saveError": "O idioma não pôde ser salvo.",
     "title": "Seu bate-papo se traduz em",
-    "subtitle": "A conversa do chat será traduzida automaticamente para o idioma escolhido."
+    "subtitle": "A conversa do chat será traduzida automaticamente para o idioma escolhido.",
+    "savedOk": "Idioma salvo.",
+    "saveError": "O idioma não pôde ser salvo."
   }
 }
