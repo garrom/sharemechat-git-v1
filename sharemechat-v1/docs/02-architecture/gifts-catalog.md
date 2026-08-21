@@ -71,3 +71,41 @@ Precio en `cost DECIMAL(10,2)`; `tier` = `premium` (pago) / `quick` (gratis);
    UPDATE` del cambio (mismo patrón que V55). Idempotente por `UNIQUE(code)`.
 3. Actualiza esta tabla.
 4. El deploy la aplica en todos los entornos. **Nunca** editar `gifts` a mano.
+
+## ⚠️ Aviso: V55 + datos sucios (FK `transactions.gift_id`) — para AUDIT
+
+**Bug latente detectado 2026-08-21** al aplicar V55 por primera vez sobre una BD
+con datos (TEST). El dedup de V55:
+
+```sql
+DELETE g1 FROM gifts g1 INNER JOIN gifts g2 ON g1.code = g2.code AND g1.id > g2.id;
+```
+
+**falla si una fila duplicada a borrar está referenciada por `transactions.gift_id`**
+(FK `fk_gift_transactions`, la ÚNICA FK que apunta a `gifts`). El `DELETE` se bloquea,
+la migración aborta y **el backend no arranca**. En PROD no ocurrió porque la tabla
+arrancó vacía; ocurre en entornos con catálogo sucio + transacciones (TEST/AUDIT).
+
+**Caso TEST (resuelto 2026-08-21):** 1 duplicado `GIFT_KISS` (id 16, superviviente
+id 2) referenciado por 38 transactions. Fix aplicado ANTES del deploy de backend:
+
+```sql
+UPDATE transactions SET gift_id = 2 WHERE gift_id = 16;  -- reapunta al superviviente
+```
+
+**Acción para AUDIT** (antes del próximo deploy de backend que aplique V55): detectar
+duplicados referenciados y reapuntarlos al superviviente (menor id) del mismo `code`:
+
+```sql
+-- detectar
+SELECT g1.id AS dup_id, g1.code, MIN(g2.id) AS survive_id, COUNT(t.id) AS refs
+FROM gifts g1
+JOIN gifts g2 ON g1.code = g2.code AND g2.id < g1.id
+LEFT JOIN transactions t ON t.gift_id = g1.id
+GROUP BY g1.id, g1.code;
+-- por cada dup_id con refs>0:  UPDATE transactions SET gift_id=<survive_id> WHERE gift_id=<dup_id>;
+```
+
+**Patrón permanente:** cualquier migración futura que BORRE filas de `gifts` debe
+**reapuntar antes las FK de `transactions`** al superviviente (V55 no lo hizo y es
+inmutable ya que está aplicada en PROD).
