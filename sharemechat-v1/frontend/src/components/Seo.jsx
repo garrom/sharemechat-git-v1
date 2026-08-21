@@ -40,7 +40,7 @@ import { localePrefix } from '../i18n/localeUtils';
 
 // og:locale por idioma de UI (Fase 1 i18n). Fallback razonable si se añade uno
 // sin mapear.
-const OG_LOCALES = { es: 'es_ES', en: 'en_US', fr: 'fr_FR', de: 'de_DE' };
+const OG_LOCALES = { es: 'es_ES', en: 'en_US', fr: 'fr_FR', de: 'de_DE', pt: 'pt_BR' };
 
 // Imagen por defecto de marca para previews sociales. Generada como
 // raster 1200x630 y subida a assets-sharemechat-{test,audit,prod}.

@@ -10,6 +10,7 @@ import en from './locales/en.json';
 // frontend/scripts/i18n-sync.mjs (máquina + revisión).
 import fr from './locales/fr.json';
 import de from './locales/de.json';
+import pt from './locales/pt.json';
 
 // Fase 4B.1 (ADR-022): namespace 'blog' separado del monolitico
 // 'translation'. Cargado tambien por import estatico para mantener el
@@ -40,7 +41,8 @@ i18n
       es: { translation: es, blog: blogEs, cms: cmsEs },
       en: { translation: en, blog: blogEn, cms: cmsEn },
       fr: { translation: fr },
-      de: { translation: de }
+      de: { translation: de },
+      pt: { translation: pt }
     },
     ns: ['translation', 'blog', 'cms'],
     defaultNS: 'translation',
