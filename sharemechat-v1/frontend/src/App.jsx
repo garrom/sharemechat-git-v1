@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Switch, Route, Redirect } from 'react-router-d
 import i18n from './i18n';
 import { DEFAULT_LOCALE } from './i18n/localeConfig';
 import { PREFIXED_LOCALES } from './i18n/localeUtils';
+import LanguageSuggestionBanner from './components/LanguageSuggestionBanner';
 import RequireRole from './components/RequireRole';
 import DashboardClient from './pages/dashboard/DashboardClient';
 import DashboardModel from './pages/dashboard/DashboardModel';
@@ -174,6 +175,7 @@ function App() {
                 </Switch>
               ) : (
                 <>
+                  <LanguageSuggestionBanner />
                   <Switch>
                     <PublicWithGuestGate exact path="/" component={Home} />
                     <PublicWithGuestGate exact path="/login" component={Home} />

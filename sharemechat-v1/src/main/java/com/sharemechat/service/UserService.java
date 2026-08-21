@@ -191,7 +191,7 @@ public class UserService {
 
         User savedUser = userRepository.save(user);
 
-        seedPrimaryLanguageIfMissing(savedUser);
+        seedPrimaryLanguageIfMissing(savedUser, acceptLanguage, countryDetected);
         emailVerificationService.issueProductVerification(savedUser);
 
         try {
@@ -312,7 +312,7 @@ public class UserService {
 
         User savedUser = userRepository.save(user);
 
-        seedPrimaryLanguageIfMissing(savedUser);
+        seedPrimaryLanguageIfMissing(savedUser, acceptLanguage, countryDetected);
         emailVerificationService.issueProductVerification(savedUser);
 
         try {
@@ -826,13 +826,15 @@ public class UserService {
         ));
     }
 
-    private void seedPrimaryLanguageIfMissing(User user) {
+    // Fase 3 i18n (2026-08-22): siembra el idioma PERSONAL/de chat en el registro
+    // desde el SET AMPLIO (SupportedChatLanguages, incluye mg), no solo desde el
+    // ui_locale (5 idiomas). Así una malgache arranca con chat en malgache.
+    private void seedPrimaryLanguageIfMissing(User user, String acceptLanguage, String countryDetected) {
         if (user == null || user.getId() == null) return;
 
         if (!userLanguageRepository.findByUserId(user.getId()).isEmpty()) return;
 
-        String lang = normalizeUiLocale(user.getUiLocale());
-        if (lang == null) lang = "en";
+        String lang = detectPersonalLanguage(acceptLanguage, countryDetected, user.getUiLocale());
 
         UserLanguage ul = new UserLanguage();
         ul.setUserId(user.getId());
@@ -841,6 +843,29 @@ public class UserService {
         ul.setPreferenceWeight(100);
 
         userLanguageRepository.save(ul);
+    }
+
+    /**
+     * Detección del idioma personal (set amplio) en el registro, con prioridad:
+     *   1. Accept-Language del navegador (mejor señal de lo que la persona lee).
+     *   2. País detectado (CDN) -> {@link com.sharemechat.constants.CountryLanguageDefaults}.
+     *   3. ui_locale (idioma de interfaz, siempre uno de los soportados de UI).
+     *   4. "en".
+     * Todo validado contra {@link com.sharemechat.constants.SupportedChatLanguages}.
+     */
+    private String detectPersonalLanguage(String acceptLanguage, String countryDetected, String uiLocale) {
+        if (acceptLanguage != null && !acceptLanguage.isBlank()) {
+            String first = acceptLanguage.split(",")[0].trim();
+            String norm = com.sharemechat.constants.SupportedChatLanguages.normalize(first);
+            if (norm != null) return norm;
+        }
+        if (countryDetected != null && !countryDetected.isBlank()) {
+            String byCountry = com.sharemechat.constants.CountryLanguageDefaults.languageFor(countryDetected);
+            if (byCountry != null) return byCountry; // ya es un código soportado
+        }
+        String ui = normalizeUiLocale(uiLocale);
+        if (ui != null) return ui;
+        return "en";
     }
 
     private boolean isBlockedForGlobalAccess(User user) {
