@@ -7,7 +7,7 @@ import {
   PREFIXED_LOCALES,
   localePrefix,
 } from '../i18n/localeUtils';
-import { getLocaleFlag, getLocaleNativeName, getLocaleLabel } from '../i18n/localeConfig';
+import { getLocaleNativeName, getLocaleLabel } from '../i18n/localeConfig';
 import { LocaleWrap, LocaleTrigger, LocaleMenu, LocaleOption } from '../styles/NavbarStyles';
 import { isAdminSurface } from '../utils/runtimeSurface';
 import { useBlogLocale } from '../pages/blog/BlogLocaleContext';
@@ -143,7 +143,7 @@ const LocaleSwitcher = ({ onAfterChange, style }) => {
         aria-label={i18n.t('common.locale.label', { defaultValue: 'Idioma' })}
         onClick={() => setOpen((v) => !v)}
       >
-        <span className="flag" aria-hidden="true">{getLocaleFlag(currentLocale)}</span>
+        <span className="code" aria-hidden="true">{getLocaleLabel(currentLocale)}</span>
         <span className="lbl">{getLocaleNativeName(currentLocale)}</span>
         <span className="chev" aria-hidden="true">▾</span>
       </LocaleTrigger>
@@ -163,9 +163,8 @@ const LocaleSwitcher = ({ onAfterChange, style }) => {
               title={disabled ? blogDisabledTitle : undefined}
               onClick={() => { if (!disabled) handleChange(locale); }}
             >
-              <span className="flag" aria-hidden="true">{getLocaleFlag(locale)}</span>
+              <span className="code" aria-hidden="true">{getLocaleLabel(locale)}</span>
               <span className="name">{getLocaleNativeName(locale)}</span>
-              <span className="code">{getLocaleLabel(locale)}</span>
               {active && <span className="check" aria-hidden="true">✓</span>}
             </LocaleOption>
           );

@@ -23,7 +23,6 @@ jest.mock('../i18n/localeUtils', () => ({
 }));
 jest.mock('../i18n/localeConfig', () => ({
   LOCALE_LABELS: { es: 'ES', en: 'EN' },
-  getLocaleFlag: (l) => ({ es: '🇪🇸', en: '🇬🇧' }[l] || ''),
   getLocaleNativeName: (l) => ({ es: 'Español', en: 'English' }[l] || l),
   getLocaleLabel: (l) => ({ es: 'ES', en: 'EN' }[l] || l),
 }));

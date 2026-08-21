@@ -25,23 +25,13 @@ export const LOCALE_NATIVE_NAMES = {
   de: 'Deutsch',
 };
 
-// Bandera (emoji) por idioma. Decorativa; el nombre nativo es el texto primario,
-// así que degrada bien si el dispositivo no renderiza banderas emoji.
-export const LOCALE_FLAGS = {
-  es: '🇪🇸',
-  en: '🇬🇧',
-  fr: '🇫🇷',
-  de: '🇩🇪',
-};
-
+// Selector con badge de código (no bandera emoji: degrada a letras
+// desalineadas en Windows). El código va como badge estilado; el nombre nativo
+// es el texto principal.
 export const getLocaleLabel = (locale) => {
   return LOCALE_LABELS[locale] || String(locale || '').toUpperCase();
 };
 
 export const getLocaleNativeName = (locale) => {
   return LOCALE_NATIVE_NAMES[locale] || getLocaleLabel(locale);
-};
-
-export const getLocaleFlag = (locale) => {
-  return LOCALE_FLAGS[locale] || '';
 };
