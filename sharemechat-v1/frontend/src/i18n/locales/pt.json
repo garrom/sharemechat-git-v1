@@ -208,11 +208,11 @@
   },
   "common": {
     "locale": {
-      "label": "Linguagem",
+      "label": "Idioma",
       "blogNotTranslated": "O blog ainda não está disponível neste idioma.",
       "suggest": "SharemeChat também está em {{lang}}.",
       "switch": "Mudar",
-      "dismiss": "Exclua",
+      "dismiss": "Ignorar",
       "suggestAria": "Sugestão de idioma"
     },
     "alerts": {
@@ -222,7 +222,7 @@
       "noRecipient": "Não foi possível determinar o destinatário correto.",
       "noSelfChat": "Você não pode conversar consigo mesmo.",
       "noDestWhileRandom": "Não é possível selecionar um destino enquanto o streaming aleatório estiver ativo.",
-      "noSelfCall": "Você não pode se chamar assim.",
+      "noSelfCall": "Você não pode ligar para si mesmo.",
       "noCentralChatWhileStreaming": "Não é possível abrir o chat central durante a transmissão. Pressione Parar se quiser alternar."
     },
     "presence": {
@@ -234,7 +234,7 @@
     "cancel": "Cancelar",
     "other": "Outro",
     "exit": "Sair",
-    "back": "Retornar",
+    "back": "Voltar",
     "hangup": "Pendurar",
     "fullscreen": "Tela cheia",
     "sendMessage": "Enviar mensagem",
@@ -631,7 +631,7 @@
       "availability": "Ele geralmente está online."
     },
     "likes": {
-      "label": "Como",
+      "label": "Like",
       "like": "Como",
       "unlike": "Remover curtida",
       "badgeNone": "Ainda sem distintivo · Seja o primeiro"
@@ -709,13 +709,13 @@
     }
   },
   "modelSpotlight": {
-    "like": "Como",
+    "like": "Like",
     "viewProfile": "Ver perfil",
     "giftTitle": "Enviar um presente",
     "videocall": "Iniciar chamada de vídeo",
     "balanceOk": "equilíbrio suficiente",
     "balanceLow": "fundos insuficientes",
-    "lowBalance": "baixo equilíbrio",
+    "lowBalance": "saldo baixo",
     "rechargeToCall": "recarga para chamadas",
     "callDisabled": "Você precisa ser um favorito aceito para poder ligar.",
     "yearsSuffix": "anos",
@@ -4648,7 +4648,7 @@
     }
   },
   "myLanguages": {
-    "title": "Seu bate-papo se traduz em",
+    "title": "Seu bate-papo é traduzido para",
     "subtitle": "A conversa do chat será traduzida automaticamente para o idioma escolhido.",
     "savedOk": "Idioma salvo.",
     "saveError": "O idioma não pôde ser salvo."

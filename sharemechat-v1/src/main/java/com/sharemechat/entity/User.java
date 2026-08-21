@@ -56,10 +56,8 @@ public class User {
     @Column(name = "ui_locale", length = 5, nullable = false)
     private String uiLocale;
 
-    // pending-hardening §5.3 (2026-08-08): idioma preferido para chat P2P.
-    // NULL = fallback a uiLocale. El selector del perfil escribe aqui.
-    @Column(name = "preferred_chat_lang", length = 5)
-    private String preferredChatLang;
+    // Fase 5 i18n (2026-08-22): la antigua columna preferred_chat_lang se
+    // eliminó (migración V57). El idioma personal/de chat vive en user_languages.
 
     @Column(name = "country_detected", columnDefinition = "CHAR(2)")
     private String countryDetected;
@@ -281,8 +279,6 @@ public class User {
     public String getUiLocale() { return uiLocale; }
     public void setUiLocale(String uiLocale) { this.uiLocale = uiLocale; }
 
-    public String getPreferredChatLang() { return preferredChatLang; }
-    public void setPreferredChatLang(String preferredChatLang) { this.preferredChatLang = preferredChatLang; }
 
     public String getCountryDetected() { return countryDetected; }
     public void setCountryDetected(String countryDetected) { this.countryDetected = countryDetected; }
