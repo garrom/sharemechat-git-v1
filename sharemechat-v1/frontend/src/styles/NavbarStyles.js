@@ -282,7 +282,19 @@ export const LocaleTrigger = styled.button`
 
   &:hover { border-color: rgba(148, 163, 184, 0.85); }
 
-  .flag { font-size: 1rem; }
+  /* Badge de código (ES/EN/FR/DE): texto real estilado, no emoji-bandera
+     (que degrada a letras desalineadas en Windows). Centrado con el nombre. */
+  .code {
+    flex: 0 0 auto;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    line-height: 1;
+    color: #0b0d11;
+    background: #e5e7eb;
+    border-radius: 5px;
+    padding: 2px 5px;
+  }
   .lbl { flex: 1; text-align: left; font-weight: 800; letter-spacing: 0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .chev { font-size: 0.7rem; opacity: .8; transition: transform .15s ease; }
   &[aria-expanded="true"] .chev { transform: rotate(180deg); }
@@ -323,9 +335,19 @@ export const LocaleOption = styled.button`
   &:hover:not(:disabled) { background: rgba(255, 255, 255, 0.05); }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  .flag { font-size: 1.05rem; flex: 0 0 auto; }
+  /* Badge de código: prominente (claro) en la opción activa, sutil en el resto. */
+  .code {
+    flex: 0 0 auto;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    line-height: 1;
+    border-radius: 5px;
+    padding: 2px 5px;
+    color: ${props => (props.$active ? '#0b0d11' : '#cfd4db')};
+    background: ${props => (props.$active ? '#e5e7eb' : 'rgba(255,255,255,0.10)')};
+  }
   .name { flex: 1; font-weight: 600; }
-  .code { color: #8b94a1; text-transform: uppercase; font-size: 0.7rem; font-weight: 700; }
   .check { color: #ea1d1d; font-weight: 800; }
 `;
 
