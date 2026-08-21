@@ -7,21 +7,21 @@
 #
 schema_version: 1
 frontend_product:
-  cloudfront_invalidation_id: IC4DCZH94OI23C09KEGD2TR0HK
+  cloudfront_invalidation_id: IBVR5N8EUAEZEK5DA8SKRQZPI9
   verification:
-    method: deploy-frontend.ps1-live-build_2026-08-15T15:06:23Z
+    method: deploy-frontend.ps1-live-build_2026-08-21T21:41:28Z
     git_commit_provenance: recorded_by_deploy_script
-    notes: 'Actualizado por deploy-frontend.ps1 (Fase 1 paso 2a) tras smoke OK (estatico + funcional /api/users/me 401, modo OPEN). Commit correcto (1f619410=origin/main) por invocar con cwd fijado al checkout principal (Set-Location). working_tree_clean corregido a true a mano: los untracked (.tmp/*.pdf scratch + un .pyc) NO son codigo ni afectan al bundle; el bundle representa fielmente 1f619410.'
-  deployed_at: 2026-08-15T15:06:23Z
-  built_at: 2026-08-15T15:06:23Z
-  bundle_sha256: 0ec1fb48700e207c9a8f81c199c2d63f395e6ed4043147995c516304c8797bfe
-  git_commit_short: 1f619410
-  git_commit: 1f619410a1fbe67b097c3470f7167bb6b3f34eba
+    notes: Actualizado automaticamente por deploy-frontend.ps1 (Fase 1 paso 2a) tras smoke OK del propio script.
+  deployed_at: 2026-08-21T21:41:28Z
+  built_at: 2026-08-21T21:41:28Z
+  bundle_sha256: 9f25968889dd788ccc78bb6efe15756c2832a632212efca4adf9ef80e71ed375
+  git_commit_short: 3175134d
+  git_commit: 3175134d98efbfd15145f616097f340cbc76dcc3
   cloudfront_distribution: E1ILXV7P6ENUV8
   deployed_by: alain@LAPTOP-8UEIKVUT
   working_tree_clean: true
   bucket: sharemechat-frontend-audit
-  bundle: main.a67f764d.js
+  bundle: main.f8339178.js
 last_update_source: deploy-frontend.ps1-fase1-paso2a
 last_update_by: alain@LAPTOP-8UEIKVUT
 environment: audit
@@ -29,32 +29,32 @@ backend:
   working_tree_clean: true
   remote_path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
   ec2_alias: audit-backend
-  deployed_at: 2026-08-13T23:43:04Z
-  jar_sha256: f4e74c710f44fbfabae3f2032601355869092c7b6f03fc31e7102210926b89ad
+  deployed_at: 2026-08-21T21:35:20Z
+  jar_sha256: 3f9bf232d09b76eeddf573d7eef06baf476d91a5613bb0e8a416431cfb44a182
   verification:
     method: manual_via_update-manifest-backend.ps1+remote-verify
-    verified_at: 2026-08-13T23:43:04Z
+    verified_at: 2026-08-21T21:35:20Z
     notes: 'Actualizado manualmente por update-manifest-backend.ps1 (Fase 1 paso 2b) tras deploy manual del backend (scp + restart). Limitacion conocida: HEAD asume = commit con el que se construyo el JAR; sin endpoint /api/health/version (Fase 2) no hay verificacion viva del commit del backend.'
-  built_at: 2026-08-13T23:43:04Z
+  built_at: 2026-08-21T21:35:20Z
   deployed_by: alain@LAPTOP-8UEIKVUT
   systemd_unit: sharemechat-audit.service
-  git_commit: 2658e394a146d223f2eb2907518a0f71f47fede2
-  git_commit_short: "2658e394"
-last_updated_at: 2026-08-15T15:06:23Z
+  git_commit: 3175134d98efbfd15145f616097f340cbc76dcc3
+  git_commit_short: 3175134d
+last_updated_at: 2026-08-21T21:41:28Z
 frontend_admin:
-  cloudfront_invalidation_id: I15N1301ZE20QROSCCL87FJUZA
+  cloudfront_invalidation_id: IAIN4P9YKA842BM9PO3V4KUQHA
   verification:
-    method: deploy-frontend.ps1-live-build_2026-08-02T19:08:30Z
+    method: deploy-frontend.ps1-live-build_2026-08-21T21:40:55Z
     git_commit_provenance: recorded_by_deploy_script
     notes: Actualizado automaticamente por deploy-frontend.ps1 (Fase 1 paso 2a) tras smoke OK del propio script.
-  deployed_at: 2026-08-02T19:08:30Z
-  built_at: 2026-08-02T19:08:30Z
-  bundle_sha256: 96f85c594548b1c5c656e5fe933aa6dcfa94acd049895bb2920a2e6461ee8197
-  git_commit_short: bacb5cf
-  git_commit: bacb5cf66aeacc58fd2834e707419c961bbfd1ab
+  deployed_at: 2026-08-21T21:40:55Z
+  built_at: 2026-08-21T21:40:55Z
+  bundle_sha256: 10df023b6c7814ff7b48fd995b68508b0b32ff3c2f9f1cb66388d986ee71ce8b
+  git_commit_short: 3175134d
+  git_commit: 3175134d98efbfd15145f616097f340cbc76dcc3
   cloudfront_distribution: E21IB0VBKYNNBW
   deployed_by: alain@LAPTOP-8UEIKVUT
-  working_tree_clean: false
+  working_tree_clean: true
   bucket: sharemechat-admin-audit
-  bundle: main.69d90c83.js
+  bundle: main.b0b0f3e9.js
 
