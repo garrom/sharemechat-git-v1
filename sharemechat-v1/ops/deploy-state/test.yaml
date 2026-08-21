@@ -1,45 +1,46 @@
 ﻿# Manifest de estado de despliegue - entorno TEST
-# Schema v1. Seccion backend actualizada por update-manifest-backend.ps1
-# (Fase 1 paso 2b, opcion B). El script lo invoca el operador tras un
-# deploy manual del backend (scp + restart). NO se hace commit
-# automatico: el operador commitea cuando le conviene (decision D2).
+# Schema v1. Auto-gestionado por deploy-frontend.ps1 (Fase 1
+# paso 2a). El paso [5.5/N] de cada deploy escribe el bloque
+# correspondiente al surface desplegado tras smoke OK. NO se
+# hace commit automatico: el operador commitea el manifest
+# cuando le conviene (decision D2).
 #
 schema_version: 1
 frontend_product:
-  cloudfront_invalidation_id: IP5K7QJ54Z9YVLE5SFN77IB6H
+  cloudfront_invalidation_id: I45G0JWRCD4V5T42288L1MQFVT
   verification:
-    method: deploy-frontend.ps1-live-build_2026-08-21T15:28:37Z
+    method: deploy-frontend.ps1-live-build_2026-08-21T19:57:56Z
     git_commit_provenance: recorded_by_deploy_script
     notes: Actualizado automaticamente por deploy-frontend.ps1 (Fase 1 paso 2a) tras smoke OK del propio script.
-  deployed_at: 2026-08-21T15:28:37Z
-  built_at: 2026-08-21T15:28:37Z
-  bundle_sha256: 8ffc608073c8f356e759e95a2359a835f8a2e98840206626efd5383218b86ccd
-  git_commit_short: 614a34c0
-  git_commit: 614a34c04576db904e6b26c1e3a345c6bb0d55b0
+  deployed_at: 2026-08-21T19:57:56Z
+  built_at: 2026-08-21T19:57:56Z
+  bundle_sha256: 57447248789ce7356e512f192801e86d33b2737e7ea82008223cd890df6c4c84
+  git_commit_short: f5b25bcc
+  git_commit: f5b25bcc220a3ab13397430785a313e595536df8
   cloudfront_distribution: E2Q4VNDDWD5QBU
   deployed_by: alain@LAPTOP-8UEIKVUT
   working_tree_clean: false
   bucket: sharemechat-frontend-test
-  bundle: main.6f391064.js
-last_update_source: update-manifest-backend.ps1-fase1-paso2b
+  bundle: main.28d80133.js
+last_update_source: deploy-frontend.ps1-fase1-paso2a
 last_update_by: alain@LAPTOP-8UEIKVUT
 environment: test
 backend:
   working_tree_clean: false
   remote_path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
   ec2_alias: test-backend
-  deployed_at: 2026-08-21T15:48:52Z
-  jar_sha256: 0a64bf52e608a1a2e3dd8ffa5c60dc2a95c0bf3cf7b00bbd9acf2d67f4fa268c
+  deployed_at: 2026-08-21T19:54:58Z
+  jar_sha256: 419c51ae0fe3de2c953a15cdabe19bf6e1d22fd7ef562af83bdfd70ff9c98e30
   verification:
     method: manual_via_update-manifest-backend.ps1+remote-verify
-    verified_at: 2026-08-21T15:48:52Z
+    verified_at: 2026-08-21T19:54:58Z
     notes: 'Actualizado manualmente por update-manifest-backend.ps1 (Fase 1 paso 2b) tras deploy manual del backend (scp + restart). Limitacion conocida: HEAD asume = commit con el que se construyo el JAR; sin endpoint /api/health/version (Fase 2) no hay verificacion viva del commit del backend.'
-  built_at: 2026-08-21T15:48:52Z
+  built_at: 2026-08-21T19:54:58Z
   deployed_by: alain@LAPTOP-8UEIKVUT
   systemd_unit: sharemechat-test.service
-  git_commit: 1ea2a085dae3c18dfa235738ae4c1d99bd33d9b3
-  git_commit_short: 1ea2a085
-last_updated_at: 2026-08-21T15:48:52Z
+  git_commit: f5b25bcc220a3ab13397430785a313e595536df8
+  git_commit_short: f5b25bcc
+last_updated_at: 2026-08-21T19:57:56Z
 frontend_admin:
   cloudfront_invalidation_id: IEZCETA7X7UKHCQO40C1UGSZ5R
   verification:
