@@ -4644,9 +4644,9 @@
     }
   },
   "myLanguages": {
-    "title": "Ihre Sprache",
-    "subtitle": "Die Sprache, die Sie fließend sprechen. Sie wird in Ihrem Profil angezeigt und ist die Sprache, in die Ihre Chats übersetzt werden.",
     "savedOk": "Sprache gespeichert.",
-    "saveError": "Die Sprache konnte nicht gerettet werden."
+    "saveError": "Die Sprache konnte nicht gerettet werden.",
+    "title": "Ihr Chat wird übersetzt zu",
+    "subtitle": "Der Chatverlauf wird automatisch in die von Ihnen gewählte Sprache übersetzt."
   }
 }

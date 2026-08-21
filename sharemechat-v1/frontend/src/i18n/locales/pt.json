@@ -4644,9 +4644,9 @@
     }
   },
   "myLanguages": {
-    "title": "Seu idioma",
-    "subtitle": "O idioma que você fala fluentemente. Ele é exibido no seu perfil e é o idioma para o qual suas conversas são traduzidas.",
     "savedOk": "Idioma salvo.",
-    "saveError": "O idioma não pôde ser salvo."
+    "saveError": "O idioma não pôde ser salvo.",
+    "title": "Seu bate-papo se traduz em",
+    "subtitle": "A conversa do chat será traduzida automaticamente para o idioma escolhido."
   }
 }

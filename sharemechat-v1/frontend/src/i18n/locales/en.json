@@ -4644,8 +4644,8 @@
     }
   },
   "myLanguages": {
-    "title": "Your language",
-    "subtitle": "The language you speak fluently. It's shown on your profile and your chats are translated into it.",
+    "title": "Your chat is translated to",
+    "subtitle": "Chat conversations are automatically translated into the language you choose.",
     "savedOk": "Language saved.",
     "saveError": "Couldn't save your language."
   }
