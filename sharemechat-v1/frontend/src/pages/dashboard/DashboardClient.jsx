@@ -2312,7 +2312,7 @@ const DashboardClient = () => {
     // nos lleva a tab videochat
     e.preventDefault();
     if (streamingActivo || callStatus !== 'idle') {
-      alert('Tienes una LLAMADA activa. Pulsa STOP para salir.');
+      alert(i18n.t('common.alerts.callActive'));
       return;
     }
     setActiveTab('videochat');
@@ -2528,10 +2528,10 @@ const DashboardClient = () => {
         setCenterInput('');
       } catch (e) {
         console.warn('[sendCenterMessage][Client] error enviando WS', e);
-        alert('No se pudo enviar el mensaje. Reintenta.');
+        alert(i18n.t('common.alerts.sendFailed'));
       }
     } else {
-      alert('Chat de mensajes desconectado. Reabre el panel.');
+      alert(i18n.t('common.alerts.chatDisconnected'));
     }
   };
 
@@ -2579,11 +2579,11 @@ const DashboardClient = () => {
 
     const peer = Number(favUser?.id ?? favUser?.userId);
     if (!Number.isFinite(peer) || peer <= 0) {
-      alert('No se pudo determinar el destinatario correcto.');
+      alert(i18n.t('common.alerts.noRecipient'));
       return;
     }
     if (Number(sessionUser?.id) === peer) {
-      alert('No puedes chatear contigo mismo.');
+      alert(i18n.t('common.alerts.noSelfChat'));
       return;
     }
     // Fuente de verdad única
@@ -3049,17 +3049,17 @@ const DashboardClient = () => {
   // [CALL] Selección directa desde la lista de favoritos (pestaña Calling): no abre chat, solo fija destino
   const handleSelectCallTargetFromFavorites = (favUser) => {
     if (streamingActivo) {
-      alert('No puedes seleccionar destino mientras hay streaming random activo.');
+      alert(i18n.t('common.alerts.noDestWhileRandom'));
       return;
     }
 
     const peer = Number(favUser?.id ?? favUser?.userId);
     if (!Number.isFinite(peer) || peer <= 0) {
-      alert('No se pudo determinar el destinatario correcto.');
+      alert(i18n.t('common.alerts.noRecipient'));
       return;
     }
     if (Number(sessionUser?.id) === peer) {
-      alert('No puedes llamarte a ti mismo.');
+      alert(i18n.t('common.alerts.noSelfCall'));
       return;
     }
     const name =

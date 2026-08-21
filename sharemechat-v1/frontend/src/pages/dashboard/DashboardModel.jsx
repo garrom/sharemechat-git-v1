@@ -2731,11 +2731,11 @@ const DashboardModel = () => {
       favUser?.nickname || favUser?.name || favUser?.email || 'Usuario';
 
     if (!Number.isFinite(peer) || peer <= 0) {
-      alert('No se pudo determinar el destinatario correcto.');
+      alert(i18n.t('common.alerts.noRecipient'));
       return;
     }
     if (Number(sessionUser?.id) === peer) {
-      alert('No puedes chatear contigo mismo.');
+      alert(i18n.t('common.alerts.noSelfChat'));
       return;
     }
 
@@ -2761,7 +2761,7 @@ const DashboardModel = () => {
     const peer = Number(peerId);
 
     if (streamingActivo) {
-      alert('No puedes abrir el chat central mientras hay streaming. Pulsa Stop si quieres cambiar.');
+      alert(i18n.t('common.alerts.noCentralChatWhileStreaming'));
       return;
     }
 
@@ -2827,10 +2827,10 @@ const DashboardModel = () => {
         setCenterInput('');
       } catch (e) {
         console.warn('[sendCenterMessage][Model] error enviando WS', e);
-        alert('No se pudo enviar el mensaje. Reintenta.');
+        alert(i18n.t('common.alerts.sendFailed'));
       }
     } else {
-      alert('Chat de mensajes desconectado. Reabre el panel.');
+      alert(i18n.t('common.alerts.chatDisconnected'));
     }
   };
 
@@ -3287,17 +3287,17 @@ const DashboardModel = () => {
   // [CALL][Model] Selección directa desde Favoritos en pestaña Calling (NO abre chat, solo fija destino)
   const handleSelectCallTargetFromFavorites = (favUser) => {
     if (streamingActivo) {
-      alert('No puedes seleccionar destino mientras hay streaming random activo.');
+      alert(i18n.t('common.alerts.noDestWhileRandom'));
       return;
     }
 
     const peer = Number(favUser?.id ?? favUser?.userId);
     if (!Number.isFinite(peer) || peer <= 0) {
-      alert('No se pudo determinar el destinatario correcto.');
+      alert(i18n.t('common.alerts.noRecipient'));
       return;
     }
     if (Number(sessionUser?.id) === peer) {
-      alert('No puedes llamarte a ti misma.');
+      alert(i18n.t('common.alerts.noSelfCall'));
       return;
     }
 

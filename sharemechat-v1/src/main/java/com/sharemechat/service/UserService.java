@@ -566,25 +566,11 @@ public class UserService {
         return (text == null || text.trim().isEmpty()) ? null : text.trim();
     }
 
+    // Fase 1 i18n (2026-08-20): la lista de idiomas de UI vive en
+    // constants/SupportedUiLocales (paralela a frontend localeConfig.js). Antes
+    // recortaba a {es,en} hardcodeado; ahora acepta el set de UI (es,en,fr,de,…).
     private String normalizeUiLocale(String uiLocale) {
-        String normalized = normalize(uiLocale);
-        if (normalized == null) {
-            return null;
-        }
-
-        normalized = normalized.toLowerCase(Locale.ROOT);
-
-        if (normalized.contains("-")) {
-            normalized = normalized.split("-")[0];
-        } else if (normalized.contains("_")) {
-            normalized = normalized.split("_")[0];
-        }
-
-        if ("es".equals(normalized) || "en".equals(normalized)) {
-            return normalized;
-        }
-
-        return null;
+        return com.sharemechat.constants.SupportedUiLocales.normalize(uiLocale);
     }
 
     /** Elimina cualquier espacio (incluido NBSP) y normaliza a minúsculas. */

@@ -35,6 +35,12 @@ import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import i18n from '../i18n';
 import { PRODUCT_ORIGIN } from '../config/runtimeEnv';
+import { SUPPORTED_LOCALES, DEFAULT_LOCALE } from '../i18n/localeConfig';
+import { localePrefix } from '../i18n/localeUtils';
+
+// og:locale por idioma de UI (Fase 1 i18n). Fallback razonable si se añade uno
+// sin mapear.
+const OG_LOCALES = { es: 'es_ES', en: 'en_US', fr: 'fr_FR', de: 'de_DE' };
 
 // Imagen por defecto de marca para previews sociales. Generada como
 // raster 1200x630 y subida a assets-sharemechat-{test,audit,prod}.
@@ -55,17 +61,14 @@ const buildAbsoluteUrl = (urlPath) => {
 };
 
 const buildLocaleAlternate = (urlPath, locale) => {
-  // En el SPA producto el basename del Router es "/en" cuando aplica;
-  // bajo "/" sirve ES. Por tanto las URLs alternativas son:
-  //   ES -> ORIGIN + urlPath
-  //   EN -> ORIGIN + "/en" + urlPath (salvo home, que es "/en")
-  const base = buildAbsoluteUrl(urlPath);
-  if (locale === 'es') return base;
-  if (urlPath === '/' || urlPath === '') {
-    return `${PRODUCT_ORIGIN || (typeof window !== 'undefined' && window.location ? window.location.origin : 'https://sharemechat.com')}/en`;
-  }
-  const origin = PRODUCT_ORIGIN || (typeof window !== 'undefined' && window.location ? window.location.origin : 'https://sharemechat.com');
-  return `${origin}/en${urlPath}`;
+  // Generalizado a N idiomas (Fase 1 i18n). El default (es) va sin prefijo;
+  // el resto con /<locale>. Home => ORIGIN + prefijo (o "/" para es).
+  const origin = PRODUCT_ORIGIN
+    || (typeof window !== 'undefined' && window.location ? window.location.origin : 'https://sharemechat.com');
+  const prefix = localePrefix(locale); // '' para es (default)
+  const path = urlPath && urlPath.startsWith('/') ? urlPath : `/${urlPath || ''}`;
+  if (path === '/' || path === '') return `${origin}${prefix || '/'}`;
+  return `${origin}${prefix}${path}`;
 };
 
 /**
@@ -84,17 +87,18 @@ const Seo = ({ pageKey, urlPath, localeAware = true, image, ogType = 'website' }
   const t = (k) => i18n.t(k);
   const title = t(`seo.${pageKey}.title`);
   const description = t(`seo.${pageKey}.description`);
-  const activeLocale = (i18n.language || 'es').slice(0, 2);
+  const rawLocale = (i18n.language || DEFAULT_LOCALE).slice(0, 2);
+  const activeLocale = SUPPORTED_LOCALES.includes(rawLocale) ? rawLocale : DEFAULT_LOCALE;
 
-  // Canonical: si localeAware y locale=en, usa el alternate EN. Para
-  // paginas ES-only, canonical siempre ES.
-  const canonical = localeAware && activeLocale === 'en'
-    ? buildLocaleAlternate(urlPath, 'en')
+  // Canonical: en páginas localeAware apunta al alternate del idioma activo
+  // (para es devuelve la base). Páginas ES-only -> canonical base.
+  const canonical = localeAware
+    ? buildLocaleAlternate(urlPath, activeLocale)
     : buildAbsoluteUrl(urlPath);
 
   const ogImage = image || DEFAULT_OG_IMAGE;
-  const ogLocale = activeLocale === 'en' ? 'en_US' : 'es_ES';
-  const inLanguage = activeLocale === 'en' ? 'en' : 'es';
+  const ogLocale = OG_LOCALES[activeLocale] || OG_LOCALES[DEFAULT_LOCALE];
+  const inLanguage = activeLocale;
 
   return (
     <Helmet>
@@ -103,15 +107,12 @@ const Seo = ({ pageKey, urlPath, localeAware = true, image, ogType = 'website' }
       <meta name="description" content={description} />
       <link rel="canonical" href={canonical} />
 
-      {/* hreflang ES <-> EN + x-default (mercado primario ES). */}
+      {/* hreflang por cada idioma de UI + x-default (mercado primario ES). */}
+      {localeAware && SUPPORTED_LOCALES.map((loc) => (
+        <link key={loc} rel="alternate" hrefLang={loc} href={buildLocaleAlternate(urlPath, loc)} />
+      ))}
       {localeAware && (
-        <link rel="alternate" hrefLang="es" href={buildLocaleAlternate(urlPath, 'es')} />
-      )}
-      {localeAware && (
-        <link rel="alternate" hrefLang="en" href={buildLocaleAlternate(urlPath, 'en')} />
-      )}
-      {localeAware && (
-        <link rel="alternate" hrefLang="x-default" href={buildLocaleAlternate(urlPath, 'es')} />
+        <link rel="alternate" hrefLang="x-default" href={buildLocaleAlternate(urlPath, DEFAULT_LOCALE)} />
       )}
 
       {/* Open Graph. Dimensiones/type/alt solo cuando usamos la card

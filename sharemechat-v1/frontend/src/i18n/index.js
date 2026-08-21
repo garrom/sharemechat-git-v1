@@ -4,6 +4,13 @@ import { initReactI18next } from 'react-i18next';
 import es from './locales/es.json';
 import en from './locales/en.json';
 
+// Fase 1 i18n (2026-08-20): idiomas de UI adicionales. Solo el namespace
+// 'translation' (producto). blog/cms caen a fallbackLng (blog es standby; cms
+// es admin/backoffice, no se traduce). Contenido generado por
+// frontend/scripts/i18n-sync.mjs (máquina + revisión).
+import fr from './locales/fr.json';
+import de from './locales/de.json';
+
 // Fase 4B.1 (ADR-022): namespace 'blog' separado del monolitico
 // 'translation'. Cargado tambien por import estatico para mantener el
 // patron actual (sin i18next-http-backend ni carga lazy). Los componentes
@@ -31,7 +38,9 @@ i18n
   .init({
     resources: {
       es: { translation: es, blog: blogEs, cms: cmsEs },
-      en: { translation: en, blog: blogEn, cms: cmsEn }
+      en: { translation: en, blog: blogEn, cms: cmsEn },
+      fr: { translation: fr },
+      de: { translation: de }
     },
     ns: ['translation', 'blog', 'cms'],
     defaultNS: 'translation',

@@ -422,11 +422,12 @@ public class AuthGoogleController {
         return oauthRepository.save(link);
     }
 
+    // Fase 1 i18n (2026-08-20): valida el locale de Google contra el set de UI
+    // soportado (es,en,fr,de,…); si no casa, cae al default. Antes guardaba el
+    // valor crudo truncado (podía persistir un ui_locale no soportado).
     private String sanitizeLocale(String locale) {
-        if (!StringUtils.hasText(locale)) return "es";
-        String trimmed = locale.trim().toLowerCase(Locale.ROOT);
-        if (trimmed.length() > 5) trimmed = trimmed.substring(0, 5);
-        return trimmed;
+        String norm = com.sharemechat.constants.SupportedUiLocales.normalize(locale);
+        return norm != null ? norm : com.sharemechat.constants.SupportedUiLocales.DEFAULT;
     }
 
     private String normalizeEmail(String email) {

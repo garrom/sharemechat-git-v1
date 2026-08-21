@@ -17,8 +17,16 @@ jest.mock('../pages/blog/BlogLocaleContext', () => ({ useBlogLocale: jest.fn() }
 jest.mock('../i18n/localeUtils', () => ({
   getResolvedLocale: jest.fn(() => 'es'),
   getAvailableLocales: jest.fn(() => ['es', 'en']),
+  // Selector dropdown (Fase 1 i18n): prefijos de URL generalizados.
+  PREFIXED_LOCALES: ['en', 'fr', 'de'],
+  localePrefix: (l) => (l && l !== 'es' ? `/${l}` : ''),
 }));
-jest.mock('../i18n/localeConfig', () => ({ LOCALE_LABELS: { es: 'Español', en: 'English' } }));
+jest.mock('../i18n/localeConfig', () => ({
+  LOCALE_LABELS: { es: 'ES', en: 'EN' },
+  getLocaleFlag: (l) => ({ es: '🇪🇸', en: '🇬🇧' }[l] || ''),
+  getLocaleNativeName: (l) => ({ es: 'Español', en: 'English' }[l] || l),
+  getLocaleLabel: (l) => ({ es: 'ES', en: 'EN' }[l] || l),
+}));
 jest.mock('../utils/runtimeSurface', () => ({ isAdminSurface: jest.fn(() => false) }));
 
 let updateUiLocale;
@@ -57,12 +65,19 @@ beforeEach(() => {
   window.location = loc;
 });
 
-const clickLocale = (label) => fireEvent.click(screen.getByRole('button', { name: label }));
+// El selector es un dropdown: primero abrir (trigger, aria-label 'Idioma' -> el
+// mock de i18n.t devuelve la clave 'common.locale.label'), luego clicar la opción
+// (role=option; su nombre accesible es "<nativo> <código>", p.ej. "English EN").
+const openMenu = () => fireEvent.click(screen.getByRole('button', { name: 'common.locale.label' }));
+const clickLocale = (nameRegex) => {
+  openMenu();
+  fireEvent.click(screen.getByRole('option', { name: nameRegex }));
+};
 
 test('clicar el idioma actual -> no-op (ni persiste ni navega)', async () => {
   setLocation('/client');
   render(<LocaleSwitcher />);
-  clickLocale('Español'); // ya es el actual (es)
+  clickLocale(/Español/); // ya es el actual (es)
   await Promise.resolve();
   expect(updateUiLocale).not.toHaveBeenCalled();
   expect(assignSpy).not.toHaveBeenCalled();
@@ -71,7 +86,7 @@ test('clicar el idioma actual -> no-op (ni persiste ni navega)', async () => {
 test('producto: es->en desde /client -> persiste y navega a /en/client', async () => {
   setLocation('/client');
   render(<LocaleSwitcher />);
-  clickLocale('English');
+  clickLocale(/English/);
   await waitFor(() => expect(updateUiLocale).toHaveBeenCalledWith('en'));
   await waitFor(() => expect(assignSpy).toHaveBeenCalledWith('/en/client'));
 });
@@ -79,7 +94,7 @@ test('producto: es->en desde /client -> persiste y navega a /en/client', async (
 test('producto: es->en desde / (home) -> /en', async () => {
   setLocation('/');
   render(<LocaleSwitcher />);
-  clickLocale('English');
+  clickLocale(/English/);
   await waitFor(() => expect(assignSpy).toHaveBeenCalledWith('/en'));
 });
 
@@ -87,14 +102,14 @@ test('producto: en->es desde /en/client -> quita el basename -> /client', async 
   getResolvedLocale.mockReturnValue('en');
   setLocation('/en/client');
   render(<LocaleSwitcher />);
-  clickLocale('Español');
+  clickLocale(/Español/);
   await waitFor(() => expect(assignSpy).toHaveBeenCalledWith('/client'));
 });
 
 test('producto: conserva search y hash al navegar', async () => {
   setLocation('/client', { search: '?a=1', hash: '#x' });
   render(<LocaleSwitcher />);
-  clickLocale('English');
+  clickLocale(/English/);
   await waitFor(() => expect(assignSpy).toHaveBeenCalledWith('/en/client?a=1#x'));
 });
 
@@ -102,7 +117,7 @@ test('público (sin user): NO persiste pero sí navega', async () => {
   useSession.mockReturnValue({ updateUiLocale, user: null });
   setLocation('/client');
   render(<LocaleSwitcher />);
-  clickLocale('English');
+  clickLocale(/English/);
   await waitFor(() => expect(assignSpy).toHaveBeenCalledWith('/en/client'));
   expect(updateUiLocale).not.toHaveBeenCalled();
 });
@@ -112,7 +127,7 @@ test('admin surface: persiste + onAfterChange, sin navegación por URL', async (
   setLocation('/dashboard-admin');
   const onAfterChange = jest.fn();
   render(<LocaleSwitcher onAfterChange={onAfterChange} />);
-  clickLocale('English');
+  clickLocale(/English/);
   await waitFor(() => expect(updateUiLocale).toHaveBeenCalledWith('en'));
   expect(onAfterChange).toHaveBeenCalledWith('en');
   expect(assignSpy).not.toHaveBeenCalled();
@@ -127,7 +142,7 @@ describe('rutas de blog (ADR-025)', () => {
     });
     setLocation('/blog/es/mi-articulo');
     render(<LocaleSwitcher />);
-    clickLocale('English');
+    clickLocale(/English/);
     await waitFor(() => expect(assignSpy).toHaveBeenCalledWith('https://x/blog/en/my-article'));
     expect(updateUiLocale).not.toHaveBeenCalled(); // el blog no pasa por persistencia
   });
@@ -140,6 +155,7 @@ describe('rutas de blog (ADR-025)', () => {
     });
     setLocation('/blog/es/solo-es');
     render(<LocaleSwitcher />);
-    expect(screen.getByRole('button', { name: 'English' })).toBeDisabled();
+    openMenu();
+    expect(screen.getByRole('option', { name: /English/ })).toBeDisabled();
   });
 });
