@@ -963,10 +963,10 @@ export const useAppModals = () => {
       text = i18n.t('modals.comingSoon.mediaMissing', { defaultValue: 'Para emitir necesitas una foto y un vídeo aprobados. Súbelos desde tu perfil y podrás empezar en cuanto abramos.' });
     } else if (role === 'model') {
       title = i18n.t('modals.comingSoon.title', { defaultValue: 'Muy pronto' });
-      text = i18n.t('modals.comingSoon.model', { defaultValue: 'Estamos ultimando los últimos detalles para abrir. Te avisaremos en cuanto puedas empezar a emitir.' });
+      text = i18n.t('modals.comingSoon.model', { defaultValue: 'Ya falta menos para abrir. Te avisaremos en cuanto puedas empezar a emitir.' });
     } else {
       title = i18n.t('modals.comingSoon.title', { defaultValue: 'Muy pronto' });
-      text = i18n.t('modals.comingSoon.client', { defaultValue: 'Estamos ultimando los últimos detalles. Muy pronto podrás entrar a conocer gente en directo.' });
+      text = i18n.t('modals.comingSoon.client', { defaultValue: 'Ya falta menos para abrir. Muy pronto podrás entrar a conocer gente en directo.' });
     }
 
     let scheduleNode = null;
