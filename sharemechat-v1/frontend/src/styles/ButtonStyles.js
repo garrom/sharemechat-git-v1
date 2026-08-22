@@ -175,9 +175,9 @@ export const ButtonAddFavorite = styled(PillButtonBase)`
   ${variant('#fff', '#0dcaf0', '#0aa2c0', '#31d2f2')}
 `;
 
-/* Llamar (texto o icono) */
+/* Llamar (texto o icono) — rojo de marca */
 export const ButtonLlamar = styled(PillButtonBase)`
-  ${variant('#fff', '#0d6efd', '#0a58ca', '#0b5ed7')}
+  ${variant('#fff', '#ea1d1d', '#b91212', '#c81616')}
 `;
 
 /* Colgar (texto o icono) */

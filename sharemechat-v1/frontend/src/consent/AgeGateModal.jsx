@@ -11,7 +11,12 @@ import {
 } from './consentClient';
 
 const Backdrop = styled.div`
-  --agegate-safe-bottom: 118px;
+  /* Reserva inferior = altura real del banner de cookies (fixed, z-index 2000)
+     para que el botón "Continuar" no quede tapado. El banner adelgazó
+     (padding 10px + 0.8rem ≈ 55px en desktop), así que la reserva baja en
+     consecuencia; antes (118/132px) sobredimensionaba y recortaba el modal
+     forzando scroll. */
+  --agegate-safe-bottom: 76px;
 
   position: fixed;
   inset: 0;
@@ -25,14 +30,15 @@ const Backdrop = styled.div`
   -webkit-overflow-scrolling: touch;
 
   @media (max-width: 640px) {
-    --agegate-safe-bottom: 132px;
+    /* En móvil el banner apila texto + botones (≈120px), reserva mayor. */
+    --agegate-safe-bottom: 120px;
     padding: 12px 12px var(--agegate-safe-bottom);
   }
 `;
 
 const Modal = styled.div`
   width: 100%;
-  max-width: 480px;
+  max-width: 560px;
   max-height: calc(100vh - 28px - var(--agegate-safe-bottom));
   margin: 0 auto auto;
   padding: 16px 16px 16px;
