@@ -101,6 +101,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/health/**").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/actuator/**").hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_ADMIN))
+                        // Observabilidad #4: reporte de errores del navegador (tambien
+                        // usuarios anonimos). Publico; el controller trunca/sanea.
+                        .requestMatchers(HttpMethod.POST, "/api/observability/client-error").permitAll()
 
                         // SEO layer (Frente 2 sobre CMS Fase 4A): sitemap dinamico
                         // y robots.txt servidos sin auth para que crawlers los indexen.
