@@ -92,6 +92,14 @@ public class SecurityConfig {
                         // junto con el resto del programa de afiliadas ([ADR-052 §D11]).
                         .requestMatchers(HttpMethod.GET, "/api/users/avatars/**").permitAll()
 
+                        // Observabilidad (2026-08-22): health/version SIN auth.
+                        // /api/health/version = commit vivo del JAR + modo operacional
+                        // (para el drift-check y uptime). /actuator/health = UP/DOWN de
+                        // infra (BD, disco). El resto de /actuator/* NO se expone
+                        // (management.endpoints.web.exposure.include=health) -> 404.
+                        .requestMatchers(HttpMethod.GET, "/api/health/**").permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+
                         // SEO layer (Frente 2 sobre CMS Fase 4A): sitemap dinamico
                         // y robots.txt servidos sin auth para que crawlers los indexen.
                         // ADR-016 / D9: GET y HEAD ambos permitAll. Sin HEAD, crawlers
