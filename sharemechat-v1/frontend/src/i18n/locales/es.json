@@ -895,8 +895,8 @@
     },
     "comingSoon": {
       "title": "Muy pronto",
-      "model": "Estamos ultimando los últimos detalles para abrir. Te avisaremos en cuanto puedas empezar a emitir.",
-      "client": "Estamos ultimando los últimos detalles. Muy pronto podrás entrar a conocer gente en directo.",
+      "model": "Ya falta menos para abrir. Te avisaremos en cuanto puedas empezar a emitir.",
+      "client": "Ya falta menos para abrir. Muy pronto podrás entrar a conocer gente en directo.",
       "mediaMissing": "Para emitir necesitas una foto y un vídeo aprobados. Súbelos desde tu perfil y podrás empezar en cuanto abramos.",
       "ok": "Entendido",
       "windowTitle": "Fuera de tu horario",
