@@ -17,6 +17,7 @@ const MobileMenu = ({
   queueText = null,
   balanceText,
   showLocaleSwitcher = true,
+  localeGuard = null,
   topRightContent = null,
   tabs = [],
   items = [],
@@ -55,7 +56,7 @@ const MobileMenu = ({
       ) : null}
 
       {showLocaleSwitcher ? (
-        <LocaleSwitcher onAfterChange={() => closeMenu()} />
+        <LocaleSwitcher guard={localeGuard} onAfterChange={() => closeMenu()} />
       ) : null}
 
       {items.map((item) => (

@@ -27,6 +27,7 @@ const NavbarClient = ({
   onLogout,
   buyLabel = null,
   showLocaleSwitcher = true,
+  localeGuard = null,
   showBalance = true,
   showAvatar = true,
   profileDisabled = false,
@@ -70,6 +71,7 @@ const NavbarClient = ({
       displayName={displayName}
       balanceText={showBalance ? balanceTextDesktop : null}
       showLocaleSwitcher={showLocaleSwitcher}
+      localeGuard={localeGuard}
       // ADR-049 Subpasada 2C: pill de Comprar / Buy pasa a icon-only para
       // alinearse con el patron compacto que introdujo NavbarModel. La
       // etiqueta se preserva via title + aria-label (DesktopActions lo
@@ -123,6 +125,7 @@ const NavbarClient = ({
       displayName={displayName}
       balanceText={showBalance ? balanceTextMobile : null}
       showLocaleSwitcher={showLocaleSwitcher}
+      localeGuard={localeGuard}
       items={[
         {
           key: 'profile',

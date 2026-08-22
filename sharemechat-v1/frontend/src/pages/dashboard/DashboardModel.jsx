@@ -3432,6 +3432,7 @@ const DashboardModel = () => {
         onProfile={handleProfile}
         onWithdraw={handleRequestPayout}
         onLogout={handleLogout}
+        localeGuard={confirmarSalidaSesionActiva}
       />
       {/* ========= FIN NAVBAR  ======== */}
 
