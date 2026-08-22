@@ -385,6 +385,46 @@ const ComingSoonSchedule = styled.div`
   }
 `;
 
+// Tema 1: checklist de foto/vídeo del modal "Necesitas foto y vídeo".
+const MediaChecks = styled.div`
+  margin: 16px auto 0;
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+const MediaRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-size: 0.92rem;
+  color: #f5eee8;
+  .badge {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .badge.ok { background: rgba(63, 179, 112, 0.16); color: #3fb370; }
+  .badge.pending { background: rgba(224, 168, 62, 0.16); color: #e0a83e; }
+  .txt { flex: 1; text-align: left; }
+  .state { font-size: 0.74rem; font-weight: 600; }
+  .state.ok { color: #3fb370; }
+  .state.pending { color: #e0a83e; }
+`;
+const MediaNote = styled.p`
+  margin: 12px auto 0;
+  max-width: 32ch;
+  text-align: center;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #8f817a;
+`;
+
 // Fase C: minutos que la zona IANA está por delante de UTC ahora mismo.
 const tzOffsetMinutes = (zone) => {
   try {
@@ -956,7 +996,44 @@ export const useAppModals = () => {
           {scheduleNode}
         </div>
       ),
-      actions: [{ label: i18n.t('modals.comingSoon.ok', { defaultValue: 'Entendido' }), primary: true, danger: false, onClick: () => closeModal() }],
+      actions: [{ label: i18n.t('modals.comingSoon.ok', { defaultValue: 'Entendido' }), brand: true, onClick: () => closeModal() }],
+    }).then(() => {});
+  }, [openModal, closeModal]);
+
+  /**
+   * Tema 1: modal PROPIO y bloqueante de "Necesitas foto y vídeo" para emitir.
+   * Separado de "Muy pronto". Muestra el checklist (foto/vídeo aprobados o
+   * pendientes). photoApproved/videoApproved vienen de /me.
+   */
+  const openMediaRequiredModal = useCallback(({ photoApproved = false, videoApproved = false } = {}) => {
+    const row = (ok, label) => (
+      <MediaRow>
+        <span className={'badge ' + (ok ? 'ok' : 'pending')} aria-hidden="true">{ok ? '✓' : '!'}</span>
+        <span className="txt">{label}</span>
+        <span className={'state ' + (ok ? 'ok' : 'pending')}>
+          {ok
+            ? i18n.t('modals.mediaRequired.approved', { defaultValue: 'Aprobada' })
+            : i18n.t('modals.mediaRequired.pending', { defaultValue: 'Pendiente' })}
+        </span>
+      </MediaRow>
+    );
+    return openModal({
+      title: '',
+      variant: 'confirm',
+      size: 'sm',
+      content: (
+        <div>
+          <ComingSoonGlyph aria-hidden="true">📷</ComingSoonGlyph>
+          <ComingSoonTitle>{i18n.t('modals.mediaRequired.title', { defaultValue: 'Necesitas foto y vídeo' })}</ComingSoonTitle>
+          <ComingSoonText>{i18n.t('modals.mediaRequired.text', { defaultValue: 'Para poder emitir necesitas una foto y un vídeo aprobados.' })}</ComingSoonText>
+          <MediaChecks>
+            {row(!!photoApproved, i18n.t('modals.mediaRequired.photo', { defaultValue: 'Foto de perfil' }))}
+            {row(!!videoApproved, i18n.t('modals.mediaRequired.video', { defaultValue: 'Vídeo de presentación' }))}
+          </MediaChecks>
+          <MediaNote>{i18n.t('modals.mediaRequired.note', { defaultValue: 'Súbelos desde tu perfil; los revisamos y podrás emitir en cuanto estén aprobados.' })}</MediaNote>
+        </div>
+      ),
+      actions: [{ label: i18n.t('modals.mediaRequired.ok', { defaultValue: 'Entendido' }), brand: true, onClick: () => closeModal() }],
     }).then(() => {});
   }, [openModal, closeModal]);
 
@@ -969,6 +1046,7 @@ export const useAppModals = () => {
     openPayoutModal,
     openActiveSessionGuard,
     openComingSoonModal,
+    openMediaRequiredModal,
     openLoginModal,
     openPublicSignupTeaser,
     openBlockReasonModal,

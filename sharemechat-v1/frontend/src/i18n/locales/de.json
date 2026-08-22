@@ -903,6 +903,16 @@
       "windowText": "Sie sind derzeit außerhalb Ihrer Sendezeiten. Kommen Sie während Ihres Zeitfensters zurück, um mit dem Senden zu beginnen.",
       "scheduleLabel": "Ihre Sendezeiten",
       "yourTime": "Ihre Zeit"
+    },
+    "mediaRequired": {
+      "title": "Sie brauchen ein Foto und ein Video",
+      "text": "Zum Senden brauchen Sie ein freigegebenes Foto und Video.",
+      "photo": "Profilfoto",
+      "video": "Vorstellungsvideo",
+      "approved": "Freigegeben",
+      "pending": "Ausstehend",
+      "note": "Laden Sie sie in Ihrem Profil hoch; wir prüfen sie und Sie können senden, sobald sie freigegeben sind.",
+      "ok": "Verstanden"
     }
   },
   "favorites": {

@@ -94,11 +94,28 @@ const DashboardModel = () => {
     openBlockReasonModal,
     openReportAbuseModal,
     openNextWaitModal,
-    openComingSoonModal
+    openComingSoonModal,
+    openMediaRequiredModal
   } = useAppModals();
 
   const { user: sessionUser, updateUiLocale, refresh } = useSession();
   const { inCall, setInCall } = useCallUi();
+
+  // Tema 1: aviso proactivo de foto/vídeo. En cuanto la modelo entra a su panel,
+  // si le falta foto o vídeo aprobados, le mostramos el modal (una vez) para que
+  // los suba, sin esperar a que pulse emitir y le rebote.
+  const mediaModalShownRef = useRef(false);
+  useEffect(() => {
+    if (mediaModalShownRef.current) return;
+    if (!sessionUser) return;
+    if (sessionUser.modelPhotoApproved === false || sessionUser.modelVideoApproved === false) {
+      mediaModalShownRef.current = true;
+      openMediaRequiredModal({
+        photoApproved: sessionUser.modelPhotoApproved,
+        videoApproved: sessionUser.modelVideoApproved,
+      });
+    }
+  }, [sessionUser, openMediaRequiredModal]);
   const {
     interaction,
     activateFavoritesChat,
@@ -2045,6 +2062,11 @@ const DashboardModel = () => {
       openComingSoonModal({ role: 'model' });
       return;
     }
+    // Tema 1: foto/vídeo aprobados obligatorios para emitir (modal propio).
+    if (sessionUser && (sessionUser.modelPhotoApproved === false || sessionUser.modelVideoApproved === false)) {
+      openMediaRequiredModal({ photoApproved: sessionUser.modelPhotoApproved, videoApproved: sessionUser.modelVideoApproved });
+      return;
+    }
     // Fase C: fuera de la ventana horaria → modal con su franja en hora local.
     if (sessionUser && sessionUser.modelWindowEnabled && sessionUser.modelWithinWindow === false) {
       openComingSoonModal({ role: 'model', window: { zone: sessionUser.modelWindowZone, open: sessionUser.modelWindowOpen, close: sessionUser.modelWindowClose } });
@@ -2564,11 +2586,12 @@ const DashboardModel = () => {
       openComingSoonModal({ role: 'model' });
       return;
     }
-    // Fase C: fuera de la ventana horaria → modal con su franja en hora local.
-    if (sessionUser && sessionUser.modelWindowEnabled && sessionUser.modelWithinWindow === false) {
-      openComingSoonModal({ role: 'model', window: { zone: sessionUser.modelWindowZone, open: sessionUser.modelWindowOpen, close: sessionUser.modelWindowClose } });
+    // Tema 1: foto/vídeo aprobados obligatorios también para la llamada 1 a 1.
+    if (sessionUser && (sessionUser.modelPhotoApproved === false || sessionUser.modelVideoApproved === false)) {
+      openMediaRequiredModal({ photoApproved: sessionUser.modelPhotoApproved, videoApproved: sessionUser.modelVideoApproved });
       return;
     }
+    // La ventana horaria NO aplica a 1 a 1 (no hay sala vacía).
     if (guardSensitiveAction({ setError: setCallError })) return;
     if (!Number(targetPeerId)) {
       setCallError('Selecciona un contacto primero.');
