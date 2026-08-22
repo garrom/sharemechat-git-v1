@@ -898,7 +898,11 @@
       "model": "Estamos ultimando los últimos detalles para abrir. Te avisaremos en cuanto puedas empezar a emitir.",
       "client": "Estamos ultimando los últimos detalles. Muy pronto podrás entrar a conocer gente en directo.",
       "mediaMissing": "Para emitir necesitas una foto y un vídeo aprobados. Súbelos desde tu perfil y podrás empezar en cuanto abramos.",
-      "ok": "Entendido"
+      "ok": "Entendido",
+      "windowTitle": "Fuera de tu horario",
+      "windowText": "Ahora mismo estás fuera de tu franja de emisión. Vuelve dentro de tu horario para empezar a emitir.",
+      "scheduleLabel": "Tu horario de emisión",
+      "yourTime": "tu hora"
     }
   },
   "favorites": {

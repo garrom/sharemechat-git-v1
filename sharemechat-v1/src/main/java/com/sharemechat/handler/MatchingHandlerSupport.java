@@ -87,6 +87,8 @@ public class MatchingHandlerSupport {
     // Fase B go-live: gate coming-soon por rol + foto/video obligatorios (modelo).
     private final com.sharemechat.service.ProductOperationalModeService productOperationalModeService;
     private final com.sharemechat.repository.ModelAssetRepository modelAssetRepository;
+    // Fase C: ventana horaria de la modelo.
+    private final com.sharemechat.service.ModelWindowService modelWindowService;
 
     public MatchingHandlerSupport(MatchingRuntimeState state,
                                   JwtUtil jwtUtil,
@@ -112,6 +114,7 @@ public class MatchingHandlerSupport {
                                   com.sharemechat.master.repository.MasterModelSplitRepository masterModelSplitRepository,
                                   com.sharemechat.service.ProductOperationalModeService productOperationalModeService,
                                   com.sharemechat.repository.ModelAssetRepository modelAssetRepository,
+                                  com.sharemechat.service.ModelWindowService modelWindowService,
                                   @Value("${matching.seen.max-scan:60}") int seenMaxScan) {
         this.state = state;
         this.jwtUtil = jwtUtil;
@@ -138,6 +141,7 @@ public class MatchingHandlerSupport {
         this.masterModelSplitRepository = masterModelSplitRepository;
         this.productOperationalModeService = productOperationalModeService;
         this.modelAssetRepository = modelAssetRepository;
+        this.modelWindowService = modelWindowService;
     }
 
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -369,6 +373,12 @@ public class MatchingHandlerSupport {
                         blockModelMediaRequired(session, userId);
                         return;
                     }
+                    // Fase C: ventana horaria. Fuera de su franja la modelo no
+                    // entra al pool (grace: las sesiones en curso terminan solas).
+                    if (!isModelWithinWindow(userId)) {
+                        blockModelWindowClosed(session, userId);
+                        return;
+                    }
                     // ADR-050 Fase B: gate liveness. Silencioso cuando
                     // livenessProperties.enabled=false (kill-switch por
                     // entorno).
@@ -452,6 +462,11 @@ public class MatchingHandlerSupport {
                     }
                     if (!hasApprovedPhotoAndVideo(userId)) {
                         blockModelMediaRequired(session, userId);
+                        return;
+                    }
+                    // Fase C: ventana horaria (defensa en profundidad).
+                    if (!isModelWithinWindow(userId)) {
+                        blockModelWindowClosed(session, userId);
                         return;
                     }
                     if (!hasLivenessPassOrDisabled(userId)) {
@@ -740,6 +755,26 @@ public class MatchingHandlerSupport {
     }
 
     /**
+     * Fase C: true si la modelo está DENTRO de su ventana horaria (según su
+     * country_detected). Devuelve true (no bloquea) si el gate está apagado, si
+     * el usuario no es modelo, o ante cualquier error (fail-open). Así el mismo
+     * helper sirve en set-role/start-match (userId=modelo) y en canMatch (donde
+     * el peer cliente devuelve true y no bloquea).
+     */
+    private boolean isModelWithinWindow(Long userId) {
+        if (userId == null) return true;
+        if (!modelWindowService.isEnabled()) return true;
+        try {
+            User u = userRepository.findById(userId).orElse(null);
+            if (u == null) return true;
+            if (!Constants.Roles.MODEL.equals(String.valueOf(u.getRole()))) return true;
+            return modelWindowService.isWithinWindow(u.getCountryDetected());
+        } catch (Exception ex) {
+            return true;
+        }
+    }
+
+    /**
      * Gate Age Verification del cliente (sub-frente Didit cliente, 2026-06-20).
      * Valida que el usuario tenga {@code user_type=FORM_CLIENT} y
      * {@code client_kyc_status=APPROVED}. Aplica uniformemente a USER y
@@ -835,6 +870,27 @@ public class MatchingHandlerSupport {
         } catch (Exception ignore) {}
         log.info("[WS][match][MODEL_MEDIA_REQUIRED] sid={} userId={}",
                 session.getId(), userId);
+        try {
+            removeFromAllBuckets(session, "model");
+        } catch (Exception ignore) {}
+        try {
+            if (userId != null) statusService.setOffline(userId);
+        } catch (Exception ignore) {}
+        try {
+            session.close(CloseStatus.NORMAL);
+        } catch (Exception ignore) {}
+    }
+
+    /**
+     * Fase C: la modelo intenta emitir fuera de su ventana horaria. Envia
+     * {@code {"type":"window-closed"}} para que el frontend muestre su franja
+     * (en hora local) y no la mete al pool.
+     */
+    private void blockModelWindowClosed(WebSocketSession session, Long userId) {
+        try {
+            safeSend(session, new JSONObject().put("type", "window-closed").toString());
+        } catch (Exception ignore) {}
+        log.info("[WS][match][WINDOW_CLOSED] sid={} userId={}", session.getId(), userId);
         try {
             removeFromAllBuckets(session, "model");
         } catch (Exception ignore) {}
@@ -2135,6 +2191,10 @@ public class MatchingHandlerSupport {
         // de este metodo). Aplica a paid Y trial: cualquier modelo con
         // ban activo se excluye del matching pool.
         if (isStreamingBanned(userAId) || isStreamingBanned(userBId)) return false;
+        // Fase C: excluye del pool a la modelo cuya ventana horaria cerro
+        // mientras estaba encolada. Grace: las sesiones activas no se cortan,
+        // pero no se crean matches nuevos fuera de ventana. Fail-open interno.
+        if (!isModelWithinWindow(userAId) || !isModelWithinWindow(userBId)) return false;
         // ADR-056 gate hard (2026-07-31): modelo bajo Master sin split
         // vigente queda excluida del matching pool. Fail-CLOSED
         // intencionalmente (a diferencia del ban): sin pacto no puede

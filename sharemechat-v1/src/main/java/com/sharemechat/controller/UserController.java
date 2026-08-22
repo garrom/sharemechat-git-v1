@@ -45,6 +45,7 @@ public class UserController {
     private final BackofficeAccessService backofficeAccessService;
     private final ProductOperationalModeService productOperationalModeService;
     private final UserAcquisitionService userAcquisitionService;
+    private final com.sharemechat.service.ModelWindowService modelWindowService;
 
     public UserController(UserService userService,
                           UserRepository userRepository,
@@ -55,7 +56,8 @@ public class UserController {
                           AgeGatePolicyService ageGatePolicyService,
                           BackofficeAccessService backofficeAccessService,
                           ProductOperationalModeService productOperationalModeService,
-                          UserAcquisitionService userAcquisitionService) {
+                          UserAcquisitionService userAcquisitionService,
+                          com.sharemechat.service.ModelWindowService modelWindowService) {
         this.userService = userService;
         this.modelAssetRepository = modelAssetRepository;
         this.clientDocumentRepository = clientDocumentRepository;
@@ -66,6 +68,7 @@ public class UserController {
         this.backofficeAccessService = backofficeAccessService;
         this.productOperationalModeService = productOperationalModeService;
         this.userAcquisitionService = userAcquisitionService;
+        this.modelWindowService = modelWindowService;
     }
 
 
@@ -298,6 +301,18 @@ public class UserController {
         // WS de matching y en la creacion del checkout PSP.
         userDTO.setModelGoliveEnabled(productOperationalModeService.isModelGoliveEnabled());
         userDTO.setClientGoliveEnabled(productOperationalModeService.isClientGoliveEnabled());
+
+        // Fase C: ventana horaria de la modelo. Exponemos si el gate está activo,
+        // si la modelo está ahora dentro de su ventana, y la franja (zona+open+
+        // close de su bloque) para que el frontend la muestre convertida a su hora
+        // local. Para no-modelos el frontend ignora estos campos.
+        com.sharemechat.service.ModelWindowService.WindowInfo wi =
+                modelWindowService.windowInfo(user.getCountryDetected());
+        userDTO.setModelWindowEnabled(wi.enabled);
+        userDTO.setModelWithinWindow(modelWindowService.isWithinWindow(user.getCountryDetected()));
+        userDTO.setModelWindowZone(wi.zone);
+        userDTO.setModelWindowOpen(wi.open);
+        userDTO.setModelWindowClose(wi.close);
 
         return ResponseEntity.ok(userDTO);
     }

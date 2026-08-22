@@ -56,7 +56,8 @@ class UserControllerLanguagesMockMvcTest {
                 new AgeGatePolicyService("v1"),
                 mock(BackofficeAccessService.class),
                 mock(ProductOperationalModeService.class),
-                mock(UserAcquisitionService.class)
+                mock(UserAcquisitionService.class),
+                new com.sharemechat.service.ModelWindowService(new com.sharemechat.config.ModelWindowProperties())
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setMessageConverters(new MappingJackson2HttpMessageConverter(new ObjectMapper()))

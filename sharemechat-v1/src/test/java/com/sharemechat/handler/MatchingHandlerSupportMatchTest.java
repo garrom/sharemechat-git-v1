@@ -7,6 +7,7 @@ import com.sharemechat.master.repository.MasterModelSplitRepository;
 import com.sharemechat.repository.ModelAssetRepository;
 import com.sharemechat.repository.ModelRepository;
 import com.sharemechat.repository.UserRepository;
+import com.sharemechat.service.ModelWindowService;
 import com.sharemechat.service.NextRateLimitService;
 import com.sharemechat.service.ProductOperationalModeService;
 import com.sharemechat.service.SeenService;
@@ -74,6 +75,7 @@ class MatchingHandlerSupportMatchTest {
     private NextRateLimitService nextRateLimitService;
     private ProductOperationalModeService productOperationalModeService;
     private ModelAssetRepository modelAssetRepository;
+    private ModelWindowService modelWindowService;
 
     private MatchingRuntimeState state;
     private MatchingHandlerSupport support;
@@ -100,6 +102,9 @@ class MatchingHandlerSupportMatchTest {
         when(productOperationalModeService.isClientGoliveEnabled()).thenReturn(true);
         modelAssetRepository = mock(ModelAssetRepository.class);
         when(modelAssetRepository.existsApprovedPrincipalActiveByUserAndType(anyLong(), anyString())).thenReturn(true);
+        // Fase C: gate de ventana APAGADO por defecto (isEnabled()=false) -> no
+        // afecta al camino feliz de los tests de emparejamiento.
+        modelWindowService = mock(ModelWindowService.class);
 
         // Cliente CLIENT + FORM_CLIENT + KYC APPROVED.
         User clientUser = new User();
@@ -134,7 +139,7 @@ class MatchingHandlerSupportMatchTest {
                 statusService, null, null, userTrialService, userBlockService, seenService,
                 streamLockService, nextRateLimitService, userLanguageService, null, null, null, null,
                 modelRepository, masterModelSplitRepository,
-                productOperationalModeService, modelAssetRepository, 60);
+                productOperationalModeService, modelAssetRepository, modelWindowService, 60);
 
         clientSession = newSession("sid-client", CLIENT_ID);
         modelSession = newSession("sid-model", MODEL_ID);
@@ -255,6 +260,21 @@ class MatchingHandlerSupportMatchTest {
 
         verify(streamService, never()).startSession(anyLong(), anyLong(), anyString());
         assertThat(receivedType(modelSession, "model-media-required")).isTrue();
+        assertThat(receivedType(modelSession, "match")).isFalse();
+    }
+
+    @Test
+    void modelo_fuera_de_ventana_horaria_recibe_window_closed_y_no_empareja() throws Exception {
+        // Fase C: con el gate de ventana activo y la modelo fuera de su franja,
+        // no entra al pool (golive+media están en true por el camino feliz).
+        when(modelWindowService.isEnabled()).thenReturn(true);
+        when(modelWindowService.isWithinWindow(any())).thenReturn(false);
+
+        setRole(clientSession);
+        setRole(modelSession);
+
+        verify(streamService, never()).startSession(anyLong(), anyLong(), anyString());
+        assertThat(receivedType(modelSession, "window-closed")).isTrue();
         assertThat(receivedType(modelSession, "match")).isFalse();
     }
 
