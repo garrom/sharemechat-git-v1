@@ -183,6 +183,25 @@ public class ProductOperationalModeService {
         return isModel ? modelMode() : currentMode();
     }
 
+    /**
+     * Gate coming-soon "go-live" MODELO: si false, la modelo VE la plataforma
+     * pero no puede empezar a emitir (enforce en el WS de matching).
+     * {@code product.golive.model.enabled} (env PRODUCT_GOLIVE_MODEL_ENABLED).
+     */
+    public boolean isModelGoliveEnabled() {
+        return props.getGolive().getModel().isEnabled();
+    }
+
+    /**
+     * Gate coming-soon "go-live" CLIENTE (role=USER): si false, no puede entrar a
+     * videochat/trial ni pagar (primer pago). Enforce en el WS de matching y en la
+     * creacion del checkout PSP. {@code product.golive.client.enabled}
+     * (env PRODUCT_GOLIVE_CLIENT_ENABLED).
+     */
+    public boolean isClientGoliveEnabled() {
+        return props.getGolive().getClient().isEnabled();
+    }
+
     public boolean hasAllowlist() {
         return !allowlistUserIds.isEmpty();
     }

@@ -93,7 +93,8 @@ const DashboardModel = () => {
     openActiveSessionGuard,
     openBlockReasonModal,
     openReportAbuseModal,
-    openNextWaitModal
+    openNextWaitModal,
+    openComingSoonModal
   } = useAppModals();
 
   const { user: sessionUser, updateUiLocale, refresh } = useSession();
@@ -2036,6 +2037,14 @@ const DashboardModel = () => {
 
 
   const handleStartMatch = async () => {
+    // Fase B go-live: coming-soon. Con la llave modelo en false la modelo ve la
+    // plataforma pero aún no puede emitir → modal "Muy pronto". Solo bloquea si
+    // el flag es explícitamente false (undefined = no gatear; el WS es el
+    // enforce duro de todos modos).
+    if (sessionUser && sessionUser.modelGoliveEnabled === false) {
+      openComingSoonModal({ role: 'model' });
+      return;
+    }
     if (guardSensitiveAction({ setError })) return;
     if (!webrtcConfigReady || !Array.isArray(webrtcPeerConfig?.iceServers) || webrtcPeerConfig.iceServers.length === 0) {
       console.error('[WEBRTC][config][Model] unavailable for random match');

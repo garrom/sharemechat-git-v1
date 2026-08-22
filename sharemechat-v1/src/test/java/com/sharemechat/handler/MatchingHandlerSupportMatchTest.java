@@ -4,9 +4,11 @@ import com.sharemechat.constants.Constants;
 import com.sharemechat.entity.Model;
 import com.sharemechat.entity.User;
 import com.sharemechat.master.repository.MasterModelSplitRepository;
+import com.sharemechat.repository.ModelAssetRepository;
 import com.sharemechat.repository.ModelRepository;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.service.NextRateLimitService;
+import com.sharemechat.service.ProductOperationalModeService;
 import com.sharemechat.service.SeenService;
 import com.sharemechat.service.StatusService;
 import com.sharemechat.service.StreamLockService;
@@ -70,6 +72,8 @@ class MatchingHandlerSupportMatchTest {
     private MasterModelSplitRepository masterModelSplitRepository;
     private UserTrialService userTrialService;
     private NextRateLimitService nextRateLimitService;
+    private ProductOperationalModeService productOperationalModeService;
+    private ModelAssetRepository modelAssetRepository;
 
     private MatchingRuntimeState state;
     private MatchingHandlerSupport support;
@@ -89,6 +93,13 @@ class MatchingHandlerSupportMatchTest {
         masterModelSplitRepository = mock(MasterModelSplitRepository.class);
         userTrialService = mock(UserTrialService.class);
         nextRateLimitService = mock(NextRateLimitService.class);
+        // Fase B go-live: por defecto ABIERTO (golive true + media presente) para
+        // que los tests de emparejamiento sigan en el camino feliz.
+        productOperationalModeService = mock(ProductOperationalModeService.class);
+        when(productOperationalModeService.isModelGoliveEnabled()).thenReturn(true);
+        when(productOperationalModeService.isClientGoliveEnabled()).thenReturn(true);
+        modelAssetRepository = mock(ModelAssetRepository.class);
+        when(modelAssetRepository.existsApprovedPrincipalActiveByUserAndType(anyLong(), anyString())).thenReturn(true);
 
         // Cliente CLIENT + FORM_CLIENT + KYC APPROVED.
         User clientUser = new User();
@@ -122,7 +133,8 @@ class MatchingHandlerSupportMatchTest {
                 state, null, userRepository, streamService, null, null, null,
                 statusService, null, null, userTrialService, userBlockService, seenService,
                 streamLockService, nextRateLimitService, userLanguageService, null, null, null, null,
-                modelRepository, masterModelSplitRepository, 60);
+                modelRepository, masterModelSplitRepository,
+                productOperationalModeService, modelAssetRepository, 60);
 
         clientSession = newSession("sid-client", CLIENT_ID);
         modelSession = newSession("sid-model", MODEL_ID);
@@ -202,6 +214,48 @@ class MatchingHandlerSupportMatchTest {
         verify(streamService, never()).startSession(anyLong(), anyLong(), anyString());
         assertThat(receivedType(modelSession, "match")).isFalse();
         assertThat(receivedType(modelSession, "no-client-available")).isTrue();
+    }
+
+    @Test
+    void modelo_golive_false_no_empareja_y_recibe_coming_soon() throws Exception {
+        // Fase B: con la llave modelo en false, la modelo no entra al pool.
+        when(productOperationalModeService.isModelGoliveEnabled()).thenReturn(false);
+
+        setRole(clientSession);   // cliente encolado
+        setRole(modelSession);    // modelo intenta -> bloqueada por coming-soon
+
+        verify(streamService, never()).startSession(anyLong(), anyLong(), anyString());
+        assertThat(receivedType(modelSession, "golive-coming-soon")).isTrue();
+        assertThat(receivedType(modelSession, "match")).isFalse();
+    }
+
+    @Test
+    void cliente_golive_false_no_empareja_y_recibe_coming_soon() throws Exception {
+        // Fase B: con la llave cliente en false, el cliente (role=USER) no entra
+        // al pool de videochat.
+        when(productOperationalModeService.isClientGoliveEnabled()).thenReturn(false);
+
+        setRole(clientSession);   // cliente intenta -> bloqueado por coming-soon
+        setRole(modelSession);    // modelo entra pero no hay cliente en pool
+
+        verify(streamService, never()).startSession(anyLong(), anyLong(), anyString());
+        assertThat(receivedType(clientSession, "golive-coming-soon")).isTrue();
+        assertThat(receivedType(clientSession, "match")).isFalse();
+    }
+
+    @Test
+    void modelo_sin_video_aprobado_recibe_media_required_y_no_empareja() throws Exception {
+        // Fase B: foto+video aprobados obligatorios. Sin VIDEO, no emite (aunque
+        // golive este en true, que es el default del camino feliz).
+        when(modelAssetRepository.existsApprovedPrincipalActiveByUserAndType(
+                eq(MODEL_ID), eq(com.sharemechat.entity.ModelAsset.AssetType.VIDEO))).thenReturn(false);
+
+        setRole(clientSession);
+        setRole(modelSession);
+
+        verify(streamService, never()).startSession(anyLong(), anyLong(), anyString());
+        assertThat(receivedType(modelSession, "model-media-required")).isTrue();
+        assertThat(receivedType(modelSession, "match")).isFalse();
     }
 
     @Test
