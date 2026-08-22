@@ -12,6 +12,12 @@ export const DEFAULT_LOCALE = 'es';
 // abre modelos de Brasil). Siguientes: it, nl, pl.
 export const SUPPORTED_LOCALES = ['es', 'en', 'fr', 'de', 'pt'];
 
+// Idiomas ofrecidos en el BACKOFFICE (admin). El backoffice NO se traduce más allá
+// de es/en (decisión de producto, i18n-language-redesign-plan.md §"Solo producto"):
+// ofrecer fr/de/pt aquí solo dejaría la UI en inglés por fallback → confuso. El
+// selector limita a este set cuando isAdminSurface().
+export const ADMIN_LOCALES = ['es', 'en'];
+
 // Etiqueta corta (código) para el disparador del selector.
 export const LOCALE_LABELS = SUPPORTED_LOCALES.reduce((acc, locale) => {
   acc[locale] = locale.toUpperCase();
