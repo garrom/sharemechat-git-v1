@@ -853,7 +853,9 @@ public class UserService {
      *   4. "en".
      * Todo validado contra {@link com.sharemechat.constants.SupportedChatLanguages}.
      */
-    private String detectPersonalLanguage(String acceptLanguage, String countryDetected, String uiLocale) {
+    // package-private (no private) para poder testear la prioridad de detección
+    // directamente en UserServiceI18nTest (mismo paquete). No es API pública.
+    String detectPersonalLanguage(String acceptLanguage, String countryDetected, String uiLocale) {
         if (acceptLanguage != null && !acceptLanguage.isBlank()) {
             String first = acceptLanguage.split(",")[0].trim();
             String norm = com.sharemechat.constants.SupportedChatLanguages.normalize(first);
