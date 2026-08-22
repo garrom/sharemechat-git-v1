@@ -84,7 +84,8 @@ class MessagesWsHandlerSupportGiftTest {
                 state, null, userRepository, favoriteService, messageService,
                 transactionService, null, null, null, null, null,
                 userBlockService, mock(BalanceRepository.class), null, null,
-                null, null, null, giftRepository);
+                null, null, null, giftRepository,
+                null, null); // ProductOperationalModeService, ModelAssetRepository (Fase B; no usados en gift test)
     }
 
     private User userWith(long id, String role) {

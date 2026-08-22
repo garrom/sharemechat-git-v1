@@ -95,7 +95,8 @@ const DashboardClient = () => {
     openActiveSessionGuard,
     openBlockReasonModal,
     openReportAbuseModal,
-    openNextWaitModal
+    openNextWaitModal,
+    openComingSoonModal
   } = useAppModals();
   const { inCall, setInCall } = useCallUi();
   const { user: sessionUser, updateUiLocale, refresh } = useSession();
@@ -1505,6 +1506,11 @@ const DashboardClient = () => {
 
 
   const handleStartMatch = async () => {
+    // Fase B go-live: coming-soon del cliente (mismo gate que el trial y la llamada).
+    if (sessionUser && sessionUser.clientGoliveEnabled === false) {
+      openComingSoonModal({ role: 'client' });
+      return;
+    }
     if (guardSensitiveAction({ setError })) return;
     if (!webrtcConfigReady || !Array.isArray(webrtcPeerConfig?.iceServers) || webrtcPeerConfig.iceServers.length === 0) {
       console.error('[WEBRTC][config][Client] unavailable for random match');
@@ -2321,6 +2327,12 @@ const DashboardClient = () => {
 
   // Cambiar a modo llamada sobre el target actual
   const enterCallMode = () => {
+    // Fase B go-live: coming-soon. El cliente no puede iniciar llamada 1 a 1 hasta
+    // que la llave cliente esté en true (igual que el random).
+    if (sessionUser && sessionUser.clientGoliveEnabled === false) {
+      openComingSoonModal({ role: 'client' });
+      return;
+    }
     if (guardSensitiveAction({ setError: setCallError })) return;
     if (!Number(targetPeerId)) {
       setCallError('Selecciona un contacto primero.');
