@@ -12,6 +12,11 @@ import {
   StyledSelect,
   StyledTable,
 } from '../../../styles/AdminStyles';
+// El resumen BFPM (invariante del bonus financiado por plataforma, ADR-012) NO es
+// un módulo de gestión de bonus: son checks contables del MISMO job de accounting
+// (scope DEFAULT). Se funde aquí, como sección del cuadre contable, para no
+// confundir con un panel de bonus (depuración control interno 2026-08-22).
+import AuditBfpmPanel from './AuditBfpmPanel';
 
 const ANOM_LIMIT_OPTIONS = [10, 20, 50, 100, 200];
 
@@ -228,6 +233,11 @@ const AuditAccountingPanel = () => {
           </div>
         </NoteCard>
       </CardsGrid>
+
+      {/* Auditoría del bonus (invariante BFPM): sección del cuadre contable. */}
+      <div style={{ marginTop: 18, borderTop: '1px solid #2b3646', paddingTop: 14 }}>
+        <AuditBfpmPanel />
+      </div>
     </div>
   );
 };
