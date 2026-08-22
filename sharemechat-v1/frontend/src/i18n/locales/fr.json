@@ -892,6 +892,13 @@
         "never": "Je ne veux pas voir cet utilisateur",
         "other": "Autres raisons"
       }
+    },
+    "comingSoon": {
+      "title": "Bientôt disponible",
+      "model": "Nous peaufinons les derniers détails avant l'ouverture. Nous vous préviendrons dès que vous pourrez commencer à diffuser.",
+      "client": "Nous peaufinons les derniers détails. Très bientôt, vous pourrez rencontrer des gens en direct.",
+      "mediaMissing": "Pour diffuser, une photo et une vidéo approuvées sont nécessaires. Ajoutez-les depuis votre profil et vous serez prêt dès l'ouverture.",
+      "ok": "Compris"
     }
   },
   "favorites": {

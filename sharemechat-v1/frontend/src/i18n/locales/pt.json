@@ -892,6 +892,13 @@
         "never": "Não quero ver este usuário.",
         "other": "Outros motivos"
       }
+    },
+    "comingSoon": {
+      "title": "Em breve",
+      "model": "Estamos finalizando os últimos detalhes para abrir. Avisaremos assim que você puder começar a transmitir.",
+      "client": "Estamos finalizando os últimos detalhes. Muito em breve você poderá conhecer pessoas ao vivo.",
+      "mediaMissing": "Para transmitir, você precisa de uma foto e um vídeo aprovados. Envie-os pelo seu perfil e estará pronto assim que abrirmos.",
+      "ok": "Entendido"
     }
   },
   "favorites": {
