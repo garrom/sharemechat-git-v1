@@ -38,7 +38,7 @@ const DashboardContentShell = styled.div`
 
 const DashboardUserClient = () => {
   const history = useHistory();
-  const { alert, openPurchaseModal, openReportAbuseModal } = useAppModals();
+  const { alert, openPurchaseModal, openReportAbuseModal, openActiveSessionGuard } = useAppModals();
   const { setInCall } = useCallUi();
 
   const t = (key, options) => i18n.t(key, options);
@@ -367,6 +367,12 @@ const DashboardUserClient = () => {
     stopAll();
     setActiveTab('blog');
   };
+
+  // Guard para el cambio de idioma (LocaleSwitcher hace reload completo, sin
+  // stopAll): si el usuario en trial tiene un videochat random activo, avisa y
+  // NO cambia de idioma para no romper la sesión. En trial no hay calling.
+  const confirmarSalidaSesionActiva = async () =>
+    openActiveSessionGuard({ hasStreaming: !!remoteStream, hasCalling: false });
 
   const handleResendEmailVerification = async () => {
     setError('');
@@ -797,6 +803,7 @@ const DashboardUserClient = () => {
         onLogout={handleLogout}
         buyLabel={t('dashboardUserClient.actions.goPremium')}
         showLocaleSwitcher={true}
+        localeGuard={confirmarSalidaSesionActiva}
         showBalance={false}
         showAvatar={true}
         videochatDisabled={false}
