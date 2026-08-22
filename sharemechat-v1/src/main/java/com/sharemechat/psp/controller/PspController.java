@@ -2,6 +2,7 @@ package com.sharemechat.psp.controller;
 
 import com.sharemechat.entity.PaymentSession;
 import com.sharemechat.entity.User;
+import com.sharemechat.psp.ClientGoliveClosedException;
 import com.sharemechat.psp.PspException;
 import com.sharemechat.psp.config.NowPaymentsProperties;
 import com.sharemechat.psp.service.PspOrchestratorService;
@@ -91,6 +92,12 @@ public class PspController {
             log.warn("[PSP] checkout bad request userId={} packId={} err={}",
                     userId, packId, iae.getMessage());
             return ResponseEntity.badRequest().body(errorBody("BAD_REQUEST", iae.getMessage()));
+        } catch (ClientGoliveClosedException ce) {
+            // Fase B go-live: primer pago del cliente rechazado por coming-soon.
+            log.info("[PSP] checkout coming-soon userId={} packId={} err={}",
+                    userId, packId, ce.getMessage());
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(errorBody("CLIENT_COMING_SOON", ce.getMessage()));
         } catch (PspException pe) {
             log.warn("[PSP] checkout unavailable userId={} packId={} err={}",
                     userId, packId, pe.getMessage());

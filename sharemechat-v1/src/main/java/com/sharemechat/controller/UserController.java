@@ -292,6 +292,13 @@ public class UserController {
         userDTO.setProductAccessMode(productOperationalModeService.effectiveModeForUser(isModel).name());
         userDTO.setAllowlisted(productOperationalModeService.isUserAllowlisted(user.getId()));
 
+        // Fase B go-live: llaves coming-soon por rol. La SPA deshabilita el boton
+        // de emitir (modelo) / videochat y pago (cliente) y muestra el modal
+        // "Muy pronto" sin intentar la accion. El enforce duro sigue en el
+        // WS de matching y en la creacion del checkout PSP.
+        userDTO.setModelGoliveEnabled(productOperationalModeService.isModelGoliveEnabled());
+        userDTO.setClientGoliveEnabled(productOperationalModeService.isClientGoliveEnabled());
+
         return ResponseEntity.ok(userDTO);
     }
 

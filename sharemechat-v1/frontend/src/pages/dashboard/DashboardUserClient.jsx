@@ -38,7 +38,7 @@ const DashboardContentShell = styled.div`
 
 const DashboardUserClient = () => {
   const history = useHistory();
-  const { alert, openPurchaseModal, openReportAbuseModal, openActiveSessionGuard } = useAppModals();
+  const { alert, openPurchaseModal, openReportAbuseModal, openActiveSessionGuard, openComingSoonModal } = useAppModals();
   const { setInCall } = useCallUi();
 
   const t = (key, options) => i18n.t(key, options);
@@ -409,6 +409,14 @@ const DashboardUserClient = () => {
     setError('');
     setStatusText('');
 
+    // Fase B go-live: coming-soon del cliente. Con la llave cliente en false NO
+    // se puede pagar (no aceptar pagos con la app no disponible: riesgo legal).
+    // El enforce duro está en el checkout PSP (503 CLIENT_COMING_SOON).
+    if (user && user.clientGoliveEnabled === false) {
+      openComingSoonModal({ role: 'client' });
+      return;
+    }
+
     if (!ensureClientKycApproved(user, history, '/dashboard-user-client')) return;
 
     if (!user?.emailVerifiedAt) {
@@ -454,6 +462,13 @@ const DashboardUserClient = () => {
     setError('');
     setStatusText('');
     setShowTrialCooldownModal(false);
+
+    // Fase B go-live: coming-soon del cliente. Con la llave cliente en false ve
+    // la plataforma pero aún no puede entrar a videochat/trial → modal.
+    if (user && user.clientGoliveEnabled === false) {
+      openComingSoonModal({ role: 'client' });
+      return;
+    }
 
     if (!webrtcConfigReady || !Array.isArray(webrtcPeerConfig?.iceServers) || webrtcPeerConfig.iceServers.length === 0) {
       console.error('[WEBRTC][config][TrialUser] unavailable for random match');

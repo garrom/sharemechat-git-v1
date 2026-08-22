@@ -75,6 +75,11 @@ public class UserDTO {
     // (bypassea el gate aunque el modo sea restrictivo).
     private String productAccessMode;
     private Boolean allowlisted;
+    // Fase B go-live: llaves coming-soon por rol. modelGoliveEnabled = la modelo
+    // ya puede emitir; clientGoliveEnabled = el cliente (role=USER) ya puede
+    // videochat/trial y pagar. false = coming-soon (modal "Muy pronto").
+    private Boolean modelGoliveEnabled;
+    private Boolean clientGoliveEnabled;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -195,4 +200,10 @@ public class UserDTO {
 
     public Boolean getAllowlisted() { return allowlisted; }
     public void setAllowlisted(Boolean allowlisted) { this.allowlisted = allowlisted; }
+
+    public Boolean getModelGoliveEnabled() { return modelGoliveEnabled; }
+    public void setModelGoliveEnabled(Boolean modelGoliveEnabled) { this.modelGoliveEnabled = modelGoliveEnabled; }
+
+    public Boolean getClientGoliveEnabled() { return clientGoliveEnabled; }
+    public void setClientGoliveEnabled(Boolean clientGoliveEnabled) { this.clientGoliveEnabled = clientGoliveEnabled; }
 }

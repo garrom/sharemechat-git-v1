@@ -32,6 +32,7 @@ public class ProductOperationalProperties {
     private Access access = new Access();
     private Registration registration = new Registration();
     private Simulation simulation = new Simulation();
+    private Golive golive = new Golive();
 
     public Access getAccess() {
         return access;
@@ -55,6 +56,14 @@ public class ProductOperationalProperties {
 
     public void setSimulation(Simulation simulation) {
         this.simulation = simulation == null ? new Simulation() : simulation;
+    }
+
+    public Golive getGolive() {
+        return golive;
+    }
+
+    public void setGolive(Golive golive) {
+        this.golive = golive == null ? new Golive() : golive;
     }
 
     public static class Access {
@@ -155,6 +164,34 @@ public class ProductOperationalProperties {
 
         public void setTransactionsDirect(Toggle transactionsDirect) {
             this.transactionsDirect = transactionsDirect == null ? new Toggle(false) : transactionsDirect;
+        }
+    }
+
+    /**
+     * Gate coming-soon de "go-live" por rol (independiente del modo de acceso al
+     * producto): con la llave en false el usuario VE la plataforma pero no puede
+     * OPERAR. Modelo = emitir; cliente (role=USER) = entrar a videochat/trial y
+     * pagar (primer pago). Defaults false (coming-soon). Se activan por env
+     * {@code PRODUCT_GOLIVE_MODEL_ENABLED} / {@code PRODUCT_GOLIVE_CLIENT_ENABLED}.
+     */
+    public static class Golive {
+        private Toggle model = new Toggle(false);
+        private Toggle client = new Toggle(false);
+
+        public Toggle getModel() {
+            return model;
+        }
+
+        public void setModel(Toggle model) {
+            this.model = model == null ? new Toggle(false) : model;
+        }
+
+        public Toggle getClient() {
+            return client;
+        }
+
+        public void setClient(Toggle client) {
+            this.client = client == null ? new Toggle(false) : client;
         }
     }
 }

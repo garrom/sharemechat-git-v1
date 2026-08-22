@@ -84,6 +84,9 @@ public class MatchingHandlerSupport {
     // safety net por si aparece alguna via edge (import batch, admin
     // manual) que la deje sin split.
     private final com.sharemechat.master.repository.MasterModelSplitRepository masterModelSplitRepository;
+    // Fase B go-live: gate coming-soon por rol + foto/video obligatorios (modelo).
+    private final com.sharemechat.service.ProductOperationalModeService productOperationalModeService;
+    private final com.sharemechat.repository.ModelAssetRepository modelAssetRepository;
 
     public MatchingHandlerSupport(MatchingRuntimeState state,
                                   JwtUtil jwtUtil,
@@ -107,6 +110,8 @@ public class MatchingHandlerSupport {
                                   LivenessProperties livenessProperties,
                                   com.sharemechat.repository.ModelRepository modelRepository,
                                   com.sharemechat.master.repository.MasterModelSplitRepository masterModelSplitRepository,
+                                  com.sharemechat.service.ProductOperationalModeService productOperationalModeService,
+                                  com.sharemechat.repository.ModelAssetRepository modelAssetRepository,
                                   @Value("${matching.seen.max-scan:60}") int seenMaxScan) {
         this.state = state;
         this.jwtUtil = jwtUtil;
@@ -131,6 +136,8 @@ public class MatchingHandlerSupport {
         this.livenessProperties = livenessProperties;
         this.modelRepository = modelRepository;
         this.masterModelSplitRepository = masterModelSplitRepository;
+        this.productOperationalModeService = productOperationalModeService;
+        this.modelAssetRepository = modelAssetRepository;
     }
 
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -349,6 +356,19 @@ public class MatchingHandlerSupport {
                         blockModelSession(session, userId, "KYC_NOT_APPROVED_OR_INACTIVE");
                         return;
                     }
+                    // Fase B go-live: coming-soon. Con la llave modelo en false la
+                    // modelo ve la plataforma pero no puede emitir todavia.
+                    if (!productOperationalModeService.isModelGoliveEnabled()) {
+                        blockGoliveComingSoon(session, userId, "model");
+                        return;
+                    }
+                    // Fase B: foto Y video aprobados obligatorios antes de emitir
+                    // (reutiliza la regla de visibilidad del pool). Vale tambien con
+                    // la llave ya en true: es requisito permanente, no solo coming-soon.
+                    if (!hasApprovedPhotoAndVideo(userId)) {
+                        blockModelMediaRequired(session, userId);
+                        return;
+                    }
                     // ADR-050 Fase B: gate liveness. Silencioso cuando
                     // livenessProperties.enabled=false (kill-switch por
                     // entorno).
@@ -380,6 +400,13 @@ public class MatchingHandlerSupport {
                         blockClientSession(session, userId, REASON_CLIENT_KYC_REQUIRED);
                         return;
                     }
+                    // Fase B go-live: coming-soon del cliente (role=USER). Con la
+                    // llave cliente en false ve la plataforma pero no puede entrar
+                    // a videochat/trial (el pago se gatea aparte en el checkout PSP).
+                    if (!productOperationalModeService.isClientGoliveEnabled()) {
+                        blockGoliveComingSoon(session, userId, "client");
+                        return;
+                    }
                     // ADR-050 Fase B: gate liveness (mismo que para modelo).
                     if (!hasLivenessPassOrDisabled(userId)) {
                         blockForLiveness(session, userId, mappedRole);
@@ -403,6 +430,11 @@ public class MatchingHandlerSupport {
                         blockClientSession(session, userId, REASON_CLIENT_KYC_REQUIRED);
                         return;
                     }
+                    // Fase B go-live: defensa en profundidad (coming-soon cliente).
+                    if (!productOperationalModeService.isClientGoliveEnabled()) {
+                        blockGoliveComingSoon(session, userId, "client");
+                        return;
+                    }
                     // ADR-050 Fase B: defensa en profundidad tambien para
                     // liveness. Cubre revocacion / expiracion del pass entre
                     // set-role y start-match.
@@ -413,6 +445,15 @@ public class MatchingHandlerSupport {
                     matchClient(session);
                 } else if ("model".equals(role)) {
                     Long userId = state.getSessionUserIds().get(session.getId());
+                    // Fase B go-live: defensa en profundidad (coming-soon + media).
+                    if (!productOperationalModeService.isModelGoliveEnabled()) {
+                        blockGoliveComingSoon(session, userId, "model");
+                        return;
+                    }
+                    if (!hasApprovedPhotoAndVideo(userId)) {
+                        blockModelMediaRequired(session, userId);
+                        return;
+                    }
                     if (!hasLivenessPassOrDisabled(userId)) {
                         blockForLiveness(session, userId, role);
                         return;
@@ -681,6 +722,24 @@ public class MatchingHandlerSupport {
     }
 
     /**
+     * Fase B: la modelo debe tener foto Y video APROBADOS (principal + activo)
+     * antes de poder emitir. Reutiliza exactamente la regla de visibilidad del
+     * pool ({@code existsApprovedPrincipalActiveByUserAndType} para PIC y VIDEO).
+     * Fail-safe: ante error de BD, devuelve false (no se permite emitir).
+     */
+    private boolean hasApprovedPhotoAndVideo(Long userId) {
+        if (userId == null) return false;
+        try {
+            return modelAssetRepository.existsApprovedPrincipalActiveByUserAndType(
+                        userId, com.sharemechat.entity.ModelAsset.AssetType.PIC)
+                && modelAssetRepository.existsApprovedPrincipalActiveByUserAndType(
+                        userId, com.sharemechat.entity.ModelAsset.AssetType.VIDEO);
+        } catch (Exception ex) {
+            return false;
+        }
+    }
+
+    /**
      * Gate Age Verification del cliente (sub-frente Didit cliente, 2026-06-20).
      * Valida que el usuario tenga {@code user_type=FORM_CLIENT} y
      * {@code client_kyc_status=APPROVED}. Aplica uniformemente a USER y
@@ -732,6 +791,58 @@ public class MatchingHandlerSupport {
 
         try {
             session.close(CloseStatus.POLICY_VIOLATION);
+        } catch (Exception ignore) {}
+    }
+
+    /**
+     * Fase B go-live: bloqueo "coming-soon" (modelo o cliente). El usuario VE la
+     * plataforma pero aun no puede operar; el enforce duro vive aqui (el frontend
+     * ya deshabilita el boton leyendo el flag de /me, pero esto cubre bypass del
+     * WS). Envia {@code {"type":"golive-coming-soon","role":...}} y cierra normal.
+     */
+    private void blockGoliveComingSoon(WebSocketSession session, Long userId, String role) {
+        try {
+            String payload = new JSONObject()
+                    .put("type", "golive-coming-soon")
+                    .put("role", role)
+                    .toString();
+            safeSend(session, payload);
+        } catch (Exception ignore) {}
+        log.info("[WS][match][GOLIVE_COMING_SOON] sid={} userId={} role={}",
+                session.getId(), userId, role);
+        try {
+            removeFromAllBuckets(session, role);
+        } catch (Exception ignore) {}
+        try {
+            if (userId != null) statusService.setOffline(userId);
+        } catch (Exception ignore) {}
+        try {
+            session.close(CloseStatus.NORMAL);
+        } catch (Exception ignore) {}
+    }
+
+    /**
+     * Fase B: la modelo intenta emitir sin foto/video aprobados. Envia
+     * {@code {"type":"model-media-required"}} para que el frontend la lleve a
+     * completar su perfil, y no la mete al pool.
+     */
+    private void blockModelMediaRequired(WebSocketSession session, Long userId) {
+        try {
+            String payload = new JSONObject()
+                    .put("type", "model-media-required")
+                    .toString();
+            safeSend(session, payload);
+        } catch (Exception ignore) {}
+        log.info("[WS][match][MODEL_MEDIA_REQUIRED] sid={} userId={}",
+                session.getId(), userId);
+        try {
+            removeFromAllBuckets(session, "model");
+        } catch (Exception ignore) {}
+        try {
+            if (userId != null) statusService.setOffline(userId);
+        } catch (Exception ignore) {}
+        try {
+            session.close(CloseStatus.NORMAL);
         } catch (Exception ignore) {}
     }
 

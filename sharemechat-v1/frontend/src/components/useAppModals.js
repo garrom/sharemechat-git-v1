@@ -323,6 +323,37 @@ const NextWaitText = styled.div`
   max-width: 320px;
 `;
 
+// === Fase B go-live: modal "Muy pronto" (coming-soon) ===
+const ComingSoonGlyph = styled.div`
+  width: 60px;
+  height: 60px;
+  margin: 4px auto 16px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  color: #fff;
+  background: radial-gradient(circle at 30% 25%, #ff4a3d, #ea1d1d 55%, #b91212);
+  box-shadow: 0 12px 30px -8px rgba(234, 29, 29, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+`;
+
+const ComingSoonTitle = styled.h3`
+  margin: 0 0 10px;
+  text-align: center;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #f5eee8;
+`;
+
+const ComingSoonText = styled.p`
+  margin: 0 auto;
+  max-width: 34ch;
+  text-align: center;
+  font-size: 0.96rem;
+  line-height: 1.6;
+  color: #c9bab0;
+`;
+
 export const useAppModals = () => {
   const { alert, confirm, openModal, closeModal } = useModal();
   const history = useHistory();
@@ -806,6 +837,34 @@ export const useAppModals = () => {
   }, [openModal, closeModal, openLoginModal]);
 
 
+  /**
+   * Fase B go-live: modal "Muy pronto" (coming-soon). role='model'|'client';
+   * mediaMissing=true cuando la modelo intenta emitir sin foto/vídeo aprobados.
+   */
+  const openComingSoonModal = useCallback(({ role = 'client', mediaMissing = false } = {}) => {
+    let text;
+    if (mediaMissing) {
+      text = i18n.t('modals.comingSoon.mediaMissing', { defaultValue: 'Para emitir necesitas una foto y un vídeo aprobados. Súbelos desde tu perfil y podrás empezar en cuanto abramos.' });
+    } else if (role === 'model') {
+      text = i18n.t('modals.comingSoon.model', { defaultValue: 'Estamos ultimando los últimos detalles para abrir. Te avisaremos en cuanto puedas empezar a emitir.' });
+    } else {
+      text = i18n.t('modals.comingSoon.client', { defaultValue: 'Estamos ultimando los últimos detalles. Muy pronto podrás entrar a conocer gente en directo.' });
+    }
+    return openModal({
+      title: '',
+      variant: 'confirm',
+      size: 'sm',
+      content: (
+        <div>
+          <ComingSoonGlyph aria-hidden="true">⏳</ComingSoonGlyph>
+          <ComingSoonTitle>{i18n.t('modals.comingSoon.title', { defaultValue: 'Muy pronto' })}</ComingSoonTitle>
+          <ComingSoonText>{text}</ComingSoonText>
+        </div>
+      ),
+      actions: [{ label: i18n.t('modals.comingSoon.ok', { defaultValue: 'Entendido' }), primary: true, danger: false, onClick: () => closeModal() }],
+    }).then(() => {});
+  }, [openModal, closeModal]);
+
   return {
     alert,
     confirm,
@@ -814,6 +873,7 @@ export const useAppModals = () => {
     openPurchaseModal,
     openPayoutModal,
     openActiveSessionGuard,
+    openComingSoonModal,
     openLoginModal,
     openPublicSignupTeaser,
     openBlockReasonModal,

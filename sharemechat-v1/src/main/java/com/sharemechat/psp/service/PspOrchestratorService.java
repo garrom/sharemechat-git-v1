@@ -2,11 +2,13 @@ package com.sharemechat.psp.service;
 
 import com.sharemechat.entity.PaymentSession;
 import com.sharemechat.entity.User;
+import com.sharemechat.psp.ClientGoliveClosedException;
 import com.sharemechat.psp.PspException;
 import com.sharemechat.psp.dto.CreateInvoiceRequest;
 import com.sharemechat.psp.dto.CreateInvoiceResult;
 import com.sharemechat.repository.PaymentSessionRepository;
 import com.sharemechat.repository.UserRepository;
+import com.sharemechat.service.ProductOperationalModeService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -67,15 +69,18 @@ public class PspOrchestratorService {
     private final UserRepository userRepository;
     private final PaymentProviderRegistry providerRegistry;
     private final PspProviderConfigService pspProviderConfigService;
+    private final ProductOperationalModeService productOperationalModeService;
 
     public PspOrchestratorService(PaymentSessionRepository paymentSessionRepository,
                                   UserRepository userRepository,
                                   PaymentProviderRegistry providerRegistry,
-                                  PspProviderConfigService pspProviderConfigService) {
+                                  PspProviderConfigService pspProviderConfigService,
+                                  ProductOperationalModeService productOperationalModeService) {
         this.paymentSessionRepository = paymentSessionRepository;
         this.userRepository = userRepository;
         this.providerRegistry = providerRegistry;
         this.pspProviderConfigService = pspProviderConfigService;
+        this.productOperationalModeService = productOperationalModeService;
     }
 
     /**
@@ -111,6 +116,16 @@ public class PspOrchestratorService {
         // 4. Determinar firstPayment (semántica ADR-012 BFPM): USER + FORM_CLIENT no
         // ha pagado antes; CLIENT ya pagó al menos una vez.
         boolean firstPayment = com.sharemechat.constants.Constants.Roles.USER.equals(user.getRole());
+
+        // 4-bis. Fase B go-live: no aceptar el PRIMER pago (role=USER) mientras el
+        // cliente esta en coming-soon (llave product.golive.client.enabled=false).
+        // Se bloquea ANTES de crear la PaymentSession y de llamar al vendor, para
+        // no cobrar y no disparar el salto user->CLIENT via webhook. Las recargas
+        // de un CLIENT ya pagado no se ven afectadas (solo firstPayment).
+        if (firstPayment && !productOperationalModeService.isClientGoliveEnabled()) {
+            throw new ClientGoliveClosedException(
+                    "CLIENT_COMING_SOON: primer pago no disponible (coming-soon) userId=" + userId);
+        }
 
         // 5. Persistir PaymentSession PENDING (antes de llamar al vendor).
         PaymentSession session = new PaymentSession();
