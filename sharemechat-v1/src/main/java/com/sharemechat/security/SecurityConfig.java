@@ -95,10 +95,12 @@ public class SecurityConfig {
                         // Observabilidad (2026-08-22): health/version SIN auth.
                         // /api/health/version = commit vivo del JAR + modo operacional
                         // (para el drift-check y uptime). /actuator/health = UP/DOWN de
-                        // infra (BD, disco). El resto de /actuator/* NO se expone
-                        // (management.endpoints.web.exposure.include=health) -> 404.
+                        // infra (BD, disco), publico. /actuator/metrics (constantes
+                        // vitales) queda restringido a ADMIN. El resto de /actuator/*
+                        // no se expone (management...include=health,metrics) -> 404.
                         .requestMatchers(HttpMethod.GET, "/api/health/**").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        .requestMatchers("/actuator/**").hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_ADMIN))
 
                         // SEO layer (Frente 2 sobre CMS Fase 4A): sitemap dinamico
                         // y robots.txt servidos sin auth para que crawlers los indexen.
