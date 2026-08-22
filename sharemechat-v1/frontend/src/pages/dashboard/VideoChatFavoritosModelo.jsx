@@ -50,7 +50,6 @@ import {
   StyledCallComposer,
   StyledChatMessagesInner,
   StyledChatDockMessageComposer,
-  StyledChatDockActions,
   StyledGiftsPanel,
   StyledGiftGrid,
   StyledGiftCatalog,
@@ -65,6 +64,7 @@ import {
   StyledCallOverlayGifts,
   StyledDaySep,
   StyledComposerBtn,
+  StyledComposerSend,
 } from '../../styles/pages-styles/VideochatStyles';
 import GiftIcon, { resolveGiftSlug, resolveGiftEmoji, isFaceGiftCode } from '../../components/gifts/GiftIcon';
 import GiftIconDefs from '../../components/gifts/GiftIconDefs';
@@ -72,7 +72,6 @@ import EmojiTextPicker from '../../components/EmojiTextPicker';
 import { isSingleEmoji } from '../../utils/emojiUtils';
 import { apiFetch } from '../../config/http';
 import {
-  ButtonLlamar,
   ButtonRegalo,
   ButtonAceptar,
   ButtonRechazar,
@@ -140,7 +139,6 @@ export default function VideoChatFavoritosModelo(props) {
     favReload,
     selectedContactId,
     hasActiveDetail,
-    hasCallTarget,
     backToList,
     callClientSaldo,
     callClientSaldoLoading,
@@ -1017,16 +1015,15 @@ export default function VideoChatFavoritosModelo(props) {
                             }}
                             disabled={!allowChat}
                           />
-                          <StyledChatDockActions>
-                            <ButtonLlamar
-                              onClick={enterCallMode}
-                              disabled={!hasCallTarget || !allowChat}
-                              title={t('dashboardModel.favorites.call.call')}
-                              aria-label={t('dashboardModel.favorites.call.call')}
-                            >
-                              <FontAwesomeIcon icon={faVideo} />
-                            </ButtonLlamar>
-                          </StyledChatDockActions>
+                          <StyledComposerSend
+                            type="button"
+                            onClick={sendCenterMessage}
+                            disabled={!allowChat}
+                            title={t('common.sendMessage')}
+                            aria-label={t('common.sendMessage')}
+                          >
+                            <FontAwesomeIcon icon={faPaperPlane} />
+                          </StyledComposerSend>
                           {showCenterGifts && allowChat && (
                             <div style={{ position:'absolute', left:0, right:0, bottom:'100%', zIndex:12 }}>
                               {renderModelGiftBar()}
