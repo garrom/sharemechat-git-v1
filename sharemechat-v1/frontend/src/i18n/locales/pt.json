@@ -903,6 +903,16 @@
       "windowText": "Você está fora do seu horário de transmissão no momento. Volte durante o seu horário para começar a transmitir.",
       "scheduleLabel": "Seu horário de transmissão",
       "yourTime": "seu horário"
+    },
+    "mediaRequired": {
+      "title": "Você precisa de foto e vídeo",
+      "text": "Para transmitir você precisa de uma foto e um vídeo aprovados.",
+      "photo": "Foto de perfil",
+      "video": "Vídeo de apresentação",
+      "approved": "Aprovada",
+      "pending": "Pendente",
+      "note": "Envie-os pelo seu perfil; nós os revisamos e você poderá transmitir assim que forem aprovados.",
+      "ok": "Entendido"
     }
   },
   "favorites": {

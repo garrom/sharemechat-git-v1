@@ -314,6 +314,16 @@ public class UserController {
         userDTO.setModelWindowOpen(wi.open);
         userDTO.setModelWindowClose(wi.close);
 
+        // Tema 1: foto/vídeo aprobados de la modelo (obligatorio para emitir). Solo
+        // relevante para modelos; el frontend muestra un modal propio y bloqueante
+        // si falta alguno. Misma regla de aprobación que la visibilidad en listados.
+        if (isModel) {
+            userDTO.setModelPhotoApproved(modelAssetRepository
+                    .existsApprovedPrincipalActiveByUserAndType(user.getId(), com.sharemechat.entity.ModelAsset.AssetType.PIC));
+            userDTO.setModelVideoApproved(modelAssetRepository
+                    .existsApprovedPrincipalActiveByUserAndType(user.getId(), com.sharemechat.entity.ModelAsset.AssetType.VIDEO));
+        }
+
         return ResponseEntity.ok(userDTO);
     }
 

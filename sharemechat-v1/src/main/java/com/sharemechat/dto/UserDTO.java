@@ -87,6 +87,10 @@ public class UserDTO {
     private String modelWindowZone;
     private String modelWindowOpen;
     private String modelWindowClose;
+    // Tema 1: foto/vídeo aprobados de la modelo (obligatorio para emitir). El
+    // frontend muestra un modal propio y bloqueante si falta alguno.
+    private Boolean modelPhotoApproved;
+    private Boolean modelVideoApproved;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -228,4 +232,10 @@ public class UserDTO {
 
     public String getModelWindowClose() { return modelWindowClose; }
     public void setModelWindowClose(String modelWindowClose) { this.modelWindowClose = modelWindowClose; }
+
+    public Boolean getModelPhotoApproved() { return modelPhotoApproved; }
+    public void setModelPhotoApproved(Boolean modelPhotoApproved) { this.modelPhotoApproved = modelPhotoApproved; }
+
+    public Boolean getModelVideoApproved() { return modelVideoApproved; }
+    public void setModelVideoApproved(Boolean modelVideoApproved) { this.modelVideoApproved = modelVideoApproved; }
 }

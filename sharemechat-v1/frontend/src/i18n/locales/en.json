@@ -903,6 +903,16 @@
       "windowText": "You're currently outside your broadcasting hours. Come back during your schedule to start broadcasting.",
       "scheduleLabel": "Your broadcasting hours",
       "yourTime": "your time"
+    },
+    "mediaRequired": {
+      "title": "You need a photo and video",
+      "text": "To broadcast you need an approved photo and video.",
+      "photo": "Profile photo",
+      "video": "Intro video",
+      "approved": "Approved",
+      "pending": "Pending",
+      "note": "Upload them from your profile; we review them and you'll be able to broadcast once approved.",
+      "ok": "Got it"
     }
   },
   "favorites": {

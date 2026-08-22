@@ -24,22 +24,26 @@
 
 ---
 
-## A. URGENTE (para PROD) — enriquecer el modal "Muy pronto" (coming-soon Fase B)
+## A. URGENTE (para PROD) — dos avisos SEPARADOS
 
-El gate de streaming coming-soon ya está en TEST; el modal en vivo es más pobre
-que el mock aprobado (le falta el checklist de foto/vídeo).
+**DECISIÓN OPERADOR 2026-08-22:** "Muy pronto" (cuenta atrás) y "foto/vídeo
+obligatorios" son DOS avisos DISTINTOS. NO se mezclan (el mock los juntaba; se
+descarta esa mezcla). El horario NO va en ninguno de los dos (aparcado).
 
+### A.1 — Modal "Muy pronto" (cuenta atrás, temporal)
+- [x] Ya funciona en TEST. Se queda **simple** (sin horario, sin foto/vídeo dentro).
+- [ ] **Botón en ROJO de marca `#ea1d1d`** (como el mock). *(decidido)*
+
+### A.2 — Modal "Necesitas foto y vídeo" (obligatorio para emitir, permanente, aparte)
+El impedimento por dentro YA existe (una modelo sin foto/vídeo aprobados no
+emite). Falta el **aviso propio y claro** en pantalla.
 - [ ] **Backend `/me`:** exponer si la modelo tiene **foto Y vídeo aprobados**
-      (nuevos campos, p.ej. `modelPhotoApproved` / `modelVideoApproved`, o
-      `modelMediaReady` + detalle). Reutiliza
-      `ModelAssetRepository.existsApprovedPrincipalActiveByUserAndType(PIC/VIDEO)`.
-- [ ] **Frontend `openComingSoonModal` (variante modelo):** añadir el **checklist
-      foto/vídeo** (Aprobada / Pendiente) como el mock.
-- [ ] **i18n** de las etiquetas nuevas del checklist en es/en/fr/de/pt (a mano,
-      NO re-sync completo que pisa QA).
-- [ ] **Botón del modal:** DECISIÓN pendiente (rojo de marca `#ea1d1d` vs azul).
-- [ ] **Panel de horario en el coming-soon:** DECISIÓN pendiente (recomendación:
-      NO en coming-soon; el horario pertenece a la ventana, en rediseño).
+      (reutiliza `existsApprovedPrincipalActiveByUserAndType(PIC/VIDEO)`).
+- [ ] **Frontend:** modal PROPIO (no variante de "Muy pronto") que bloquea emitir
+      y le dice que suba foto y vídeo. Botón rojo también.
+- [ ] **Cuándo aparece:** DECISIÓN pendiente — (a) proactivo al entrar a emitir
+      [recomendado] vs (b) solo al pulsar emitir.
+- [ ] **i18n** de las etiquetas en es/en/fr/de/pt (a mano).
 
 ## B. FIX inmediato — ventana solo Random, no 1 a 1
 
@@ -48,6 +52,12 @@ que el mock aprobado (le falta el checklist de foto/vídeo).
       *(Backend: el 1 a 1 en `MessagesWsHandlerSupport` ya NO tiene gate de ventana.)*
 
 ## C. NO URGENTE — rediseño de la ventana (cliente = llave, modelo = recomendación)
+
+**IDEA CONFIRMADA OPERADOR 2026-08-22:** la ventana **podría ser bloqueante para
+el CLIENTE en Random, pero quizás NO en 1 a 1** (en 1 a 1 no hay sala vacía). Esa
+es la dirección; a concretar cuando se retome con calma. Ventana **DESACTIVADA en
+TEST** (2026-08-22): `MODEL_WINDOW_ENABLED=false`, y `PRODUCT_GOLIVE_MODEL_ENABLED`
+devuelto a `false` (coming-soon normal).
 
 ### Backend
 - [ ] **Quitar el gate DURO de ventana del MODELO** en `MatchingHandlerSupport`:

@@ -141,6 +141,7 @@ const ModalBase = ({
                     key={i}
                     data-primary={a.primary ? 'true' : 'false'}
                     data-danger={a.danger ? 'true' : 'false'}
+                    data-brand={a.brand ? 'true' : 'false'}
                     autoFocus={a.autoFocus}
                     onClick={a.onClick}
                     type={a.type || 'button'}

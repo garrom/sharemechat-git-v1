@@ -903,6 +903,16 @@
       "windowText": "Vous êtes actuellement en dehors de vos horaires de diffusion. Revenez pendant votre créneau pour commencer à diffuser.",
       "scheduleLabel": "Vos horaires de diffusion",
       "yourTime": "votre heure"
+    },
+    "mediaRequired": {
+      "title": "Il vous faut une photo et une vidéo",
+      "text": "Pour diffuser, une photo et une vidéo approuvées sont nécessaires.",
+      "photo": "Photo de profil",
+      "video": "Vidéo de présentation",
+      "approved": "Approuvée",
+      "pending": "En attente",
+      "note": "Ajoutez-les depuis votre profil ; nous les vérifions et vous pourrez diffuser dès qu'ils seront approuvés.",
+      "ok": "Compris"
     }
   },
   "favorites": {

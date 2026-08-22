@@ -362,4 +362,18 @@ export const ModalBtn = styled.button`
       box-shadow: 0 0 0 1px rgba(167, 54, 48, 0.55);
     }
   }
+
+  /* Rojo de marca (acciones "brand", p.ej. modales go-live) */
+  &[data-brand='true'] {
+    background: #ea1d1d;
+    border-color: #b91212;
+    color: #ffffff;
+    box-shadow: 0 0 0 1px rgba(234, 29, 29, 0.45);
+
+    &:hover {
+      background: #cf1a1a;
+      border-color: #a81010;
+      box-shadow: 0 0 0 1px rgba(234, 29, 29, 0.55);
+    }
+  }
 `;

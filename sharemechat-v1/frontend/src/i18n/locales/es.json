@@ -903,6 +903,16 @@
       "windowText": "Ahora mismo estás fuera de tu franja de emisión. Vuelve dentro de tu horario para empezar a emitir.",
       "scheduleLabel": "Tu horario de emisión",
       "yourTime": "tu hora"
+    },
+    "mediaRequired": {
+      "title": "Necesitas foto y vídeo",
+      "text": "Para poder emitir necesitas una foto y un vídeo aprobados.",
+      "photo": "Foto de perfil",
+      "video": "Vídeo de presentación",
+      "approved": "Aprobada",
+      "pending": "Pendiente",
+      "note": "Súbelos desde tu perfil; los revisamos y podrás emitir en cuanto estén aprobados.",
+      "ok": "Entendido"
     }
   },
   "favorites": {
