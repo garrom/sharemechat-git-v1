@@ -892,6 +892,13 @@
         "never": "Ich möchte diesen Benutzer nicht sehen.",
         "other": "Andere Gründe"
       }
+    },
+    "comingSoon": {
+      "title": "Bald verfügbar",
+      "model": "Wir legen letzte Hand an, bevor wir öffnen. Wir benachrichtigen Sie, sobald Sie mit dem Senden beginnen können.",
+      "client": "Wir legen letzte Hand an. Schon bald können Sie Menschen live kennenlernen.",
+      "mediaMissing": "Zum Senden benötigen Sie ein freigegebenes Foto und Video. Laden Sie diese in Ihrem Profil hoch und Sie sind startklar, sobald wir öffnen.",
+      "ok": "Verstanden"
     }
   },
   "favorites": {
