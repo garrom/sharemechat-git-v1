@@ -2553,6 +2553,12 @@ const DashboardModel = () => {
 
   // Cambiar a modo llamada sobre el target actual
   const enterCallMode = () => {
+    // Fase B go-live: coming-soon. La modelo no puede iniciar llamada 1 a 1 hasta
+    // que la llave modelo esté en true (igual que el random).
+    if (sessionUser && sessionUser.modelGoliveEnabled === false) {
+      openComingSoonModal({ role: 'model' });
+      return;
+    }
     if (guardSensitiveAction({ setError: setCallError })) return;
     if (!Number(targetPeerId)) {
       setCallError('Selecciona un contacto primero.');

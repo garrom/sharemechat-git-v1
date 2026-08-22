@@ -55,6 +55,9 @@ public class MessagesWsHandlerSupport {
     private final ProductAccessGuardService productAccessGuardService;
     private final SupportBotProvider supportBotProvider;
     private final GiftRepository giftRepository;
+    // Fase B go-live: gate coming-soon en la llamada 1 a 1 (calling) + foto/video.
+    private final com.sharemechat.service.ProductOperationalModeService productOperationalModeService;
+    private final com.sharemechat.repository.ModelAssetRepository modelAssetRepository;
 
     public MessagesWsHandlerSupport(MessagesRuntimeState state,
                                     JwtUtil jwtUtil,
@@ -74,7 +77,9 @@ public class MessagesWsHandlerSupport {
                                     AgeGatePolicyService ageGatePolicyService,
                                     ProductAccessGuardService productAccessGuardService,
                                     SupportBotProvider supportBotProvider,
-                                    GiftRepository giftRepository) {
+                                    GiftRepository giftRepository,
+                                    com.sharemechat.service.ProductOperationalModeService productOperationalModeService,
+                                    com.sharemechat.repository.ModelAssetRepository modelAssetRepository) {
         this.state = state;
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
@@ -94,6 +99,41 @@ public class MessagesWsHandlerSupport {
         this.productAccessGuardService = productAccessGuardService;
         this.supportBotProvider = supportBotProvider;
         this.giftRepository = giftRepository;
+        this.productOperationalModeService = productOperationalModeService;
+        this.modelAssetRepository = modelAssetRepository;
+    }
+
+    /**
+     * Fase B go-live: la llamada 1 a 1 (CLIENT↔MODEL) requiere que AMBOS lados
+     * esten abiertos (llaves golive cliente y modelo en true) y que la modelo
+     * tenga foto y video aprobados. Con la app en coming-soon, no hay llamadas.
+     * Devuelve true (y avisa por WS) si debe bloquearse.
+     */
+    private boolean callGoliveBlocked(WebSocketSession session, Long modelId) {
+        try {
+            if (!productOperationalModeService.isClientGoliveEnabled()
+                    || !productOperationalModeService.isModelGoliveEnabled()) {
+                safeSend(session, new JSONObject().put("type", "call:coming-soon").toString());
+                return true;
+            }
+            if (!hasApprovedPhotoAndVideo(modelId)) {
+                safeSend(session, new JSONObject().put("type", "call:coming-soon").put("reason", "media").toString());
+                return true;
+            }
+        } catch (Exception ex) {
+            // Fail-safe: ante error, bloquea la llamada (no emitir con dudas).
+            safeSend(session, new JSONObject().put("type", "call:coming-soon").toString());
+            return true;
+        }
+        return false;
+    }
+
+    private boolean hasApprovedPhotoAndVideo(Long modelId) {
+        if (modelId == null) return false;
+        return modelAssetRepository.existsApprovedPrincipalActiveByUserAndType(
+                    modelId, com.sharemechat.entity.ModelAsset.AssetType.PIC)
+            && modelAssetRepository.existsApprovedPrincipalActiveByUserAndType(
+                    modelId, com.sharemechat.entity.ModelAsset.AssetType.VIDEO);
     }
 
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -321,6 +361,9 @@ public class MessagesWsHandlerSupport {
             Long clientId = cm.getLeft();
             Long modelId = cm.getRight();
 
+            // Fase B go-live: coming-soon en la llamada 1 a 1.
+            if (callGoliveBlocked(session, modelId)) return;
+
             if (!hasSufficientBalance(clientId)) {
                 safeSend(session, new JSONObject().put("type", "call:no-balance").toString());
                 return;
@@ -398,6 +441,9 @@ public class MessagesWsHandlerSupport {
             }
             Long clientId = cm.getLeft();
             Long modelId = cm.getRight();
+
+            // Fase B go-live: defensa en profundidad (coming-soon) también al aceptar.
+            if (callGoliveBlocked(session, modelId)) { clearRinging(me); return; }
 
             StreamRecord startedSession;
             try {
