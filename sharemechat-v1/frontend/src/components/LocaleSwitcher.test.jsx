@@ -25,6 +25,7 @@ jest.mock('../i18n/localeConfig', () => ({
   LOCALE_LABELS: { es: 'ES', en: 'EN' },
   getLocaleNativeName: (l) => ({ es: 'Español', en: 'English' }[l] || l),
   getLocaleLabel: (l) => ({ es: 'ES', en: 'EN' }[l] || l),
+  ADMIN_LOCALES: ['es', 'en'],
 }));
 jest.mock('../utils/runtimeSurface', () => ({ isAdminSurface: jest.fn(() => false) }));
 
@@ -130,6 +131,18 @@ test('admin surface: persiste + onAfterChange, sin navegación por URL', async (
   await waitFor(() => expect(updateUiLocale).toHaveBeenCalledWith('en'));
   expect(onAfterChange).toHaveBeenCalledWith('en');
   expect(assignSpy).not.toHaveBeenCalled();
+});
+
+test('admin surface: solo ofrece es/en aunque el producto tenga 5 idiomas', () => {
+  isAdminSurface.mockReturnValue(true);
+  getAvailableLocales.mockReturnValue(['es', 'en', 'fr', 'de', 'pt']); // set de producto
+  setLocation('/dashboard-admin');
+  render(<LocaleSwitcher />);
+  openMenu();
+  const options = screen.getAllByRole('option');
+  expect(options).toHaveLength(2); // el backoffice NO ofrece fr/de/pt
+  expect(screen.getByRole('option', { name: /Español/ })).toBeInTheDocument();
+  expect(screen.getByRole('option', { name: /English/ })).toBeInTheDocument();
 });
 
 // Guard de sesión activa (streaming/llamada): el cambio de idioma navega con

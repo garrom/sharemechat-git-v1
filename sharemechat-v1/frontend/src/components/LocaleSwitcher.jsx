@@ -7,7 +7,7 @@ import {
   PREFIXED_LOCALES,
   localePrefix,
 } from '../i18n/localeUtils';
-import { getLocaleNativeName, getLocaleLabel } from '../i18n/localeConfig';
+import { getLocaleNativeName, getLocaleLabel, ADMIN_LOCALES } from '../i18n/localeConfig';
 import { LocaleWrap, LocaleTrigger, LocaleMenu, LocaleOption } from '../styles/NavbarStyles';
 import { isAdminSurface } from '../utils/runtimeSurface';
 import { useBlogLocale } from '../pages/blog/BlogLocaleContext';
@@ -73,7 +73,9 @@ const LocaleSwitcher = ({ onAfterChange, style, guard }) => {
   const wrapRef = useRef(null);
 
   const currentLocale = getResolvedLocale(i18n);
-  const locales = getAvailableLocales();
+  // El backoffice (admin) solo ofrece es/en: no se traduce a fr/de/pt, así que
+  // ofrecerlos dejaría la UI en inglés por fallback. En producto, el set completo.
+  const locales = isAdminSurface() ? ADMIN_LOCALES : getAvailableLocales();
 
   useEffect(() => {
     if (!open) return undefined;
