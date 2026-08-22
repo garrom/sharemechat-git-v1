@@ -3169,6 +3169,7 @@ const DashboardClient = () => {
         onGoHistory={handleGoHistory}
         onGoTickets={handleGoTickets}
         onLogout={handleLogout}
+        localeGuard={confirmarSalidaSesionActiva}
       />
       {/* ========= FIN NAVBAR  ======== */}
 

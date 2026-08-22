@@ -16,6 +16,7 @@ const DesktopActions = ({
   balanceText = null,
   studioText = null,
   showLocaleSwitcher = true,
+  localeGuard = null,
   primaryAction = null,
   secondaryAction = null,
   tertiaryAction = null,
@@ -69,7 +70,7 @@ const DesktopActions = ({
 
       {balanceText ? <SaldoText className="me-3">{balanceText}</SaldoText> : null}
 
-      {showLocaleSwitcher ? <LocaleSwitcher /> : null}
+      {showLocaleSwitcher ? <LocaleSwitcher guard={localeGuard} /> : null}
 
       {/* ADR-049 Subpasada 2C: el pill de Afiliada (tertiaryAction) va PRIMERO
           del grupo de acciones para destacar la seccion nueva mientras las

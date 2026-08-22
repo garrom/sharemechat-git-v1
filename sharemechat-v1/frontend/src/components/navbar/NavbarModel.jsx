@@ -33,6 +33,7 @@ const NavbarModel = ({
   onWithdraw,
   onLogout,
   showLocaleSwitcher = true,
+  localeGuard = null,
   showBalance = true,
   showQueue = true,
   showAvatar = true,
@@ -74,6 +75,7 @@ const NavbarModel = ({
       studioText={showBalance ? studioTextDesktop : null}
       balanceText={showBalance ? balanceTextDesktop : null}
       showLocaleSwitcher={showLocaleSwitcher}
+      localeGuard={localeGuard}
       // tertiaryAction (pill Afiliada) retirada el 2026-07-24 junto con el
       // resto del programa de afiliadas ([ADR-052 §D11]).
       // Stats / Withdraw / Logout: icon-only con tooltip nativo + aria-label
@@ -122,6 +124,7 @@ const NavbarModel = ({
         </div>
       ) : null}
       showLocaleSwitcher={showLocaleSwitcher}
+      localeGuard={localeGuard}
       items={[
         {
           key: 'profile',

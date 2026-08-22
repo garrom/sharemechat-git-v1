@@ -66,7 +66,7 @@ const isOnBlogPath = () => {
   return p === '/blog' || p.startsWith('/blog/');
 };
 
-const LocaleSwitcher = ({ onAfterChange, style }) => {
+const LocaleSwitcher = ({ onAfterChange, style, guard }) => {
   const { updateUiLocale, user } = useSession();
   const blogCtx = useBlogLocale();
   const [open, setOpen] = useState(false);
@@ -102,6 +102,17 @@ const LocaleSwitcher = ({ onAfterChange, style }) => {
   const handleChange = async (locale) => {
     setOpen(false);
     if (locale === currentLocale) return;
+
+    // Guard de sesión activa (streaming/llamada): en producto el cambio de idioma
+    // navega por URL con recarga COMPLETA, que rompería una comunicación en curso.
+    // Se aplica el mismo cortafuegos que el resto de la navegación del dashboard
+    // (handleGoBlog, etc.): si hay stream/llamada, avisa y NO cambia. En público
+    // y admin no se pasa `guard`, así que no bloquea nada.
+    if (guard) {
+      let allowed = true;
+      try { allowed = await guard(); } catch (e) { allowed = true; }
+      if (!allowed) return;
+    }
 
     if (!isAdminSurface() && isOnBlogPath()) {
       if (onAfterChange) { try { onAfterChange(locale); } catch (e) { /* no-op */ } }

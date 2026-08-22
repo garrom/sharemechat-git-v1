@@ -132,6 +132,37 @@ test('admin surface: persiste + onAfterChange, sin navegación por URL', async (
   expect(assignSpy).not.toHaveBeenCalled();
 });
 
+// Guard de sesión activa (streaming/llamada): el cambio de idioma navega con
+// recarga completa y rompería la comunicación. Los dashboards pasan
+// confirmarSalidaSesionActiva como `guard`; si bloquea (false), no se navega.
+describe('guard de sesión activa', () => {
+  test('guard bloquea (sesión activa) -> ni persiste ni navega', async () => {
+    const guard = jest.fn().mockResolvedValue(false);
+    setLocation('/client');
+    render(<LocaleSwitcher guard={guard} />);
+    clickLocale(/English/);
+    await waitFor(() => expect(guard).toHaveBeenCalled());
+    expect(updateUiLocale).not.toHaveBeenCalled();
+    expect(assignSpy).not.toHaveBeenCalled();
+  });
+
+  test('guard permite (sin sesión) -> navega normal', async () => {
+    const guard = jest.fn().mockResolvedValue(true);
+    setLocation('/client');
+    render(<LocaleSwitcher guard={guard} />);
+    clickLocale(/English/);
+    await waitFor(() => expect(assignSpy).toHaveBeenCalledWith('/en/client'));
+    expect(guard).toHaveBeenCalled();
+  });
+
+  test('sin guard -> comportamiento normal (navega)', async () => {
+    setLocation('/client');
+    render(<LocaleSwitcher />);
+    clickLocale(/English/);
+    await waitFor(() => expect(assignSpy).toHaveBeenCalledWith('/en/client'));
+  });
+});
+
 describe('rutas de blog (ADR-025)', () => {
   test('detalle con alternate publicado -> salta al slug equivalente', async () => {
     useBlogLocale.mockReturnValue({
