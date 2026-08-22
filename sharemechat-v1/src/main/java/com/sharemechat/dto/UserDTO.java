@@ -80,6 +80,13 @@ public class UserDTO {
     // videochat/trial y pagar. false = coming-soon (modal "Muy pronto").
     private Boolean modelGoliveEnabled;
     private Boolean clientGoliveEnabled;
+    // Fase C: ventana horaria de la modelo. within=está ahora dentro; zone/open/
+    // close = franja de su bloque (el frontend la convierte a hora local).
+    private Boolean modelWindowEnabled;
+    private Boolean modelWithinWindow;
+    private String modelWindowZone;
+    private String modelWindowOpen;
+    private String modelWindowClose;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -206,4 +213,19 @@ public class UserDTO {
 
     public Boolean getClientGoliveEnabled() { return clientGoliveEnabled; }
     public void setClientGoliveEnabled(Boolean clientGoliveEnabled) { this.clientGoliveEnabled = clientGoliveEnabled; }
+
+    public Boolean getModelWindowEnabled() { return modelWindowEnabled; }
+    public void setModelWindowEnabled(Boolean modelWindowEnabled) { this.modelWindowEnabled = modelWindowEnabled; }
+
+    public Boolean getModelWithinWindow() { return modelWithinWindow; }
+    public void setModelWithinWindow(Boolean modelWithinWindow) { this.modelWithinWindow = modelWithinWindow; }
+
+    public String getModelWindowZone() { return modelWindowZone; }
+    public void setModelWindowZone(String modelWindowZone) { this.modelWindowZone = modelWindowZone; }
+
+    public String getModelWindowOpen() { return modelWindowOpen; }
+    public void setModelWindowOpen(String modelWindowOpen) { this.modelWindowOpen = modelWindowOpen; }
+
+    public String getModelWindowClose() { return modelWindowClose; }
+    public void setModelWindowClose(String modelWindowClose) { this.modelWindowClose = modelWindowClose; }
 }

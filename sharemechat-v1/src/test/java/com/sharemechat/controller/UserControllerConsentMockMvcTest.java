@@ -74,7 +74,8 @@ class UserControllerConsentMockMvcTest {
                 ageGatePolicyService,
                 backofficeAccessService,
                 productOperationalModeService,
-                userAcquisitionService
+                userAcquisitionService,
+                new com.sharemechat.service.ModelWindowService(new com.sharemechat.config.ModelWindowProperties())
         );
 
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller)

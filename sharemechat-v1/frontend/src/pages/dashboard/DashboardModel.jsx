@@ -2045,6 +2045,11 @@ const DashboardModel = () => {
       openComingSoonModal({ role: 'model' });
       return;
     }
+    // Fase C: fuera de la ventana horaria → modal con su franja en hora local.
+    if (sessionUser && sessionUser.modelWindowEnabled && sessionUser.modelWithinWindow === false) {
+      openComingSoonModal({ role: 'model', window: { zone: sessionUser.modelWindowZone, open: sessionUser.modelWindowOpen, close: sessionUser.modelWindowClose } });
+      return;
+    }
     if (guardSensitiveAction({ setError })) return;
     if (!webrtcConfigReady || !Array.isArray(webrtcPeerConfig?.iceServers) || webrtcPeerConfig.iceServers.length === 0) {
       console.error('[WEBRTC][config][Model] unavailable for random match');
@@ -2557,6 +2562,11 @@ const DashboardModel = () => {
     // que la llave modelo esté en true (igual que el random).
     if (sessionUser && sessionUser.modelGoliveEnabled === false) {
       openComingSoonModal({ role: 'model' });
+      return;
+    }
+    // Fase C: fuera de la ventana horaria → modal con su franja en hora local.
+    if (sessionUser && sessionUser.modelWindowEnabled && sessionUser.modelWithinWindow === false) {
+      openComingSoonModal({ role: 'model', window: { zone: sessionUser.modelWindowZone, open: sessionUser.modelWindowOpen, close: sessionUser.modelWindowClose } });
       return;
     }
     if (guardSensitiveAction({ setError: setCallError })) return;

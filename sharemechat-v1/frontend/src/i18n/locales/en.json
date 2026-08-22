@@ -898,7 +898,11 @@
       "model": "We're putting the finishing touches before we open. We'll let you know the moment you can start broadcasting.",
       "client": "We're putting the finishing touches. Very soon you'll be able to meet people live.",
       "mediaMissing": "To broadcast, you need an approved photo and video. Upload them from your profile and you'll be ready as soon as we open.",
-      "ok": "Got it"
+      "ok": "Got it",
+      "windowTitle": "Outside your hours",
+      "windowText": "You're currently outside your broadcasting hours. Come back during your schedule to start broadcasting.",
+      "scheduleLabel": "Your broadcasting hours",
+      "yourTime": "your time"
     }
   },
   "favorites": {

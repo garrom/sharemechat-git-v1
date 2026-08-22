@@ -898,7 +898,11 @@
       "model": "Nous peaufinons les derniers détails avant l'ouverture. Nous vous préviendrons dès que vous pourrez commencer à diffuser.",
       "client": "Nous peaufinons les derniers détails. Très bientôt, vous pourrez rencontrer des gens en direct.",
       "mediaMissing": "Pour diffuser, une photo et une vidéo approuvées sont nécessaires. Ajoutez-les depuis votre profil et vous serez prêt dès l'ouverture.",
-      "ok": "Compris"
+      "ok": "Compris",
+      "windowTitle": "Hors de vos horaires",
+      "windowText": "Vous êtes actuellement en dehors de vos horaires de diffusion. Revenez pendant votre créneau pour commencer à diffuser.",
+      "scheduleLabel": "Vos horaires de diffusion",
+      "yourTime": "votre heure"
     }
   },
   "favorites": {

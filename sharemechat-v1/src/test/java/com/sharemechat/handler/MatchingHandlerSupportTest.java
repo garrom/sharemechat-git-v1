@@ -63,6 +63,7 @@ class MatchingHandlerSupportTest {
                 null,               // MasterModelSplitRepository (ADR-056 gate hard 2026-07-31)
                 null,               // ProductOperationalModeService (Fase B go-live)
                 null,               // ModelAssetRepository (Fase B foto/video)
+                null,               // ModelWindowService (Fase C ventana horaria)
                 60                  // seenMaxScan
         );
     }

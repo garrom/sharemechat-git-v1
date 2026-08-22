@@ -354,6 +354,76 @@ const ComingSoonText = styled.p`
   color: #c9bab0;
 `;
 
+// Fase C: panel de horario dentro del modal (franja convertida a hora local).
+const ComingSoonSchedule = styled.div`
+  margin: 16px auto 0;
+  max-width: 260px;
+  text-align: center;
+  border: 1px solid rgba(190, 172, 157, 0.16);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.24);
+  padding: 12px 16px;
+  .lbl {
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #8f817a;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .hours {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #f5eee8;
+    font-variant-numeric: tabular-nums;
+  }
+  .hours small {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: #8f817a;
+    letter-spacing: 0;
+  }
+`;
+
+// Fase C: minutos que la zona IANA está por delante de UTC ahora mismo.
+const tzOffsetMinutes = (zone) => {
+  try {
+    const now = new Date();
+    const dtf = new Intl.DateTimeFormat('en-US', {
+      timeZone: zone, hour12: false,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    });
+    const p = {};
+    dtf.formatToParts(now).forEach((x) => { p[x.type] = x.value; });
+    const h = p.hour === '24' ? '00' : p.hour;
+    const asUTC = Date.UTC(+p.year, +p.month - 1, +p.day, +h, +p.minute, +p.second);
+    return Math.round((asUTC - now.getTime()) / 60000);
+  } catch (e) {
+    return null;
+  }
+};
+
+// Convierte una hora "HH:MM" de la zona de referencia a la hora local del navegador.
+const toLocalHour = (hhmm, refZone) => {
+  try {
+    const [h, m] = String(hhmm).split(':').map((n) => parseInt(n, 10));
+    if (Number.isNaN(h)) return hhmm;
+    const refOff = tzOffsetMinutes(refZone);
+    if (refOff === null) return hhmm;
+    const locOff = -new Date().getTimezoneOffset();
+    const deltaMin = locOff - refOff;
+    let total = ((h * 60 + (m || 0)) + deltaMin) % (24 * 60);
+    if (total < 0) total += 24 * 60;
+    const lh = Math.floor(total / 60);
+    const lm = total % 60;
+    const pad = (n) => (n < 10 ? '0' : '') + n;
+    return pad(lh) + ':' + pad(lm);
+  } catch (e) {
+    return hhmm;
+  }
+};
+
 export const useAppModals = () => {
   const { alert, confirm, openModal, closeModal } = useModal();
   const history = useHistory();
@@ -841,15 +911,39 @@ export const useAppModals = () => {
    * Fase B go-live: modal "Muy pronto" (coming-soon). role='model'|'client';
    * mediaMissing=true cuando la modelo intenta emitir sin foto/vídeo aprobados.
    */
-  const openComingSoonModal = useCallback(({ role = 'client', mediaMissing = false } = {}) => {
+  const openComingSoonModal = useCallback(({ role = 'client', mediaMissing = false, window = null } = {}) => {
+    const isWindow = !!(window && window.zone && window.open && window.close);
+    let title;
     let text;
-    if (mediaMissing) {
+    if (isWindow) {
+      title = i18n.t('modals.comingSoon.windowTitle', { defaultValue: 'Fuera de tu horario' });
+      text = i18n.t('modals.comingSoon.windowText', { defaultValue: 'Ahora mismo estás fuera de tu franja de emisión. Vuelve dentro de tu horario para empezar a emitir.' });
+    } else if (mediaMissing) {
+      title = i18n.t('modals.comingSoon.title', { defaultValue: 'Muy pronto' });
       text = i18n.t('modals.comingSoon.mediaMissing', { defaultValue: 'Para emitir necesitas una foto y un vídeo aprobados. Súbelos desde tu perfil y podrás empezar en cuanto abramos.' });
     } else if (role === 'model') {
+      title = i18n.t('modals.comingSoon.title', { defaultValue: 'Muy pronto' });
       text = i18n.t('modals.comingSoon.model', { defaultValue: 'Estamos ultimando los últimos detalles para abrir. Te avisaremos en cuanto puedas empezar a emitir.' });
     } else {
+      title = i18n.t('modals.comingSoon.title', { defaultValue: 'Muy pronto' });
       text = i18n.t('modals.comingSoon.client', { defaultValue: 'Estamos ultimando los últimos detalles. Muy pronto podrás entrar a conocer gente en directo.' });
     }
+
+    let scheduleNode = null;
+    if (isWindow) {
+      const openLocal = toLocalHour(window.open, window.zone);
+      const closeLocal = toLocalHour(window.close, window.zone);
+      scheduleNode = (
+        <ComingSoonSchedule>
+          <div className="lbl">{i18n.t('modals.comingSoon.scheduleLabel', { defaultValue: 'Tu horario de emisión' })}</div>
+          <div className="hours">
+            {openLocal} – {closeLocal}{' '}
+            <small>{i18n.t('modals.comingSoon.yourTime', { defaultValue: 'tu hora' })}</small>
+          </div>
+        </ComingSoonSchedule>
+      );
+    }
+
     return openModal({
       title: '',
       variant: 'confirm',
@@ -857,8 +951,9 @@ export const useAppModals = () => {
       content: (
         <div>
           <ComingSoonGlyph aria-hidden="true">⏳</ComingSoonGlyph>
-          <ComingSoonTitle>{i18n.t('modals.comingSoon.title', { defaultValue: 'Muy pronto' })}</ComingSoonTitle>
+          <ComingSoonTitle>{title}</ComingSoonTitle>
           <ComingSoonText>{text}</ComingSoonText>
+          {scheduleNode}
         </div>
       ),
       actions: [{ label: i18n.t('modals.comingSoon.ok', { defaultValue: 'Entendido' }), primary: true, danger: false, onClick: () => closeModal() }],
