@@ -1,0 +1,15 @@
+# Patrones caducados (Motor 2, check C). Uno por linea, regex Python (case-insensitive).
+# Lineas en blanco y las que empiezan por # se ignoran.
+#
+# Regla: si aparece fuera de _archive/, el CI lo marca. Aqui SOLO patrones
+# especificos y de alta senal (no "5-15" suelto, que sale legitimamente como
+# rango en docs de SEO/deploy). Cuando se retira un esquema de negocio, se
+# anade aqui su firma inequivoca.
+#
+# --- Esquema de tiers RETIRADO (ADR-043 §4, superseded por ADR-052 el 2026-07-24) ---
+# El real es T1-T4 con umbrales en euros; ver tabla model_pricing_tiers.
+5-15\s*/\s*7-20\s*/\s*9-40
+tiers?\s+5-15\b
+€0\.0[579]\s+primer\s+min
+[≥>]?\s*600\s+minutos\s+facturados
+[≥>]?\s*1200\s+minutos\s+facturados
