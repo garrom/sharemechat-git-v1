@@ -140,6 +140,16 @@ export const StyledButton = styled.button`
     box-shadow: 0 18px 40px rgba(0,245,157,0.36);
   }
 
+  /* Contexto modelo: botón en rojo de marca (identidad del flujo modelo). */
+  &[data-accent='model'] {
+    background: #ea1d1d;
+    color: #fff;
+  }
+  &[data-accent='model']:hover:not(:disabled) {
+    background: #c81616;
+    box-shadow: 0 18px 40px rgba(234,29,29,0.36);
+  }
+
   &:disabled {
     opacity: .6;
     cursor: wait;

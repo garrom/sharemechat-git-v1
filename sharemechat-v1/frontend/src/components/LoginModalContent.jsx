@@ -257,7 +257,7 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login', aud
             )}
           </Field>
 
-          <StyledButton type="submit" disabled={loading}>
+          <StyledButton type="submit" disabled={loading} data-accent={isModelCtx ? 'model' : undefined}>
             {loading
               ? i18n.t('auth.login.actions.loading')
               : i18n.t('auth.login.actions.submit')}
