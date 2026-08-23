@@ -1,6 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import ReactMarkdown from 'react-markdown';
+import SupportAvatar from './SupportAvatar';
 
 // Frente B.3.3 + Fase 1 estilos. Burbuja de mensaje compartida entre:
 // - surface admin (AdminSupportPanel > Conversations > Detail),
@@ -295,7 +296,7 @@ const SupportMessageBubble = ({
     return (
       <div>
         <Row $side="left">
-          <Avatar $bg={dark ? '#d61f4e' : '#3b82f6'}>🤖</Avatar>
+          <SupportAvatar size={32} />
           <ColumnWrap $side="left">
             <Bubble $bg={llmBubble.bg} $fg={llmBubble.fg} $border={llmBubble.border}>
               <ReactMarkdown components={LLM_MD_COMPONENTS} skipHtml>
