@@ -1,0 +1,12 @@
+[Unit]
+Description=Run SharemeChat backend health monitor every 3 minutes
+
+[Timer]
+# Arranca 2 min tras el boot y luego cada 3 min tras cada ejecucion. Granularidad
+# suficiente para detectar una caida en minutos sin cargar el sistema.
+OnBootSec=2min
+OnUnitActiveSec=3min
+Unit=sharemechat-health-monitor.service
+
+[Install]
+WantedBy=timers.target

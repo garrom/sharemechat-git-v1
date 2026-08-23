@@ -1,0 +1,16 @@
+[Unit]
+Description=SharemeChat backend health monitor (obs #5): alerta por email si /actuator/health deja de estar UP
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+# Consulta el health interno (localhost) y envia email SOLO en transiciones
+# (UP->DOWN, DOWN->UP) o re-aviso periodico mientras siga caido. La config y los
+# secretos SMTP viven en /etc/sharemechat-health-monitor/{config,secrets}.env.
+ExecStart=/opt/sharemechat-health-monitor/bin/check-health.sh --config /etc/sharemechat-health-monitor/config.env
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
