@@ -15,17 +15,24 @@ import { useSession } from '../../components/SessionProvider';
 // Iter.5 (2026-08-02) — unificación de layout con DashboardMaster
 // (maxWidth 1200 + margin 0 auto). Antes quedaba alineado a la izquierda
 // con vacío grande a la derecha (feedback operador).
-const wrap = { padding: '24px 16px 64px', maxWidth: 1200, margin: '0 auto' };
+// 2026-08-23: tratamiento claro igual que la Estadística de la modelo —
+// página gris #e9ebf2 + tarjeta redondeada #f5f6fa de dos tonos, fuente del
+// sistema con numerales legibles.
+const FONT_STACK = "-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
+const pageBox = { background: '#e9ebf2', padding: '22px 18px 64px', fontFamily: FONT_STACK, minHeight: '100%', boxSizing: 'border-box' };
+const cardBox = { background: '#f5f6fa', border: '1px solid #e2e5ee', borderRadius: 16, padding: '20px 22px', maxWidth: 1180, margin: '0 auto' };
+const cardBoxWide = { ...cardBox, maxWidth: 1400 };
 const headerRow = {
   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
   gap: 12, marginBottom: 16, flexWrap: 'wrap',
 };
-const title = { fontSize: 20, fontWeight: 700, color: '#f8fafc', margin: 0 };
-const subtitle = { fontSize: 13, color: '#9ca3af', marginTop: 4 };
+const title = { fontSize: 20, fontWeight: 800, color: '#0f172a', margin: 0 };
+const subtitle = { fontSize: 13, color: '#64748b', marginTop: 4 };
 const btn = (variant = 'primary', disabled = false) => ({
   padding: '8px 16px', borderRadius: 8, border: 'none',
-  background: disabled ? '#4b5563' : variant === 'primary' ? '#2563eb' : '#3f4a5a',
-  color: '#ffffff', fontSize: 13, fontWeight: 600,
+  background: disabled ? '#cbd5e1' : variant === 'primary' ? '#2563eb' : '#e2e8f0',
+  color: disabled ? '#64748b' : variant === 'primary' ? '#ffffff' : '#334155',
+  fontSize: 13, fontWeight: 600,
   cursor: disabled ? 'not-allowed' : 'pointer',
 });
 const tableWrap = { overflowX: 'auto', WebkitOverflowScrolling: 'touch' };
@@ -41,8 +48,8 @@ const td = { padding: '10px 12px', borderBottom: '1px solid #eef1f4', color: '#1
 const trClickable = { cursor: 'pointer' };
 const empty = { padding: 20, textAlign: 'center', color: '#6b7280', fontSize: 13 };
 const errBox = {
-  padding: 12, background: '#5a1a1e', borderRadius: 8, color: '#fecaca',
-  border: '1px solid #b91c1c', marginBottom: 12, fontSize: 13,
+  padding: 12, background: '#fef2f2', borderRadius: 8, color: '#b91c1c',
+  border: '1px solid #fecaca', marginBottom: 12, fontSize: 13,
 };
 const flagPill = {
   display: 'inline-block', padding: '1px 6px', borderRadius: 4, fontSize: 10,
@@ -84,11 +91,6 @@ const RESOLVED_LIKE_STATUSES = new Set([
   'ABANDONED',
 ]);
 
-// Ancho envolvente distinto en detalle: la split view 1:2 aprovecha mejor
-// hasta 1400px que 1200. En movil el ancho lo controla el propio media
-// wrapper (mediaGrid).
-const wrapDetail = { padding: '24px 16px 64px', maxWidth: 1400, margin: '0 auto' };
-
 // Split view desktop 1:2 (ficha compacta izq, chat ancho der). En pantallas
 // <900px se apila. minmax(0, 1fr) para que el chat pueda encoger sin
 // desbordar el grid.
@@ -121,7 +123,8 @@ function TicketDetail({ ticket, onBack }) {
   }, []);
 
   return (
-    <div style={wrapDetail}>
+    <div style={pageBox}>
+    <div style={cardBoxWide}>
       <div style={headerRow}>
         <div>
           <h2 style={title}>{i18n.t('support.tickets.detail.title', { id: ticket.id })}</h2>
@@ -134,8 +137,8 @@ function TicketDetail({ ticket, onBack }) {
 
       <div style={isNarrow ? { display: 'flex', flexDirection: 'column', gap: 16 } : splitGrid}>
         {/* IZQUIERDA — ficha del ticket */}
-        <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 10, padding: 14 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, color: '#cbd5e1', fontSize: 13 }}>
+        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 14 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, color: '#475569', fontSize: 13 }}>
             <div>
               <div style={{ fontSize: 11, opacity: 0.7, textTransform: 'uppercase' }}>
                 {i18n.t('support.tickets.detail.categoryLabel')}
@@ -160,7 +163,7 @@ function TicketDetail({ ticket, onBack }) {
               <div style={{ fontSize: 11, opacity: 0.7, textTransform: 'uppercase' }}>
                 {i18n.t('support.tickets.detail.descriptionLabel')}
               </div>
-              <div style={{ marginTop: 6, background: '#0f172a', padding: 10, borderRadius: 6, color: '#e2e8f0', whiteSpace: 'pre-wrap', fontSize: 13 }}>
+              <div style={{ marginTop: 6, background: '#f1f5f9', padding: 10, borderRadius: 6, color: '#334155', whiteSpace: 'pre-wrap', fontSize: 13 }}>
                 {ticket.description}
               </div>
             </div>
@@ -169,17 +172,17 @@ function TicketDetail({ ticket, onBack }) {
                 <div style={{ fontSize: 11, opacity: 0.7, textTransform: 'uppercase' }}>
                   {i18n.t('support.tickets.detail.resolutionNotesLabel')}
                 </div>
-                <div style={{ marginTop: 4, color: '#f8fafc', fontSize: 13, whiteSpace: 'pre-wrap' }}>
+                <div style={{ marginTop: 4, color: '#334155', fontSize: 13, whiteSpace: 'pre-wrap' }}>
                   {ticket.resolutionNotes}
                 </div>
               </div>
             )}
             {(ticket.verificationLastAt || ticket.resolvedAt) && (
-              <div style={{ borderTop: '1px solid #334155', paddingTop: 10 }}>
+              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 10 }}>
                 <div style={{ fontSize: 11, opacity: 0.7, textTransform: 'uppercase', marginBottom: 6 }}>
                   {i18n.t('support.tickets.detail.timelineLabel')}
                 </div>
-                <div style={{ fontSize: 12, color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ fontSize: 12, color: '#64748b', display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <div>· {i18n.t('support.tickets.detail.timelineCreated')}: {formatDate(ticket.createdAt)}</div>
                   {ticket.verificationLastAt && (
                     <div>· {i18n.t('support.tickets.detail.timelineVerified')}: {formatDate(ticket.verificationLastAt)}</div>
@@ -195,7 +198,7 @@ function TicketDetail({ ticket, onBack }) {
 
         {/* DERECHA — conversacion scoped al ticket */}
         <div>
-          <h3 style={{ fontSize: 15, color: '#f8fafc', margin: '0 0 8px 0' }}>
+          <h3 style={{ fontSize: 15, color: '#0f172a', margin: '0 0 8px 0' }}>
             {i18n.t('support.tickets.detail.conversationTitle')}
           </h3>
           {ticket.linkedConversationId ? (
@@ -213,6 +216,7 @@ function TicketDetail({ ticket, onBack }) {
           )}
         </div>
       </div>
+    </div>
     </div>
   );
 }
@@ -256,7 +260,8 @@ export default function ClientTicketsPanel() {
   }
 
   return (
-    <div style={wrap}>
+    <div style={pageBox}>
+    <div style={cardBox}>
       <div style={headerRow}>
         <div>
           <h2 style={title}>{i18n.t('support.tickets.title')}</h2>
@@ -320,6 +325,7 @@ export default function ClientTicketsPanel() {
         onClose={() => setModalOpen(false)}
         onCreated={handleCreated}
       />
+    </div>
     </div>
   );
 }

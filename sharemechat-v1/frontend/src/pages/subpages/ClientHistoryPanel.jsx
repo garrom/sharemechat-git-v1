@@ -13,12 +13,17 @@ import { buildApiUrl } from '../../config/api';
 // Iter.5 (2026-08-02) — unificación de layout con DashboardMaster
 // (maxWidth 1200 + margin 0 auto). Antes quedaba alineado a la izquierda
 // con vacío grande a la derecha (feedback operador).
-const wrap = { padding: '24px 16px 64px', maxWidth: 1200, margin: '0 auto' };
+// 2026-08-23: tratamiento claro igual que la Estadística de la modelo —
+// página gris #e9ebf2 + tarjeta redondeada #f5f6fa de dos tonos, y fuente del
+// sistema con numerales legibles (el "1" tabular parecía una L).
+const FONT_STACK = "-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
+const pageBox = { background: '#e9ebf2', padding: '22px 18px 64px', fontFamily: FONT_STACK, minHeight: '100%', boxSizing: 'border-box' };
+const cardBox = { background: '#f5f6fa', border: '1px solid #e2e5ee', borderRadius: 16, padding: '20px 22px', maxWidth: 1180, margin: '0 auto' };
 const headerRow = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12, flexWrap: 'wrap' };
 const btn = (variant = 'primary', disabled = false) => ({
   padding: '8px 16px', borderRadius: 8, border: 'none',
-  background: disabled ? '#4b5563' : variant === 'primary' ? '#2f81f7' : '#3f4a5a',
-  color: '#ffffff',
+  background: disabled ? '#cbd5e1' : variant === 'primary' ? '#2f81f7' : '#e2e8f0',
+  color: disabled ? '#64748b' : variant === 'primary' ? '#ffffff' : '#334155',
   fontSize: 13, fontWeight: 600, cursor: disabled ? 'not-allowed' : 'pointer',
 });
 // Estilo ghost/outline para "Descargar CSV". Se diferencia visualmente
@@ -26,20 +31,19 @@ const btn = (variant = 'primary', disabled = false) => ({
 // acciones sobre filtros) sin competir con Aplicar por atencion.
 const btnGhost = (disabled = false) => ({
   padding: '7px 14px', borderRadius: 8,
-  border: `1px solid ${disabled ? '#4b5563' : '#3b82f6'}`,
+  border: `1px solid ${disabled ? '#cbd5e1' : '#3b82f6'}`,
   background: 'transparent',
-  color: disabled ? '#6b7280' : '#93c5fd',
+  color: disabled ? '#94a3b8' : '#2563eb',
   fontSize: 13, fontWeight: 600, cursor: disabled ? 'not-allowed' : 'pointer',
   display: 'inline-flex', alignItems: 'center', gap: 6,
 });
-const title = { fontSize: 20, fontWeight: 700, color: '#f8fafc', margin: 0 };
-const subtitle = { fontSize: 13, color: '#9ca3af', marginTop: 4 };
+const title = { fontSize: 20, fontWeight: 800, color: '#0f172a', margin: 0 };
+const subtitle = { fontSize: 13, color: '#64748b', marginTop: 4 };
 
-// Barra de filtros sobre fondo oscuro. Card con fondo blanco para inputs
-// legibles + labels claras arriba.
+// Barra de filtros clara (2026-08-23): card blanca sobre la tarjeta gris.
 const filterBar = {
-  background: '#1e293b',
-  border: '1px solid #334155',
+  background: '#ffffff',
+  border: '1px solid #e2e8f0',
   borderRadius: 10,
   padding: 12,
   marginBottom: 12,
@@ -47,7 +51,7 @@ const filterBar = {
   gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
   gap: 12,
 };
-const filterLabel = { fontSize: 11, color: '#cbd5e1', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, display: 'block' };
+const filterLabel = { fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, display: 'block' };
 const input = {
   width: '100%', padding: '8px 10px', borderRadius: 6,
   border: '1px solid #d0d7de', fontSize: 13, boxSizing: 'border-box', background: '#fff', color: '#18212f',
@@ -67,10 +71,10 @@ const tableWrap = { overflowX: 'auto', WebkitOverflowScrolling: 'touch' };
 const table = { width: '100%', borderCollapse: 'collapse', fontSize: 13, background: '#fff', border: '1px solid #e1e4e8', borderRadius: 8, overflow: 'hidden' };
 const th = { textAlign: 'left', padding: '10px 12px', background: '#f4f6f9', color: '#3a4152', fontWeight: 600, borderBottom: '1px solid #e1e4e8' };
 const td = { padding: '10px 12px', borderBottom: '1px solid #eef1f4', color: '#18212f' };
-const tdAmount = { ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 600 };
+const tdAmount = { ...td, textAlign: 'right', fontWeight: 700 };
 const empty = { padding: 20, textAlign: 'center', color: '#6b7280', fontSize: 13 };
-const errBox = { padding: 12, background: '#5a1a1e', borderRadius: 8, color: '#fecaca', border: '1px solid #b91c1c', marginBottom: 12, fontSize: 13 };
-const pager = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 12, fontSize: 13, color: '#cbd5e1' };
+const errBox = { padding: 12, background: '#fef2f2', borderRadius: 8, color: '#b91c1c', border: '1px solid #fecaca', marginBottom: 12, fontSize: 13 };
+const pager = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 12, fontSize: 13, color: '#64748b' };
 const pill = (bg, fg) => ({ display: 'inline-block', padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 600, background: bg, color: fg });
 
 const PAGE_SIZE = 20;
@@ -242,7 +246,8 @@ const ClientHistoryPanel = () => {
   }, [appliedCategory, appliedFrom, appliedTo, t]);
 
   return (
-    <div style={wrap}>
+    <div style={pageBox}>
+    <div style={cardBox}>
       <div style={headerRow}>
         <div>
           <h2 style={title}>{t('dashboardClient.history.title', { defaultValue: 'Historial de transacciones' })}</h2>
@@ -357,6 +362,7 @@ const ClientHistoryPanel = () => {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 };
