@@ -78,3 +78,14 @@ jobs:
         # playwright.config.js arranca el dev server (react-scripts start, .env.product)
         # en :3100 y corre los specs de e2e/ con el backend mockeado por red.
         run: npx playwright test
+
+  docs-consistency:
+    name: Docs consistency (Motor 2, ADR-061)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Motor 2: detector de podredumbre repo-wide (enlaces rotos, rutas muertas,
+      # patrones caducados, integridad de ADRs). Stdlib de Python, sin deps.
+      # Falla solo ante hallazgos NUEVOS (los preexistentes viven en baseline.txt).
+      - name: Run repo consistency check
+        run: python3 sharemechat-v1/ops/repo-consistency/check.py
