@@ -181,11 +181,12 @@ export const StyledMainContent = styled.div`
   gap: ${props => (props['data-tab'] === 'stats' || props['data-tab'] === 'favoritos') ? '0' : '16px'};
   /* Tabs "documentales" (fondo claro full-width sin marco negro): 'stats'
      (Estadística modelo), 'historial' e 'tickets' (Historial e Incidencias
-     cliente, rediseño claro 2026-08-23). 'favoritos': columnas edge-to-edge.
-     Los demás tabs mantienen el padding 16px. */
+     cliente) y 'blog' (blog privado; su PageWrap ya es claro, solo faltaba
+     quitar el marco). Rediseño claro 2026-08-23. 'favoritos': columnas
+     edge-to-edge. Los demás tabs mantienen el padding 16px. */
   padding: ${props => props['data-tab'] === 'favoritos'
     ? '10px 0 0'
-    : (['stats', 'historial', 'tickets'].includes(props['data-tab']) ? '0' : '16px')};
+    : (['stats', 'historial', 'tickets', 'blog'].includes(props['data-tab']) ? '0' : '16px')};
   box-sizing: border-box;
 
   /* Regla clave (2026-08-08 refactor):
