@@ -19,8 +19,13 @@ import styled from 'styled-components';
 // ============================================================
 
 // -------- Paleta local (para reutilizar dentro del fichero) --------
+// Fuente con numerales claros (el "1" de 'Inter'/tabular-nums parecía una L).
+// Igual que el mock aprobado.
+const FONT_STACK = "-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
+
 const c = {
-  bg:            '#eef0f4',   // gris claro — igualado al fondo del perfil (PageShell)
+  bg:            '#e9ebf2',   // PÁGINA — gris claro (dos tonos, como el perfil/mock)
+  panel:         '#f5f6fa',   // TARJETA — un pelín más clara que la página
   bgAlt:         '#e2e8f0',   // slate 200 — accent zones
   card:          '#ffffff',   // blanco puro — cards
   cardAlt:       '#f8fafc',   // slate 50 — thead tabla
@@ -75,33 +80,43 @@ export const Wrap = styled.div`
   flex: 1;
   min-width: 0;
   min-height: 0;
-  /* Iter.5 (2026-08-02): unificación con DashboardMaster
-     (maxWidth 1200 + margin auto). El contenido de Estadística
-     queda centrado en pantallas anchas en vez de pegado a la
-     izquierda con vacío a la derecha. */
   width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 24px 16px 64px;
+  padding: 22px 18px 64px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
 
-  /* Fondo plano gris claro, igualado al perfil (PageShell #eef0f4). */
+  /* PÁGINA gris claro (dos tonos con la tarjeta Panel), como el perfil/mock. */
   background: ${c.bg};
-
   color: ${c.text};
+  font-family: ${FONT_STACK};
   overflow: auto;
-  /* Iter.3 (2026-08-02): sin border-radius ni borde exterior — el panel
-     ocupa todo el ancho pegado al navbar (patrón visual DashboardMaster).
-     El arco redondeado previo generaba fricción visual en la esquina
-     superior izquierda contra el fondo negro del DashboardShell. */
   border-radius: 0;
   border: none;
   box-shadow: none;
 
   @media (max-width: 768px) {
-    padding: 14px 14px 28px;
+    padding: 14px 12px 28px;
+  }
+`;
+
+// TARJETA redondeada (2026-08-23): envuelve todo el panel (cabecera + aviso +
+// tabs + contenido) sobre la página. Dos tonos: página #e9ebf2 + tarjeta
+// #f5f6fa, esquinas redondeadas — igual que el mock aprobado.
+export const Panel = styled.div`
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  background: ${c.panel};
+  border: 1px solid #e2e5ee;
+  border-radius: 16px;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+
+  @media (max-width: 768px) {
+    padding: 16px 14px;
+    border-radius: 14px;
   }
 `;
 
@@ -131,9 +146,9 @@ export const TopIcon = styled.div`
   align-items: center;
   justify-content: center;
 
-  background: ${rgba('#93b5e1', 0.20)};
-  border: 1px solid ${rgba('#93b5e1', 0.45)};
-  color: ${c.primaryText};
+  background: #e0e7ff;
+  border: none;
+  color: #4f46e5;
   font-size: 18px;
 `;
 
@@ -280,15 +295,12 @@ export const PayoutNotice = styled.div`
 // ============================================================
 // Tabs — Progress / History / Billing
 // ============================================================
+// 2026-08-23: sin contenedor (una sola "capa"). Antes tenía fondo blanco +
+// borde + sombra + radio, creando una caja alrededor de las tabs; el operador
+// quiere solo los botones sueltos (como el mock).
 export const TabsBar = styled.div`
   display: flex;
-  gap: 4px;
-  padding: 4px;
-  background: ${c.card};
-  border: 1px solid ${c.border};
-  border-radius: 12px;
-  box-shadow: 0 1px 2px rgba(15,23,42,0.04);
-  align-self: flex-start;
+  gap: 10px;
   flex-wrap: wrap;
 `;
 
@@ -307,9 +319,8 @@ export const TabButton = styled.button`
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 8px 14px;
-  min-width: 140px;
-  border-radius: 8px;
+  padding: 9px 16px;
+  border-radius: 10px;
   border: 1.5px solid ${(props) => rgba(props.$color || '#3b82f6', 0.4)};
   background: #ffffff;
   color: ${(props) => props.$color || '#3b82f6'};
@@ -433,10 +444,10 @@ export const MiniLabel = styled.div`
 
 export const MiniValue = styled.div`
   font-size: 22px;
-  font-weight: 700;
+  font-weight: 800;
   color: ${c.text};
   line-height: 1.15;
-  font-variant-numeric: tabular-nums;
+  /* Sin tabular-nums: en 'Inter'/fallback el "1" tabular parecía una L. */
   word-break: break-word;
 `;
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  faChartLine,
+  faChartColumn,
   faGem,
   faUser,
 } from '@fortawesome/free-solid-svg-icons';
@@ -84,7 +84,7 @@ const NavbarModel = ({
         label: i18n.t('dashboardModel.actions.stats'),
         title: i18n.t('dashboardModel.actions.stats'),
         onClick: onGoStats,
-        icon: faChartLine,
+        icon: faChartColumn,
         iconStyle: { color: '#22c55e', fontSize: '1rem' },
         disabled: statsDisabled,
         iconOnly: true,
@@ -136,7 +136,7 @@ const NavbarModel = ({
         },
         {
           key: 'stats',
-          icon: faChartLine,
+          icon: faChartColumn,
           iconStyle: { color: '#22c55e', fontSize: '1rem' },
           label: i18n.t('dashboardModel.actions.stats'),
           title: i18n.t('dashboardModel.actions.stats'),

@@ -1654,7 +1654,7 @@
     "statistics": {
       "header": {
         "title": "Estatísticas",
-        "subtitle": "Resumo por níveis, minutos e tarifas. Dados baseados em instantâneos diários."
+        "subtitle": "Resumo de nível, minutos e tarifas. Dados de snapshots diários."
       },
       "payoutNotice": {
         "ariaLabel": "Limite mínimo de pagamento",

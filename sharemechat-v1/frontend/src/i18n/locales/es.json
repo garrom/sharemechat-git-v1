@@ -1654,7 +1654,7 @@
     "statistics": {
       "header": {
         "title": "Estadísticas",
-        "subtitle": "Resumen de tier, minutos y tarifas. Datos basados en snapshots diarios."
+        "subtitle": "Resumen de tramo, minutos y tarifas. Datos de snapshots diarios."
       },
       "payoutNotice": {
         "ariaLabel": "Umbral mínimo de pago",

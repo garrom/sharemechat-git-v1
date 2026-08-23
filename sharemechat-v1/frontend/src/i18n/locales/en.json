@@ -1654,7 +1654,7 @@
     "statistics": {
       "header": {
         "title": "Statistics",
-        "subtitle": "Summary of tier, minutes, and rates. Data based on daily snapshots."
+        "subtitle": "Summary of tier, minutes and rates. Daily snapshot data."
       },
       "payoutNotice": {
         "ariaLabel": "Minimum payout threshold",

@@ -1,5 +1,5 @@
 import React from 'react';
-import { faGem, faUser, faChartLine, faTicket } from '@fortawesome/free-solid-svg-icons';
+import { faGem, faUser, faReceipt, faTicket } from '@fortawesome/free-solid-svg-icons';
 import i18n from '../../i18n';
 import NavbarBase from './NavbarBase';
 import DesktopTabs from './DesktopTabs';
@@ -91,7 +91,7 @@ const NavbarClient = ({
         label: historyLabel,
         title: historyLabel,
         onClick: onGoHistory,
-        icon: faChartLine,
+        icon: faReceipt,
         iconStyle: { color: '#3b82f6', fontSize: '1rem' },
         disabled: historyDisabled,
         iconOnly: true,
@@ -146,7 +146,7 @@ const NavbarClient = ({
         },
         ...(onGoHistory ? [{
           key: 'history',
-          icon: faChartLine,
+          icon: faReceipt,
           iconStyle: { color: '#3b82f6', fontSize: '1rem' },
           label: historyLabel,
           title: historyLabel,

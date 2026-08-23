@@ -1654,7 +1654,7 @@
     "statistics": {
       "header": {
         "title": "Statistiken",
-        "subtitle": "Tarifübersicht, Minuten und Preise. Daten basieren auf täglichen Momentaufnahmen."
+        "subtitle": "Übersicht über Stufe, Minuten und Tarife. Daten aus täglichen Snapshots."
       },
       "payoutNotice": {
         "ariaLabel": "Mindestzahlungsschwelle",

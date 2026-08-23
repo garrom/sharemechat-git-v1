@@ -1654,7 +1654,7 @@
     "statistics": {
       "header": {
         "title": "Statistiques",
-        "subtitle": "Récapitulatif des niveaux, minutes et tarifs. Données basées sur des instantanés quotidiens."
+        "subtitle": "Résumé du palier, des minutes et des tarifs. Données de snapshots quotidiens."
       },
       "payoutNotice": {
         "ariaLabel": "seuil de paiement minimum",

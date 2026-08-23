@@ -3,6 +3,7 @@ import i18n from '../../i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faChartLine,
+  faChartColumn,
   faClockRotateLeft,
   faTags,
   faCalendarDays,
@@ -10,6 +11,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import {
   Wrap,
+  Panel,
   TopBar,
   TopLeft,
   TopIcon,
@@ -139,10 +141,11 @@ export default function Estadistica({
 
   return (
     <Wrap>
+      <Panel>
       <TopBar>
         <TopLeft>
           <TopIcon>
-            <FontAwesomeIcon icon={faChartLine} />
+            <FontAwesomeIcon icon={faChartColumn} />
           </TopIcon>
 
           <div>
@@ -312,6 +315,7 @@ export default function Estadistica({
         // PAYOUT_REQUEST, PAYOUT_REQUEST_REVERT).
         <ModelBillingPanel />
       )}
+      </Panel>
     </Wrap>
   );
 }
