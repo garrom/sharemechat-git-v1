@@ -179,10 +179,13 @@ export const StyledMainContent = styled.div`
   display: flex;
   flex: 1;
   gap: ${props => (props['data-tab'] === 'stats' || props['data-tab'] === 'favoritos') ? '0' : '16px'};
-  /* tab 'stats' se pinta full-width sin marco negro alrededor. 'favoritos'
-     (rediseño puro): columnas pegadas edge-to-edge sin hueco ni padding,
-     como el mock. Los demás tabs mantienen el padding 16px. */
-  padding: ${props => props['data-tab'] === 'favoritos' ? '10px 0 0' : ((props['data-tab'] === 'stats') ? '0' : '16px')};
+  /* Tabs "documentales" (fondo claro full-width sin marco negro): 'stats'
+     (Estadística modelo), 'historial' e 'tickets' (Historial e Incidencias
+     cliente, rediseño claro 2026-08-23). 'favoritos': columnas edge-to-edge.
+     Los demás tabs mantienen el padding 16px. */
+  padding: ${props => props['data-tab'] === 'favoritos'
+    ? '10px 0 0'
+    : (['stats', 'historial', 'tickets'].includes(props['data-tab']) ? '0' : '16px')};
   box-sizing: border-box;
 
   /* Regla clave (2026-08-08 refactor):
