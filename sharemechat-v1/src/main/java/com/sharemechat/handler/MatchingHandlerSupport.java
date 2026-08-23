@@ -2200,6 +2200,22 @@ public class MatchingHandlerSupport {
         // intencionalmente (a diferencia del ban): sin pacto no puede
         // emitir bajo ningun concepto.
         if (isMasterModelWithoutSplit(userAId) || isMasterModelWithoutSplit(userBId)) return false;
+        // Gate cuentas de prueba (reutiliza la allowlist existente, sin filtro
+        // nuevo): una MODELO que esta en la allowlist es cuenta de prueba/staff y
+        // SOLO puede emparejar con un CLIENTE que tambien este en la allowlist.
+        // Impide que una modelo de prueba matchee con un cliente REAL (en PROD
+        // seria un incidente grave). Asimetrico a proposito: una modelo real (no
+        // allowlisted) empareja con cualquiera, y un cliente de prueba puede ver
+        // modelos reales. Convencion de este metodo (ambos callers, lineas 1114 y
+        // 1243): userAId=clientId, userBId=modelId. La allowlist es un Set en
+        // memoria (sin IO): no hay ruta de error que abrir. En TEST/AUDIT no hay
+        // modelos en la allowlist, asi que el gate queda dormido alli.
+        if (productOperationalModeService.isUserAllowlisted(userBId)          // modelo de prueba
+                && !productOperationalModeService.isUserAllowlisted(userAId)) { // cliente NO de prueba
+            log.warn("[MATCH-GATE] modelo de prueba modelId={} excluida de cliente no-prueba clientId={}",
+                    userBId, userAId);
+            return false;
+        }
         return true;
     }
 

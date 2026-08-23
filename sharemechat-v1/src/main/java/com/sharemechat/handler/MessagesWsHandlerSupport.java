@@ -136,6 +136,19 @@ public class MessagesWsHandlerSupport {
                     modelId, com.sharemechat.entity.ModelAsset.AssetType.VIDEO);
     }
 
+    /**
+     * Gate cuentas de prueba en el 1-a-1 (defensa en profundidad; canMatch ya
+     * separa el par en el random). Reutiliza la allowlist: una MODELO de prueba
+     * (allowlisted) solo puede llamar/aceptar con un CLIENTE de prueba
+     * (allowlisted). Cubre favoritos historicos previos a este gate. Devuelve
+     * true si debe bloquearse. En TEST/AUDIT no hay modelos en la allowlist, asi
+     * que queda dormido alli.
+     */
+    private boolean testAccountCallBlocked(Long clientId, Long modelId) {
+        return productOperationalModeService.isUserAllowlisted(modelId)
+                && !productOperationalModeService.isUserAllowlisted(clientId);
+    }
+
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         Long userId = resolveUserId(session);
         if (userId == null) {
@@ -364,6 +377,13 @@ public class MessagesWsHandlerSupport {
             // Fase B go-live: coming-soon en la llamada 1 a 1.
             if (callGoliveBlocked(session, modelId)) return;
 
+            // Gate cuentas de prueba: modelo de prueba solo con cliente de prueba.
+            if (testAccountCallBlocked(clientId, modelId)) {
+                log.warn("[MATCH-GATE] 1a1 invite bloqueado: modelo de prueba modelId={} con cliente no-prueba clientId={}", modelId, clientId);
+                safeSend(session, new JSONObject().put("type", "call:error").put("message", "Emparejamiento restringido").toString());
+                return;
+            }
+
             if (!hasSufficientBalance(clientId)) {
                 safeSend(session, new JSONObject().put("type", "call:no-balance").toString());
                 return;
@@ -444,6 +464,14 @@ public class MessagesWsHandlerSupport {
 
             // Fase B go-live: defensa en profundidad (coming-soon) también al aceptar.
             if (callGoliveBlocked(session, modelId)) { clearRinging(me); return; }
+
+            // Gate cuentas de prueba: modelo de prueba solo con cliente de prueba.
+            if (testAccountCallBlocked(clientId, modelId)) {
+                log.warn("[MATCH-GATE] 1a1 accept bloqueado: modelo de prueba modelId={} con cliente no-prueba clientId={}", modelId, clientId);
+                clearRinging(me);
+                safeSend(session, new JSONObject().put("type", "call:error").put("message", "Emparejamiento restringido").toString());
+                return;
+            }
 
             StreamRecord startedSession;
             try {
