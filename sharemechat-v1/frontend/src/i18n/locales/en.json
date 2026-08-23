@@ -1004,7 +1004,7 @@
     },
     "login": {
       "title": "Log in",
-      "titleModel": "Model login",
+      "titleModel": "Log in as a model",
       "status": {
         "successRedirecting": "Access granted. Redirecting…"
       },
@@ -1154,7 +1154,7 @@
       }
     },
     "registerModel": {
-      "title": "Model registration",
+      "title": "Create your model account",
       "placeholders": {
         "nickname": "Nickname",
         "email": "Email",
@@ -1188,7 +1188,8 @@
       "success": {
         "title": "Check your inbox",
         "message": "We've sent you an email to confirm your account. Please check it, and the spam folder if you don't see it."
-      }
+      },
+      "subtitle": "Go live and earn. Age verification required."
     },
     "registerMaster": {
       "title": "Master sign-up",
@@ -1279,6 +1280,10 @@
         "connection": "Connection error. Please try again.",
         "generic": "Could not activate the account."
       }
+    },
+    "modelRibbon": {
+      "title": "Model account",
+      "subtitle": "To create and go live"
     }
   },
   "dashboardClient": {

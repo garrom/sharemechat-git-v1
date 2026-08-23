@@ -20,7 +20,7 @@ export const Form = styled.form`
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 14px;
+  gap: 10px;
   @media (max-width: ${bp.md}) {
     max-width: 100%;
     padding: 24px 20px;
@@ -32,9 +32,18 @@ export const Form = styled.form`
 export const Title = styled.h2`
   margin: 0;
   font-weight: 700;
-  font-size: 1.7rem;
+  font-size: 1.35rem;
   text-align: left;
   color: #f9fafb;
+`;
+
+/* SUBTÍTULO (usado en el registro de MODELO para explicar el rol) */
+export const Subtitle = styled.p`
+  margin: 0;
+  color: #9aa4b2;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  text-align: left;
 `;
 
 /* MENSAJE ERROR (igual estilo Login) */
@@ -58,7 +67,7 @@ export const Input = styled.input`
   background: #2a2a2a;
   border: 1px solid #3a3a3a;
   color: #f5f5f5;
-  padding: 13px 16px;
+  padding: 10px 16px;
   outline: none;
   transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
   /* iOS: sin -webkit-appearance:none, el type="date" añade padding interno
@@ -114,7 +123,7 @@ export const Button = styled.button`
      con Google" (limite duro de Google) y se veian desalineados. */
   max-width: 400px;
   align-self: center;
-  padding: 14px 18px;
+  padding: 12px 18px;
   margin-top: 4px;
   border-radius: 999px;
   background: #00f59d;
@@ -156,7 +165,7 @@ export const CheckRow = styled.label`
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  margin: 6px 0;
+  margin: 2px 0;
   cursor: pointer;
   user-select: none;
 `;

@@ -1004,7 +1004,7 @@
     },
     "login": {
       "title": "Iniciar sesión",
-      "titleModel": "Login Modelo",
+      "titleModel": "Entra como modelo",
       "status": {
         "successRedirecting": "Acceso correcto. Redirigiendo…"
       },
@@ -1154,7 +1154,7 @@
       }
     },
     "registerModel": {
-      "title": "Registro Modelo",
+      "title": "Crea tu cuenta de modelo",
       "placeholders": {
         "nickname": "Apodo / Nickname",
         "email": "Email",
@@ -1188,7 +1188,8 @@
       "success": {
         "title": "Revisa tu bandeja de entrada",
         "message": "Te hemos enviado un email para confirmar tu cuenta. Revísalo y, si no lo ves, mira en la carpeta de spam."
-      }
+      },
+      "subtitle": "Emite en directo y genera ingresos. Se requiere verificación de edad."
     },
     "registerMaster": {
       "title": "Registro Master",
@@ -1279,6 +1280,10 @@
         "connection": "Error de conexión. Inténtalo de nuevo.",
         "generic": "No se pudo activar la cuenta."
       }
+    },
+    "modelRibbon": {
+      "title": "Cuenta de modelo",
+      "subtitle": "Para crear y emitir en directo"
     }
   },
   "dashboardClient": {

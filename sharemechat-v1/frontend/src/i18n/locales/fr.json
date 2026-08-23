@@ -1004,7 +1004,7 @@
     },
     "login": {
       "title": "Se connecter",
-      "titleModel": "Modèle de connexion",
+      "titleModel": "Connectez-vous en tant que modèle",
       "status": {
         "successRedirecting": "Accès réussi. Redirection en cours…"
       },
@@ -1154,7 +1154,7 @@
       }
     },
     "registerModel": {
-      "title": "Enregistrement du modèle",
+      "title": "Créez votre compte modèle",
       "placeholders": {
         "nickname": "Surnom",
         "email": "E-mail",
@@ -1188,7 +1188,8 @@
       "success": {
         "title": "Consultez votre boîte de réception",
         "message": "Nous vous avons envoyé un courriel pour confirmer votre compte. Veuillez le consulter. Si vous ne le trouvez pas, vérifiez votre dossier de courriers indésirables."
-      }
+      },
+      "subtitle": "Diffusez en direct et gagnez de l'argent. Vérification de l'âge requise."
     },
     "registerMaster": {
       "title": "Document maître",
@@ -1279,6 +1280,10 @@
         "connection": "Erreur de connexion. Veuillez réessayer.",
         "generic": "Le compte n'a pas pu être activé."
       }
+    },
+    "modelRibbon": {
+      "title": "Compte modèle",
+      "subtitle": "Pour créer et diffuser en direct"
     }
   },
   "dashboardClient": {

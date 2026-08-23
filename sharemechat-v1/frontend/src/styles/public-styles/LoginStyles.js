@@ -12,7 +12,7 @@ export const StyledForm = styled.form`
   position: relative;
   width: 100%;
   max-width: ${p => p.$wide ? '820px' : '520px'};
-  padding: ${p => p.$wide ? '38px 44px 34px' : '28px 28px'};
+  padding: ${p => p.$wide ? '38px 44px 34px' : '20px 28px'};
   border-radius: 24px;
   background: ${colors.backsolid || '#020617'};
   border: 1px solid #0b1120;
@@ -23,7 +23,7 @@ export const StyledForm = styled.form`
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 14px; /* mismo espacio entre todos los elementos del form */
+  gap: 10px; /* mismo espacio entre todos los elementos del form */
 
   /* ModalBase con hideChrome=true renderiza este form directo en el Dialog
      sin el <Body> con scroll. Para formularios largos (RegisterMasterModalContent
@@ -44,7 +44,7 @@ export const StyledForm = styled.form`
        en movil; desktop mantiene el layout original de auto-fit. */
     min-width: min(calc(100vw - 32px), ${p => p.$wide ? '720px' : '520px'});
     max-width: 100%;
-    padding: ${p => p.$wide ? '26px 16px 24px' : '24px 20px'};
+    padding: ${p => p.$wide ? '26px 16px 24px' : '18px 20px'};
     border-radius: 20px;
     max-height: calc(100vh - 32px);
     max-height: calc(100dvh - 32px);
@@ -55,7 +55,7 @@ export const StyledForm = styled.form`
 export const FormTitle = styled.h2`
   margin: 0;
   font-weight: 700;
-  font-size: 1.7rem;
+  font-size: 1.35rem;
   text-align: left;
   color: #f9fafb;
 `;
@@ -150,10 +150,56 @@ export const StyledButton = styled.button`
 // Fila de pestañas Login / Regístrate
 export const TabsRow = styled.div`
   display: flex;
-  gap: 28px;              /* separación entre Login | Registrate */
-  margin-bottom: 22px;   /* separación con el contenido de abajo */
+  gap: 24px;              /* separación entre Login | Registrate */
+  margin-bottom: 14px;   /* separación con el contenido de abajo */
   border-bottom: 1px solid #1f2933;
   padding-bottom: 6px;
+`;
+
+/* CINTA DE IDENTIDAD MODELO (2026-08-23): barra roja de marca a sangre en la
+   parte superior del modal cuando el contexto es modelo (audience='model').
+   Señal visual inconfundible para no crear una cuenta cliente por error. El
+   margin negativo neutraliza el padding del StyledForm para ir a sangre. */
+export const ModelRibbon = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #ea1d1d;
+  color: #fff;
+  padding: 12px 20px;
+  margin: -20px -28px 4px;
+  border-radius: 24px 24px 0 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  @media (max-width: ${bp.md}) {
+    margin: -18px -20px 4px;
+    border-radius: 20px 20px 0 0;
+  }
+`;
+
+export const ModelRibbonIcon = styled.span`
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+`;
+
+export const ModelRibbonText = styled.span`
+  text-transform: uppercase;
+  small {
+    display: block;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    opacity: 0.92;
+    font-size: 11.5px;
+  }
 `;
 
 
@@ -175,6 +221,12 @@ export const TabButton = styled.button`
   &[data-active='true'] {
     color: #f9fafb;
     border-bottom-color: #f9fafb;
+  }
+
+  /* Contexto modelo: acento rojo de marca en la pestaña activa. */
+  &[data-accent='model'][data-active='true'] {
+    color: #fff;
+    border-bottom-color: #ea1d1d;
   }
 
   &:hover:not(:disabled) {

@@ -6,7 +6,7 @@ import { getResolvedLocale } from '../i18n/localeUtils';
 import { registerErrorMessage } from '../i18n/registerErrorMessage';
 import { normalizeNickname } from '../utils/normalizeNickname';
 import InfoTooltip from './InfoTooltip';
-import { Form as RegForm, Title, Input, Button, Error as ErrorText, Field, FieldError, Hint, Label, CheckRow, CheckInput, CheckText } from '../styles/public-styles/RegisterClientModelStyles';
+import { Form as RegForm, Title, Subtitle, Input, Button, Error as ErrorText, Field, FieldError, Hint, Label, CheckRow, CheckInput, CheckText } from '../styles/public-styles/RegisterClientModelStyles';
 import { useAppModals } from './useAppModals';
 import { pushSignUp, getAcquisitionPayload } from '../utils/attribution';
 
@@ -16,6 +16,17 @@ const InlineForm = styled(RegForm)`
   box-shadow: none;
   margin: 0;
   padding: 0;
+`;
+
+// Botón en rojo de marca (#ea1d1d) — identidad del registro de MODELO, para
+// diferenciarlo del botón verde del registro de CLIENTE.
+const ModelButton = styled(Button)`
+  background: #ea1d1d;
+  color: #fff;
+  &:hover:not(:disabled) {
+    background: #c81616;
+    box-shadow: 0 18px 40px rgba(234, 29, 29, 0.36);
+  }
 `;
 
 const RegisterModelModalContent = ({ onClose }) => {
@@ -101,6 +112,7 @@ const RegisterModelModalContent = ({ onClose }) => {
   return (
     <InlineForm noValidate>
       <Title>{i18n.t('auth.registerModel.title')}</Title>
+      <Subtitle>{i18n.t('auth.registerModel.subtitle')}</Subtitle>
       {error && <ErrorText role="alert">{error}</ErrorText>}
 
       <Field>
@@ -139,7 +151,7 @@ const RegisterModelModalContent = ({ onClose }) => {
         <CheckText>{i18n.t('auth.registerModel.checks.acceptPrefix')} <a href="/legal?tab=terms" target="_blank" rel="noreferrer">{i18n.t('auth.registerModel.checks.terms')}</a> {i18n.t('auth.registerModel.checks.and')} <a href="/legal?tab=privacy" target="_blank" rel="noreferrer">{i18n.t('auth.registerModel.checks.privacy')}</a></CheckText>
       </CheckRow>
 
-      <Button type="button" disabled={loading} onClick={handleRegister}>{loading ? i18n.t('auth.registerModel.actions.loading') : i18n.t('auth.registerModel.actions.submit')}</Button>
+      <ModelButton type="button" disabled={loading} onClick={handleRegister}>{loading ? i18n.t('auth.registerModel.actions.loading') : i18n.t('auth.registerModel.actions.submit')}</ModelButton>
     </InlineForm>
   );
 };

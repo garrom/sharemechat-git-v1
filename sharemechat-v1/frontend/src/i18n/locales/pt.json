@@ -1004,7 +1004,7 @@
     },
     "login": {
       "title": "Conecte-se",
-      "titleModel": "Modelo de login",
+      "titleModel": "Entrar como modelo",
       "status": {
         "successRedirecting": "Acesso efetuado com sucesso. Redirecionando…"
       },
@@ -1154,7 +1154,7 @@
       }
     },
     "registerModel": {
-      "title": "Registro de modelo",
+      "title": "Crie sua conta de modelo",
       "placeholders": {
         "nickname": "Apelido",
         "email": "E-mail",
@@ -1188,7 +1188,8 @@
       "success": {
         "title": "Confira sua caixa de entrada.",
         "message": "Enviamos um e-mail para confirmar sua conta. Por favor, verifique sua caixa de entrada e, caso não o encontre, verifique sua pasta de spam."
-      }
+      },
+      "subtitle": "Transmita ao vivo e ganhe dinheiro. Verificação de idade obrigatória."
     },
     "registerMaster": {
       "title": "Registro mestre",
@@ -1279,6 +1280,10 @@
         "connection": "Erro de conexão. Tente novamente.",
         "generic": "A conta não pôde ser ativada."
       }
+    },
+    "modelRibbon": {
+      "title": "Conta de modelo",
+      "subtitle": "Para criar e transmitir ao vivo"
     }
   },
   "dashboardClient": {
