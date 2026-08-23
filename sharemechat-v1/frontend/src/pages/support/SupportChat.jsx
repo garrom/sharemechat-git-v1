@@ -12,12 +12,11 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPaperPlane, faUserTie } from '@fortawesome/free-solid-svg-icons';
+import { faPaperPlane } from '@fortawesome/free-solid-svg-icons';
 import i18n from '../../i18n';
-import useSupportChat from '../../hooks/useSupportChat';
+import { useSupportChatCtx } from '../../components/support/SupportChatContext';
 import SupportMessageBubble from '../../components/support/SupportMessageBubble';
 import SupportAvatar from '../../components/support/SupportAvatar';
-import SupportEscalateModal from './SupportEscalateModal';
 
 const MAX_INPUT = 4000;
 const WARN_MSGS_THRESHOLD = 5;
@@ -46,35 +45,20 @@ const containerStyle = {
   minHeight: 0,
 };
 
-// Fase 1 estilos: header adelgazado. Antes 72x72 avatar + padding 12px
-// hacia una banda pesada que ocupaba demasiado alto y robaba espacio al
-// hilo. Ahora avatar 40x40 + padding 6px 12px + gap 10px. Reduccion
-// visible del alto de la banda superior sin perder identidad del bot.
+// Cabecera unificada con el chat P2P (cliente/modelo): barra a sangre con
+// avatar + nombre + línea de presencia; sin botón (el escalado vive ahora en
+// la 3ª columna, SupportSpotlight). `margin` negativo neutraliza el padding
+// del container para ir a sangre, igual que la cabecera de favoritos.
 const headerStyle = {
   display: 'flex',
   alignItems: 'center',
   gap: 10,
-  padding: '6px 12px',
+  padding: '11px 16px',
+  margin: '-12px -12px 8px',
   background: '#f9fafb',
-  border: '1px solid #e5e7eb',
-  borderRadius: 8,
-  marginBottom: 8,
+  borderBottom: '1px solid #e5e7eb',
+  flexShrink: 0,
 };
-
-const escalateBtnStyle = (disabled) => ({
-  marginLeft: 'auto',
-  background: disabled ? '#f3f4f6' : '#ffffff',
-  color: disabled ? '#9ca3af' : '#374151',
-  border: '1px solid #d1d5db',
-  borderRadius: 6,
-  padding: '8px 14px',
-  fontSize: '0.9rem',
-  fontWeight: 600,
-  cursor: disabled ? 'not-allowed' : 'pointer',
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 6,
-});
 
 const messagesAreaStyle = {
   flex: 1,
@@ -214,7 +198,6 @@ const DARK_CHAT_BG = {
 export default function SupportChat({ pinnedConversationId, readOnly, ticketContext, dark = false } = {}) {
   const {
     messages,
-    conversationId,
     loading,
     sending,
     error,
@@ -223,18 +206,16 @@ export default function SupportChat({ pinnedConversationId, readOnly, ticketCont
     escalated,
     meta,
     sendMessage,
-    requestEscalation,
-  } = useSupportChat({ pinnedConversationId });
+  } = useSupportChatCtx();
 
   const [input, setInput] = useState('');
-  const [escalateOpen, setEscalateOpen] = useState(false);
   const [sendHover, setSendHover] = useState(false);
   const messagesRef = useRef(null);
 
   // Estilos oscuros (variante `dark`, chat Agente IA en favoritos). Sin dark,
   // se conservan los claros originales (tickets, admin).
   const cStyle = dark ? { ...containerStyle, ...DARK_CHAT_BG } : containerStyle;
-  const hStyle = dark ? { ...headerStyle, background: '#14171d', border: '1px solid rgba(255,255,255,0.08)', color: '#e7ebf0' } : headerStyle;
+  const hStyle = dark ? { ...headerStyle, background: '#14171d', borderBottom: '1px solid rgba(255,255,255,0.08)', color: '#e7ebf0' } : headerStyle;
   const mStyle = dark ? { ...messagesAreaStyle, background: 'transparent' } : messagesAreaStyle;
   const iRowStyle = dark ? { ...inputRowStyle, borderTop: '1px solid rgba(255,255,255,0.08)' } : inputRowStyle;
   const tStyle = dark ? { ...textareaStyle, background: 'rgba(255,255,255,0.08)', color: '#f8fafc', border: '1px solid transparent' } : textareaStyle;
@@ -248,11 +229,6 @@ export default function SupportChat({ pinnedConversationId, readOnly, ticketCont
 
   const rateLimited = !!rateLimitState.rateLimited;
   const humanHandling = resolutionStatus === 'HUMAN_HANDLING';
-  // El botón "Hablar con un técnico" debe quedar deshabilitado desde que se
-  // solicita (ESCALATED) hasta que se resuelva / nueva conversación, no solo
-  // cuando un humano ya reclamó (HUMAN_HANDLING). Antes se podía re-escalar en
-  // bucle mientras estaba en cola sin que el técnico hubiera intervenido.
-  const alreadyRequestedHuman = humanHandling || escalated || resolutionStatus === 'ESCALATED';
 
   const warningBanner = useMemo(() => {
     if (rateLimited) return null;
@@ -270,10 +246,6 @@ export default function SupportChat({ pinnedConversationId, readOnly, ticketCont
     : null;
 
   const canSend = !sending && !rateLimited && input.trim().length > 0;
-  const canEscalate = !sending && !!conversationId && !alreadyRequestedHuman;
-  const escalateTooltip = alreadyRequestedHuman
-    ? i18n.t('support.escalate.alreadyHumanHandling')
-    : i18n.t('support.escalate.button');
 
   const handleSend = async () => {
     if (!canSend) return;
@@ -289,10 +261,6 @@ export default function SupportChat({ pinnedConversationId, readOnly, ticketCont
     }
   };
 
-  const handleEscalate = async (reason) => {
-    await requestEscalation(reason);
-  };
-
   return (
     <div style={cStyle}>
       {/* Header solo en modo unpinned (chat casual /client Soporte). En modo
@@ -303,20 +271,15 @@ export default function SupportChat({ pinnedConversationId, readOnly, ticketCont
           técnico asignado se propaga al banner de status humano abajo. */}
       {!pinnedConversationId && (
         <header style={hStyle}>
-          <SupportAvatar size={40} />
-          <strong>{i18n.t('support.chat.agentName')}</strong>
-          {!readOnly && (
-            <button
-              type="button"
-              style={escalateBtnStyle(!canEscalate)}
-              onClick={() => setEscalateOpen(true)}
-              disabled={!canEscalate}
-              title={escalateTooltip}
-            >
-              <FontAwesomeIcon icon={faUserTie} />
-              <span>{i18n.t('support.escalate.button')}</span>
-            </button>
-          )}
+          <SupportAvatar size={34} />
+          <div style={{ lineHeight: 1.25, minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: dark ? '#e7ebf0' : '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {i18n.t('support.chat.agentName')}
+            </div>
+            <div style={{ fontSize: 11, color: '#22c55e' }}>
+              ● {i18n.t('support.chat.agentPresence')}
+            </div>
+          </div>
         </header>
       )}
 
@@ -379,6 +342,7 @@ export default function SupportChat({ pinnedConversationId, readOnly, ticketCont
               message={rendered}
               pending={!!m.pending}
               agentLabel={i18n.t('support.chat.agentName')}
+              dark={dark}
             />
           );
         })}
@@ -418,14 +382,6 @@ export default function SupportChat({ pinnedConversationId, readOnly, ticketCont
             <span>{i18n.t('support.chat.sendButton')}</span>
           </button>
         </div>
-      )}
-
-      {!readOnly && (
-        <SupportEscalateModal
-          open={escalateOpen}
-          onClose={() => setEscalateOpen(false)}
-          onConfirm={handleEscalate}
-        />
       )}
     </div>
   );

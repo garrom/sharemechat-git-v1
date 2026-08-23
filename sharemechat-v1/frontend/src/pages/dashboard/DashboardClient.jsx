@@ -48,6 +48,8 @@ import {
 import VideoChatRandomCliente from './VideoChatRandomCliente';
 import VideoChatFavoritosCliente from './VideoChatFavoritosCliente';
 import SupportChat from '../support/SupportChat';
+import { SupportChatProvider } from '../../components/support/SupportChatContext';
+import SupportSpotlight from '../../components/support/SupportSpotlight';
 import { apiFetch } from '../../config/http';
 import { useSession } from '../../components/SessionProvider';
 import { buildWsUrl, WS_PATHS } from '../../config/api';
@@ -3263,10 +3265,20 @@ const DashboardClient = () => {
                 )}
               </StyledLeftColumn>
             )}
-            <StyledCenter data-mode={contactMode==='call'?'call':undefined}>
-              {selectedFav?.isBot ? (
+            {selectedFav?.isBot ? (
+            <SupportChatProvider>
+              <StyledCenter>
                 <SupportChat dark />
-              ) : (
+              </StyledCenter>
+              {!isMobile && !showFavoritesFullCall && (
+                <StyledRightColumn data-rail data-surface="favorites-premium">
+                  <SupportSpotlight />
+                </StyledRightColumn>
+              )}
+            </SupportChatProvider>
+            ) : (
+            <>
+            <StyledCenter data-mode={contactMode==='call'?'call':undefined}>
               <VideoChatFavoritosCliente
                 isMobile={isMobile}
                 onViewProfile={openModelProfile}
@@ -3318,12 +3330,11 @@ const DashboardClient = () => {
                 currentModelRate={currentModelRate}
                 currentSaldo={saldo}
               />
-              )}
             </StyledCenter>
             {/* Rediseño Fase 3: columna derecha = spotlight de la modelo (foto,
                 presencia, edad; CTA/likes/datos/regalos en pasos siguientes).
                 Solo con una modelo seleccionada (no el bot) y fuera de llamada. */}
-            {!isMobile && !showFavoritesFullCall && !selectedFav?.isBot && centerChatPeerId && (
+            {!isMobile && !showFavoritesFullCall && centerChatPeerId && (
               <StyledRightColumn data-rail data-surface="favorites-premium">
                 <ModelSpotlight
                   userId={centerChatPeerId}
@@ -3339,6 +3350,8 @@ const DashboardClient = () => {
                   giftSendEnabled={allowChat}
                 />
               </StyledRightColumn>
+            )}
+            </>
             )}
           </>
         )}

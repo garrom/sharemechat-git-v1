@@ -4042,7 +4042,8 @@
       "readOnlyBanner": "This ticket is closed. You can view the history but cannot send new messages.",
       "teamPending": "Support team",
       "assignedByName": "{{name}} is handling your case.",
-      "ticketEmptyState": "Hi {{name}}, ticket #{{ticketId}} has been registered. We will get back to you in less than 4 hours."
+      "ticketEmptyState": "Hi {{name}}, ticket #{{ticketId}} has been registered. We will get back to you in less than 4 hours.",
+      "agentPresence": "Assistant · always available"
     },
     "escalate": {
       "button": "Talk to a support agent",
@@ -4134,6 +4135,29 @@
         "descriptionRequired": "Description is required.",
         "categoryRequired": "Select a category."
       }
+    },
+    "spotlight": {
+      "name": "SharemeChat Support",
+      "subtitle": "18+ support · in your language",
+      "pill": {
+        "ai": "AI Assistant",
+        "human": "Human Support"
+      },
+      "statusCard": "Conversation status",
+      "status": {
+        "ai": "Open · AI",
+        "waiting": "Waiting for an agent",
+        "human": "An agent is helping you",
+        "resolved": "Resolved"
+      },
+      "rowStatus": "Status",
+      "rowMessages": "Messages today",
+      "rowMessagesValue": "{{count}} left",
+      "rowConversation": "Conversation",
+      "howTitle": "How it works",
+      "how1": "Ask our agent any question or issue you have with the app.",
+      "how2": "If you need human support, press the Talk to a support agent button.",
+      "how3": "Our agents will reply within 4 hours."
     }
   },
   "modelLanding": {
