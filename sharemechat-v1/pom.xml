@@ -250,12 +250,15 @@
 				<configuration>
 					<generateGitPropertiesFile>true</generateGitPropertiesFile>
 					<failOnNoGitDirectory>false</failOnNoGitDirectory>
-					<!-- full: genera git.commit.id.full ademas de .abbrev (si no, en
-					     modo flat solo hay git.commit.id y el filtro de abajo no casa). -->
-					<commitIdGenerationMode>full</commitIdGenerationMode>
+					<!-- flat: genera git.commit.id = hash COMPLETO (40 chars). Spring
+					     GitProperties.getCommitId() lee esa propiedad; en modo 'full' la
+					     id principal pasa a git.commit.id.full y getCommitId() devuelve
+					     null (commitFull=null en /api/health/version). El abbrev se genera
+					     igual en ambos modos. -->
+					<commitIdGenerationMode>flat</commitIdGenerationMode>
 					<includeOnlyProperties>
+						<includeOnlyProperty>^git.commit.id$</includeOnlyProperty>
 						<includeOnlyProperty>^git.commit.id.abbrev$</includeOnlyProperty>
-						<includeOnlyProperty>^git.commit.id.full$</includeOnlyProperty>
 						<includeOnlyProperty>^git.commit.time$</includeOnlyProperty>
 						<includeOnlyProperty>^git.branch$</includeOnlyProperty>
 					</includeOnlyProperties>

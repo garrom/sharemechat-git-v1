@@ -233,6 +233,53 @@ if ($RemoteVerify) {
             $verificationNotes  = "Remote verify intentado pero SSH a $alias fallo (exit $sshExitCode). jar_sha256 registrado = sha del JAR LOCAL; verificar manualmente cuando SSH se restablezca."
             $verificationMethod = 'manual_via_update-manifest-backend.ps1+remote-verify-failed'
         }
+
+        # Observabilidad #1 (2026-08-23): confirmar el commit REAL del JAR desplegado
+        # via /api/health/version (lo alimenta git.properties). Cierra la limitacion
+        # conocida (el manifest asumia HEAD = commit del JAR). Si el endpoint responde,
+        # se registra el commit VIVO (autoridad); si no existe (backend antiguo) o
+        # falla, se mantiene HEAD.
+        $prev2 = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        try {
+            $healthRaw  = & ssh -o BatchMode=yes -o ConnectTimeout=10 $alias "curl -s --max-time 6 http://localhost:8080/api/health/version" 2>$null
+            $healthExit = $LASTEXITCODE
+        } finally { $ErrorActionPreference = $prev2 }
+
+        $liveCommitFull = $null; $liveCommitShort = $null
+        if ($healthExit -eq 0 -and $healthRaw) {
+            try {
+                $health = $healthRaw | ConvertFrom-Json
+                $cf = [string]$health.commitFull
+                $cs = [string]$health.commit
+                if ($cf -and $cf -ne 'unknown') { $liveCommitFull = $cf }
+                if ($cs -and $cs -ne 'unknown') { $liveCommitShort = $cs }
+            } catch { }
+        }
+
+        # Si el endpoint solo trae el commit corto (backends con el git-commit-id
+        # en modo 'full', donde Spring getCommitId() da null), resolver el full
+        # localmente desde el repo. Valida ademas que el commit vivo existe aqui.
+        if (-not $liveCommitFull -and $liveCommitShort) {
+            $resolved = (& git rev-parse "$liveCommitShort^{commit}" 2>$null)
+            if ($LASTEXITCODE -eq 0 -and $resolved) { $liveCommitFull = $resolved.Trim() }
+        }
+
+        if ($liveCommitFull) {
+            $liveShortShown = if ($liveCommitShort) { $liveCommitShort } else { $liveCommitFull.Substring(0, [Math]::Min(8, $liveCommitFull.Length)) }
+            if ($gitCommitFull -and $gitCommitFull -ne $liveCommitFull) {
+                Write-Host " WARN - commit VIVO del backend ($liveShortShown) != HEAD del repo ($gitCommitShort). Se registra el VIVO (commit real del JAR desplegado)." -ForegroundColor Yellow
+            } else {
+                Write-Host "   commit vivo confirmado via /api/health/version: $liveShortShown"
+            }
+            $gitCommitFull  = $liveCommitFull
+            $gitCommitShort = $liveShortShown
+            $verificationMethod = 'manual_via_update-manifest-backend.ps1+health-version'
+        } elseif ($liveCommitShort) {
+            Write-Host " WARN - el commit vivo corto ($liveCommitShort) no resuelve a full en este repo. Se registra HEAD; verificar manualmente." -ForegroundColor Yellow
+        } else {
+            Write-Host " WARN - no se pudo confirmar el commit vivo (/api/health/version ausente o inaccesible). Se registra HEAD." -ForegroundColor Yellow
+        }
     }
 }
 
