@@ -9,6 +9,7 @@ import i18n from '../../i18n';
 import { listMyTickets, getMyTicket } from '../../api/ticketsApi';
 import NewTicketModal from '../support/NewTicketModal';
 import SupportChat from '../support/SupportChat';
+import { SupportChatProvider } from '../../components/support/SupportChatContext';
 import { useSession } from '../../components/SessionProvider';
 
 // Iter.5 (2026-08-02) — unificación de layout con DashboardMaster
@@ -199,11 +200,13 @@ function TicketDetail({ ticket, onBack }) {
           </h3>
           {ticket.linkedConversationId ? (
             <div style={{ background: '#fff', borderRadius: 10, height: isNarrow ? 480 : 560, overflow: 'hidden' }}>
-              <SupportChat
-                pinnedConversationId={ticket.linkedConversationId}
-                readOnly={isResolved}
-                ticketContext={{ ticketId: ticket.id, userName }}
-              />
+              <SupportChatProvider pinnedConversationId={ticket.linkedConversationId}>
+                <SupportChat
+                  pinnedConversationId={ticket.linkedConversationId}
+                  readOnly={isResolved}
+                  ticketContext={{ ticketId: ticket.id, userName }}
+                />
+              </SupportChatProvider>
             </div>
           ) : (
             <div style={empty}>{i18n.t('support.tickets.detail.conversationEmpty')}</div>

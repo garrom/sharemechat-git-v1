@@ -4042,7 +4042,8 @@
       "readOnlyBanner": "Este problema foi resolvido. Você pode visualizar o histórico, mas não pode enviar mais mensagens.",
       "teamPending": "Equipe de Suporte",
       "assignedByName": "{{name}} está cuidando do seu caso.",
-      "ticketEmptyState": "Olá {{name}}, o incidente nº {{ticketId}} já foi registrado. Resolveremos o problema em menos de 4 horas."
+      "ticketEmptyState": "Olá {{name}}, o incidente nº {{ticketId}} já foi registrado. Resolveremos o problema em menos de 4 horas.",
+      "agentPresence": "Assistente · sempre disponível"
     },
     "escalate": {
       "button": "Fale com um técnico",
@@ -4134,6 +4135,29 @@
         "descriptionRequired": "A descrição é obrigatória.",
         "categoryRequired": "Selecione uma categoria."
       }
+    },
+    "spotlight": {
+      "name": "Suporte SharemeChat",
+      "subtitle": "Suporte 18+ · no seu idioma",
+      "pill": {
+        "ai": "Assistente IA",
+        "human": "Suporte Humano"
+      },
+      "statusCard": "Status da conversa",
+      "status": {
+        "ai": "Aberto · IA",
+        "waiting": "Aguardando um técnico",
+        "human": "Um técnico está te atendendo",
+        "resolved": "Resolvido"
+      },
+      "rowStatus": "Status",
+      "rowMessages": "Mensagens hoje",
+      "rowMessagesValue": "{{count}} restantes",
+      "rowConversation": "Conversa",
+      "howTitle": "Como funciona",
+      "how1": "Pergunte ao nosso agente qualquer dúvida ou problema que você tenha com o aplicativo.",
+      "how2": "Caso precise de suporte humano, toque no botão Fale com um técnico.",
+      "how3": "Nossos técnicos vão te atender em menos de 4 horas."
     }
   },
   "modelLanding": {

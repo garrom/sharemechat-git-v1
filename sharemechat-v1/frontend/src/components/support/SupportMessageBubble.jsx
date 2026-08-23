@@ -237,6 +237,7 @@ const SupportMessageBubble = ({
   userAvatarUrl = null,
   transparent = false,
   translation = null,
+  dark = false,
 }) => {
   if (!message) return null;
   const sender = message.sender;
@@ -249,6 +250,26 @@ const SupportMessageBubble = ({
   }
 
   if (sender === 'USER') {
+    // Perspectiva propia (chat de soporte del propio usuario, modo dark):
+    // el mensaje del usuario es SUYO -> derecha, burbuja verde. En admin
+    // (dark=false) se mantiene admin-céntrico: izquierda, gris.
+    if (dark) {
+      return (
+        <div>
+          <Row $side="right">
+            <ColumnWrap $side="right">
+              <Bubble $bg="#0a7d63" $fg="#ffffff" $border="transparent" $tail="right">
+                <ReactMarkdown>{content}</ReactMarkdown>
+              </Bubble>
+              <MetaLine $side="right" $onDark>
+                {ts}
+                {pending ? <PendingTag>enviando…</PendingTag> : null}
+              </MetaLine>
+            </ColumnWrap>
+          </Row>
+        </div>
+      );
+    }
     return (
       <div>
         <Row $side="left">
@@ -268,17 +289,20 @@ const SupportMessageBubble = ({
   }
 
   if (sender === 'LLM') {
+    const llmBubble = dark
+      ? { bg: '#171b22', fg: '#e7ebf0', border: 'rgba(255,255,255,0.07)' }
+      : { bg: '#eff6ff', fg: '#1e3a8a', border: '#bfdbfe' };
     return (
       <div>
         <Row $side="left">
-          <Avatar $bg="#3b82f6">🤖</Avatar>
+          <Avatar $bg={dark ? '#d61f4e' : '#3b82f6'}>🤖</Avatar>
           <ColumnWrap $side="left">
-            <Bubble $bg="#eff6ff" $fg="#1e3a8a" $border="#bfdbfe">
+            <Bubble $bg={llmBubble.bg} $fg={llmBubble.fg} $border={llmBubble.border}>
               <ReactMarkdown components={LLM_MD_COMPONENTS} skipHtml>
                 {preprocessLlmContent(content)}
               </ReactMarkdown>
             </Bubble>
-            <MetaLine $side="left">{agentLabel} · {ts}</MetaLine>
+            <MetaLine $side="left" $onDark={dark}>{agentLabel} · {ts}</MetaLine>
           </ColumnWrap>
         </Row>
       </div>
@@ -291,6 +315,26 @@ const SupportMessageBubble = ({
     const signature = profileCategory
       ? `${profileName} (${profileCategory})`
       : profileName;
+    // Perspectiva propia (dark): el técnico humano es el OTRO -> izquierda,
+    // burbuja oscura. En admin (dark=false) el humano es "yo" -> derecha verde.
+    if (dark) {
+      return (
+        <div>
+          <Row $side="left">
+            <Avatar $bg="#15803d">{initialOf(profileName)}</Avatar>
+            <ColumnWrap $side="left">
+              <Bubble $bg="#1b2530" $fg="#e7ebf0" $border="rgba(255,255,255,0.07)">
+                <ReactMarkdown>{content}</ReactMarkdown>
+              </Bubble>
+              <MetaLine $side="left" $onDark>
+                {signature} · {ts}
+                {pending ? <PendingTag>enviando…</PendingTag> : null}
+              </MetaLine>
+            </ColumnWrap>
+          </Row>
+        </div>
+      );
+    }
     return (
       <div>
         <Row $side="right">

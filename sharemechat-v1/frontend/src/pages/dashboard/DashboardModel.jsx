@@ -45,6 +45,8 @@ import {
 import VideoChatRandomModelo from './VideoChatRandomModelo';
 import VideoChatFavoritosModelo from './VideoChatFavoritosModelo';
 import SupportChat from '../support/SupportChat';
+import { SupportChatProvider } from '../../components/support/SupportChatContext';
+import SupportSpotlight from '../../components/support/SupportSpotlight';
 import { buildApiUrl, buildWsUrl, WS_PATHS } from '../../config/api';
 import { apiFetch } from '../../config/http';
 import useFrameCapture from '../../utils/useFrameCapture';
@@ -3637,10 +3639,21 @@ const DashboardModel = () => {
               </StyledLeftColumn>
             )}
 
-            <StyledCenter data-mode={contactMode === 'call' ? 'call' : undefined}>
-              {activeTab === 'favoritos' && selectedFav?.isBot ? (
+            {activeTab === 'favoritos' && selectedFav?.isBot ? (
+            <SupportChatProvider>
+              <StyledCenter>
                 <SupportChat dark />
-              ) : activeTab === 'favoritos' && (
+              </StyledCenter>
+              {!isMobile && !showFavoritesFullCall && (
+                <StyledRightColumn data-rail data-surface="favorites-premium">
+                  <SupportSpotlight />
+                </StyledRightColumn>
+              )}
+            </SupportChatProvider>
+            ) : (
+            <>
+            <StyledCenter data-mode={contactMode === 'call' ? 'call' : undefined}>
+              {activeTab === 'favoritos' && (
                 <VideoChatFavoritosModelo
                   isMobile={isMobile}
                   modelEconomics={modelEconomics}
@@ -3701,7 +3714,7 @@ const DashboardModel = () => {
                 no tiene perfil público/likes/edad/tarifa, así que se muestra lo
                 que haya. Solo con un cliente seleccionado (no el bot) y fuera de
                 llamada. */}
-            {!isMobile && !showFavoritesFullCall && !selectedFav?.isBot && selectedContactId && (
+            {!isMobile && !showFavoritesFullCall && selectedContactId && (
               <StyledRightColumn data-rail data-surface="favorites-premium">
                 <ModelSpotlight
                   simple
@@ -3714,6 +3727,8 @@ const DashboardModel = () => {
                   giftShowcase={paidShowcase}
                 />
               </StyledRightColumn>
+            )}
+            </>
             )}
           </>
         )}

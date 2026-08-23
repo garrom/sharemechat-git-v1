@@ -4042,7 +4042,8 @@
       "readOnlyBanner": "Dieses Problem ist gelöst. Sie können den Verlauf einsehen, aber keine weiteren Nachrichten senden.",
       "teamPending": "Support-Team",
       "assignedByName": "{{name}} ist für Ihren Fall zuständig.",
-      "ticketEmptyState": "Hallo {{name}}, Vorfall Nr. {{ticketId}} wurde bereits erfasst. Wir kümmern uns innerhalb von 4 Stunden darum."
+      "ticketEmptyState": "Hallo {{name}}, Vorfall Nr. {{ticketId}} wurde bereits erfasst. Wir kümmern uns innerhalb von 4 Stunden darum.",
+      "agentPresence": "Assistent · immer verfügbar"
     },
     "escalate": {
       "button": "Sprechen Sie mit einem Techniker",
@@ -4134,6 +4135,29 @@
         "descriptionRequired": "Eine Beschreibung ist erforderlich.",
         "categoryRequired": "Wählen Sie eine Kategorie."
       }
+    },
+    "spotlight": {
+      "name": "SharemeChat Support",
+      "subtitle": "18+ Support · in Ihrer Sprache",
+      "pill": {
+        "ai": "KI-Assistent",
+        "human": "Menschlicher Support"
+      },
+      "statusCard": "Status der Unterhaltung",
+      "status": {
+        "ai": "Offen · KI",
+        "waiting": "Warten auf einen Techniker",
+        "human": "Ein Techniker hilft Ihnen",
+        "resolved": "Gelöst"
+      },
+      "rowStatus": "Status",
+      "rowMessages": "Nachrichten heute",
+      "rowMessagesValue": "{{count}} übrig",
+      "rowConversation": "Unterhaltung",
+      "howTitle": "So funktioniert es",
+      "how1": "Stellen Sie unserem Agenten jede Frage oder jedes Problem mit der App.",
+      "how2": "Wenn Sie menschlichen Support benötigen, drücken Sie die Schaltfläche Sprechen Sie mit einem Techniker.",
+      "how3": "Unsere Techniker antworten innerhalb von 4 Stunden."
     }
   },
   "modelLanding": {
