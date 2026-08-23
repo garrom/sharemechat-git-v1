@@ -1680,7 +1680,8 @@
       "tabs": {
         "history": "Historique",
         "billing": "Facturation",
-        "pricing": "Frais"
+        "pricing": "Frais",
+        "schedule": "Horaires"
       },
       "status": {
         "loading": "Chargement des statistiques…",
@@ -1693,14 +1694,25 @@
         "table": {
           "date": "Date",
           "tier": "Étage",
-          "minutes30d": "Minutes au cours des 30 derniers jours"
-        }
+          "minutes30d": "Minutes au cours des 30 derniers jours",
+          "period": "Période",
+          "days": "Jours"
+        },
+        "rollingNote": "« Minutes (30 jours) » est une fenêtre glissante, pas les minutes de ce jour. Nous regroupons les jours consécutifs où votre palier et vos minutes n’ont pas changé."
       },
       "billing": {
         "title": "Facturation",
         "hint": "En cours de construction",
         "placeholderTitle": "En cours de construction",
         "placeholderText": "Cette section sera activée dans les versions futures pour afficher les ventilations, les périodes et les règlements."
+      },
+      "schedule": {
+        "title": "Quand vous êtes en ligne d’habitude",
+        "hint": "Votre activité par heure, selon les dernières semaines. Changez de jour avec les flèches.",
+        "note": "Vous aide à repérer vos meilleurs créneaux.",
+        "empty": "Pas encore assez d’activité pour afficher vos horaires.",
+        "prevDay": "Jour précédent",
+        "nextDay": "Jour suivant"
       }
     },
     "pricing": {

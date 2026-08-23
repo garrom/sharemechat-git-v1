@@ -20,7 +20,7 @@ import styled from 'styled-components';
 
 // -------- Paleta local (para reutilizar dentro del fichero) --------
 const c = {
-  bg:            '#f1f5f9',   // slate 100 — fondo Wrap
+  bg:            '#eef0f4',   // gris claro — igualado al fondo del perfil (PageShell)
   bgAlt:         '#e2e8f0',   // slate 200 — accent zones
   card:          '#ffffff',   // blanco puro — cards
   cardAlt:       '#f8fafc',   // slate 50 — thead tabla
@@ -87,10 +87,8 @@ export const Wrap = styled.div`
   flex-direction: column;
   gap: 18px;
 
-  background:
-    radial-gradient(1000px 400px at 5% -10%, ${rgba('#93b5e1', 0.14)}, transparent 55%),
-    radial-gradient(800px 500px at 100% 0%, ${rgba('#c4b5fd', 0.12)}, transparent 50%),
-    ${c.bg};
+  /* Fondo plano gris claro, igualado al perfil (PageShell #eef0f4). */
+  background: ${c.bg};
 
   color: ${c.text};
   overflow: auto;
@@ -250,17 +248,29 @@ export const AvailabilityPill = styled.div`
 `;
 
 // Aviso permanente (payout).
+// Aviso de umbral de pago (2026-08-23 rediseño): banner sobrio de ANCHO
+// COMPLETO bajo la cabecera, en vez de una caja apretada arriba-derecha.
+// Icono ⓘ a la izquierda, ámbar suave, una/dos líneas.
 export const PayoutNotice = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
   padding: 10px 14px;
   border-radius: 10px;
-  font-size: 12px;
+  font-size: 12.5px;
   line-height: 1.5;
-  max-width: 560px;
 
-  background: ${rgba('#f4c99b', 0.18)};
+  background: ${rgba('#f4c99b', 0.14)};
   color: ${c.textSoft};
-  border: 1px solid ${rgba('#f4c99b', 0.55)};
+  border: 1px solid ${rgba('#f4c99b', 0.5)};
 
+  .payout-ic {
+    color: ${c.controlText};
+    font-size: 14px;
+    margin-top: 1px;
+    flex-shrink: 0;
+  }
   b {
     color: ${c.controlText};
     font-weight: 700;

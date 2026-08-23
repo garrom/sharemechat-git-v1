@@ -1680,7 +1680,8 @@
       "tabs": {
         "history": "History",
         "billing": "Billing",
-        "pricing": "Rate"
+        "pricing": "Rate",
+        "schedule": "Schedule"
       },
       "status": {
         "loading": "Loading statistics…",
@@ -1693,14 +1694,25 @@
         "table": {
           "date": "Date",
           "tier": "Tier",
-          "minutes30d": "Minutes in the last 30 days"
-        }
+          "minutes30d": "Minutes in the last 30 days",
+          "period": "Period",
+          "days": "Days"
+        },
+        "rollingNote": "“Minutes (30 days)” is a rolling window, not that day’s minutes. We group consecutive days where your tier and minutes didn’t change."
       },
       "billing": {
         "title": "Billing",
         "hint": "Under construction",
         "placeholderTitle": "Under construction",
         "placeholderText": "This section will be enabled in future versions to show breakdowns, periods, and settlements."
+      },
+      "schedule": {
+        "title": "When you’re usually online",
+        "hint": "Your activity by hour, based on recent weeks. Use the arrows to change day.",
+        "note": "Helps you spot your strongest time slots.",
+        "empty": "Not enough activity yet to show your schedule.",
+        "prevDay": "Previous day",
+        "nextDay": "Next day"
       }
     },
     "pricing": {

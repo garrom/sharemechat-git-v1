@@ -1680,7 +1680,8 @@
       "tabs": {
         "history": "Histórico",
         "billing": "Facturación",
-        "pricing": "Tarifa"
+        "pricing": "Tarifa",
+        "schedule": "Horarios"
       },
       "status": {
         "loading": "Cargando estadísticas…",
@@ -1693,14 +1694,25 @@
         "table": {
           "date": "Fecha",
           "tier": "Tier",
-          "minutes30d": "Minutos últimos 30 días"
-        }
+          "minutes30d": "Minutos últimos 30 días",
+          "period": "Periodo",
+          "days": "Días"
+        },
+        "rollingNote": "“Minutos (30 días)” es una ventana móvil, no los minutos de ese día. Agrupamos los días consecutivos en los que tu tramo y tus minutos no cambiaron."
       },
       "billing": {
         "title": "Facturación",
         "hint": "En construcción",
         "placeholderTitle": "En construcción",
         "placeholderText": "Esta sección se habilitará en próximas versiones para mostrar desglose, periodos y liquidaciones."
+      },
+      "schedule": {
+        "title": "Cuándo sueles estar en línea",
+        "hint": "Tu actividad por hora, según las últimas semanas. Cambia de día con las flechas.",
+        "note": "Te ayuda a ver tus franjas más fuertes.",
+        "empty": "Aún no hay suficiente actividad para mostrar tus horarios.",
+        "prevDay": "Día anterior",
+        "nextDay": "Día siguiente"
       }
     },
     "pricing": {
