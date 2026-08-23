@@ -1680,7 +1680,8 @@
       "tabs": {
         "history": "Historisch",
         "billing": "Abrechnung",
-        "pricing": "Gebühr"
+        "pricing": "Gebühr",
+        "schedule": "Zeiten"
       },
       "status": {
         "loading": "Lade Statistiken…",
@@ -1693,14 +1694,25 @@
         "table": {
           "date": "Datum",
           "tier": "Stufe",
-          "minutes30d": "Minuten der letzten 30 Tage"
-        }
+          "minutes30d": "Minuten der letzten 30 Tage",
+          "period": "Zeitraum",
+          "days": "Tage"
+        },
+        "rollingNote": "„Minuten (30 Tage)“ ist ein gleitendes Fenster, nicht die Minuten dieses Tages. Wir fassen aufeinanderfolgende Tage zusammen, an denen sich Ihre Stufe und Minuten nicht geändert haben."
       },
       "billing": {
         "title": "Abrechnung",
         "hint": "Im Bau",
         "placeholderTitle": "Im Bau",
         "placeholderText": "Dieser Abschnitt wird in zukünftigen Versionen aktiviert, um Aufschlüsselungen, Zeiträume und Abrechnungen anzuzeigen."
+      },
+      "schedule": {
+        "title": "Wann Sie normalerweise online sind",
+        "hint": "Ihre Aktivität pro Stunde, basierend auf den letzten Wochen. Mit den Pfeilen wechseln Sie den Tag.",
+        "note": "Hilft Ihnen, Ihre stärksten Zeitfenster zu erkennen.",
+        "empty": "Noch nicht genug Aktivität, um Ihre Zeiten anzuzeigen.",
+        "prevDay": "Vorheriger Tag",
+        "nextDay": "Nächster Tag"
       }
     },
     "pricing": {

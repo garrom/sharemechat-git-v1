@@ -1680,7 +1680,8 @@
       "tabs": {
         "history": "Histórico",
         "billing": "Cobrança",
-        "pricing": "Taxa"
+        "pricing": "Taxa",
+        "schedule": "Horários"
       },
       "status": {
         "loading": "Carregando estatísticas…",
@@ -1693,14 +1694,25 @@
         "table": {
           "date": "Data",
           "tier": "Nível",
-          "minutes30d": "Minutos nos últimos 30 dias"
-        }
+          "minutes30d": "Minutos nos últimos 30 dias",
+          "period": "Período",
+          "days": "Dias"
+        },
+        "rollingNote": "“Minutos (30 dias)” é uma janela móvel, não os minutos daquele dia. Agrupamos os dias consecutivos em que seu nível e seus minutos não mudaram."
       },
       "billing": {
         "title": "Cobrança",
         "hint": "Em construção",
         "placeholderTitle": "Em construção",
         "placeholderText": "Esta seção será habilitada em versões futuras para exibir detalhamentos, períodos e liquidações."
+      },
+      "schedule": {
+        "title": "Quando você costuma estar on-line",
+        "hint": "Sua atividade por hora, com base nas últimas semanas. Use as setas para mudar o dia.",
+        "note": "Ajuda a identificar seus melhores horários.",
+        "empty": "Ainda não há atividade suficiente para mostrar seus horários.",
+        "prevDay": "Dia anterior",
+        "nextDay": "Próximo dia"
       }
     },
     "pricing": {
