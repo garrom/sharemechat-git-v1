@@ -1004,7 +1004,7 @@
     },
     "login": {
       "title": "Login",
-      "titleModel": "Anmeldemodell",
+      "titleModel": "Als Model anmelden",
       "status": {
         "successRedirecting": "Zugriff erfolgreich. Weiterleitung…"
       },
@@ -1154,7 +1154,7 @@
       }
     },
     "registerModel": {
-      "title": "Modellregistrierung",
+      "title": "Erstellen Sie Ihr Model-Konto",
       "placeholders": {
         "nickname": "Spitzname",
         "email": "E-Mail",
@@ -1188,7 +1188,8 @@
       "success": {
         "title": "Überprüfen Sie Ihren Posteingang.",
         "message": "Wir haben Ihnen eine E-Mail zur Bestätigung Ihres Kontos gesendet. Bitte überprüfen Sie den Inhalt. Sollten Sie die E-Mail nicht finden, schauen Sie bitte in Ihrem Spam-Ordner nach."
-      }
+      },
+      "subtitle": "Gehen Sie live und verdienen Sie. Altersverifizierung erforderlich."
     },
     "registerMaster": {
       "title": "Master-Datensatz",
@@ -1279,6 +1280,10 @@
         "connection": "Verbindungsfehler. Bitte versuchen Sie es erneut.",
         "generic": "Das Konto konnte nicht aktiviert werden."
       }
+    },
+    "modelRibbon": {
+      "title": "Model-Konto",
+      "subtitle": "Zum Erstellen und Live-Gehen"
     }
   },
   "dashboardClient": {

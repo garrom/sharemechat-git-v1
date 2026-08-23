@@ -11,13 +11,14 @@ import { useSession } from '../components/SessionProvider';
 import {
   StyledForm, StyledInput, StyledButton, StyledLinkButton,
   StyledError, Status, Field, FieldError, FormTitle,
-  CloseBtn as LoginCloseBtn, TabsRow, TabButton
+  CloseBtn as LoginCloseBtn, TabsRow, TabButton,
+  ModelRibbon, ModelRibbonIcon, ModelRibbonText
 } from '../styles/public-styles/LoginStyles';
 
 import Roles from '../constants/Roles';
 import UserTypes from '../constants/UserTypes';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark } from '@fortawesome/free-solid-svg-icons';
+import { faXmark, faVideo } from '@fortawesome/free-solid-svg-icons';
 import { canAccessBackoffice } from '../utils/backofficeAccess';
 import { buildAdminAppUrl, isAdminSurface, navigateToUrl, resolveHomeUrl } from '../utils/runtimeSurface';
 import { isGoogleOAuthEnabled } from '../config/runtimeEnv';
@@ -140,6 +141,10 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login', aud
 
   const isLoginTab = view === 'login';
   const isRegisterTab = view !== 'login';
+  // Contexto modelo: viene de /modelos (audience='model') o vista register-model.
+  // Activa la identidad roja de marca (cinta + acento) para no confundir el
+  // registro/login de modelo con el de cliente.
+  const isModelCtx = audience === 'model' || view === 'register-model';
 
   return (
     <StyledForm
@@ -157,10 +162,23 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login', aud
         </LoginCloseBtn>
       )}
 
+      {isModelCtx && (
+        <ModelRibbon>
+          <ModelRibbonIcon aria-hidden="true">
+            <FontAwesomeIcon icon={faVideo} />
+          </ModelRibbonIcon>
+          <ModelRibbonText>
+            {i18n.t('auth.modelRibbon.title')}
+            <small>{i18n.t('auth.modelRibbon.subtitle')}</small>
+          </ModelRibbonText>
+        </ModelRibbon>
+      )}
+
       <TabsRow>
         <TabButton
           type="button"
           data-active={isLoginTab}
+          data-accent={isModelCtx ? 'model' : undefined}
           onClick={() => setView('login')}
         >
           {i18n.t('auth.tabs.login')}
@@ -169,6 +187,7 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login', aud
         <TabButton
           type="button"
           data-active={isRegisterTab}
+          data-accent={isModelCtx ? 'model' : undefined}
           onClick={() => {
             // Preserva la intencion de registro del visitante segun de donde
             // se abrio el modal: /for-studios -> register-master, /modelos ->
