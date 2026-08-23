@@ -96,11 +96,37 @@ class Finding:
         return f"[{self.check}] {self.file}:{self.line}  {self.msg}"
 
 
+def exists_cs(abs_path):
+    """
+    Existencia SENSIBLE A MAYUSCULAS, incluso en Windows. El CI corre en Linux
+    (case-sensitive); sin esto, un enlace con el case equivocado pasaria en local
+    y fallaria en CI. Verifica el case exacto de cada componente desde la ruta
+    hasta REPO_ROOT usando os.listdir.
+    """
+    abs_path = os.path.normpath(abs_path)
+    if not os.path.exists(abs_path):
+        return False
+    root = os.path.normpath(REPO_ROOT)
+    p = abs_path
+    while os.path.normpath(p) != root:
+        parent = os.path.dirname(p)
+        if parent == p:
+            break
+        name = os.path.basename(p)
+        try:
+            if name and name not in os.listdir(parent):
+                return False
+        except OSError:
+            return False
+        p = parent
+    return True
+
+
 def path_exists(candidate):
-    """True si 'candidate' existe relativo a REPO_ROOT o a sharemechat-v1/."""
+    """True si 'candidate' existe (case-sensitive) relativo a REPO_ROOT o a sharemechat-v1/."""
     c = candidate.strip().lstrip("/")
     for base in (REPO_ROOT, os.path.join(REPO_ROOT, "sharemechat-v1")):
-        if os.path.exists(os.path.join(base, c)):
+        if exists_cs(os.path.join(base, c)):
             return True
     return False
 
@@ -129,7 +155,7 @@ def check_links(md_files):
                     continue
                 # 1) relativo al fichero (convencion markdown estandar).
                 resolved = os.path.normpath(os.path.join(base, clean))
-                if os.path.exists(resolved):
+                if exists_cs(resolved):
                     continue
                 # 2) tolerancia: rutas escritas desde la raiz del repo o desde
                 #    sharemechat-v1/ (patron frecuente en estos docs).
