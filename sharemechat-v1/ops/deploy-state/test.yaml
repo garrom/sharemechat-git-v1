@@ -1,9 +1,8 @@
 ﻿# Manifest de estado de despliegue - entorno TEST
-# Schema v1. Auto-gestionado por deploy-frontend.ps1 (Fase 1
-# paso 2a). El paso [5.5/N] de cada deploy escribe el bloque
-# correspondiente al surface desplegado tras smoke OK. NO se
-# hace commit automatico: el operador commitea el manifest
-# cuando le conviene (decision D2).
+# Schema v1. Seccion backend actualizada por update-manifest-backend.ps1
+# (Fase 1 paso 2b, opcion B). El script lo invoca el operador tras un
+# deploy manual del backend (scp + restart). NO se hace commit
+# automatico: el operador commitea cuando le conviene (decision D2).
 #
 schema_version: 1
 frontend_product:
@@ -22,25 +21,25 @@ frontend_product:
   working_tree_clean: false
   bucket: sharemechat-frontend-test
   bundle: main.d0842059.js
-last_update_source: deploy-frontend.ps1-fase1-paso2a
+last_update_source: update-manifest-backend.ps1-fase1-paso2b
 last_update_by: alain@LAPTOP-8UEIKVUT
 environment: test
 backend:
   working_tree_clean: false
   remote_path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
   ec2_alias: test-backend
-  deployed_at: 2026-08-22T23:16:32Z
-  jar_sha256: 67103e851c8ab55cc576a51041c845ef3fa0c592b8d0eb8277740a8754664c32
+  deployed_at: 2026-08-23T00:51:55Z
+  jar_sha256: 5261ee67d3b679bbd4fe4c3663af528b3e9da0df3511d03c06fc914c784491e1
   verification:
     method: manual_via_update-manifest-backend.ps1+remote-verify
-    verified_at: 2026-08-22T23:16:32Z
+    verified_at: 2026-08-23T00:51:55Z
     notes: 'Actualizado manualmente por update-manifest-backend.ps1 (Fase 1 paso 2b) tras deploy manual del backend (scp + restart). Limitacion conocida: HEAD asume = commit con el que se construyo el JAR; sin endpoint /api/health/version (Fase 2) no hay verificacion viva del commit del backend.'
-  built_at: 2026-08-22T23:16:32Z
+  built_at: 2026-08-23T00:51:55Z
   deployed_by: alain@LAPTOP-8UEIKVUT
   systemd_unit: sharemechat-test.service
-  git_commit: 1103263d985bfcaa3b013d4df3040d82b5bd7767
-  git_commit_short: 1103263d
-last_updated_at: 2026-08-22T23:17:54Z
+  git_commit: ebff6afc4d766a3a63ad6b22f0b5c7dbc0b82974
+  git_commit_short: ebff6afc
+last_updated_at: 2026-08-23T00:51:55Z
 frontend_admin:
   cloudfront_invalidation_id: ICFKCRLUQ0E664D9GPC26VAYV5
   verification:
