@@ -38,6 +38,7 @@ La reorganización actual conserva el conocimiento útil y redistribuye su conte
 - `02-architecture`: visión del sistema y arquitectura por capas
 - `03-environments`: visión por entorno y diferencias relevantes
 - `04-operations`: despliegue, runbooks, incidencias, riesgos y accesos operativos del equipo
+  - **`04-operations/incidencias-prod/`** → base de conocimiento viva de incidencias en PROD (teoría, casos reales, técnicas de actuación). Se rellena poco a poco; empezar por su [`README.md`](04-operations/incidencias-prod/README.md).
 - `05-backoffice`: modelo operativo y de permisos del backoffice
 - `06-decisions`: decisiones arquitectónicas registradas
 - `07-roadmap`: fase actual y siguientes frentes
