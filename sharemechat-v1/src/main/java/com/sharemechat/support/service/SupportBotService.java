@@ -77,6 +77,9 @@ public class SupportBotService {
             "El agente IA no esta disponible temporalmente. Un miembro del equipo revisara tu mensaje.";
     static final String ESCALATION_MESSAGE_ES =
             "Te derivamos con un miembro del equipo humano; revisara tu caso y te contactara.";
+    static final String ESCALATED_WAITING_MESSAGE_ES =
+            "Tu caso ya esta con el equipo humano; lo revisaran en cuanto puedan. "
+            + "Si surge algo nuevo, abrelo como incidencia desde el icono de ticket del navbar.";
 
     static final int MAX_USER_MESSAGE_LENGTH = 4000;
 
@@ -152,6 +155,24 @@ public class SupportBotService {
             out.setResolutionStatus(Constants.SupportResolutionStatuses.HUMAN_HANDLING);
             out.setHumanHandling(true);
             out.setEscalated(false);
+            out.setMessagesRemainingToday(rateLimitService.remainingMessages(userId));
+            out.setTokensRemainingToday(rateLimitService.remainingTokens(userId));
+            return out;
+        }
+
+        // Una vez ESCALADA, el bot NO vuelve a atender (incidente 2026-08-23: el
+        // bot seguia respondiendo tras escalar -> incongruencia y sin trazabilidad
+        // limpia IA/humano). Regla: o IA o humano, nunca ambos. El mensaje del
+        // usuario ya se persistio arriba (queda para el humano); aqui solo se
+        // devuelve un aviso de espera, sin llamar al LLM ni consumir tokens. El
+        // caso "agente ya asignado" lo cubre el guard anterior.
+        if (Constants.SupportResolutionStatuses.ESCALATED.equals(conv.getResolutionStatus())) {
+            log.info("[SUPPORT-BOT] skip LLM userId={} conversationId={} (escalated, waiting human)",
+                    userId, conv.getId());
+            out.setReply(ESCALATED_WAITING_MESSAGE_ES);
+            out.setResolutionStatus(Constants.SupportResolutionStatuses.ESCALATED);
+            out.setEscalated(true);
+            out.setHumanHandling(false);
             out.setMessagesRemainingToday(rateLimitService.remainingMessages(userId));
             out.setTokensRemainingToday(rateLimitService.remainingTokens(userId));
             return out;

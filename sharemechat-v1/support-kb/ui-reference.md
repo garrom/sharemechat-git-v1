@@ -70,6 +70,12 @@ Ubicaciones concretas para la modelo:
 - Gestionar favoritos y chatear: tab "Favoritos".
 - Atender videochat aleatorio: tab "Videochat" (activar cámara para entrar en la cola).
 
+Dentro de "Estadísticas" hay tres sub-pestañas, todas sobre el rendimiento y las ganancias de la modelo (nunca sobre pagos que ella haga; la modelo no recarga ni tiene saldo):
+- Tarifa: la tarifa que le corresponde según su tier actual.
+- Histórico: evolución por fecha de su tier y de sus minutos facturados (foto diaria de los últimos 30 días). Sirve para ver cómo cambian su tier y su volumen día a día. NO es un registro de recargas ni de transacciones (eso es del cliente, no de la modelo).
+- Facturación: su facturación/ganancias acumuladas.
+En esas pantallas el tier aparece como T1, T2, T3 o T4.
+
 ## Tab Favoritos (dentro de /client o /model)
 
 Layout de 3 columnas dentro del propio dashboard:
