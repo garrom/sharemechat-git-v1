@@ -22,14 +22,14 @@ const wrap = {
 };
 
 const avatarWrap = {
-  width: 116,
-  height: 116,
+  width: 58,
+  height: 58,
   borderRadius: '50%',
   background: 'linear-gradient(135deg, #ff5470, #d61f4e)',
-  border: '2px solid rgba(255,255,255,0.30)',
+  border: '1.5px solid rgba(255,255,255,0.30)',
   display: 'grid',
   placeItems: 'center',
-  boxShadow: '0 8px 24px rgba(214,31,78,0.35)',
+  boxShadow: '0 4px 14px rgba(214,31,78,0.30)',
   flexShrink: 0,
 };
 
@@ -69,7 +69,7 @@ const stepNum = { flex: '0 0 20px', width: 20, height: 20, borderRadius: '50%', 
 
 // Auricular blanco (mismo trazo que SupportAvatar/IconSupport), grande.
 const HeadsetGlyph = () => (
-  <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
     <path d="M4 14v-2a8 8 0 0116 0v2" />
     <rect x="2.2" y="14" width="4.2" height="6.6" rx="1.8" fill="#fff" stroke="none" />
     <rect x="17.6" y="14" width="4.2" height="6.6" rx="1.8" fill="#fff" stroke="none" />
