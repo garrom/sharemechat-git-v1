@@ -35,7 +35,6 @@ B|sharemechat-v1/docs/06-decisions/adr-030-moderation-pipeline-build-vs-rent.md|
 B|sharemechat-v1/docs/06-decisions/adr-036-moderation-pipeline-architectural-stance.md|docs/02-architecture/moderation-pipeline.md
 B|sharemechat-v1/docs/06-decisions/adr-045-keywords-seo-per-locale.md|sharemechat-v1/frontend/src/pages/admin/content/BodyLocaleTabs.jsx
 B|sharemechat-v1/docs/06-decisions/adr-059-estrategia-de-testing.md|src/polyfills.js
-B|sharemechat-v1/docs/06-decisions/adr-061-facts-as-code-fuente-unica-y-drift-ci.md|docs/_data/sources-of-truth.yaml
 B|sharemechat-v1/docs/project-log.md|docs/00-context
 B|sharemechat-v1/docs/project-log.md|docs/01-business/README.md
 B|sharemechat-v1/docs/project-log.md|docs/02-architecture/api-conventions.md
@@ -60,9 +59,5 @@ C|sharemechat-v1/docs/07-roadmap/pre-mortem-launch-2026-07.md|[≥>]?\s*600\s+mi
 C|sharemechat-v1/docs/07-roadmap/pre-mortem-launch-2026-07.md|tiers?\s+5-15\b
 C|sharemechat-v1/docs/07-roadmap/pre-mortem-launch-2026-07.md|€0\.0[579]\s+primer\s+min
 C|sharemechat-v1/docs/project-log.md|5-15\s*/\s*7-20\s*/\s*9-40
-C|sharemechat-v1/support-kb/payout-y-tiers.md|[≥>]?\s*1200\s+minutos\s+facturados
-C|sharemechat-v1/support-kb/payout-y-tiers.md|[≥>]?\s*600\s+minutos\s+facturados
-C|sharemechat-v1/support-kb/payout-y-tiers.md|tiers?\s+5-15\b
-C|sharemechat-v1/support-kb/payout-y-tiers.md|€0\.0[579]\s+primer\s+min
 C|sharemechat-v1/support-kb/producto-general.md|5-15\s*/\s*7-20\s*/\s*9-40
 D|ref|055

@@ -17,13 +17,15 @@ El usuario es MODEL. La información es del lado modelo, no del cliente.
 
 ## Hechos operativos
 
-- Tres tiers: 5-15, 7-20, 9-40.
-- Tier 5-15: €0.05 primer minuto, €0.15 resto. Requisito: tier inicial (0 minutos facturados).
-- Tier 7-20: €0.07 primer minuto, €0.20 resto. Requisito: ≥600 minutos facturados últimos 30 días.
-- Tier 9-40: €0.09 primer minuto, €0.40 resto. Requisito: ≥1200 minutos facturados últimos 30 días.
-- Los nombres de tier son céntimos: 5 = €0.05, 15 = €0.15, 7 = €0.07, 20 = €0.20, 9 = €0.09, 40 = €0.40.
-- Cada sesión: primer minuto con la tarifa reducida, resto con la tarifa completa.
-- Tier se recalcula automáticamente cada día sobre ventana móvil de últimos 30 días. Sube y baja de forma automática al cruzar los umbrales.
+<!-- BEGIN generated:pricing-tiers renderer=kb-list (no editar a mano; fuente docs/_data/pricing-tiers.yaml) -->
+- Cuatro tramos (régimen INDIVIDUAL): T1, T2, T3, T4. Así aparecen en la sección Estadísticas de la modelo.
+- T1: umbral 0 €/30d · reparto 50% · 1,00 €/min el primer minuto · 1,00 €/min el resto.
+- T2: umbral 1.000 €/30d · reparto 54% · 1,00 €/min el primer minuto · 3,00 €/min el resto.
+- T3: umbral 4.000 €/30d · reparto 57% · 1,00 €/min el primer minuto · 6,00 €/min el resto.
+- T4: umbral 15.000 €/30d · reparto 60% · 1,00 €/min el primer minuto · 9,00 €/min el resto.
+- El umbral es la facturación bruta de los últimos 30 días (ventana móvil); el tier se recalcula a diario y sube o baja solo al cruzar los umbrales.
+- El Master (estudios) no tiene tramos propios: cobra la suma de los pagos individuales al % del tramo INDIVIDUAL de cada modelo.
+<!-- END generated:pricing-tiers -->
 - La modelo consulta su tier actual y su progreso en la sección "Estadísticas" del navbar del dashboard modelo.
 - Gifts: 90% del valor va al balance de la modelo, 10% lo retiene la plataforma.
 - Los gifts los envían clientes; la modelo los recibe en su balance junto con lo facturado por minuto.
@@ -36,9 +38,9 @@ El usuario es MODEL. La información es del lado modelo, no del cliente.
 
 ## Qué debes hacer
 
-- "¿Cuánto cobro?" → si el contexto te da el tier, responde con las tarifas de ese tier. Si no, explica los tres tiers con las tarifas exactas.
-- "¿Qué son los tiers?" o "¿qué significa 5-15?" → explica que son céntimos por minuto (5 = €0.05 primer minuto, 15 = €0.15 resto).
-- "¿Cómo subo de tier?" → describe la ventana móvil de 30 días y los umbrales (≥600 para 7-20, ≥1200 para 9-40). Recálculo diario automático.
+- "¿Cuánto cobro?" → si el contexto te da el tier, responde con las tarifas de ese tier. Si no, explica los cuatro tramos (T1-T4) con las tarifas exactas.
+- "¿Qué son los tiers?" → explica que son cuatro tramos (T1, T2, T3, T4) según tu facturación bruta de los últimos 30 días: a más facturación, mayor % de reparto y mayor tarifa máxima por minuto.
+- "¿Cómo subo de tier?" → describe la ventana móvil de 30 días y los umbrales en euros de facturación bruta (1.000 € para T2, 4.000 € para T3, 15.000 € para T4). Recálculo diario automático.
 - "¿Cómo cobro?" o "¿cómo retiro?" → botón "Retirar" del navbar, umbral €100, revisión admin, y método de cobro a elegir (Paxum, Yoursafe, cripto o SEPA).
 - "¿Puedo cobrar en cripto?" → sí, puedes registrar una wallet como método de cobro; el envío en cripto hoy se gestiona manualmente por el equipo, no es instantáneo.
 - "¿Cuándo cobro?" → sin calendario fijo, solicitud a demanda al alcanzar el umbral.
@@ -53,7 +55,7 @@ El usuario es MODEL. La información es del lado modelo, no del cliente.
 - No prometas envío instantáneo ni plazos concretos del cobro en cripto (gestión manual hoy).
 - No prometas frecuencias fijas de retiro ("cada 15 días", "primeros de mes") ni plazos concretos de aprobación.
 - No pidas la clave privada de una wallet; solo se registra la dirección pública, desde la propia UI.
-- No inventes tiers adicionales ni tarifas fuera de las tres listadas.
+- No inventes tiers adicionales ni tarifas fuera de los cuatro tramos listados.
 - No expliques cómo el sistema calcula "minutos facturados" internamente. Solo la regla externa (ventana 30 días).
 
 ## Cuándo escalar

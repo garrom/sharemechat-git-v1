@@ -89,3 +89,21 @@ jobs:
       # Falla solo ante hallazgos NUEVOS (los preexistentes viven en baseline.txt).
       - name: Run repo consistency check
         run: python3 sharemechat-v1/ops/repo-consistency/check.py
+
+  facts-generation:
+    name: Facts generation (Motor 1, ADR-061)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Motor 1: los bloques generados de docs/KB deben coincidir con su fuente
+      # única (docs/_data/*.yaml). Si tocaste la fuente y no regeneraste (o
+      # editaste un bloque a mano), el CI falla. El anclaje fuente<->sistema lo
+      # verifica el test de integracion (perfil ci) del job backend.
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install PyYAML
+        run: python3 -m pip install --quiet pyyaml
+      - name: Check generated blocks are in sync with sources of truth
+        run: python3 sharemechat-v1/ops/facts/build_facts.py --check
