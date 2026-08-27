@@ -48,6 +48,7 @@ Marcador: `<!-- BEGIN generated:<dominio> renderer=<r> -->`.
 
 - `pricing-tiers` → `md-table` (tramo, facturación, % modelo, % empresa, rango €/min), `kb-list` (lista estilo KB).
 - `product-modes` → `modes-list` (lista de modos con su significado).
+- `product-flags` → `flags-table` (catálogo de flags product.*: property, env var, default, qué hace).
 
 Añadir un dominio = un `.yaml` en `docs/_data/`, una entrada en `DOMAINS`, sus
 renderers, un bloque generado en los docs y su test de cierre (fuente ↔ sistema).
