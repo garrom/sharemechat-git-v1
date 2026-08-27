@@ -18,5 +18,5 @@ Todas son `cloudfront-js-1.0`, event type `viewer-request`.
 ## Historial de cambios
 
 ### 2026-06-21
-- Modificación de `redirect-spa-prod`: añadida rama `/blog/*` que reescribe a `<path>/index.html` en lugar de sustituir por `/index.html`. Habilita pre-render selectivo del blog. Ver [docs/01-business/seo/seo-edge-function-analysis-2026-06-21.md](../../docs/01-business/seo/seo-edge-function-analysis-2026-06-21.md).
+- Modificación de `redirect-spa-prod`: añadida rama `/blog/*` que reescribe a `<path>/index.html` en lugar de sustituir por `/index.html`. Habilita pre-render selectivo del blog. Ver [docs/01-business/seo/seo-edge-function-analysis-2026-06-21.md](../../docs/_archive/01-business/seo/seo-edge-function-analysis-2026-06-21.md).
 - Distribución PROD `E2FWNC80D4QDJC`: añadido `CustomErrorResponses` con item `403 → /index.html (200)` para cubrir el caso de artículo publicado sin HTML pre-renderizado aún en S3 (S3 OAC devuelve 403 cuando la key no existe; CloudFront lo convierte a 200 + shell SPA y la SPA hidrata via API igual que hoy).

@@ -223,7 +223,7 @@ Hasta esos triggers, G3 es la opción más coherente con el patrón actual.
 
 ## Referencias
 
-- Análisis de viabilidad: [`docs/04-operations/prerender-cron-implementation-2026-06-25.md`](../04-operations/prerender-cron-implementation-2026-06-25.md).
+- Análisis de viabilidad: [`do../_archive/04-operations/prerender-cron-implementation-2026-06-25.md`](../_archive/04-operations/prerender-cron-implementation-2026-06-25.md).
 - Frentes SEO anteriores: [Prompt 1 commit `c5b4cc9`](../../ops/cloudfront-functions/redirect-spa-prod.js),
   [Prompt 2 commit `6306f7e`](../../ops/scripts/prerender-blog/render.js),
   [Prompt 3 cierre commit `9c4aba5`](04-operations/seo-prompt3-implementation-2026-06-23.md).

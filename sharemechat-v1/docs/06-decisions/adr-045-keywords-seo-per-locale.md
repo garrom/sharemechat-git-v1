@@ -4,7 +4,7 @@
 
 Aceptada (2026-07-04).
 
-Aplicabilidad: contrato de `content_article_translations.target_keywords`, editor admin del CMS, `ContentPromptBuilder`, `ContentRunService.applyBilingual`, skills del pipeline editorial (`cms-research-seo`, `cms-translate-en`, `cms-json-builder`, `cms-json-validator`), workflow editorial `DRAFT → IN_REVIEW`, migraciones Flyway del módulo CMS. Encadena a [ADR-023](./adr-023-bilingual-editorial-pipeline-es-en.md) (pipeline bilingüe fase 4.5), [ADR-025](./adr-025-flyway-introduction-and-cms-v2-schema.md) (rediseño CMS v2, modelo satélite bilingüe) y [ADR-027](./adr-027-brief-per-locale.md) (brief per-locale). Base factual: `docs/analysis/2026-07-04-cms-articulo-keywords-por-locale.md`.
+Aplicabilidad: contrato de `content_article_translations.target_keywords`, editor admin del CMS, `ContentPromptBuilder`, `ContentRunService.applyBilingual`, skills del pipeline editorial (`cms-research-seo`, `cms-translate-en`, `cms-json-builder`, `cms-json-validator`), workflow editorial `DRAFT → IN_REVIEW`, migraciones Flyway del módulo CMS. Encadena a [ADR-023](./adr-023-bilingual-editorial-pipeline-es-en.md) (pipeline bilingüe fase 4.5), [ADR-025](./adr-025-flyway-introduction-and-cms-v2-schema.md) (rediseño CMS v2, modelo satélite bilingüe) y [ADR-027](./adr-027-brief-per-locale.md) (brief per-locale). Base factual: `docs/_archive/analysis/2026-07-04-cms-articulo-keywords-por-locale.md`.
 
 ## Contexto
 
@@ -27,7 +27,7 @@ Trabajo de research SEO US (`keyword-research-sharemechat-us-2026-06-24.xlsx`, 1
 
 ### Motivación estratégica
 
-Ver `docs/analysis/2026-07-04-cms-articulo-keywords-por-locale.md` para el análisis completo. Resumen: la doctrina SEO moderna es **una keyword primaria única por URL más 3-5 secundarias semánticas de apoyo**, con la primaria siendo el eje del research, del título, de la meta description y de la estructura de encabezados. En un CMS bilingüe, esa primaria es por locale, no compartida.
+Ver `docs/_archive/analysis/2026-07-04-cms-articulo-keywords-por-locale.md` para el análisis completo. Resumen: la doctrina SEO moderna es **una keyword primaria única por URL más 3-5 secundarias semánticas de apoyo**, con la primaria siendo el eje del research, del título, de la meta description y de la estructura de encabezados. En un CMS bilingüe, esa primaria es por locale, no compartida.
 
 ## Decisión
 
@@ -251,7 +251,7 @@ Ninguna acción operativa. Los datos existentes son compatibles.
 
 ## Referencias
 
-- Análisis de trabajo: `docs/analysis/2026-07-04-cms-articulo-keywords-por-locale.md`
+- Análisis de trabajo: `docs/_archive/analysis/2026-07-04-cms-articulo-keywords-por-locale.md`
 - Research SEO US: `keyword-research-sharemechat-us-2026-06-24.xlsx` (2026-06-24)
 - Plan editorial: `plan-editorial-sharemechat-v6.xlsx` (2026-07-04, columnas keyword per-locale añadidas como preparación operativa a este ADR)
 - Código fuente ancla:
