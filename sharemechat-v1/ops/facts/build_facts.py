@@ -122,6 +122,20 @@ def render_modes_list(data):
     return "\n".join(lines)
 
 
+def render_flags_table(data):
+    lines = [
+        "| Property | Variable de entorno | Default | Qué hace |",
+        "|---|---|---|---|",
+    ]
+    for fl in data["flags"]:
+        default = fl["default"]
+        default_cell = "*(vacío)*" if default == "" else f"`{default}`"
+        lines.append(
+            f"| `{fl['property']}` | `{fl['env_var']}` | {default_cell} | {fl['meaning']} |"
+        )
+    return "\n".join(lines)
+
+
 # Registro de dominios: cada uno con su fichero fuente y sus renderers.
 # El generador es genérico; añadir un dominio = una entrada aquí + su YAML.
 DOMAINS = {
@@ -132,6 +146,10 @@ DOMAINS = {
     "product-modes": {
         "yaml": os.path.join(DATA_DIR, "product-modes.yaml"),
         "renderers": {"modes-list": render_modes_list},
+    },
+    "product-flags": {
+        "yaml": os.path.join(DATA_DIR, "product-flags.yaml"),
+        "renderers": {"flags-table": render_flags_table},
     },
 }
 

@@ -1,0 +1,63 @@
+# =============================================================================
+# FUENTE ÚNICA DE VERDAD — Flags operativas de producto (ADR-061 Motor 1)
+# =============================================================================
+# Catálogo de las flags `product.*` del backend: property, variable de entorno,
+# valor por defecto y qué hace. La tabla de referencia se GENERA de aquí.
+# No edites esa tabla a mano: edita este fichero y regenera con
+#   python3 sharemechat-v1/ops/facts/build_facts.py
+#
+# Ancla al sistema: cada entrada debe coincidir con la línea real de
+# `src/main/resources/application.properties` con forma
+#   <property>=${<env_var>:<default>}
+# El test ProductFlagsSsotTest lo verifica en CI: si se añade/cambia/elimina una
+# flag product.* en application.properties y no aquí (o al revés), el CI falla.
+#
+# NO cubre valores POR ENTORNO (viven en config.env de cada caja, fuera de git),
+# solo el catálogo y sus defaults. El `meaning` es prosa mantenida a mano aquí.
+# =============================================================================
+
+flags:
+  - property: product.access.mode
+    env_var: PRODUCT_ACCESS_MODE
+    default: OPEN
+    meaning: Modo operativo global del producto (OPEN / PRELAUNCH / MAINTENANCE / CLOSED). Ver product-modes.
+  - property: product.access.allowlist.user-ids
+    env_var: PRODUCT_ACCESS_ALLOWLIST_USER_IDS
+    default: ""
+    meaning: Lista de userId (coma-separados) que saltan el gate en modos restrictivos. Vacío = nadie.
+  - property: product.registration.client.enabled
+    env_var: PRODUCT_REGISTRATION_CLIENT_ENABLED
+    default: "true"
+    meaning: Habilita el registro público de cliente (POST /api/users/register/client).
+  - property: product.registration.model.enabled
+    env_var: PRODUCT_REGISTRATION_MODEL_ENABLED
+    default: "true"
+    meaning: Habilita el registro público de modelo (POST /api/users/register/model).
+  - property: product.promo.welcome.enabled
+    env_var: PRODUCT_PROMO_WELCOME_ENABLED
+    default: "false"
+    meaning: Activa la promo de bienvenida (bono a los primeros clientes).
+  - property: product.promo.welcome.cap
+    env_var: PRODUCT_PROMO_WELCOME_CAP
+    default: "100"
+    meaning: Número máximo de clientes que reciben la promo de bienvenida.
+  - property: product.promo.welcome.amount-eur
+    env_var: PRODUCT_PROMO_WELCOME_AMOUNT_EUR
+    default: "10.00"
+    meaning: Importe en euros del bono de bienvenida.
+  - property: product.promo.welcome.promo-key
+    env_var: PRODUCT_PROMO_WELCOME_PROMO_KEY
+    default: WELCOME_100
+    meaning: Clave interna que identifica la promo de bienvenida.
+  - property: product.simulation.transactions-direct.enabled
+    env_var: PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED
+    default: "false"
+    meaning: Habilita los endpoints directos de simulación económica (/api/transactions/first, /add-balance). Se cierran por entorno sin tocar payout ni webhooks.
+  - property: product.golive.model.enabled
+    env_var: PRODUCT_GOLIVE_MODEL_ENABLED
+    default: "false"
+    meaning: Coming-soon modelo. Si false, la modelo ve la plataforma pero no puede empezar a emitir.
+  - property: product.golive.client.enabled
+    env_var: PRODUCT_GOLIVE_CLIENT_ENABLED
+    default: "false"
+    meaning: Coming-soon cliente. Si false, el cliente ve la plataforma pero no puede entrar a videochat/trial.

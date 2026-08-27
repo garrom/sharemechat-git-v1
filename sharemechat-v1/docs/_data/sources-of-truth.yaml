@@ -33,6 +33,16 @@ domains:
     derived:
       - sharemechat-v1/docs/06-decisions/adr-009-product-operational-mode.md  # bloque generado renderer=modes-list
 
+  product_flags:
+    description: Catálogo de flags product.* del backend (property, env var, default, significado).
+    source_of_truth: sharemechat-v1/docs/_data/product-flags.yaml
+    runtime_anchor: >-
+      líneas product.*=${ENV_VAR:default} de src/main/resources/application.properties.
+      (Solo el catálogo y defaults; los valores por entorno viven en config.env de cada caja, fuera de git.)
+    runtime_check: sharemechat-v1/src/test/java/com/sharemechat/facts/ProductFlagsSsotTest.java
+    generated_by: sharemechat-v1/ops/facts/build_facts.py
+    derived:
+      - sharemechat-v1/docs/03-environments/product-flags.md  # bloque generado renderer=flags-table
+
   # Próximos dominios a incorporar (pendientes):
-  #   feature_flags  -> application.properties + config.env.example
-  #   gifts_split    -> HECHO como prosa (reparto por tramo, mismo % que streams); no es fuente propia.
+  #   gifts_split -> HECHO como prosa (reparto por tramo, mismo % que streams); no es fuente propia.
