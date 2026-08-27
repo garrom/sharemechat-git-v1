@@ -32,7 +32,7 @@ except ImportError:
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
-PRICING_YAML = os.path.join(REPO_ROOT, "sharemechat-v1", "docs", "_data", "pricing-tiers.yaml")
+DATA_DIR = os.path.join(REPO_ROOT, "sharemechat-v1", "docs", "_data")
 
 EXCLUDE_DIRS = {
     ".git", "node_modules", "target", "build", ".cache", ".idea",
@@ -40,10 +40,13 @@ EXCLUDE_DIRS = {
     "_archive", "_audit", "_deprecated",
 }
 
+# Marcador genérico multi-dominio:
+#   <!-- BEGIN generated:<domain> renderer=<r> ... -->  ...  <!-- END generated:<domain> -->
+# El END debe casar el mismo <domain> (backreference).
 BLOCK_RE = re.compile(
-    r"(<!--\s*BEGIN generated:pricing-tiers\s+renderer=(?P<renderer>[\w-]+)[^>]*-->)"
+    r"(?P<begin><!--\s*BEGIN generated:(?P<domain>[\w-]+)\s+renderer=(?P<renderer>[\w-]+)[^>]*-->)"
     r"(?P<body>.*?)"
-    r"(<!--\s*END generated:pricing-tiers\s*-->)",
+    r"(?P<end><!--\s*END generated:(?P=domain)\s*-->)",
     re.DOTALL,
 )
 
@@ -112,10 +115,35 @@ def render_kb_list(data):
     return "\n".join(lines)
 
 
-RENDERERS = {
-    "md-table": render_md_table,
-    "kb-list": render_kb_list,
+def render_modes_list(data):
+    lines = []
+    for m in data["modes"]:
+        lines.append(f"- **{m['code']}**: {m['meaning']}")
+    return "\n".join(lines)
+
+
+# Registro de dominios: cada uno con su fichero fuente y sus renderers.
+# El generador es genérico; añadir un dominio = una entrada aquí + su YAML.
+DOMAINS = {
+    "pricing-tiers": {
+        "yaml": os.path.join(DATA_DIR, "pricing-tiers.yaml"),
+        "renderers": {"md-table": render_md_table, "kb-list": render_kb_list},
+    },
+    "product-modes": {
+        "yaml": os.path.join(DATA_DIR, "product-modes.yaml"),
+        "renderers": {"modes-list": render_modes_list},
+    },
 }
+
+# Caché de datos cargados por dominio.
+_DATA_CACHE = {}
+
+
+def load_domain(domain):
+    if domain not in _DATA_CACHE:
+        with open(DOMAINS[domain]["yaml"], "r", encoding="utf-8") as f:
+            _DATA_CACHE[domain] = yaml.safe_load(f)
+    return _DATA_CACHE[domain]
 
 
 def iter_md(root):
@@ -130,7 +158,7 @@ def rel(path):
     return os.path.relpath(path, REPO_ROOT).replace(os.sep, "/")
 
 
-def process(data, check):
+def process(check):
     changed, errors, blocks = [], [], 0
     for path in sorted(iter_md(REPO_ROOT)):
         with open(path, "r", encoding="utf-8") as f:
@@ -139,13 +167,18 @@ def process(data, check):
         def repl(m):
             nonlocal blocks, errors
             blocks += 1
+            domain = m.group("domain")
             renderer = m.group("renderer")
-            fn = RENDERERS.get(renderer)
-            if fn is None:
-                errors.append(f"{rel(path)}: renderer desconocido '{renderer}'")
+            spec = DOMAINS.get(domain)
+            if spec is None:
+                errors.append(f"{rel(path)}: dominio generado desconocido '{domain}'")
                 return m.group(0)
-            rendered = fn(data)
-            return f"{m.group(1)}\n{rendered}\n{m.group(4)}"
+            fn = spec["renderers"].get(renderer)
+            if fn is None:
+                errors.append(f"{rel(path)}: renderer '{renderer}' desconocido para dominio '{domain}'")
+                return m.group(0)
+            rendered = fn(load_domain(domain))
+            return f"{m.group('begin')}\n{rendered}\n{m.group('end')}"
 
         # Proteger los fenced code blocks (marcadores de ejemplo) del procesado.
         fences = []
@@ -170,12 +203,10 @@ def process(data, check):
 
 def main():
     check = "--check" in sys.argv[1:]
-    with open(PRICING_YAML, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f)
 
-    blocks, changed, errors = process(data, check)
+    blocks, changed, errors = process(check)
 
-    print("=== Motor 1 :: generación de hechos (pricing-tiers) ===")
+    print("=== Motor 1 :: generación de hechos (" + ", ".join(sorted(DOMAINS)) + ") ===")
     print(f"bloques generados encontrados: {blocks}")
     if errors:
         for e in errors:

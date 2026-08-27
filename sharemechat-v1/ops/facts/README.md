@@ -41,9 +41,13 @@ Dependencia: PyYAML. En CI el job `facts-generation` la instala y corre `--check
    coincidan.
 4. Commitea YAML + docs regenerados juntos.
 
-## Renderers disponibles
+## Dominios y renderers
 
-- `md-table`: tabla markdown (tramo, facturación, % modelo, % empresa, rango €/min).
-- `kb-list`: lista de hechos en texto, estilo KB del bot.
+El generador es genérico multi-dominio (registro `DOMAINS` en `build_facts.py`).
+Marcador: `<!-- BEGIN generated:<dominio> renderer=<r> -->`.
 
-Añadir un renderer = una función en `build_facts.py` y su alta en el dict `RENDERERS`.
+- `pricing-tiers` → `md-table` (tramo, facturación, % modelo, % empresa, rango €/min), `kb-list` (lista estilo KB).
+- `product-modes` → `modes-list` (lista de modos con su significado).
+
+Añadir un dominio = un `.yaml` en `docs/_data/`, una entrada en `DOMAINS`, sus
+renderers, un bloque generado en los docs y su test de cierre (fuente ↔ sistema).
