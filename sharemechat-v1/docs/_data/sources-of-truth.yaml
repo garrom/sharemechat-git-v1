@@ -24,7 +24,15 @@ domains:
       - sharemechat-v1/support-kb/payout-y-tiers.md               # bloque generado renderer=kb-list
       - sharemechat-v1/docs/01-business/sistema-tiers-modelos.md  # bloque generado renderer=md-table
 
+  product_modes:
+    description: Modos operativos del producto (OPEN / PRELAUNCH / MAINTENANCE / CLOSED) y su significado.
+    source_of_truth: sharemechat-v1/docs/_data/product-modes.yaml
+    runtime_anchor: enum ProductOperationalProperties.Mode (gobierna product.access.mode / PRODUCT_ACCESS_MODE).
+    runtime_check: sharemechat-v1/src/test/java/com/sharemechat/facts/ProductModesSsotTest.java
+    generated_by: sharemechat-v1/ops/facts/build_facts.py
+    derived:
+      - sharemechat-v1/docs/06-decisions/adr-009-product-operational-mode.md  # bloque generado renderer=modes-list
+
   # Próximos dominios a incorporar (pendientes):
-  #   product_modes     -> ProductOperationalProperties (PRELAUNCH/OPEN/...)
-  #   feature_flags     -> application.properties + config.env.example
-  #   gifts_split       -> reparto de gifts por tramo (ADR-056; hoy prosa caducada 90/10 en varios docs)
+  #   feature_flags  -> application.properties + config.env.example
+  #   gifts_split    -> HECHO como prosa (reparto por tramo, mismo % que streams); no es fuente propia.

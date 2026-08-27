@@ -38,10 +38,12 @@ Se introduce una capa nueva, **Product Operational Mode**, gobernada por una pro
 
 Una propiedad enum gobierna el estado global del producto:
 
+<!-- BEGIN generated:product-modes renderer=modes-list (no editar a mano; fuente docs/_data/product-modes.yaml) -->
 - **OPEN**: producto abierto normalmente. Comportamiento equivalente al actual.
 - **PRELAUNCH**: producto bloqueado para login, refresh, acceso REST funcional y WebSocket. Registro permitido si las flags de registro están a `true`. Email verification, forgot/reset password y backoffice siguen operando. Pensado para Fase 1 del roadmap en PRO.
 - **MAINTENANCE**: producto bloqueado temporalmente con semántica de "vuelve más tarde". Backoffice operativo. Registro según flags.
 - **CLOSED**: producto cerrado completamente. Registro también cerrado, independientemente de las flags. Backoffice operativo.
+<!-- END generated:product-modes -->
 
 ### Flags de registro
 

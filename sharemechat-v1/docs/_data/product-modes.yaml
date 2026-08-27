@@ -1,0 +1,34 @@
+# =============================================================================
+# FUENTE ÚNICA DE VERDAD — Modos operativos del producto (ADR-061 Motor 1 / ADR-009)
+# =============================================================================
+# La lista de modos y su significado se GENERA de aquí a los docs (ADR-009, etc.).
+# No edites esas listas a mano: edita este fichero y regenera con
+#   python3 sharemechat-v1/ops/facts/build_facts.py
+#
+# Ancla al sistema: los `code` deben coincidir EXACTAMENTE (y en orden) con el
+# enum ProductOperationalProperties.Mode. El test ProductModesSsotTest lo verifica
+# en CI: añadir/quitar/renombrar un modo en el enum sin tocar este fichero (o al
+# revés) hace fallar el build. El `meaning` es prosa mantenida a mano aquí (única).
+#
+# Gobierna la property product.access.mode (env PRODUCT_ACCESS_MODE). El modo por
+# rol (modelo) usa product.access.mode-model (PRODUCT_ACCESS_MODE_MODEL) con el
+# mismo juego de valores.
+# =============================================================================
+
+modes:
+  - code: OPEN
+    meaning: producto abierto normalmente. Comportamiento equivalente al actual.
+  - code: PRELAUNCH
+    meaning: >-
+      producto bloqueado para login, refresh, acceso REST funcional y WebSocket.
+      Registro permitido si las flags de registro están a `true`. Email verification,
+      forgot/reset password y backoffice siguen operando. Pensado para Fase 1 del
+      roadmap en PRO.
+  - code: MAINTENANCE
+    meaning: >-
+      producto bloqueado temporalmente con semántica de "vuelve más tarde".
+      Backoffice operativo. Registro según flags.
+  - code: CLOSED
+    meaning: >-
+      producto cerrado completamente. Registro también cerrado, independientemente
+      de las flags. Backoffice operativo.
