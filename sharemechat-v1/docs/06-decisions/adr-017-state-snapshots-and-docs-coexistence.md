@@ -16,7 +16,7 @@ El proyecto SharemeChat ha mantenido históricamente toda su documentación dura
 Esa mezcla genera dos problemas reales y observados durante 2026-04 y 2026-05:
 
 - **Drift constante**: los hechos crudos cambian con cada deploy, cada ajuste de nginx o cada migración SQL. La prosa narrativa que los menciona se queda desactualizada y nadie se entera hasta que aparece una incidencia.
-- **Auditorías post-hoc no escalan**: la solución intentada hasta ahora ha sido auditar puntualmente la documentación contra el código (`docs/_audit/doc-vs-code-gap-2026-05-07.md` y similares). Cada auditoría confirma que la documentación está desactualizada — y vuelve a estarlo en una semana.
+- **Auditorías post-hoc no escalan**: la solución intentada hasta ahora ha sido auditar puntualmente la documentación contra el código (`docs/_archive/_audit/doc-vs-code-gap-2026-05-07.md` y similares). Cada auditoría confirma que la documentación está desactualizada — y vuelve a estarlo en una semana.
 
 El 2026-05-09 se introdujo un nuevo sistema de **snapshots estructurados de estado** (skill `state-inventory` en `docs/_archive/state-inventory-skills/state-inventory.md`, ficheros YAML en `docs/_archive/_snapshots/`). Los snapshots son fuente de verdad fáctica: lista de cache behaviors, lista de estados que admite el `CHECK`, etc. Se generan con un agente que ejecuta comandos reales contra el sistema (AWS CLI, SSH a EC2, MySQL Shell vía túnel) y producen YAML saneado de IDs sensibles.
 
@@ -125,7 +125,7 @@ Esta invariante existe desde la primera versión de `state-inventory` y queda el
 
 ### Neutras
 
-- **Auditorías puntuales (`docs/_audit/`)** quedan como práctica residual. Se mantiene la carpeta como histórico, pero la auditoría continua pasa a ser responsabilidad de `state-diff` cuando exista. Decidir más adelante si `_audit/` se integra al governance o se archiva.
+- **Auditorías puntuales (`docs/_archive/_audit/`)** quedan como práctica residual. Se mantiene la carpeta como histórico, pero la auditoría continua pasa a ser responsabilidad de `state-diff` cuando exista. Decidir más adelante si `_audit/` se integra al governance o se archiva.
 
 ## Plan de implementación
 
@@ -142,7 +142,7 @@ Este ADR **no decide** sobre:
 
 - El contenido específico de la skill `state-diff` (su esquema, sus reglas de comparación, etc.). Eso será otro ADR cuando se diseñe.
 - La migración masiva de prosa a YAML. No habrá migración masiva: la prosa narrativa sigue siendo prosa.
-- El destino futuro de `docs/_audit/`: pendiente de revisar al construir `state-diff`.
+- El destino futuro de `docs/_archive/_audit/`: pendiente de revisar al construir `state-diff`.
 - La automatización del túnel SSH a RDS, la persistencia de `RDS_PASSWORD`, o el flujo operativo de `state-inventory`. Eso son optimizaciones operativas, no decisiones arquitectónicas.
 
 ## Referencias

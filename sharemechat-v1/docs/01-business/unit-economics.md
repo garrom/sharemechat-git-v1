@@ -128,7 +128,7 @@ Los bonos promocionales financiados por la plataforma se modelan como BFPM ([ADR
 
 ## Programa de afiliados (retirado)
 
-El programa de afiliadas modelos (30% revshare por cliente atribuido) queda **retirado** por [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) §D11. Aunque el reparto pasó de 75-79% a 50-60% con [ADR-056](../06-decisions/adr-056-sistema-master-studio.md), el %reparto sigue siendo competitivo frente al sector (LiveJasmin L1 30%, BongaCams ~35%) y no se justifica reintroducir el revshare de afiliadas. Ya no hay coste adicional de revshare a afiliados que restar del margen empresa. Ver [affiliate-program.md](affiliate-program.md) (stub de retirada) y [`../_deprecated/registro.md`](../_deprecated/registro.md) para el contenido histórico.
+El programa de afiliadas modelos (30% revshare por cliente atribuido) queda **retirado** por [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) §D11. Aunque el reparto pasó de 75-79% a 50-60% con [ADR-056](../06-decisions/adr-056-sistema-master-studio.md), el %reparto sigue siendo competitivo frente al sector (LiveJasmin L1 30%, BongaCams ~35%) y no se justifica reintroducir el revshare de afiliadas. Ya no hay coste adicional de revshare a afiliados que restar del margen empresa. Ver [affiliate-program.md](affiliate-program.md) (stub de retirada) y [`docs/_archive/_deprecated/registro.md`](docs/_archive/_deprecated/registro.md) para el contenido histórico.
 
 ## Estado de este documento
 

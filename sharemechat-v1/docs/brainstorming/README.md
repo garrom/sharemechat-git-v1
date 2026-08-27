@@ -10,7 +10,7 @@ Descubrir y refinar **en bucle** canales y tácticas **orgánicos** (~0€) para
 atraer **CLIENTES** que pagan por videochat 1-a-1 con modelos verificadas a
 sharemechat.com. Foco **exclusivo en clientes**, no en reclutar modelos.
 
-Distinción con el plan existente `docs/07-roadmap/plan-captacion-trafico-2026-q3.md`:
+Distinción con el plan existente `docs/_archive/07-roadmap/plan-captacion-trafico-2026-q3.md`:
 ese plan es **model-céntrico** (las modelos traen su audiencia). SEED explora el
 espacio complementario: **captación DIRECTA de clientes**, que ese plan apenas toca.
 

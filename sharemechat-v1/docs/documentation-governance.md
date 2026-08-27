@@ -321,7 +321,7 @@ Las plantillas `docs/templates/template-adr.md`, `template-environment.md` y `te
 
 Cuando una sección de un fichero vigente queda superseded (por un ADR nuevo, por un cambio de estrategia o por dejar de aplicar), no se elimina en silencio ni se deja en el fichero vigente contaminando la lectura. Se sigue este patrón:
 
-1. **Mover el contenido histórico a `docs/_deprecated/registro.md`** bajo un heading nuevo con el formato `## [fichero-origen.md] §"nombre sección"` seguido del texto íntegro retirado.
+1. **Mover el contenido histórico a `docs/_archive/_deprecated/registro.md`** bajo un heading nuevo con el formato `## [fichero-origen.md] §"nombre sección"` seguido del texto íntegro retirado.
 2. **En el fichero vigente**, sustituir el contenido retirado por un bloque de referencia:
 
 ```
@@ -335,7 +335,7 @@ Cuando una sección de un fichero vigente queda superseded (por un ADR nuevo, po
 
 Este patrón preserva el rastro de decisiones sin duplicar contenido activo y evita que las lecturas del corpus vigente se contaminen con paréntesis históricos sobre lo que ya no aplica.
 
-`docs/_deprecated/registro.md` es un fichero cronológico inverso (entradas más recientes arriba) y no tiene otra política de edición: cada retirada se registra en el mismo commit que la aplica.
+`docs/_archive/_deprecated/registro.md` es un fichero cronológico inverso (entradas más recientes arriba) y no tiene otra política de edición: cada retirada se registra en el mismo commit que la aplica.
 
 ## Regla final
 
