@@ -5,7 +5,7 @@ S3 (`sharemechat-frontend-prod/blog/`) y los renderiza con Puppeteer cada
 15 minutos. Auto-curativo, idempotente.
 
 Decisión arquitectónica: [ADR-042](../../../docs/06-decisions/adr-042-prerender-cron-on-backend-ec2.md).
-Informe del frente: [`docs/04-operations/prerender-cron-implementation-2026-06-25.md`](../../../docs/04-operations/prerender-cron-implementation-2026-06-25.md).
+Informe del frente: [`docs/_archive/04-operations/prerender-cron-implementation-2026-06-25.md`](../../../docs/_archive/04-operations/prerender-cron-implementation-2026-06-25.md).
 
 ## Layout en el repo
 

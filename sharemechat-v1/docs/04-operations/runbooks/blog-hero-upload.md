@@ -98,7 +98,7 @@ Borrar el fichero de `sharemechat-v1/ops/uploads-pending/blog/`. No commitear na
 
 - **`Cache-Control: immutable`** implica que cualquier reedición del hero debe invalidar CF sí o sí (o cambiar el nombre del fichero). Para artículos en producción, preferir cambiar el nombre (`<slug>-v2.webp`) y actualizar `article.heroImageUrl` en BD, no sobrescribir.
 - **Comilla curva en EXIF**: imágenes exportadas desde GIMP llevan EXIF + ICC sRGB. No se strippea — añade ~3 KB pero asegura color consistente cross-device. Si se quiere optimizar, `cwebp -metadata none` o `Image.save(..., exif=b'')` con Pillow.
-- **Vincular con el artículo**: tras subir, asegurarse de que el `ContentArticleEditor` apunta a la URL canónica en `heroImageUrl`. El render del blog usa este campo para `og:image` con dimensiones omitidas (ver [seo-prompt3-implementation-2026-06-23.md](../seo-prompt3-implementation-2026-06-23.md) sección B).
+- **Vincular con el artículo**: tras subir, asegurarse de que el `ContentArticleEditor` apunta a la URL canónica en `heroImageUrl`. El render del blog usa este campo para `og:image` con dimensiones omitidas (ver [seo-prompt3-implementation-2026-06-23.md](../../_archive/04-operations/seo-prompt3-implementation-2026-06-23.md) sección B).
 
 ## Histórico
 

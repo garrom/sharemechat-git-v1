@@ -44,6 +44,12 @@ EXCLUDE_DIRS = {
     "_archive", "_audit", "_deprecated",
 }
 
+# Ficheros que no se escanean (por basename). project-log.md es un DIARIO
+# append-only: sus entradas datadas enlazan a ficheros que legítimamente se
+# mueven/archivan con el tiempo; checar esos enlaces daria falsos positivos
+# perpetuos sin valor (nadie navega los enlaces antiguos del diario).
+EXCLUDE_FILES = {"project-log.md"}
+
 # Referencia a linea de codigo escrita como enlace: Foo.java:123 o Foo.jsx:12:5.
 LINENUM_SUFFIX_RE = re.compile(r":\d+(?::\d+)?$")
 
@@ -69,6 +75,8 @@ def iter_files(root, exts):
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if d not in EXCLUDE_DIRS]
         for fn in filenames:
+            if fn in EXCLUDE_FILES:
+                continue
             if fn.lower().endswith(exts):
                 yield os.path.join(dirpath, fn)
 
