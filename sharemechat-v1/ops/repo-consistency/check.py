@@ -96,13 +96,27 @@ class Finding:
         return f"[{self.check}] {self.file}:{self.line}  {self.msg}"
 
 
+def within_repo(abs_path):
+    """
+    True si abs_path cae DENTRO del repo. Cierra el bug cross-platform: un enlace
+    a una ruta absoluta de la maquina (p. ej. /C:/Users/... o rutas fuera del
+    arbol) existe en el Windows del dev pero no en el CI Linux. Se trata como roto
+    en ambos.
+    """
+    try:
+        return os.path.commonpath([os.path.abspath(abs_path), REPO_ROOT]) == REPO_ROOT
+    except ValueError:  # distinta unidad en Windows
+        return False
+
+
 def exists_cs(abs_path):
     """
-    Existencia SENSIBLE A MAYUSCULAS, incluso en Windows. El CI corre en Linux
-    (case-sensitive); sin esto, un enlace con el case equivocado pasaria en local
-    y fallaria en CI. Verifica el case exacto de cada componente desde la ruta
-    hasta REPO_ROOT usando os.listdir.
+    Existencia SENSIBLE A MAYUSCULAS y DENTRO del repo, igual en Windows y en el
+    CI Linux (case-sensitive; sin escapes fuera del arbol). Verifica el case exacto
+    de cada componente desde la ruta hasta REPO_ROOT usando os.listdir.
     """
+    if not within_repo(abs_path):
+        return False
     abs_path = os.path.normpath(abs_path)
     if not os.path.exists(abs_path):
         return False

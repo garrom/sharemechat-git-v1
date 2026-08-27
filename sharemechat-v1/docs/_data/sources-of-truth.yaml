@@ -1,0 +1,30 @@
+# =============================================================================
+# REGISTRO DE FUENTES DE VERDAD (ADR-061, "Facts as Code")
+# =============================================================================
+# Por cada dominio de HECHO del repo: dónde vive la verdad, qué la ancla a la
+# realidad ejecutable, y qué artefactos derivan de ella (generados, no tecleados).
+#
+# El Motor 1 (ops/facts/build_facts.py) regenera los `derived`. El `runtime_check`
+# es el test que verifica que la fuente == lo que corre el sistema (cierra el bucle).
+# El Motor 2 (ops/repo-consistency) vigila el resto del repo (prosa) contra podredumbre.
+#
+# Se va poblando dominio a dominio; la máquina (generador + puerta CI) ya es global.
+# =============================================================================
+
+domains:
+  pricing_tiers:
+    description: Tramos de precio y reparto de la modelo (T1–T4, régimen INDIVIDUAL).
+    source_of_truth: sharemechat-v1/docs/_data/pricing-tiers.yaml
+    runtime_anchor: >-
+      tabla model_pricing_tiers, filas vigentes (effective_to IS NULL,
+      target_type='INDIVIDUAL'); valores sembrados por la migración V42 (ADR-056).
+    runtime_check: sharemechat-v1/src/test/java/com/sharemechat/integration/PricingTiersSsotIntegrationTest.java
+    generated_by: sharemechat-v1/ops/facts/build_facts.py
+    derived:
+      - sharemechat-v1/support-kb/payout-y-tiers.md               # bloque generado renderer=kb-list
+      - sharemechat-v1/docs/01-business/sistema-tiers-modelos.md  # bloque generado renderer=md-table
+
+  # Próximos dominios a incorporar (pendientes):
+  #   product_modes     -> ProductOperationalProperties (PRELAUNCH/OPEN/...)
+  #   feature_flags     -> application.properties + config.env.example
+  #   gifts_split       -> reparto de gifts por tramo (ADR-056; hoy prosa caducada 90/10 en varios docs)

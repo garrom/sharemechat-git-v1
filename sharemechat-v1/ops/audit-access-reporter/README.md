@@ -103,4 +103,4 @@ Este componente es la tercera etapa del pipeline de auditoria de accesos:
 2. `audit-access-classifier`
 3. `audit-access-reporter`
 
-La vision end-to-end, la estrategia de fechas y la operacion diaria completa viven en [ops/audit-access/README.md](/C:/Users/alain/Desktop/ALAIN_Escritorio/INFORMATICA/EMPRENDIMIENTO/sharemechat-git-v1/sharemechat-v1/ops/audit-access/README.md).
+La vision end-to-end, la estrategia de fechas y la operacion diaria completa viven en [ops/audit-access/README.md](../audit-access/README.md).

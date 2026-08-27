@@ -1,0 +1,50 @@
+# =============================================================================
+# FUENTE ÚNICA DE VERDAD — Tramos de precio/reparto de la modelo (ADR-061, Motor 1)
+# =============================================================================
+# Este fichero es la ÚNICA fuente de los tramos (tiers) de la modelo. Todo lo que
+# los menciona (KB del Agente IA, docs de negocio, tablas financieras) se GENERA
+# de aquí — no se teclea. No edites las tablas de esos docs a mano: edita este
+# fichero y regenera con:  python3 sharemechat-v1/ops/facts/build_facts.py
+#
+# Debe coincidir con lo que corre el sistema: las filas vigentes
+# (effective_to IS NULL, target_type='INDIVIDUAL') de la tabla model_pricing_tiers.
+# Un test de integración (PricingTiersSsotIT) verifica esa igualdad en CI: si una
+# migración cambia el pricing y este fichero no, o al revés, el CI falla.
+#
+# Régimen MASTER: retirado (migración V43, ADR-056 D4). El Master cobra la suma
+# de los pagos individuales al % del tramo INDIVIDUAL de cada modelo; no hay
+# tramos MASTER propios vigentes. Si se reactiva el régimen dual, se añade aquí.
+#
+# Origen de los valores actuales: migración V42 (ADR-056, 2026-07-29).
+# =============================================================================
+
+regime: INDIVIDUAL
+currency: EUR
+rate_unit: eur_per_minute          # tarifa en euros por minuto
+threshold_unit: eur_gross_30d      # umbral en euros de facturación bruta, ventana móvil
+window_days: 30
+
+# Regla de tarifa por sesión: el PRIMER minuto va a rate_first, el RESTO a rate_rest.
+# El tier se recalcula a diario sobre la facturación bruta de los últimos 30 días;
+# sube y baja solo al cruzar los umbrales.
+tiers:
+  - code: T1
+    threshold_eur_30d: 0
+    model_share_pct: 50
+    rate_first_eur: 1.00
+    rate_rest_eur: 1.00
+  - code: T2
+    threshold_eur_30d: 1000
+    model_share_pct: 54
+    rate_first_eur: 1.00
+    rate_rest_eur: 3.00
+  - code: T3
+    threshold_eur_30d: 4000
+    model_share_pct: 57
+    rate_first_eur: 1.00
+    rate_rest_eur: 6.00
+  - code: T4
+    threshold_eur_30d: 15000
+    model_share_pct: 60
+    rate_first_eur: 1.00
+    rate_rest_eur: 9.00

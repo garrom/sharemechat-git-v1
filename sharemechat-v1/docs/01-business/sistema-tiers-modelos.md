@@ -25,12 +25,14 @@ Adicionalmente, la modelo puede activar **Estatus Pro** al superar 1.500 €/mes
 
 ## 2. Los 4 tramos — tabla de referencia
 
-| Tramo | Facturación bruta acumulada (rolling 30d) | % modelo | % empresa (bruto) | Rango precio / min |
+<!-- BEGIN generated:pricing-tiers renderer=md-table (no editar a mano; fuente docs/_data/pricing-tiers.yaml) -->
+| Tramo | Facturación bruta (rolling 30d) | % modelo | % empresa | Rango €/min |
 |---|---|---:|---:|---|
-| **T1** (entrada) | 0 – 1.000 € | **50%** | 50% | **1 €/min fijo** |
-| **T2** | > 1.000 € | **54%** | 46% | 1 – 3 €/min |
-| **T3** | > 4.000 € | **57%** | 43% | 1 – 6 €/min |
-| **T4** | > 15.000 € | **60%** | 40% | 1 – 9 €/min |
+| T1 | desde 0 € | 50% | 50% | 1 €/min fijo |
+| T2 | desde 1.000 € | 54% | 46% | 1 – 3 €/min |
+| T3 | desde 4.000 € | 57% | 43% | 1 – 6 €/min |
+| T4 | desde 15.000 € | 60% | 40% | 1 – 9 €/min |
+<!-- END generated:pricing-tiers -->
 
 - **Umbral T4 es el más alto configurado hoy**. El techo de precio (€9/min) es una property configurable (`billing.pricing.rate-max-eur-per-min=9.00`); ampliaciones futuras a €15/min o superiores no requieren migration, solo cambio de property + fila de `model_pricing_tiers` para el rango.
 - **Los umbrales de reparto y de precio comparten los mismos escalones** (€1.000, €4.000, €15.000): cada desbloqueo de precio viene acompañado de mejora de reparto. Un solo gráfico comunica ambas dimensiones.
