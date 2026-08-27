@@ -744,7 +744,7 @@ Las cuatro líneas comparten haber sido levantadas conversacionalmente durante l
 
 ## Parte 6 — Frentes derivados del brainstorming 2026-08-08 (A0004 / A0005 / A0006)
 
-Levantados en la sesión de brainstorming del 2026-08-08 (ver `docs/brainstorming/artifacts/A0004.md`, `A0005.md`, `A0006.md` — plan Founding Models + copy captación + plan orgánico US). Todos habilitadores directos del arranque comercial real; ninguno puramente técnico.
+Levantados en la sesión de brainstorming del 2026-08-08 (ver `docs/_archive/brainstorming/artifacts/A0004.md`, `A0005.md`, `A0006.md` — plan Founding Models + copy captación + plan orgánico US). Todos habilitadores directos del arranque comercial real; ninguno puramente técnico.
 
 ### 6.1 Habilitar Madagascar en allowlist de registro modelo — PRIORIDAD ALTA
 
@@ -786,7 +786,7 @@ Sub-tareas:
 
 ### 6.4 Founding Models — reclutamiento cohorte fundadora (bloque estratégico, requiere decisión operador)
 
-**Contexto (A0004 + A0005)**: propuesta cerrada de reclutar 5-10 modelos colombianas verificadas con estatus fundadora (70% forever + destacado + badge) comprometidas a franja Américas (~19:00-23:00 COT). 3 modelos ya identificadas por contacto personal (1 colombiana + 2 malgaches — MG bloqueado por 6.1). Copy WhatsApp/DM y anuncio reclutamiento listos en `docs/brainstorming/artifacts/A0005.md`.
+**Contexto (A0004 + A0005)**: propuesta cerrada de reclutar 5-10 modelos colombianas verificadas con estatus fundadora (70% forever + destacado + badge) comprometidas a franja Américas (~19:00-23:00 COT). 3 modelos ya identificadas por contacto personal (1 colombiana + 2 malgaches — MG bloqueado por 6.1). Copy WhatsApp/DM y anuncio reclutamiento listos en `docs/_archive/brainstorming/artifacts/A0005.md`.
 
 **Requiere decisión operador (fuera de mandato técnico)**:
 
