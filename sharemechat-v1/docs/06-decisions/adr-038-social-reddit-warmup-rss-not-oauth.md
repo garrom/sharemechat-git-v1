@@ -115,4 +115,4 @@ Descrita en "Decisión" arriba. Se elige porque:
 
 - **FASE 0 / FASE 0 bis** (ya hechas, esta sesión y la previa): investigación + pivots de backend (Cowork fetch → OAuth → RSS).
 - **FASE 2A** (esta sesión): script `social-thread-finder.ps1` + ADR-038 + README operativo.
-- **FASE 2B** (próxima sesión): skill nueva `social-comment-helper` en `docs/social/skills/` + extensión del contrato del `social-orchestrator` con modo `thread_comment` + posibles ajustes a `social-phase-gate` y `social-brand-legal-review` para el caso "comentario en thread ajeno".
+- **FASE 2B** (próxima sesión): skill nueva `social-comment-helper` en `docs/_archive/social/skills/` + extensión del contrato del `social-orchestrator` con modo `thread_comment` + posibles ajustes a `social-phase-gate` y `social-brand-legal-review` para el caso "comentario en thread ajeno".

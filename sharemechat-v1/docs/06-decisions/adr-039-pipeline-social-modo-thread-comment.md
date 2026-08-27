@@ -23,7 +23,7 @@ Añadir un **modo `thread_comment`** al pipeline social-ops, distinto del modo h
 
 1. **Discriminador en el contrato del orchestrator**: campo `modo` con valores `post_propio` (default, mantiene el flujo histórico intacto) o `thread_comment` (activa el sub-flujo nuevo).
 
-2. **Dos skills nuevas en `docs/social/skills/`**:
+2. **Dos skills nuevas en `docs/_archive/social/skills/`**:
    - **`social-thread-finder`**: ejecuta el script `social-thread-finder.ps1`, presenta candidatos al operador con envoltorio instructivo de cómo elegir, parsea la respuesta del operador con regex `r/(\w+)\s*#\s*(\d+)` y devuelve al orchestrator la lista de threads elegidos.
    - **`social-comment-helper`**: para cada thread elegido genera 2 variantes (A recomendada, B alternativa) con voz casual, sin marca, sin links, max 250 chars, max 3 frases. Output en el formato fijo del § 3.B (code fences aislados, metadata inline, checklist con checkbox, justificación en `<details>`).
 
@@ -91,7 +91,7 @@ Descrita en "Decisión" arriba. Se elige porque:
 ### Negativas
 
 - Requiere **2 invocaciones de Cowork por sesión** (descubrir + redactar). Esto es coherente con el principio rector pero añade overhead operativo: el operador no termina una sesión con un solo "ejecuta el pipeline".
-- La voz nueva "comentarios en threads ajenos" se añade a `sharemechat-voice` (skill transversal en `docs/cms/skills/`). Cualquier ajuste posterior de esa voz cruza dominio CMS ↔ social. Mitigación aceptada: la skill `sharemechat-voice` ya era transversal por diseño.
+- La voz nueva "comentarios en threads ajenos" se añade a `sharemechat-voice` (skill transversal en `docs/_archive/cms/skills/`). Cualquier ajuste posterior de esa voz cruza dominio CMS ↔ social. Mitigación aceptada: la skill `sharemechat-voice` ya era transversal por diseño.
 - El campo `commented_threads` empieza vacío y solo se llena con el uso real. Esto significa que la heurística "ya comenté en este thread, no proponerlo de nuevo" del finder no aplica hasta que el packager registre al menos un comentario. Mitigación: en la práctica el finder devuelve threads hot recientes (max 24 h en r/AskReddit), por lo que el solapamiento con threads ya comentados es bajo en uso normal.
 
 ## Relación con otras ADRs

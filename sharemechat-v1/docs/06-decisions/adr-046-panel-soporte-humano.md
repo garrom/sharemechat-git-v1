@@ -152,4 +152,4 @@ Ver entrada correspondiente en `docs/04-operations/known-debt.md` (2026-07-08).
   - **TEST**: V15 aplicada (commit `287f8c2`), JAR desplegado (`sha256=71ccb203…`, HEAD `d8d5b90`), bundle admin desplegado (`main.bebe34ed.js`, `sha256=b6e4437c…`). Manifest `ops/deploy-state/test.yaml` regularizado. Sin smoke funcional automático; validación manual pendiente por el operador.
   - **AUDIT**: NO desplegado. Backend en `074cb69` (nivelación post ADR-045, 2026-07-06), schema en V14. Requiere replicar V15 (túnel bastion + `mysqlsh`), scp del JAR y deploy admin.
   - **PROD**: NO desplegado. Backend en `5cdda0c` (hardening coming-soon, 2026-07-06), schema en V14. Mismos pasos de replicación cuando el operador decida el corte.
-- Snapshot factual de la ventana operativa: `docs/_snapshots/state-test-2026-07-08-1900.yaml`.
+- Snapshot factual de la ventana operativa: `docs/_archive/_snapshots/state-test-2026-07-08-1900.yaml`.

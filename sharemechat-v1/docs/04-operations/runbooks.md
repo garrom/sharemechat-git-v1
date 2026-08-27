@@ -328,7 +328,7 @@ La regla aplicada en el repositorio es:
 
 Si una salida temporal del pipeline necesitara conservarse como evidencia de una decisión o incidencia, el procedimiento correcto es:
 
-1. archivar esa salida como anexo de un documento durable (`docs/04-operations/incident-notes.md` o similar) **resumiendo el contenido**, no copiando el blob completo
+1. archivar esa salida como anexo de un documento durable (`docs/_archive/04-operations/incident-notes.md` o similar) **resumiendo el contenido**, no copiando el blob completo
 2. nunca dejar el directorio `tmp-*` en el árbol con la intención de "documentar después"
 3. si la salida es sensible (IPs, identificadores reales), aplicar la regla de saneado de gobierno documental antes de archivar
 

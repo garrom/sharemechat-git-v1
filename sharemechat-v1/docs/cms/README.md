@@ -11,7 +11,7 @@ que deben permanecer junto al producto pero fuera del código.
 
 ## Subdirectorios
 
-- [skills/](skills/) — versionado de las skills personales de Claude Cowork
+- [skills/](docs/_archive/cms/skills/) — versionado de las skills personales de Claude Cowork
   que el flujo `FULL_ARTICLE_ORCHESTRATED` invoca como pipeline editorial
   multi-rol. Ver [ADR-014](../06-decisions/adr-014-full-article-orchestrated-pipeline.md).
 

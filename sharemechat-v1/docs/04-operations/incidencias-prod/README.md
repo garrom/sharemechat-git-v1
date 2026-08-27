@@ -3,7 +3,7 @@
 > Cuaderno vivo de incidencias de producción. Aquí se acumula, poco a poco,
 > **conocimiento teórico** (cómo actuar), **casos reales** (qué pasó y cómo se
 > resolvió) y **técnicas** (cómo investigar con lo que tenemos). No es un log
-> cronológico seco (para eso está [`incident-notes.md`](../incident-notes.md));
+> cronológico seco (para eso está [`incident-notes.md`](docs/_archive/04-operations/incident-notes.md));
 > es el manual que consultas cuando algo se rompe y el sitio donde documentas un
 > caso con suficiente detalle para no repetirlo.
 
@@ -142,7 +142,7 @@ Casos ya documentados en otros sitios, para migrar/enlazar cuando toque:
 
 ## Enlaces relacionados
 
-- [`incident-notes.md`](../incident-notes.md) — notas cronológicas de incidentes.
+- [`incident-notes.md`](docs/_archive/04-operations/incident-notes.md) — notas cronológicas de incidentes.
 - [`known-risks.md`](../known-risks.md) · [`known-debt.md`](../known-debt.md) — riesgos y deuda conocidos.
 - [`runbooks.md`](../runbooks.md) — procedimientos (despliegue, etc.).
 - [`access-and-tooling.md`](../access-and-tooling.md) — accesos (SSH, BD, GA4).

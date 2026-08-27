@@ -49,9 +49,33 @@ No hay lectura obligatoria global. Carga el contexto mínimo según el frente:
 | Despliegue, runbooks, incidentes, riesgos | `docs/04-operations/` |
 | Backoffice y permisos | `docs/05-backoffice/` |
 | Decisiones pasadas | `docs/06-decisions/` |
-| Prioridades y fase actual | `docs/07-roadmap/current-phase.md` + `pending-hardening.md` |
+| Prioridades, estado y fase | `docs/07-roadmap/backlog-priorizado.md` (**única fuente de estado**; `current-phase.md`/`pending-hardening.md` son narrativa) |
 
-Los antiguos apéndices de raíz `shareme-context.md` (stub puntero) y `shareme-aws-context.md` (inventario de IDs AWS) están **archivados** en `docs/_archive/context-overview-inactive/` desde 2026-05-27. Para identificar un recurso concreto de PROD, usar el snapshot más reciente en `docs/_snapshots/` y el `state-mapping` local (`~/.sharemechat/state-mapping.yaml`), que son la fuente viva y actualizada; `shareme-aws-context.md` quedó obsoleto (pre-frente PRO).
+Los antiguos apéndices de raíz `shareme-context.md` y `shareme-aws-context.md` están **archivados** en `docs/_archive/context-overview-inactive/`. Para identificar un recurso concreto de PROD, usar el `state-mapping` local (`~/.sharemechat/state-mapping.yaml`), que es la fuente viva; los snapshots de `docs/_archive/_snapshots/` son históricos (el inventariado periódico está inactivo).
+
+---
+
+## Dónde se documenta cada cosa (ESCRITURA)
+
+`docs/` está **congelado para notas de un momento**: NO se crean docs nuevos de snapshot, investigación, as-built ni diagnóstico. El trabajo terminado se cierra en su estructura viva (backlog + bitácora). Cuando se pida "documenta esto", el destino es **inequívoco**:
+
+| Qué registrar | Sitio ÚNICO |
+|---|---|
+| Decisión (elegir A sobre B, patrón, integración, estrategia) | ADR nuevo en `docs/06-decisions/` |
+| Cambio de arquitectura/técnico ya decidido | doc vivo en `docs/02-architecture/` (el porqué va en el ADR) |
+| Cambio funcional / de negocio (roles, onboarding, compliance) | `docs/01-business/` (+ `docs/05-backoffice/`) |
+| Cambio de comportamiento de un entorno | `docs/03-environments/` |
+| Un **DATO** del sistema (precio, %, flag, modo, umbral) | NO en prosa → fuente única `docs/_data/*.yaml` + generado (Motor 1, ADR-061) |
+| Idea / mejora futura / nueva prioridad / estado de fase | `docs/07-roadmap/backlog-priorizado.md` (única fuente de estado; verificar contra CÓDIGO) |
+| Deuda técnica (refactor, atajo) | `docs/04-operations/known-debt.md` |
+| Riesgo conocido (algo que puede fallar) | `docs/04-operations/known-risks.md` |
+| Incidencia / problema operativo (sobre todo PROD) | `docs/04-operations/incidencias-prod/` |
+| Cómo operar algo (procedimiento repetible) | `docs/04-operations/runbooks/` |
+| Hito / paquete cerrado / aprendizaje duradero | `docs/project-log.md` (bitácora — el porqué, no el qué) |
+| Contexto para Claude en futuras sesiones (preferencia, gotcha) | memoria de Claude (no docs) |
+| Skill nueva/modificada | `.claude/skills/` (la skill ES la fuente; `docs/` NO lleva copia) |
+
+Detalle y política de la bitácora en `docs/documentation-governance.md`. Ante duda de si un hito merece bitácora, preguntar al operador.
 
 ---
 

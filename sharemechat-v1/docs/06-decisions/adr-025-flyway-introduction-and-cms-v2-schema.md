@@ -150,7 +150,7 @@ Paquetes siguientes (fuera del alcance de esta ADR, secuenciales):
 ## Deudas registradas
 
 - **Endpoints CMS rotos durante la ventana paquete 1 → paquete 5**. Asumido y finalizado conforme se mergeen los paquetes siguientes.
-- **`cms-orchestrator` skill no versionada** en `docs/cms/skills/`. Heredada de [ADR-023](./adr-023-bilingual-editorial-pipeline-es-en.md). Pendiente.
+- **`cms-orchestrator` skill no versionada** en `docs/_archive/cms/skills/`. Heredada de [ADR-023](./adr-023-bilingual-editorial-pipeline-es-en.md). Pendiente.
 - **`sharemechat-voice` necesita sección EN** para coherencia editorial bilingüe. Pendiente, lo redacta el operador antes del primer run productivo bilingüe.
 - **Procedimiento de aplicación de futuras migraciones Flyway** más allá del runbook one-shot de este paquete: cuándo aplicar, cómo coordinar con deploy, quién valida. Sub-pasada operativa futura.
 - **Política de generación periódica de `V1__baseline.sql`**: si se acumulan muchas migraciones sobre tablas no-CMS, conviene regenerar el baseline periódicamente para acortar la cadena `V1→V2→...→VN` que ejecutará PRO al lanzarse. Sub-pasada futura.

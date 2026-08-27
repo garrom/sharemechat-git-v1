@@ -64,7 +64,7 @@ run type `FULL_ARTICLE`. La infraestructura técnica del CMS no cambia.
 
 `FULL_ARTICLE_ORCHESTRATED` delega el pipeline en seis skills personales
 versionadas (en stubs) bajo
-[`docs/cms/skills/`](../cms/skills/):
+[`docs/_archive/cms/skills/`](docs/_archive/cms/skills/):
 
 | Orden | Skill | Artefactos en `working_dir/` |
 |------:|-------|------------------------------|
@@ -169,7 +169,7 @@ dominio editorial (`ContentArticleService`, workflow, versions, events).
 
 - **Versionado real del know-how editorial**: las decisiones de voz, SEO y
   fact-check viven donde son editables sin recompilar el backend (skills
-  personales + stubs en `docs/cms/skills/`), no enterradas en código Java.
+  personales + stubs en `docs/_archive/cms/skills/`), no enterradas en código Java.
 - **Pipeline más corto en el prompt**: el `ContentPromptBuilder` reduce
   drásticamente la sección dedicada al pipeline; las skills llevan el peso.
   El prompt resultante es más mantenible y menos frágil ante cambios.
@@ -191,11 +191,11 @@ dominio editorial (`ContentArticleService`, workflow, versions, events).
 - **Dependencia operativa de las skills personales del editor**: si un
   editor nuevo no tiene cargadas las seis skills en su Cowork, el pipeline
   no se ejecuta correctamente. Mitigación: stubs versionados en
-  `docs/cms/skills/` con instrucciones para sincronizar.
+  `docs/_archive/cms/skills/` con instrucciones para sincronizar.
 - **Ventana de inconsistencia entre skills personales y stubs versionados**:
   una skill puede evolucionar en Cowork sin que se actualice el stub en el
   repo (y viceversa). Mitigación: convención en
-  [`docs/cms/skills/README.md`](../cms/skills/README.md) de commitear el
+  [`docs/_archive/cms/skills/README.md`](docs/_archive/cms/skills/README.md) de commitear el
   stub cuando se cambia la skill, con mensaje explícito (`cms: bump
   cms-research-seo skill (motivo)`).
 - **Trazabilidad parcial del pipeline**: los artefactos intermedios viven
@@ -253,7 +253,7 @@ decisión explícita de activar `MODE_API_HYBRID`.
 ## Pendiente residual
 
 - **Sincronizar el cuerpo de los stubs**: los seis ficheros bajo
-  `docs/cms/skills/*.md` se han creado con frontmatter (`name:`,
+  `docs/_archive/cms/skills/*.md` se han creado con frontmatter (`name:`,
   `description:`) y un placeholder `TODO: pegar contenido de la skill
   personal`. El editor responsable los completa con el cuerpo real de cada
   skill antes del primer run productivo en TEST. Hasta entonces, la

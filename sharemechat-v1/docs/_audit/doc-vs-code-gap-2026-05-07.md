@@ -43,14 +43,14 @@ No se han identificado drifts conceptuales relevantes entre la doc y el código 
 
 - Documento: [adr-004-turn-ice-strategy-for-cross-network-webrtc.md](sharemechat-v1/docs/06-decisions/adr-004-turn-ice-strategy-for-cross-network-webrtc.md).
 - Qué afirma que ya no aplica: el campo "Estado" sigue diciendo "Propuesta", y la sección "Pendiente tras esta decision" describe trabajo futuro sobre contrato backend ICE, sustitución de TURN público estático y observabilidad de relay.
-- Evidencia: el contrato backend ICE existe en [WebRtcConfigController.java](sharemechat-v1/src/main/java/com/sharemechat/controller/WebRtcConfigController.java) y [WebRtcProperties.java](sharemechat-v1/src/main/java/com/sharemechat/config/WebRtcProperties.java); el frontend lo consume vía [webrtcConfig.js](sharemechat-v1/frontend/src/realtime/webrtcConfig.js); la fase TURN propio está validada en AUDIT y TEST con `candidateType=relay` y selected pair `relay (TURN)` (ver [audit.md](sharemechat-v1/docs/03-environments/audit.md) y [incident-notes.md](sharemechat-v1/docs/04-operations/incident-notes.md) §"WebRTC roto en TEST por cableado de properties y host TURN apagado").
+- Evidencia: el contrato backend ICE existe en [WebRtcConfigController.java](sharemechat-v1/src/main/java/com/sharemechat/controller/WebRtcConfigController.java) y [WebRtcProperties.java](sharemechat-v1/src/main/java/com/sharemechat/config/WebRtcProperties.java); el frontend lo consume vía [webrtcConfig.js](sharemechat-v1/frontend/src/realtime/webrtcConfig.js); la fase TURN propio está validada en AUDIT y TEST con `candidateType=relay` y selected pair `relay (TURN)` (ver [audit.md](sharemechat-v1/docs/03-environments/audit.md) y [incident-notes.md](sharemechat-v1/docs/_archive/04-operations/incident-notes.md) §"WebRTC roto en TEST por cableado de properties y host TURN apagado").
 - Acción sugerida: cambiar estado a "Aceptada e implementada" (alineado con [ADR-005](sharemechat-v1/docs/06-decisions/adr-005-turn-deployment-strategy-by-environment.md)) y mover el bloque "Pendiente" a "Pendiente residual" o eliminarlo si los puntos ya están cubiertos.
 - Severidad: media.
 
 #### S2 — ADR-005 marcado "Propuesta" pero TURN mínimo ya operativo en AUDIT y TEST
 
 - Documento: [adr-005-turn-deployment-strategy-by-environment.md](sharemechat-v1/docs/06-decisions/adr-005-turn-deployment-strategy-by-environment.md).
-- Qué afirma que ya no aplica: estado "Propuesta", aunque el despliegue mínimo TURN ya está cerrado a nivel operativo en AUDIT (gestión por systemd, certificado válido, evidencia frontend de relay) y replicado en TEST (ver [audit-environment-plan.md](sharemechat-v1/docs/07-roadmap/audit-environment-plan.md) §"Cierre de fase en AUDIT" e [incident-notes.md](sharemechat-v1/docs/04-operations/incident-notes.md) §"WebRTC roto en TEST...").
+- Qué afirma que ya no aplica: estado "Propuesta", aunque el despliegue mínimo TURN ya está cerrado a nivel operativo en AUDIT (gestión por systemd, certificado válido, evidencia frontend de relay) y replicado en TEST (ver [audit-environment-plan.md](sharemechat-v1/docs/07-roadmap/audit-environment-plan.md) §"Cierre de fase en AUDIT" e [incident-notes.md](sharemechat-v1/docs/_archive/04-operations/incident-notes.md) §"WebRTC roto en TEST...").
 - Evidencia: [audit.md](sharemechat-v1/docs/03-environments/audit.md) §"TURN minimo operativo" y [test-levelling-plan.md](sharemechat-v1/docs/07-roadmap/test-levelling-plan.md) Fase 3.
 - Acción sugerida: cambiar estado a "Aceptada e implementada en AUDIT y TEST; PRO inicial pendiente".
 - Severidad: media.
@@ -67,7 +67,7 @@ No se han identificado drifts conceptuales relevantes entre la doc y el código 
 
 #### O1 — `incident-notes.md` filtra IDs de CloudFront, EIP y deny list de IPs públicas
 
-- Documento: [incident-notes.md](sharemechat-v1/docs/04-operations/incident-notes.md).
+- Documento: [incident-notes.md](sharemechat-v1/docs/_archive/04-operations/incident-notes.md).
 - Tipo de exposición: IDs cloud (distribuciones CloudFront), IP elástica, lista de IPs públicas de terceros usada como ejemplo de deny list.
 - Cita o referencia: §"WebSocket /messages inestable en TEST por AllowedMethods restringidos en CloudFront" expone "distribucion: `[REDACTED-CF-ID-TEST]`", "CloudFront TEST (`[REDACTED-CF-ID-TEST]`) behavior `/messages*`" y "CloudFront AUDIT (`[REDACTED-CF-ID-AUDIT]`)"; §"WebRTC roto en TEST por cableado de properties y host TURN apagado" expone "EC2... `[REDACTED-EC2-NAME]`, EIP `[REDACTED-EIP]`"; §"Pipeline desacoplado..." ⇒ deny list real con cuatro IPs `[REDACTED]/32` y referencia a `[REDACTED-IP]/32` clasificada como MALICIOSA.
 - Acción sugerida según regla de saneado: sustituir por nombres lógicos ("distribución pública del entorno TEST", "distribución pública del entorno AUDIT", "EIP del servidor TURN del entorno TEST", "deny list operativa del pipeline perimetral"). Mantener la incidencia narrativa intacta; sólo retirar los identificadores concretos. La traza exacta de IPs y CF-IDs vive en la fuente operativa fuera del repo.
@@ -99,7 +99,7 @@ Esta lista evita que el lector piense que se han pasado por alto.
 - Backoffice + permisos + audit log ([ADR-001](sharemechat-v1/docs/06-decisions/adr-001-dual-surface-react.md), [permissions-model.md](sharemechat-v1/docs/05-backoffice/permissions-model.md), [admin-operations.md](sharemechat-v1/docs/05-backoffice/admin-operations.md)) ✓
 - I18n compartido producto/admin ([ADR-006](sharemechat-v1/docs/06-decisions/adr-006-shared-i18n-strategy-product-backoffice.md)) coincide con [i18n/index.js](sharemechat-v1/frontend/src/i18n/index.js) y locales ES/EN ✓
 - Frontend dual surface + acoplamiento a TEST ya documentado como riesgo en [frontend-architecture.md](sharemechat-v1/docs/02-architecture/frontend-architecture.md) y [known-risks.md](sharemechat-v1/docs/04-operations/known-risks.md) ✓
-- Pipeline perimetral AUDIT (normalizer/classifier/reporter/blocker) coincide con [ops/](sharemechat-v1/ops/) y con la sección correspondiente de [incident-notes.md](sharemechat-v1/docs/04-operations/incident-notes.md) ✓
+- Pipeline perimetral AUDIT (normalizer/classifier/reporter/blocker) coincide con [ops/](sharemechat-v1/ops/) y con la sección correspondiente de [incident-notes.md](sharemechat-v1/docs/_archive/04-operations/incident-notes.md) ✓
 
 ## Recomendaciones de orden de actuación
 

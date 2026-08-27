@@ -7,7 +7,7 @@
 El run type `FULL_ARTICLE` con pipeline editorial monolítico inline en un
 único prompt deja de estar soportado. Lo sustituye `FULL_ARTICLE_ORCHESTRATED`,
 que delega el pipeline en seis skills personales versionadas en
-[`docs/cms/skills/`](../cms/skills/). Los runs históricos creados con
+[`docs/_archive/cms/skills/`](docs/_archive/cms/skills/). Los runs históricos creados con
 `prompt_template_id="FULL_ARTICLE/v1"` se conservan en
 `content_generation_runs` como traza auditable; solo se prohíben runs
 **nuevos** con ese tipo. Los umbrales de validación reforzada (≥5 sources,
