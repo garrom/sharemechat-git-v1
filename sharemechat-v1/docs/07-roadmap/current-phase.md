@@ -173,7 +173,7 @@ Secuencia planificada (4 sub-frentes, orden 1→2→3, 4 en paralelo a 3):
 1. **Sub-frente 1: Fase B documental** — HECHO (2026-07-24)
    - Reescritura completa de [`../01-business/sistema-tiers-modelos.md`](../01-business/sistema-tiers-modelos.md), [`../01-business/pricing.md`](../01-business/pricing.md), [`../01-business/unit-economics.md`](../01-business/unit-economics.md).
    - Actualización parcial de [`../01-business/business-model.md`](../01-business/business-model.md), [`../01-business/launch-strategy.md`](../01-business/launch-strategy.md), [`../01-business/model-profile-strategy.md`](../01-business/model-profile-strategy.md).
-   - Actualización del plan de captación [`plan-captacion-trafico-2026-q3.md`](plan-captacion-trafico-2026-q3.md) marcando palanca P3 (programa de afiliados) como RETIRADA con re-cálculo de horas y métricas.
+   - Actualización del plan de captación [`plan-captacion-trafico-2026-q3.md`](docs/_archive/07-roadmap/plan-captacion-trafico-2026-q3.md) marcando palanca P3 (programa de afiliados) como RETIRADA con re-cálculo de horas y métricas.
    - `affiliate-program.md` movido a `_deprecated/registro.md` con stub de retirada en el fichero original.
    - Cabeceras de ADRs anteriores actualizadas: ADR-049 SUPERSEDED por ADR-052, ADR-043 §1 y §4 parcialmente superseded por ADR-052.
    - Actualización de deudas conocidas en [`../04-operations/known-debt.md`](../04-operations/known-debt.md) (cancelación de deudas #D-18/19/20/21/22/23 del ADR-049 + añadir deuda nueva de rediseño packs premium).

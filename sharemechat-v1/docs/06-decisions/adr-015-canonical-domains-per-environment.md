@@ -26,7 +26,7 @@ hace tiempo, repartida entre varias capas:
   reutiliza desde los tres entornos sin variación.
 
 La auditoría
-[doc-vs-code-gap-2026-05-07](../_audit/doc-vs-code-gap-2026-05-07.md) detectó
+[doc-vs-code-gap-2026-05-07](docs/_archive/_audit/doc-vs-code-gap-2026-05-07.md) detectó
 que la decisión efectiva nunca quedó escrita: `production.md` se mantenía
 deliberadamente sobrio sin fijar host PRO, `shareme-context-overview.md` solo
 listaba los hosts de TEST y AUDIT y el roadmap (`go-live-roadmap.md`)

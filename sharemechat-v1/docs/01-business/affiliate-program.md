@@ -1,7 +1,7 @@
 # Programa de afiliados
 
 > Estado: **RETIRADO** por [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) §D11 (2026-07-24).
-> Contenido histórico en [_deprecated/registro.md](../_deprecated/registro.md).
+> Contenido histórico en [_deprecated/registro.md](docs/_archive/_deprecated/registro.md).
 
 El programa de afiliadas internas (30% revshare por cliente atribuido a la modelo referidora) queda **eliminado por completo**. Su función incentivadora la cubre el reparto escalonado a la modelo, **hoy 50-60%** del bruto (ver [sistema-tiers-modelos.md](sistema-tiers-modelos.md)), muy por encima del sector.
 

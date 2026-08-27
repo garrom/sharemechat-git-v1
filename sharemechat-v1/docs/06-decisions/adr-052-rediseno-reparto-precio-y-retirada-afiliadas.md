@@ -273,12 +273,12 @@ Ficheros business que quedan superseded o requieren reescritura en Fase B poster
 - **`sistema-tiers-modelos.md`**: reescritura completa. Los 3 tiers desaparecen. Se sustituye por sistema de 4 tramos + rango de precio + Estatus Pro.
 - **`pricing.md`**: reescritura. Precio deja de ser plano €1/min.
 - **`unit-economics.md`**: reescritura. Reparto se cierra por primera vez (75/77/78/79). Fees PSP se aproximan con NOWPayments (~1%) y tarjeta (~10-15%) como aproximaciones vigentes de ADR-051 y del frente de negociación PSP tarjeta abierto.
-- **`affiliate-program.md`**: **DEPRECATED**. Mover a `docs/_deprecated/` con nota y referencia a ADR-052.
+- **`affiliate-program.md`**: **DEPRECATED**. Mover a `docs/_archive/_deprecated/` con nota y referencia a ADR-052.
 - **`business-model.md`**: actualización de la sección de reparto y de la retirada del programa de afiliadas.
 - **`launch-strategy.md`**: actualización de la sección afiliación (§4).
 - **`model-profile-strategy.md`**: retirada de la sección de afiliación como palanca. La página `/m/:slug` sigue siendo palanca central por ADR-048; solo se retira la lectura como "link de afiliación implícito".
 - **`financiero/modelo-financiero.md` + xlsx**: recalcular con reparto 75-79% y mix cripto/tarjeta actualizado. Ajuste completo del horizonte de break-even.
-- **`../07-roadmap/plan-captacion-trafico-2026-q3.md`** § P3: la palanca "programa de afiliados propio" queda eliminada. Sustituir por "reclutamiento directo con propuesta 75-79%".
+- **`docs/_archive/07-roadmap/plan-captacion-trafico-2026-q3.md`** § P3: la palanca "programa de afiliados propio" queda eliminada. Sustituir por "reclutamiento directo con propuesta 75-79%".
 - **`../07-roadmap/current-phase.md`**: añadir frente "materialización ADR-052" en la fase vigente.
 - **`../04-operations/riesgos-operacionales.md`**: añadir riesgo "margen tarjeta delgado, sensible a chargebacks" con mitigación (mix cripto favorable + renegociación PSP a volumen).
 

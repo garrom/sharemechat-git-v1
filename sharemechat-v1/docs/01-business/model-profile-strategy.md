@@ -45,7 +45,7 @@ La implementación no introduce infraestructura nueva. Todos los componentes ya 
 ## 4. Tracking de afiliación (RETIRADO)
 
 > ⚠️ SECCIÓN RETIRADA
-> Contenido histórico movido a: [_deprecated/registro.md §"[affiliate-program.md] §'Programa de afiliados'"](../_deprecated/registro.md) (bloque relacionado del programa de afiliadas retirado).
+> Contenido histórico movido a: [_deprecated/registro.md §"[affiliate-program.md] §'Programa de afiliados'"](docs/_archive/_deprecated/registro.md) (bloque relacionado del programa de afiliadas retirado).
 > Motivo: [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) §D11.
 > Fecha retirada: 2026-07-24
 

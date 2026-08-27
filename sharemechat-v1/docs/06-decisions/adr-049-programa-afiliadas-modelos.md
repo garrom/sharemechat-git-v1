@@ -309,7 +309,7 @@ Aproximadamente 7-8 subpasadas efectivas (la 8 puede diferirse). El detalle exac
 ## Trazabilidad
 
 - Documento business: [`../01-business/affiliate-program.md`](../01-business/affiliate-program.md).
-- Estrategia de captación y encaje: [`../07-roadmap/plan-captacion-trafico-2026-q3.md`](../07-roadmap/plan-captacion-trafico-2026-q3.md) § P3.
+- Estrategia de captación y encaje: [`docs/_archive/07-roadmap/plan-captacion-trafico-2026-q3.md`](docs/_archive/07-roadmap/plan-captacion-trafico-2026-q3.md) § P3.
 - Página pública de modelo (pieza técnica adyacente): [ADR-048](adr-048-pagina-publica-modelo-slug.md).
 - Pivote soft launch (contexto de PSP y prioridad de reclutamiento): [ADR-047](adr-047-pivote-soft-launch-cripto-paxum.md).
 - Patrón BFPM (base del bono de bienvenida): [ADR-012](adr-012-bfpm-platform-funded-bonus.md).
