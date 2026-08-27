@@ -33,7 +33,7 @@ El archivo arranca limpio desde la v4.2 en adelante. Las versiones anteriores (d
 ## Reglas operativas
 
 1. **NUNCA se sobrescribe un fichero existente**. Cada versión publicada queda commited tal cual.
-2. **NUNCA se borra un fichero existente** sin documentar la razón en `docs/04-operations/incident-notes.md`.
+2. **NUNCA se borra un fichero existente** sin documentar la razón en `docs/_archive/04-operations/incident-notes.md`.
 3. **El nombre del fichero debe ser idéntico a la `version` del manifest**, no a la del bucket. Si el bucket conserva alguna copia con otro nombre (por ejemplo `legal/history/`), la fuente autoritativa es la copia en este repo.
 4. **El sha256 del PDF en disco debe coincidir con el sha256 publicado en el manifest** de esa versión. Verificable con:
    ```

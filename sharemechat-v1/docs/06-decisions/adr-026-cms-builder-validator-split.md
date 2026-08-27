@@ -85,7 +85,7 @@ Adoptar la opción 3 con las decisiones operativas concretas listadas abajo. Imp
 
 2. **Crear `cms-json-validator.md`** (paquete 8.B) como nueva skill personal de Cowork (stub canónico en el repo, instancia operativa en Claude.ai). Define la fase 5.5, política de 3 intentos (intento = ciclo completo parse / detectar todos los errores / corregir en lote / re-parsear), lista canónica de campos de riesgo alto heredada del antiguo sub-paso 15.2, política de éxito (sobrescribir + emitir report), política de fallo (renombrar a `final.broken.json` sin sobrescribir el roto + emitir report con diagnóstico).
 
-3. **Integrar fase 5.5 en `cms-orchestrator.md`** (paquete 8.C): añadir fila 5.5 en el bloque PIPELINE A EJECUTAR (de 6 a 7 fases), nueva regla 10 "convención de existencia tras la fase 5.5" (`final.json` existe → OK; solo existe `final.broken.json` → falló), reescritura del reporte estructurado de éxito para incluir auditoría sintáctica, bloque dedicado en REPORTE DE ERROR ("CASO ESPECÍFICO: FASE 5.5 ABORTÓ TRAS 3 INTENTOS") que enfatiza que el contenido editorial sigue intacto en `final.broken.json` y orienta al operador a inspeccionar `04_review/`. Añadir fila 5.5 en la tabla canónica de `docs/cms/skills/README.md`.
+3. **Integrar fase 5.5 en `cms-orchestrator.md`** (paquete 8.C): añadir fila 5.5 en el bloque PIPELINE A EJECUTAR (de 6 a 7 fases), nueva regla 10 "convención de existencia tras la fase 5.5" (`final.json` existe → OK; solo existe `final.broken.json` → falló), reescritura del reporte estructurado de éxito para incluir auditoría sintáctica, bloque dedicado en REPORTE DE ERROR ("CASO ESPECÍFICO: FASE 5.5 ABORTÓ TRAS 3 INTENTOS") que enfatiza que el contenido editorial sigue intacto en `final.broken.json` y orienta al operador a inspeccionar `04_review/`. Añadir fila 5.5 en la tabla canónica de `docs/_archive/cms/skills/README.md`.
 
 4. **Política de entrega del JSON al operador** (paquete 8.C-fix): el orquestador (no builder ni validator) pinta el contenido completo de `final.json` en chat dentro de un bloque ```json único, al final del reporte estructurado de éxito. Solo se pinta si la fase 5.5 pasó (existe `final.json`). Si falló (existe `final.broken.json`), NO se pinta el JSON roto; se emite el bloque de reporte de error específico. Builder y validator tienen prohibido pintar JSON en chat por su cuenta. Razón del cambio respecto a la política anterior (entrega solo por fichero descargable, paquete 8.A original): Cowork no escribe a `C:\Users\alain\Downloads\` de forma fiable y no ofrece descarga directa del artefacto del sandbox; pintar el JSON validado en chat le da al operador una vía operativa directa, y el gate cliente-side del CMS admin (paquete 6.7) bloquea cualquier JSON malformado al pegarlo, manteniendo la defensa en profundidad.
 
@@ -125,10 +125,10 @@ Sobre las decisiones internas de la opción 3:
 
 ### Skills personales (repo + Cowork)
 
-- **`docs/cms/skills/cms-json-builder.md`**: regla 15 eliminada (incluidos sub-pasos 15.1-15.4). Dos bullets de validación sintáctica eliminados del self-check. Nueva sección "Política de entrega al operador" aclara que el builder NO pinta JSON en chat (lo hace el orquestador).
-- **`docs/cms/skills/cms-json-validator.md`**: skill nueva (creada en paquete 8.B). ~128 líneas. Estructura completa: rol, inputs, outputs, política de 3 intentos, campos de riesgo alto, política de éxito, política de fallo, política de entrega, lo que no hace, voz editorial (no aplica), cuando termines.
-- **`docs/cms/skills/cms-orchestrator.md`**: fila 5.5 añadida al PIPELINE A EJECUTAR; regla 10 nueva (convención de existencia); reporte estructurado ampliado con auditoría 5.5; bloque "CASO ESPECÍFICO: FASE 5.5 ABORTÓ TRAS 3 INTENTOS" añadido al REPORTE DE ERROR; sección "POLÍTICA DE ENTREGA AL OPERADOR" nueva que define cómo se pinta el JSON en chat (8.C-fix); regla 11 anterior (persistencia obligatoria a Downloads) eliminada por no ser viable operativamente.
-- **`docs/cms/skills/README.md`**: fila 5.5 añadida en la tabla canónica de skills.
+- **`docs/_archive/cms/skills/cms-json-builder.md`**: regla 15 eliminada (incluidos sub-pasos 15.1-15.4). Dos bullets de validación sintáctica eliminados del self-check. Nueva sección "Política de entrega al operador" aclara que el builder NO pinta JSON en chat (lo hace el orquestador).
+- **`docs/_archive/cms/skills/cms-json-validator.md`**: skill nueva (creada en paquete 8.B). ~128 líneas. Estructura completa: rol, inputs, outputs, política de 3 intentos, campos de riesgo alto, política de éxito, política de fallo, política de entrega, lo que no hace, voz editorial (no aplica), cuando termines.
+- **`docs/_archive/cms/skills/cms-orchestrator.md`**: fila 5.5 añadida al PIPELINE A EJECUTAR; regla 10 nueva (convención de existencia); reporte estructurado ampliado con auditoría 5.5; bloque "CASO ESPECÍFICO: FASE 5.5 ABORTÓ TRAS 3 INTENTOS" añadido al REPORTE DE ERROR; sección "POLÍTICA DE ENTREGA AL OPERADOR" nueva que define cómo se pinta el JSON en chat (8.C-fix); regla 11 anterior (persistencia obligatoria a Downloads) eliminada por no ser viable operativamente.
+- **`docs/_archive/cms/skills/README.md`**: fila 5.5 añadida en la tabla canónica de skills.
 
 ### Código backend
 
@@ -199,9 +199,9 @@ Cero cambios. La política nueva de pintado del JSON en chat afecta a cómo el o
 - [ADR-023](./adr-023-bilingual-editorial-pipeline-es-en.md) — Pipeline bilingüe ES+EN, fase 4.5. Precedente directo del patrón "fase decimal".
 - [ADR-024](./adr-024-bilingual-submit-inside-editor.md) — Endpoint atómico `output-bilingual` (superseded por ADR-025 en BD, pero documenta el flujo operativo Cowork → admin que este ADR consolida).
 - [ADR-025](./adr-025-flyway-introduction-and-cms-v2-schema.md) — Schema bilingüe v2 en la capa de datos. Este ADR es independiente: opera en la capa Cowork, no en BD.
-- `docs/cms/skills/cms-json-builder.md` — skill modificada (paquete 8.A + 8.C-fix).
-- `docs/cms/skills/cms-json-validator.md` — skill nueva creada por este ADR (paquete 8.B).
-- `docs/cms/skills/cms-orchestrator.md` — orquestador con fase 5.5 integrada (paquete 8.C + 8.C-fix).
-- `docs/cms/skills/README.md` — tabla canónica con fila 5.5.
+- `docs/_archive/cms/skills/cms-json-builder.md` — skill modificada (paquete 8.A + 8.C-fix).
+- `docs/_archive/cms/skills/cms-json-validator.md` — skill nueva creada por este ADR (paquete 8.B).
+- `docs/_archive/cms/skills/cms-orchestrator.md` — orquestador con fase 5.5 integrada (paquete 8.C + 8.C-fix).
+- `docs/_archive/cms/skills/README.md` — tabla canónica con fila 5.5.
 - `docs/project-log.md` — bitácora del proyecto: entrada del 2026-05-20 documenta el detonante del split y las alternativas descartadas (paquete 9.A).
 - `docs/04-operations/known-debt.md` — deudas residuales del paquete 8 anotadas en cierre documental (paquete 9.B).

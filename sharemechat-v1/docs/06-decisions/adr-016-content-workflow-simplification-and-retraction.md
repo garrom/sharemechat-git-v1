@@ -205,5 +205,5 @@ Cada uno de estos frentes, si llega a justificarse, abrirá su propio ADR.
 - `docs/07-roadmap/current-phase.md:112` (cita original de "Fase 4B" — queda redefinida por este ADR).
 - `docs/03-environments/test.md:202-208` (limitaciones Fase 4A — se cierran las relativas a workflow y retracción).
 - `docs/02-architecture/cms-seo-overview.md` (limitaciones SEO mínimo — se mantienen las no cubiertas aquí).
-- `docs/04-operations/incident-notes.md` (deuda residual `HEAD 401` cerrada por D9).
+- `docs/_archive/04-operations/incident-notes.md` (deuda residual `HEAD 401` cerrada por D9).
 - Análisis de Fase 4B (Claude Code, 2026-05-08): informe interno del owner.

@@ -261,7 +261,7 @@ Una vez aplicados V1 baseline + V2 en ambos entornos, ejecutar las siguientes co
 
 Tras validar:
 
-- Anotar en `docs/04-operations/incident-notes.md` (sección con fecha 2026-05-16, encabezado "Introducción Flyway + V2 CMS aplicado") los timestamps de aplicación en TEST y AUDIT, el hash del JAR usado y cualquier anomalía observada.
+- Anotar en `docs/_archive/04-operations/incident-notes.md` (sección con fecha 2026-05-16, encabezado "Introducción Flyway + V2 CMS aplicado") los timestamps de aplicación en TEST y AUDIT, el hash del JAR usado y cualquier anomalía observada.
 - Si se observó alguna divergencia entre `V1__baseline.sql` (lo que dice el repo) y el schema real de AUDIT post-baseline (lo que efectivamente quedó), abrir nota en `known-debt.md` para regenerar V1 cuando convenga.
 - Confirmar al owner que la ventana paquete 1 → paquete 2 está activa: endpoints CMS rotos hasta que paquete 2 se mergee.
 

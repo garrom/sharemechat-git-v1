@@ -123,7 +123,7 @@ El bloque `<output_contract>` se refuerza para declarar la regla de merge (D4) y
 
 ### D9 — Skills del pipeline editorial afectadas
 
-Las siguientes skills reciben un contrato de input nuevo. Sus stubs en `docs/cms/skills/` se actualizan en el mismo commit del ADR.
+Las siguientes skills reciben un contrato de input nuevo. Sus stubs en `docs/_archive/cms/skills/` se actualizan en el mismo commit del ADR.
 
 - **`cms-research-seo`**: acepta `primary_keyword` como input autoritativo por locale. El research se ancla a ese término, no lo elige la skill.
 - **`cms-draft-writer`**: sin cambios estructurales. Consume el research.
@@ -231,7 +231,7 @@ Esta sección no es parte de la decisión (que ya está cerrada arriba) sino gu�
 
 ### Documentación y skills
 
-- Actualizar stubs de skill afectados en `docs/cms/skills/`: `cms-research-seo`, `cms-translate-en`, `cms-json-builder`, `cms-json-validator`.
+- Actualizar stubs de skill afectados en `docs/_archive/cms/skills/`: `cms-research-seo`, `cms-translate-en`, `cms-json-builder`, `cms-json-validator`.
 - Añadir a `docs/02-architecture/cms-seo-overview.md` una sección "Keywords per-locale editables" que explique el modelo mental para futuros contribuidores.
 - Añadir al `known-debt.md` las discrepancias D-1 a D-7 del informe de análisis, con referencia a este ADR-045 en las que este ADR ayuda a cerrar (D-2 en particular queda superseded porque este ADR redefine el contrato de la fase 4.5 y elimina la ambigüedad del opt-out).
 

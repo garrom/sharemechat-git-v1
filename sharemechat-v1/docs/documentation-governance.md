@@ -1,5 +1,14 @@
 # Gobierno documental y de decisión - SharemeChat
 
+> **Referencia rápida y autoritativa: [`CLAUDE.md`](../../CLAUDE.md) §"Dónde se documenta cada cosa"** — el mapa "qué registrar → sitio único" que TODA sesión lee. Este documento detalla la política y la casuística; ante conflicto, **gana el mapa de CLAUDE.md**.
+>
+> **Reconciliación 2026-08-28 (política "docs/ congelado", ADR-061):**
+> - `docs/` está **congelado para notas de un momento** (snapshots, investigaciones, as-built, diagnósticos): NO se crean; el trabajo terminado se cierra en `backlog-priorizado.md` + `project-log.md`. Lo point-in-time histórico vive en `docs/_archive/`.
+> - **DATOS del sistema** (precios, flags, modos, umbrales): NO en prosa. Fuente única en `docs/_data/*.yaml`, generados a los docs por Motor 1 (ADR-061) y anclados al sistema por tests.
+> - **Incidencias**: la casa viva es `docs/04-operations/incidencias-prod/` (sustituye a `incident-notes.md`, archivado).
+> - **Skills**: viven en `.claude/skills/` (la skill ES la fuente). `docs/` NO lleva copia.
+> - **Caso 9 (snapshots periódicos): RETIRADO** — el inventariado de estado está inactivo; `_snapshots/` y `state-inventory-skills/` archivados.
+
 ## Propósito
 
 Este documento define cómo mantener la documentación del proyecto y cómo registrar cambios técnicos, operativos y de arquitectura de forma consistente.
@@ -62,8 +71,8 @@ Ejemplos:
 - error operativo repetible
 
 Acción:
-- registrar el caso en `docs/04-operations/incident-notes.md`
-- si sigue existiendo riesgo o deuda, reflejarlo también en `docs/04-operations/known-risks.md`
+- registrar el caso en `docs/04-operations/incidencias-prod/` (la casa viva de incidencias; `incident-notes.md` quedó archivado)
+- si sigue existiendo riesgo o deuda, reflejarlo también en `docs/04-operations/known-risks.md` (riesgo) o `known-debt.md` (deuda)
 
 ### Caso 4. Problema resuelto
 Ejemplos:
@@ -73,8 +82,8 @@ Ejemplos:
 
 Acción:
 - actualizar el documento donde se describía el problema
-- dejar constancia de resolución en `incident-notes.md`
-- ajustar o retirar el punto correspondiente de `known-risks.md` si ya no aplica
+- dejar constancia de resolución en `docs/04-operations/incidencias-prod/`
+- ajustar o retirar el punto correspondiente de `known-risks.md` / `known-debt.md` si ya no aplica
 - actualizar arquitectura o entorno si la solución cambia la realidad del sistema
 
 ### Caso 5. Cambio funcional o de negocio
@@ -120,21 +129,13 @@ Ejemplos:
 - skill que despliega un componente operativo
 
 Acción:
-- ubicar en `docs/state-inventory-skills/<nombre>.md` (o `docs/cms/skills/<nombre>.md` si es skill editorial)
+- la skill vive en `.claude/skills/<nombre>/` (la skill ES la fuente; `docs/` NO lleva copia — evita duplicación que deriva)
 - documentar versión y procedimiento dentro del propio fichero de la skill
 - si la skill cambia cómo se documenta o se opera el sistema, abrir ADR
 
-### Caso 9. Snapshot de estado del sistema
-Ejemplos:
-- inventariado periódico de un entorno (TEST, AUDIT, PROD)
-- snapshot pre/post cambio para validar diff
-- snapshot tras cierre de un frente
+### Caso 9. Snapshot de estado del sistema — RETIRADO (2026-08-28)
 
-Acción:
-- ubicar en `docs/_snapshots/state-<env>-<YYYY-MM-DD-HHMM>.yaml`
-- generado por skill, NO se edita a mano
-- los snapshots SÍ se versionan en git (la skill aplica saneado lógico de IDs sensibles)
-- la tabla de mapeo lógico↔real vive FUERA del repo (`~/.sharemechat/state-mapping.yaml`)
+El inventariado periódico de estado está **inactivo** desde ~jul-2026; `docs/_archive/_snapshots/` y `docs/_archive/state-inventory-skills/` quedaron **archivados** en `docs/_archive/`. No se crean snapshots nuevos (política de congelación). Para identificar un recurso concreto de PROD, usar el `state-mapping` local (`~/.sharemechat/state-mapping.yaml`), que sigue vivo fuera del repo.
 
 ### Caso 10. Hito del proyecto que merece entrada en bitácora
 Ejemplos:
@@ -258,8 +259,8 @@ Ante cualquier cambio relevante:
 - backoffice -> `docs/05-backoffice/`
 - decisiones de arquitectura -> `docs/06-decisions/`
 - fase actual y planificación -> `docs/07-roadmap/`
-- skills operativas ejecutables por agentes -> `docs/state-inventory-skills/` (o `docs/cms/skills/` si son editoriales)
-- snapshots estructurados de estado del sistema -> `docs/_snapshots/`
+- skills operativas ejecutables por agentes -> `docs/_archive/state-inventory-skills/` (o `docs/_archive/cms/skills/` si son editoriales)
+- snapshots estructurados de estado del sistema -> `docs/_archive/_snapshots/`
 - bitácora cronológica de hitos del proyecto -> `docs/project-log.md`
 
 ## Formatos aceptados en el repo
@@ -274,7 +275,7 @@ Convención de formatos para toda la documentación versionada en `docs/` (y por
 
 Los siguientes formatos están permitidos solo para los usos concretos indicados:
 
-- `.yaml` / `.yml`: snapshots estructurados (`docs/_snapshots/`), configuración estructurada de skills, ficheros de estado versionados.
+- `.yaml` / `.yml`: snapshots estructurados (`docs/_archive/_snapshots/`), configuración estructurada de skills, ficheros de estado versionados.
 - `.sql`: migraciones Flyway (`src/main/resources/db/migration/`) y snippets SQL de referencia.
 - `.json`: ledgers operativos (`docs/social/social-state.json`), esquemas y contratos de intercambio.
 - `.ps1` / `.sh`: scripts operativos referenciados desde runbooks.

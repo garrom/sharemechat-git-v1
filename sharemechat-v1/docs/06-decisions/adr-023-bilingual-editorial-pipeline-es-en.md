@@ -117,9 +117,9 @@ Sobre las decisiones internas de Opcion C:
 
 ### Documentacion (stubs de skill personal)
 
-- **`docs/cms/skills/cms-translate-en.md`**: nuevo stub que describe la skill personal de Cowork. Aporta sincronia documental con la skill real del editor.
-- **`docs/cms/skills/cms-json-builder.md`**: seccion "OUTPUT QUE ESCRIBES" actualizada para output dual; nueva seccion "Cambios introducidos por ADR-023" con reglas 14 y 15 que el operador ya inyecto en la skill real (Cowork).
-- **`docs/cms/skills/README.md`**: tabla canonica con fila 4.5 + nota sobre "skip translate-en".
+- **`docs/_archive/cms/skills/cms-translate-en.md`**: nuevo stub que describe la skill personal de Cowork. Aporta sincronia documental con la skill real del editor.
+- **`docs/_archive/cms/skills/cms-json-builder.md`**: seccion "OUTPUT QUE ESCRIBES" actualizada para output dual; nueva seccion "Cambios introducidos por ADR-023" con reglas 14 y 15 que el operador ya inyecto en la skill real (Cowork).
+- **`docs/_archive/cms/skills/README.md`**: tabla canonica con fila 4.5 + nota sobre "skip translate-en".
 
 ### Operaciones
 
@@ -176,7 +176,7 @@ Sobre las decisiones internas de Opcion C:
 - **Politica de sincronizacion ES->EN cuando se edita la version ES**: sin resolver. Opciones futuras: re-run del pipeline solo para la fase 4.5 (re-traducir), marca "outdated" automatica en EN, sincronizacion manual bajo demanda.
 - **Validacion cruzada en el endpoint admin**: hoy el backend valida cada JSON individualmente. No comprueba que `parent_slug` de un EN apunte realmente a un slug ES PUBLISHED existente. Riesgo de huerfano si el operador importa el EN antes que el ES. Mitigable con check en import (sub-pasada futura).
 - **Output del pipeline en formato no-JSON**: rompe simetria con otros runs. Si el frontend admin evolucionara a parsear el output, habria que estandarizar el formato del reporte.
-- **El stub `cms-orchestrator` no esta en `docs/cms/skills/`**: la skill vive solo en Cowork (Claude.ai) sin contraparte versionada en el repo. Es la skill que orquesta todas las demas; convendria stub para auditoria. Sub-pasada futura.
+- **El stub `cms-orchestrator` no esta en `docs/_archive/cms/skills/`**: la skill vive solo en Cowork (Claude.ai) sin contraparte versionada en el repo. Es la skill que orquesta todas las demas; convendria stub para auditoria. Sub-pasada futura.
 
 ## Referencias
 
@@ -187,7 +187,7 @@ Sobre las decisiones internas de Opcion C:
 - [ADR-016](./adr-016-content-workflow-simplification-and-retraction.md) — Workflow editorial (DRAFT->IN_REVIEW->PUBLISHED->RETRACTED). El workflow se aplica por locale: cada version transiciona independientemente.
 - [ADR-017](./adr-017-state-snapshots-and-docs-coexistence.md) — Coexistencia de snapshots y documentacion narrativa. Patron aplicado al documentar 4C.1.
 - `src/main/java/com/sharemechat/content/service/ContentPromptBuilder.java` — Generador del prompt orquestador. Metodo `appendFullArticleOrchestratedPipeline` modificado por este ADR.
-- `docs/cms/skills/cms-translate-en.md` — Stub de la nueva skill personal (creado por este ADR).
-- `docs/cms/skills/cms-json-builder.md` — Stub de la skill empaquetadora (actualizado por este ADR).
-- `docs/cms/skills/README.md` — Tabla canonica de skills del pipeline (actualizada con fila 4.5).
+- `docs/_archive/cms/skills/cms-translate-en.md` — Stub de la nueva skill personal (creado por este ADR).
+- `docs/_archive/cms/skills/cms-json-builder.md` — Stub de la skill empaquetadora (actualizado por este ADR).
+- `docs/_archive/cms/skills/README.md` — Tabla canonica de skills del pipeline (actualizada con fila 4.5).
 - Skill `cms-orchestrator` en Claude Cowork (Claude.ai): orquesta la ejecucion de fases. Sin contraparte versionada en el repo (deuda registrada).

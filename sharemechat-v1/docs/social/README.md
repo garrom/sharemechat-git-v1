@@ -186,7 +186,7 @@ Mismo patrón que el pipeline editorial (`cms-orchestrator` + agentes), reutiliz
 
 ## Convenciones del frontmatter de las skills sociales
 
-Las skills bajo `docs/social/skills/` usan **formato A** (frontmatter YAML) según el contrato que el script `ops/scripts/sync-skills-to-cowork.ps1` reproduce hacia Cowork:
+Las skills bajo `docs/_archive/social/skills/` usan **formato A** (frontmatter YAML) según el contrato que el script `ops/scripts/sync-skills-to-cowork.ps1` reproduce hacia Cowork:
 
 ```yaml
 ---
@@ -218,12 +218,12 @@ Reglas concretas a aplicar al escribir el `description` del frontmatter de cualq
 Antes de hacer commit de una skill nueva o modificada, ejecutar localmente:
 
 ```powershell
-head -5 docs/social/skills/<skill>.md | Select-String -Pattern '<[^>]*>|&lt;|&gt;|&amp;'
+head -5 docs/_archive/social/skills/<skill>.md | Select-String -Pattern '<[^>]*>|&lt;|&gt;|&amp;'
 ```
 
 Si la regex devuelve algún match, la skill será rechazada por Cowork al sincronizar.
 
-Esta regla aplica también a las skills CMS bajo `docs/cms/skills/` cuando usen formato A (frontmatter YAML). Las que usan formato B (`# Descripcion` + `# Instrucciones`) NO tienen frontmatter YAML y por tanto la restricción no aplica al campo description, pero conviene evitar tags angulares en la línea inmediatamente posterior a `# Descripcion` por consistencia.
+Esta regla aplica también a las skills CMS bajo `docs/_archive/cms/skills/` cuando usen formato A (frontmatter YAML). Las que usan formato B (`# Descripcion` + `# Instrucciones`) NO tienen frontmatter YAML y por tanto la restricción no aplica al campo description, pero conviene evitar tags angulares en la línea inmediatamente posterior a `# Descripcion` por consistencia.
 
 ### Regla operativa de Cowork: límite duro de 1024 chars en el `description`
 
@@ -242,7 +242,7 @@ Reglas concretas a aplicar:
 - Antes de commit, validar con:
 
 ```powershell
-$line = (Get-Content docs/social/skills/<skill>.md -TotalCount 3)[2]
+$line = (Get-Content docs/_archive/social/skills/<skill>.md -TotalCount 3)[2]
 if ($line -match '^description:\s*(.*)$') { "$($matches[1].Length) chars" }
 ```
 

@@ -3,10 +3,8 @@
 A|sharemechat-v1/docs/01-business/seo/estrategia.md|../financiero/modelo-financiero-sharemechat.xlsx
 A|sharemechat-v1/docs/06-decisions/adr-022-blog-cms-multilingual-es-en.md|../../.claude/skills/anthropic-skills/sharemechat-voice
 A|sharemechat-v1/docs/06-decisions/adr-042-prerender-cron-on-backend-ec2.md|04-operations/seo-prompt3-implementation-2026-06-23.md
-A|sharemechat-v1/docs/cms/skills/cms-draft-writer.md|url
 B|CLAUDE.md|frontend/.cache
 B|CLAUDE.md|frontend/build
-B|sharemechat-v1/docs/04-operations/incident-notes.md|frontend/build
 B|sharemechat-v1/docs/04-operations/known-debt.md|frontend/build
 B|sharemechat-v1/docs/04-operations/known-debt.md|frontend/src/pages/blog/blogHelpers.js
 B|sharemechat-v1/docs/04-operations/known-debt.md|ops/scripts/deploy-perimeter.ps1
@@ -23,8 +21,6 @@ B|sharemechat-v1/docs/06-decisions/adr-030-moderation-pipeline-build-vs-rent.md|
 B|sharemechat-v1/docs/06-decisions/adr-036-moderation-pipeline-architectural-stance.md|docs/02-architecture/moderation-pipeline.md
 B|sharemechat-v1/docs/06-decisions/adr-045-keywords-seo-per-locale.md|sharemechat-v1/frontend/src/pages/admin/content/BodyLocaleTabs.jsx
 B|sharemechat-v1/docs/06-decisions/adr-059-estrategia-de-testing.md|src/polyfills.js
-B|sharemechat-v1/docs/state-inventory-skills/state-inventory.md|db/migration
-B|sharemechat-v1/docs/state-inventory-skills/state-inventory.md|src/main/resources/db/manual
 B|sharemechat-v1/ops/sharemechat-backend/README.md|ops/coturn
 C|sharemechat-v1/docs/01-business/financiero/modelo-financiero-tablas.md|tiers?\s+5-15\b
 C|sharemechat-v1/docs/01-business/financiero/modelo-financiero-tablas.md|€0\.0[579]\s+primer\s+min

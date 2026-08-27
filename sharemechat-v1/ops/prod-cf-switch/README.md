@@ -96,9 +96,9 @@ deploy + 1-2 min wait invalidation).
 ## Referencias
 
 - Snapshot pre-switch:
-  [`docs/_snapshots/state-prod-2026-06-07.yaml`](../../docs/_snapshots/state-prod-2026-06-07.yaml).
+  [`docs/_archive/_snapshots/state-prod-2026-06-07.yaml`](../../docs/_archive/_snapshots/state-prod-2026-06-07.yaml).
 - Snapshot post-switch:
-  [`docs/_snapshots/state-prod-2026-06-07-postswitch.yaml`](../../docs/_snapshots/state-prod-2026-06-07-postswitch.yaml).
+  [`docs/_archive/_snapshots/state-prod-2026-06-07-postswitch.yaml`](../../docs/_archive/_snapshots/state-prod-2026-06-07-postswitch.yaml).
 - ADR-009 (Product Operational Mode):
   [`docs/06-decisions/adr-009-product-operational-mode.md`](../../docs/06-decisions/adr-009-product-operational-mode.md).
 - Bitácora del switch:

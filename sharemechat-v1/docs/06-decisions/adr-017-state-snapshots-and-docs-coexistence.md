@@ -4,7 +4,7 @@
 
 Propuesta (pendiente de aprobación del owner).
 
-Si se aprueba, **complementa `documentation-governance.md`** añadiendo dos casos nuevos (skill operativa y snapshot de estado) y aclara la división de responsabilidades entre `docs/_snapshots/` y el resto de `docs/`.
+Si se aprueba, **complementa `documentation-governance.md`** añadiendo dos casos nuevos (skill operativa y snapshot de estado) y aclara la división de responsabilidades entre `docs/_archive/_snapshots/` y el resto de `docs/`.
 
 ## Contexto
 
@@ -18,7 +18,7 @@ Esa mezcla genera dos problemas reales y observados durante 2026-04 y 2026-05:
 - **Drift constante**: los hechos crudos cambian con cada deploy, cada ajuste de nginx o cada migración SQL. La prosa narrativa que los menciona se queda desactualizada y nadie se entera hasta que aparece una incidencia.
 - **Auditorías post-hoc no escalan**: la solución intentada hasta ahora ha sido auditar puntualmente la documentación contra el código (`docs/_audit/doc-vs-code-gap-2026-05-07.md` y similares). Cada auditoría confirma que la documentación está desactualizada — y vuelve a estarlo en una semana.
 
-El 2026-05-09 se introdujo un nuevo sistema de **snapshots estructurados de estado** (skill `state-inventory` en `docs/state-inventory-skills/state-inventory.md`, ficheros YAML en `docs/_snapshots/`). Los snapshots son fuente de verdad fáctica: lista de cache behaviors, lista de estados que admite el `CHECK`, etc. Se generan con un agente que ejecuta comandos reales contra el sistema (AWS CLI, SSH a EC2, MySQL Shell vía túnel) y producen YAML saneado de IDs sensibles.
+El 2026-05-09 se introdujo un nuevo sistema de **snapshots estructurados de estado** (skill `state-inventory` en `docs/_archive/state-inventory-skills/state-inventory.md`, ficheros YAML en `docs/_archive/_snapshots/`). Los snapshots son fuente de verdad fáctica: lista de cache behaviors, lista de estados que admite el `CHECK`, etc. Se generan con un agente que ejecuta comandos reales contra el sistema (AWS CLI, SSH a EC2, MySQL Shell vía túnel) y producen YAML saneado de IDs sensibles.
 
 Con la introducción de los snapshots aparece una pregunta legítima: **¿son `/docs/` y los snapshots dos formas de hacer lo mismo, o son cosas distintas?** Si son lo mismo, hay que migrar y eliminar redundancia. Si son distintas, hay que dejar claras sus responsabilidades para que la convivencia no genere más confusión que la que resuelve.
 
@@ -32,7 +32,7 @@ Los snapshots de estado y la documentación narrativa de `docs/` **conviven** co
 
 | Capa | Pregunta que responde | Forma | Fuente de verdad sobre |
 |---|---|---|---|
-| **Snapshots (`docs/_snapshots/`)** | "¿qué hay AHORA en el sistema?" | YAML estructurado, generado por agente | Hechos crudos del sistema: configuraciones, valores, conteos, versiones, listas de elementos. |
+| **Snapshots (`docs/_archive/_snapshots/`)** | "¿qué hay AHORA en el sistema?" | YAML estructurado, generado por agente | Hechos crudos del sistema: configuraciones, valores, conteos, versiones, listas de elementos. |
 | **Documentación narrativa (resto de `docs/`)** | "¿por qué está así? ¿qué deberíamos hacer? ¿cómo opera? ¿cuál es el plan?" | Prosa Markdown escrita por humano o IA | Decisiones, contexto, razones, planificación, runbooks, modelos de negocio, gobierno. |
 
 Ninguna de las dos capas puede sustituir a la otra. Un snapshot nunca explica el porqué; un ADR nunca refleja el estado actual del sistema.
@@ -89,11 +89,11 @@ Las dos carpetas nuevas (`_snapshots/` y `state-inventory-skills/`) deben quedar
 
 **Caso 8 — Skill operativa nueva o modificada**
 Ejemplos: skill que inventaría estado, skill que detecta drift, skill que despliega un componente.
-Acción: ubicar en `docs/state-inventory-skills/<nombre>.md` (o `docs/cms/skills/<nombre>.md` si es skill editorial). Documentar versión y procedimiento dentro del propio fichero. Si la skill es estructural (cambia cómo se documenta o se opera el sistema), abrir ADR.
+Acción: ubicar en `docs/_archive/state-inventory-skills/<nombre>.md` (o `docs/_archive/cms/skills/<nombre>.md` si es skill editorial). Documentar versión y procedimiento dentro del propio fichero. Si la skill es estructural (cambia cómo se documenta o se opera el sistema), abrir ADR.
 
 **Caso 9 — Snapshot de estado del sistema**
 Ejemplos: inventariado periódico de un entorno, snapshot pre/post cambio para validar diff.
-Acción: el snapshot va a `docs/_snapshots/state-<env>-<YYYY-MM-DD-HHMM>.yaml`. Es generado por skill, NO se edita a mano. Los snapshots SÍ se versionan en git (no contienen IDs sensibles porque la skill aplica saneado lógico).
+Acción: el snapshot va a `docs/_archive/_snapshots/state-<env>-<YYYY-MM-DD-HHMM>.yaml`. Es generado por skill, NO se edita a mano. Los snapshots SÍ se versionan en git (no contienen IDs sensibles porque la skill aplica saneado lógico).
 
 ### D6 — Saneado de los snapshots como invariante
 
@@ -147,12 +147,12 @@ Este ADR **no decide** sobre:
 
 ## Referencias
 
-- `docs/state-inventory-skills/state-inventory.md` — skill v1 que produce los snapshots.
-- `docs/_snapshots/state-test-2026-05-09-*.yaml` — primeros snapshots reales de TEST.
+- `docs/_archive/state-inventory-skills/state-inventory.md` — skill v1 que produce los snapshots.
+- `docs/_archive/_snapshots/state-test-2026-05-09-*.yaml` — primeros snapshots reales de TEST.
 - `docs/04-operations/known-debt.md` — deudas detectadas por la primera ejecución (incluye registrar `_snapshots/` y `state-inventory-skills/` en governance).
 - `documentation-governance.md` — gobierno documental general (a actualizar tras este ADR).
 - ADR-016 — Workflow editorial simplificado (precedente del patrón "ADR cierra alcance + skills implementan").
 
 ## Notas posteriores
 
-- **2026-06-10**: la carpeta `docs/state-inventory-skills/` se llamaba originalmente `skills` (bajo `docs/`) cuando se cerró este ADR. Se renombró para evitar confusión con `docs/cms/skills/` (pipeline editorial) y con `docs/social/skills/` (futura). La decisión arquitectónica de este ADR (snapshots ⨯ narrativa, casos 8 y 9 de governance, autoridad sobre datos crudos) **se mantiene íntegra**; solo cambia el nombre de carpeta. Las menciones en el cuerpo del ADR fueron actualizadas al nombre nuevo para preservar navegabilidad.
+- **2026-06-10**: la carpeta `docs/_archive/state-inventory-skills/` se llamaba originalmente `skills` (bajo `docs/`) cuando se cerró este ADR. Se renombró para evitar confusión con `docs/_archive/cms/skills/` (pipeline editorial) y con `docs/_archive/social/skills/` (futura). La decisión arquitectónica de este ADR (snapshots ⨯ narrativa, casos 8 y 9 de governance, autoridad sobre datos crudos) **se mantiene íntegra**; solo cambia el nombre de carpeta. Las menciones en el cuerpo del ADR fueron actualizadas al nombre nuevo para preservar navegabilidad.

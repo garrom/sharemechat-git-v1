@@ -208,7 +208,7 @@ Este ADR **no decide** sobre:
 
 - ADR-016 — Workflow editorial simplificado y retracción (deuda D7 que este ADR resuelve).
 - ADR-017 — Coexistencia de snapshots de estado y documentación narrativa (define cómo este ADR cierra alcance arquitectónico, no operativo).
-- `docs/_snapshots/state-test-2026-05-09-1659.yaml` — Snapshot v2 que confirma topología real de TEST (4 distribuciones, 5 buckets, función edge).
+- `docs/_archive/_snapshots/state-test-2026-05-09-1659.yaml` — Snapshot v2 que confirma topología real de TEST (4 distribuciones, 5 buckets, función edge).
 - `frontend/src/pages/blog/BlogContent.jsx` — Componente actual del listado, dependiente de backend.
 - `frontend/src/pages/blog/BlogArticleView.jsx` — Componente actual del detalle, dependiente de backend.
 - `src/main/java/com/sharemechat/content/publishing/ContentPublicController.java` — API pública del blog.
