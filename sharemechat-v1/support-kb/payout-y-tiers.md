@@ -27,7 +27,7 @@ El usuario es MODEL. La información es del lado modelo, no del cliente.
 - El Master (estudios) no tiene tramos propios: cobra la suma de los pagos individuales al % del tramo INDIVIDUAL de cada modelo.
 <!-- END generated:pricing-tiers -->
 - La modelo consulta su tier actual y su progreso en la sección "Estadísticas" del navbar del dashboard modelo.
-- Gifts: 90% del valor va al balance de la modelo, 10% lo retiene la plataforma.
+- Gifts: se reparten con el mismo porcentaje de tu tramo que el streaming (el % de tu tier, 50–60% según tramo), no un porcentaje fijo. El valor va a tu balance a ese %. Los gifts NO cuentan para subir de tramo (solo los consumen).
 - Los gifts los envían clientes; la modelo los recibe en su balance junto con lo facturado por minuto.
 - Umbral mínimo para solicitar payout: €100 acumulados.
 - Payout se solicita desde el botón "Retirar" del navbar. Pasa por revisión admin (cumplimiento KYC, datos de cobro válidos).
@@ -45,7 +45,7 @@ El usuario es MODEL. La información es del lado modelo, no del cliente.
 - "¿Puedo cobrar en cripto?" → sí, puedes registrar una wallet como método de cobro; el envío en cripto hoy se gestiona manualmente por el equipo, no es instantáneo.
 - "¿Cuándo cobro?" → sin calendario fijo, solicitud a demanda al alcanzar el umbral.
 - "¿Dónde veo mi tier?" → sección "Estadísticas" del navbar.
-- "¿Qué pasa con los gifts?" → 90% al balance de la modelo, 10% comisión de plataforma. Se acumulan junto con lo facturado por minuto.
+- "¿Qué pasa con los gifts?" → se reparten con el % de tu tramo (igual que el streaming), no un 90% fijo; el valor va a tu balance a ese %, junto con lo facturado por minuto. No suben de tramo, solo lo consumen.
 - "Estoy bajo un estudio/Master, ¿cómo cobro?" → tu liquidación la gestiona tu Master de forma consolidada; consulta el caso de cuentas Master.
 
 ## Qué NO debes hacer
