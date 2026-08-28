@@ -325,6 +325,29 @@ quedaría: (1) confirmar aceptación del método por estado / activar fallback a
 anti-FOSTA; (5) opinión legal sobre si el 1-a-1 en vivo entra en las AV. KYC de modelos y el gate
 de edad de cliente ya están.
 
+---
+
+## 9. Estado de aplicación (2026-08-28)
+
+Decidido con el operador y **aplicado en TEST y PROD** (config.env + reinicio; PRELAUNCH intacto en
+PROD; backup `config.env.bak-countries` en ambos). TEST y PROD quedan con **cadenas idénticas**
+(anti-drift). El JAR no cambia (es dato de `config.env`, no código).
+
+- **Cliente (allowlist) → 47 países.** Toda América **salvo Cuba** (bloqueo legal), incluyendo
+  Venezuela y Haití (permisivo como la competencia; su riesgo es de pago, no activo en PRELAUNCH —
+  revisar fricción de pago antes de revenue). Se mantiene el **mecanismo allowlist** (deny-by-default,
+  `block-when-missing=true`); no se pasó a lista negra (decisión razonada en §3/§6: la allowlist es
+  la red de compliance).
+- **Modelo (allowlist) → 57 países.** Base previa + 10 altas que la competencia acepta y nosotros
+  no: `GR, HR, SI, CY, MT` (completar UE), `ZA, JM` (mercados anglófonos, Streamate los acepta),
+  `RS, MD, IS` (Europa/Balcanes, viveros de camming). **Ucrania (UA) queda fuera** (contexto de
+  guerra). Se **excluyen de modelo `CU` y `RU`** (embargo / alto riesgo); estaban por error en el
+  TEST previo y se limpiaron.
+- **Verificado:** `CountryAccessService initialized: clientAllowed=47, modelAllowed=57,
+  unionAllowed=66` en ambos entornos; PROD sigue `productAccessMode=PRELAUNCH`.
+- **Pendiente:** AUDIT no se tocó en esta pasada (evaluar si alinear por consistencia). Antes de
+  revenue: fricción de pago por país (LatAm alto fraude) y, para OPEN en EEUU, el afinado de §8.6.
+
 **Conclusión operativa:** EEUU no bloquea la expansión de clientes de LatAm (son decisiones
 independientes). La expansión de **LatAm es de bajo riesgo** y puede hacerse ya; **EEUU** conviene
 tratarlo como un **frente aparte** (age-gating por estado con Didit) **antes** de pasar el cliente
