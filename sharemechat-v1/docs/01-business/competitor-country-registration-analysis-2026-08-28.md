@@ -236,3 +236,78 @@ fetch automático; sus datos de cliente son inferencia marcada como tal.
 
 > Para una decisión vinculante sobre exclusiones por sanción, contrastar el listado vigente con
 > asesoría legal de sanciones: el régimen sirio y los paquetes de la UE cambian con frecuencia.
+
+---
+
+## 8. Anexo — Compliance específico de EEUU (cliente)
+
+Revisión motivada por la duda del operador: EEUU **ya está** en la allowlist de cliente (hoy ya
+aceptamos clientes de EEUU); ¿cumplimos? Resumen de la revisión (fuentes en el cuerpo; no es
+asesoría legal — el punto más incierto merece opinión de un despacho adult/First Amendment).
+
+### 8.1 Veredicto: MANEJABLE, no bloqueador — pero con un hueco real
+
+Aceptar clientes de EEUU es un problema **moderado y gestionable**, no un impedimento. De hecho,
+en **pagos EEUU MEJORA** nuestro perfil frente a Latinoamérica (chargeback EEUU ~0,47 % vs Brasil
+~3,48 %, México ~2,81 %). El coste real está en el **cumplimiento regulatorio adult**, no en el
+fraude.
+
+### 8.2 Reencuadre clave para la decisión de países
+
+La carga de compliance que motivó la filosofía restrictiva **se concentra en EEUU, Reino Unido y
+Francia** (leyes de verificación de edad), **no en Latinoamérica**. LatAm es **fácil** en el lado
+regulatorio; su único problema es el **fraude de pago** (comercial, y no activo en PRELAUNCH). Es
+decir: **ser permisivos con clientes de LatAm es de bajo riesgo de compliance**; el compliance
+difícil es justo el mercado (EEUU) que ya teníamos dentro.
+
+### 8.3 Las cuatro cargas de EEUU
+
+1. **Verificación de edad por estado (la novedad 2024-2026).** ~27 estados con ley en vigor; el
+   Supremo la avaló en *Free Speech Coalition v. Paxton* (jun-2025, escrutinio intermedio). Aplican
+   a webs donde >1/3 del contenido es "sexual material harmful to minors" (Kansas 25 %, Tennessee
+   "substantial portion"). **Zona gris real:** las leyes se escribieron para *tube sites*
+   pregrabados; **no está resuelto** si un videochat 1-a-1 en vivo entra. Señal práctica: Texas
+   **ya demandó a Chaturbate** (cam en directo). **Prudente asumir que aplica.** `self-attestation`
+   ("soy mayor") **no** cumple; hace falta ID, digital ID o **estimación facial por IA** de tercero.
+2. **18 U.S.C. §2257 (record-keeping).** Aplica a productores de contenido sexual explícito real;
+   la industria trata a los cam sites como productores. Obliga a verificar edad de las **modelos**
+   con ID y conservar registros (custodian con dirección física). Mitigación **ya en marcha vía
+   Didit/KYC** — mantenerla y documentarla. Enforcement extraterritorial contra una OÜ estonia:
+   incierto/poco litigado.
+3. **FOSTA-SESTA.** Un videochat en vivo sin encuentros presenciales no es el objetivo; el riesgo
+   surge si el chat se usa para pactar prostitución presencial. Mitigación: ToS que lo prohíban +
+   moderación activa + KYC de modelos.
+4. **PSP high-risk (VIRP).** Adult es categoría high-risk (~3-4 % chargeback; el umbral de
+   monitorización Visa/MC es 1 %). Exige acquirer especializado (Segpay/Vendo/CCBill…), registro
+   **VIRP** (~950 $ + fees) y — contractualmente — **verificación de edad de usuarios y modelos**.
+   El corte de pagos es el vector de enforcement **más real** contra un operador offshore.
+
+### 8.4 Exposición del operador extranjero (UE/Estonia)
+
+No estamos inmunes: las leyes de AV se aplican por **accesibilidad**, no por presencia (Texas
+congeló el dominio de un porn site extranjero). Vectores realistas: *private right of action*,
+multas de AG (Louisiana 5-10 k$/día), bloqueo de dominio por estado y, sobre todo, **presión sobre
+los pagos**. El riesgo **penal-personal** es bajo en la práctica **salvo** aparición de contenido
+con menores (ahí el riesgo es serio y global, sin tolerancia).
+
+### 8.5 ¿Cumplimos hoy? (honesto)
+
+- **Sí:** KYC/verificación de edad de **modelos** vía Didit (cubre 2257/VIRP/anti-trata en el lado
+  modelo). ✓
+- **No / parcial:** **no** hay verificación de edad de **clientes** por estado en EEUU. En
+  PRELAUNCH no hay usuarios reales, así que **no hay incumplimiento activo**, pero **antes de abrir
+  EEUU en modo OPEN** hay que resolverlo. ✗
+
+### 8.6 Medidas mínimas antes de abrir EEUU (modo OPEN)
+
+**Obligatorio:** (1) age-gating de cliente por estado (ID / estimación facial de tercero — encaja
+con **Didit**, que ya hace age estimation de cliente) **o** geobloqueo de los estados con ley;
+(2) KYC de modelos (ya está); (3) ToS + moderación anti-FOSTA; (4) PSP high-risk registrado en
+VIRP; (5) health warnings donde la ley estatal los exija. **Prudente:** opinión legal específica
+sobre si el 1-a-1 en vivo cae bajo las AV, y confirmar requisitos con el PSP.
+
+**Conclusión operativa:** EEUU no bloquea la expansión de clientes de LatAm (son decisiones
+independientes). La expansión de **LatAm es de bajo riesgo** y puede hacerse ya; **EEUU** conviene
+tratarlo como un **frente aparte** (age-gating por estado con Didit) **antes** de pasar el cliente
+de EEUU a OPEN. En PRELAUNCH no corre prisa, pero es deuda a saldar antes del lanzamiento público
+en EEUU.
