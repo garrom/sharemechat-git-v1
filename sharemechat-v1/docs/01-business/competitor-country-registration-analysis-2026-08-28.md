@@ -290,21 +290,40 @@ multas de AG (Louisiana 5-10 k$/día), bloqueo de dominio por estado y, sobre to
 los pagos**. El riesgo **penal-personal** es bajo en la práctica **salvo** aparición de contenido
 con menores (ahí el riesgo es serio y global, sin tolerancia).
 
-### 8.5 ¿Cumplimos hoy? (honesto)
+### 8.5 ¿Cumplimos hoy? (corregido tras revisar el código, 2026-08-28)
 
-- **Sí:** KYC/verificación de edad de **modelos** vía Didit (cubre 2257/VIRP/anti-trata en el lado
-  modelo). ✓
-- **No / parcial:** **no** hay verificación de edad de **clientes** por estado en EEUU. En
-  PRELAUNCH no hay usuarios reales, así que **no hay incumplimiento activo**, pero **antes de abrir
-  EEUU en modo OPEN** hay que resolverlo. ✗
+**Corrección importante:** una versión previa de este anexo afirmó que "no hay verificación de
+edad de clientes". **Es falso.** Verificado en el código (`MatchingHandlerSupport.java`,
+`TransactionService`):
 
-### 8.6 Medidas mínimas antes de abrir EEUU (modo OPEN)
+- **Modelos:** KYC/verificación de edad con ID vía Didit (cubre 2257/VIRP/anti-trata). ✓
+- **Clientes: SÍ hay verificación de edad activa.** El gate `isApprovedClient` bloquea el acceso
+  al **videochat** (matching) y el **primer pago/recarga** si `client_kyc_status != APPROVED`. Se
+  aplica **uniformemente a todos los clientes** (sin flag que lo desactive) y **antes de acceder al
+  contenido**, que es exactamente lo que exigen las leyes de AV. El método es **estimación facial
+  por un tercero (Didit)**, uno de los métodos **aceptados** incluso en jurisdicciones estrictas
+  (Reino Unido, Online Safety Act; Francia). **No es autodeclaración.** ✓
 
-**Obligatorio:** (1) age-gating de cliente por estado (ID / estimación facial de tercero — encaja
-con **Didit**, que ya hace age estimation de cliente) **o** geobloqueo de los estados con ley;
-(2) KYC de modelos (ya está); (3) ToS + moderación anti-FOSTA; (4) PSP high-risk registrado en
-VIRP; (5) health warnings donde la ley estatal los exija. **Prudente:** opinión legal específica
-sobre si el 1-a-1 en vivo cae bajo las AV, y confirmar requisitos con el PSP.
+Es decir, en lo esencial —verificar la edad con un método comercialmente razonable antes de dar
+acceso— **ya cumplimos**, y con el mismo enfoque que nos vale para UK/FR.
+
+**Lo que queda por afinar (no es "falta verificación", es tuning):**
+1. **Aceptación del método por estado:** la estimación facial se acepta ampliamente como
+   "commercially reasonable", pero algún estado puede exigir ID gubernamental / "digital ID".
+   Revisar estado por estado con opinión legal.
+2. **Umbral de estimación** (`age_estimation_threshold`): confirmar que el margen es conservador
+   (rechazar borderline / fallback a documento).
+3. **Health warnings** por estado (Texas y análogas) y retención de prueba de verificación.
+4. **PSP high-risk (VIRP)** y **ToS + moderación anti-FOSTA** (frente de pagos/operación).
+5. **Ambigüedad "one-third"**: si el 1-a-1 en vivo cae o no bajo las AV — opinión legal.
+
+### 8.6 Medidas antes de abrir EEUU (modo OPEN) — ajuste, no construcción
+
+El grueso (verificación de edad de cliente con método aceptado) **ya está**. Antes de OPEN en EEUU
+quedaría: (1) confirmar aceptación del método por estado / activar fallback a ID donde se exija;
+(2) health warnings por estado; (3) PSP high-risk registrado en VIRP; (4) ToS + moderación
+anti-FOSTA; (5) opinión legal sobre si el 1-a-1 en vivo entra en las AV. KYC de modelos y el gate
+de edad de cliente ya están.
 
 **Conclusión operativa:** EEUU no bloquea la expansión de clientes de LatAm (son decisiones
 independientes). La expansión de **LatAm es de bajo riesgo** y puede hacerse ya; **EEUU** conviene
