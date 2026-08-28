@@ -3,6 +3,7 @@ package com.sharemechat.service;
 import com.sharemechat.constants.Constants;
 import com.sharemechat.consent.ConsentState;
 import com.sharemechat.util.NicknameNormalizer;
+import com.sharemechat.util.EmailDomainValidator;
 import com.sharemechat.dto.*;
 import com.sharemechat.entity.LoginResponse;
 import com.sharemechat.entity.Unsubscribe;
@@ -93,6 +94,10 @@ public class UserService {
 
         if (email == null) {
             throw new IllegalArgumentException("El email no puede estar vacío");
+        }
+        if (!EmailDomainValidator.domainLikelyValid(email)) {
+            throw new IllegalArgumentException(
+                    "No se pudo registrar: el dominio del correo no existe. Revisa tu email (por ejemplo, gmail.com).");
         }
         if (nickname == null) {
             throw new IllegalArgumentException("El nickname es obligatorio");
@@ -224,6 +229,10 @@ public class UserService {
 
         if (email == null) {
             throw new IllegalArgumentException("El email no puede estar vacío");
+        }
+        if (!EmailDomainValidator.domainLikelyValid(email)) {
+            throw new IllegalArgumentException(
+                    "No se pudo registrar: el dominio del correo no existe. Revisa tu email (por ejemplo, gmail.com).");
         }
         if (nickname == null) {
             throw new IllegalArgumentException("El nickname es obligatorio");
