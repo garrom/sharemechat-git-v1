@@ -30,3 +30,6 @@ Notas:
   de cada modo están en [`docs/_data/product-modes.yaml`](../_data/product-modes.yaml).
 - Las flags `product.golive.*` controlan el coming-soon (ver la plataforma vs poder
   emitir/entrar a videochat), independientes del modo de acceso.
+- El **gate de país** del registro (allowlist `country.access.*`), la validación de
+  dominio de email y el orden de capas del alta están en
+  [`country-access.md`](./country-access.md).
