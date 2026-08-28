@@ -262,7 +262,8 @@
       "connectionFailedRetry": "Não foi possível conectar. Por favor, tente novamente.",
       "connectionSetupFailedRetry": "Não foi possível estabelecer a conexão. Tente novamente.",
       "nicknameTaken": "Esse apelido já está em uso. Por favor, escolha outro.",
-      "emailTaken": "Esse endereço de e-mail já está cadastrado."
+      "emailTaken": "Esse endereço de e-mail já está cadastrado.",
+      "countryBlocked": "Seu país não está disponível para cadastro na plataforma."
     },
     "fieldInfo": {
       "nicknameHelp": "Este é o nome da sua conta pública. Você poderá alterá-lo mais tarde.",

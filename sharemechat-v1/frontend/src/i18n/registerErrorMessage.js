@@ -8,6 +8,11 @@ import i18n from './index';
 const BY_CODE = {
   NICKNAME_TAKEN: 'common.errors.nicknameTaken',
   EMAIL_TAKEN: 'common.errors.emailTaken',
+  // Bloqueo por país en el registro: el backend devuelve el code uniforme
+  // REGISTRATION_UNAVAILABLE (mismo para todos los bloqueos de país, anti-
+  // enumeración a nivel API). En los formularios de registro lo mostramos claro;
+  // login/auth NO usan este helper, así que allí sigue el mensaje discreto.
+  REGISTRATION_UNAVAILABLE: 'common.errors.countryBlocked',
 };
 
 export function registerErrorMessage(err) {

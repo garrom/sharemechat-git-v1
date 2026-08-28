@@ -262,7 +262,8 @@
       "connectionFailedRetry": "Impossible de se connecter. Veuillez réessayer.",
       "connectionSetupFailedRetry": "La connexion n'a pas pu être établie. Veuillez réessayer.",
       "nicknameTaken": "Ce surnom est déjà utilisé. Veuillez en choisir un autre.",
-      "emailTaken": "Cette adresse e-mail est déjà enregistrée."
+      "emailTaken": "Cette adresse e-mail est déjà enregistrée.",
+      "countryBlocked": "Votre pays n'est pas disponible pour l'inscription sur la plateforme."
     },
     "fieldInfo": {
       "nicknameHelp": "Il s'agit du nom de votre compte public. Vous pourrez le modifier ultérieurement.",

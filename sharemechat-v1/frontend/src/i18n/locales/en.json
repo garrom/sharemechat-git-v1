@@ -262,7 +262,8 @@
       "connectionFailedRetry": "Could not connect. Please try again.",
       "connectionSetupFailedRetry": "Could not establish the connection. Please try again.",
       "nicknameTaken": "That nickname is already taken. Choose another.",
-      "emailTaken": "That email is already registered."
+      "emailTaken": "That email is already registered.",
+      "countryBlocked": "Your country is not available for registration on the platform."
     },
     "fieldInfo": {
       "nicknameHelp": "It's your account's public name. You can change it later.",
