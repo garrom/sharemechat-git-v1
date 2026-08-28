@@ -262,7 +262,8 @@
       "connectionFailedRetry": "Es konnte keine Verbindung hergestellt werden. Bitte versuchen Sie es erneut.",
       "connectionSetupFailedRetry": "Es konnte keine Verbindung hergestellt werden. Bitte versuchen Sie es erneut.",
       "nicknameTaken": "Dieser Spitzname ist bereits vergeben. Bitte wählen Sie einen anderen.",
-      "emailTaken": "Diese E-Mail-Adresse ist bereits registriert."
+      "emailTaken": "Diese E-Mail-Adresse ist bereits registriert.",
+      "countryBlocked": "Ihr Land ist für die Registrierung auf der Plattform nicht verfügbar."
     },
     "fieldInfo": {
       "nicknameHelp": "Dies ist Ihr öffentlicher Kontoname. Sie können ihn später ändern.",
