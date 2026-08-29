@@ -8,6 +8,12 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-08-30 — ADR-062: notificacion activa de URLs via IndexNow, y por que el canal prioritario ya no es Google
+
+Se cierra ADR-062: el backend notificara a IndexNow cada articulo publicado, y queda un script (`indexnow-submit-prod.ps1`) para la siembra inicial y los reenvios en bloque. El paso A se ejecuto el mismo dia contra PROD: 36 URLs enviadas, HTTP 202. El detonante fue medir en vez de suponer. Search Console daba 53 impresiones en agosto con `/modelos` marcada como "URL desconocida para Google, nunca rastreada" pese a llevar en el sitemap desde junio, mientras GA4 mostraba el canal `AI Assistant` con 10 sesiones y 9 de ellas con engagement, por delante de las 7 del organico de Google. La conclusion incomoda es que el buscador que penaliza dominio joven y vertical adulto no es hoy el canal a optimizar; los motores de respuesta de IA, que se alimentan del indice de Bing, no aplican ese filtro. IndexNow es la via mas corta a ese indice: protocolo abierto, sin cuenta, sin credenciales y sin coste.
+
+Se descarto dejarlo como script manual, que era la opcion barata y la que el propio paso A ya ofrecia. El motivo no fue de rendimiento sino de modo de fallo: el dia anterior se habia reparado el pre-render de las landings, roto durante semanas precisamente por depender de que alguien lo relanzase tras cada despliegue y por degradar en silencio. Repetir ese patron con IndexNow era conocido y evitable. El aprendizaje que se consolida es que en este repo un paso manual recurrente no es una decision de coste, es deuda con fecha de vencimiento; y que un mecanismo disenyado para no romper la pagina cuando falla es, por esa misma amabilidad, invisible cuando falla.
+
 ## 2026-08-30 — EXIF strip + age-gate rate-limit desplegados a PROD (backend `566301a3`)
 
 **Qué:** los dos P2 de seguridad (EXIF/GPS strip + rate-limit del age-gate) pasan a **PROD**. Un único JAR `566301a3` (contiene ambos, más `commons-imaging`), el mismo binario verificado en TEST. Backend PROD sube de `692a2401` a `566301a3`; **PRELAUNCH intacto** (smoke: `productAccessMode=PRELAUNCH`, 401 en protegido). Backup N=1. Manifest `prod.yaml` backend actualizado (sha `e669d435`).
