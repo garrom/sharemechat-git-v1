@@ -9,7 +9,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.net.URI;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -49,9 +48,6 @@ public class SitemapController {
 
     private static final DateTimeFormatter ISO_DATE = DateTimeFormatter.ISO_LOCAL_DATE;
     private static final long SITEMAP_CACHE_SECONDS = 3600;
-
-    /** Host canonico del apex PROD (ADR-015). Discriminante de robots.txt. */
-    private static final String PROD_APEX_HOST = "sharemechat.com";
 
     /** Body fail-closed de robots.txt para entornos no indexables. */
     private static final String ROBOTS_DISALLOW_ALL = "User-agent: *\nDisallow: /\n";
@@ -231,25 +227,13 @@ public class SitemapController {
      * "lo que esta configurado en este profile". Cambiar `app.public.base-url`
      * sigue siendo la unica forma de hacer indexable un entorno.
      */
+    /**
+     * Delega en {@link PublicSiteProperties#isProdApex()}, unica definicion
+     * de "soy el apex PROD canonico" (ADR-033). Se mantiene el metodo para
+     * no cambiar la lectura de los dos endpoints que lo consultan.
+     */
     private boolean isProdApex() {
-        String configured = siteProperties == null ? null : siteProperties.getBaseUrl();
-        if (configured == null || configured.isBlank()) {
-            return false;
-        }
-        try {
-            URI uri = URI.create(configured);
-            if (!"https".equalsIgnoreCase(uri.getScheme())) {
-                return false;
-            }
-            String host = uri.getHost();
-            if (host == null || !PROD_APEX_HOST.equalsIgnoreCase(host)) {
-                return false;
-            }
-            int port = uri.getPort();
-            return port == -1 || port == 443;
-        } catch (IllegalArgumentException ex) {
-            return false;
-        }
+        return siteProperties != null && siteProperties.isProdApex();
     }
 
     // ================================================================

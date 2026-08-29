@@ -112,6 +112,16 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/sitemap.xml", "/robots.txt").permitAll()
                         .requestMatchers(HttpMethod.HEAD, "/sitemap.xml", "/robots.txt").permitAll()
 
+                        // ADR-062: fichero de clave IndexNow servido en la raiz
+                        // (/<clave>.txt). El path depende de la clave configurada, asi
+                        // que el matcher es por patron; la autoridad real es
+                        // IndexNowKeyController, que devuelve 404 salvo que el nombre
+                        // coincida con la clave Y el entorno sea el apex PROD. El patron
+                        // exige 8 chars minimo, por lo que no puede solapar con
+                        // /robots.txt (6). GET y HEAD, igual que sitemap/robots.
+                        .requestMatchers(HttpMethod.GET, "/*.txt").permitAll()
+                        .requestMatchers(HttpMethod.HEAD, "/*.txt").permitAll()
+
                         // STREAMS: ACK media (cliente o modelo)
                         .requestMatchers(HttpMethod.POST, "/api/streams/*/ack-media").hasAnyRole("CLIENT", "MODEL")
 

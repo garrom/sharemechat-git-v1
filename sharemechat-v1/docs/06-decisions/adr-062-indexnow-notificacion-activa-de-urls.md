@@ -87,7 +87,7 @@ Se adopta la **Opción 3**, materializada en dos pasos, y se conserva el artefac
 - `seo.indexnow.enabled` (**default `false`**), `seo.indexnow.key` y `seo.indexnow.endpoint` en `application.properties`, resolubles por variable de entorno.
 - `IndexNowService`: envío **asíncrono y fail-open**. Cualquier excepción se registra y se descarta; nunca propaga.
 - `IndexNowKeyController`: sirve `/<clave>.txt` bajo el mismo gate `isProdApex()` que `/sitemap.xml`. Fuera del apex PROD responde 404.
-- Disparo en la transición `IN_REVIEW → PUBLISHED` de `ContentArticleService`, envuelto en `try/catch`.
+- Disparo al publicar, en `ContentAdminController` inmediatamente después de `transitionState`. Se situó ahí y no dentro del servicio por dos razones que solo se vieron al implementar: `transitionState` es `@Transactional`, de modo que al retornar ya ha commiteado y no se notifica un publish que luego revierta; y `IndexNowService` vive en `content.publishing`, paquete que ya depende de `content.service` a través de `SitemapController`, así que llamarlo desde el servicio cerraría un ciclo entre paquetes. El controller es hoy el **único** llamante de `transitionState` en todo el código, por lo que no hay camino alternativo que se salte el aviso.
 - Endpoint admin de reenvío masivo bajo `/api/admin/**` (ya cubierto por `ROLE_ADMIN`).
 
 Invariantes que la implementación no puede romper:
@@ -110,6 +110,8 @@ Sobre el protocolo: IndexNow es abierto y lo consumen Bing, Yandex, Seznam y Nav
 **Arquitectura.** Una capacidad saliente nueva en la capa de publicación de contenido. Es la primera llamada HTTP saliente del paquete `content/`; se aísla en un servicio propio para que el resto del paquete siga sin conocer red externa.
 
 **Código.** Tres clases nuevas (`IndexNowProperties`, `IndexNowKeyController`, `IndexNowService`), una llamada en `ContentArticleService`, un matcher en `SecurityConfig` y un endpoint admin. Sin migración de base de datos y sin cambios en frontend.
+
+**Infraestructura (bloqueante para activar).** La distribución CloudFront de PROD debe enrutar `/<clave>.txt` al origen del backend mediante una *cache behavior*, igual que ya hace con `/sitemap.xml` y `/robots.txt`. Sin ella la petición cae al bucket y el controller no llega a ejecutarse, con lo que la clave seguiría sirviéndose como objeto de S3 y volvería a estar expuesta al riesgo de barrido por el sync de despliegue. Al **rotar** la clave hay que actualizar también esa behavior. Procedimiento completo en [`../04-operations/runbooks/indexnow-activation.md`](../04-operations/runbooks/indexnow-activation.md).
 
 **Operaciones.** Dos variables nuevas en el `config.env` de PROD (`SEO_INDEXNOW_ENABLED`, `SEO_INDEXNOW_KEY`). El fichero de clave vive en el bucket de frontend, fuera del bundle: **un despliegue de frontend no debe borrarlo**. Ver la nota de riesgo más abajo.
 
