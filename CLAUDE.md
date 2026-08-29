@@ -49,7 +49,7 @@ No hay lectura obligatoria global. Carga el contexto mínimo según el frente:
 | Despliegue, runbooks, incidentes, riesgos | `docs/04-operations/` |
 | Backoffice y permisos | `docs/05-backoffice/` |
 | Decisiones pasadas | `docs/06-decisions/` |
-| Prioridades, estado y fase | `docs/07-roadmap/backlog-priorizado.md` (**única fuente de estado**; `current-phase.md`/`pending-hardening.md` son narrativa) |
+| Prioridades, estado y fase | `docs/07-roadmap/backlog-priorizado.md` (**única fuente de estado**; `current-phase.md`/`pending-hardening.md`/`go-live-roadmap.md` quedaron **archivados** el 2026-08-29 → narrativa histórica en `docs/_archive/07-roadmap/`) |
 
 Los antiguos apéndices de raíz `shareme-context.md` y `shareme-aws-context.md` están **archivados** en `docs/_archive/context-overview-inactive/`. Para identificar un recurso concreto de PROD, usar el `state-mapping` local (`~/.sharemechat/state-mapping.yaml`), que es la fuente viva; los snapshots de `docs/_archive/_snapshots/` son históricos (el inventariado periódico está inactivo).
 
