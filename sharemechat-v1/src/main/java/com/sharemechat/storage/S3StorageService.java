@@ -143,15 +143,22 @@ public class S3StorageService implements StorageService {
         PutObjectRequest.Builder requestBuilder = PutObjectRequest.builder()
                 .bucket(bucket)
                 .key(key)
-                .contentLength(file.getSize())
                 .contentType(resolveContentType(file, ext));
 
         if (StringUtils.hasText(serverSideEncryption)) {
             requestBuilder.serverSideEncryption(ServerSideEncryption.fromValue(serverSideEncryption));
         }
 
-        try (InputStream inputStream = file.getInputStream()) {
-            s3Client.putObject(requestBuilder.build(), RequestBody.fromInputStream(inputStream, file.getSize()));
+        // Strip de metadatos (EXIF/GPS) para imágenes; el resto se sube en streaming tal cual.
+        if (ImageMetadataScrubber.handles(ext)) {
+            byte[] clean = ImageMetadataScrubber.scrub(file.getBytes(), ext);
+            requestBuilder.contentLength((long) clean.length);
+            s3Client.putObject(requestBuilder.build(), RequestBody.fromBytes(clean));
+        } else {
+            requestBuilder.contentLength(file.getSize());
+            try (InputStream inputStream = file.getInputStream()) {
+                s3Client.putObject(requestBuilder.build(), RequestBody.fromInputStream(inputStream, file.getSize()));
+            }
         }
         return storageUrlCodec.buildManagedUrl(key);
     }

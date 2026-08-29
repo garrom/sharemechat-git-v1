@@ -189,6 +189,14 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
+
+		<!-- Strip de metadatos (EXIF/GPS) de imágenes subidas por usuarios.
+		     Eliminación lossless de EXIF en JPEG (ExifRewriter) sin recodificar. -->
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-imaging</artifactId>
+			<version>1.0.0-alpha6</version>
+		</dependency>
 	</dependencies>
 
 	<build>

@@ -94,8 +94,14 @@ public class LocalStorageService implements StorageService {
             throw new SecurityException("Ruta fuera del root de storage");
         }
 
-        try (var in = file.getInputStream()) {
-            Files.copy(in, dest, StandardCopyOption.REPLACE_EXISTING);
+        // Strip de metadatos (EXIF/GPS) para imágenes; el resto se copia tal cual.
+        if (ImageMetadataScrubber.handles(ext)) {
+            byte[] clean = ImageMetadataScrubber.scrub(file.getBytes(), ext);
+            Files.write(dest, clean);
+        } else {
+            try (var in = file.getInputStream()) {
+                Files.copy(in, dest, StandardCopyOption.REPLACE_EXISTING);
+            }
         }
 
         try {
