@@ -8,6 +8,18 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-08-29 — Strip de metadatos EXIF/GPS en subida de imágenes (en TEST; PROD gateado a OWASP)
+
+**Qué:** primer P2 de seguridad/privacidad del backlog rescatado el 2026-08-29. Las fotos personales (galería de modelo, avatar de cliente) y demás imágenes se subían a S3/local **tal cual** — el EXIF con **GPS** de las fotos de móvil se conservaba (riesgo de doxxing de ubicación). Ahora se limpian antes de persistir. En TEST (`68b5f4b0`); PROD pendiente de OWASP.
+
+**Implementación (sistémica, en la capa de storage).** Nuevo `storage/ImageMetadataScrubber`: eliminación **LOSSLESS** del bloque EXIF del JPEG con **Apache Commons Imaging** (`ExifRewriter.removeExifMetadata`) — no recodifica, así que **cero pérdida de calidad** (seguro también para documentos KYC). Integrado en `S3StorageService.store()` y `LocalStorageService.store()`: si el ext es imagen que el scrubber maneja → bufferiza + limpia + sube el `byte[]` (ajustando content-length); vídeos/PDF siguen en streaming sin tocar. **Fail-open**: si el strip falla, se conserva el original y se loguea (no rompe la subida). Cubre **todas** las imágenes que pasan por `store()` (galería, avatar, KYC, evidencias) al ser lossless.
+
+**Alcance y gap consciente:** solo **JPEG** se limpia hoy (es donde viaja el GPS de cámara/móvil, ~99% del riesgo). **PNG/WEBP/GIF sin strip** por ahora; ampliable sin tocar los llamantes (basta que `handles()` los acepte). No cubre XMP (GPS ahí es muy raro).
+
+**Dependencia + OWASP.** `org.apache.commons:commons-imaging:1.0.0-alpha6` (última release de Apache; commons-imaging lleva años en "alpha" pero es estable y de uso extendido). **OWASP dependency-check NO pudo correr** en el entorno: la NVD devuelve 403/404 sin API key, y CI corre `mvnw test` (no `verify`), así que el plugin (bound a `verify`) tampoco lo ejecuta. Verificación manual: los CVE históricos de commons-imaging (lote DoS 2018 por imágenes malformadas) están corregidos desde `1.0-alpha2`; uso acotado (magic-bytes + límite 26 MB + scrubber fail-open). **Gate consciente**: correr el OWASP formal con NVD key antes de PROD.
+
+**Verificación.** `ImageMetadataScrubberTest` (3, verde): construye un JPEG con GPS, confirma EXIF antes y su ausencia después + JPEG sigue decodificable. CI verde (5 jobs). JAR desplegado en TEST contiene `ImageMetadataScrubber.class` + `commons-imaging-1.0.0-alpha6.jar`. El test end-to-end por API queda pendiente de una cuenta autenticada (galería exige modelo KYC-verificado; avatar exige CLIENT post-pago) — la corrección está probada por el unit test que ejerce la lógica exacta del scrubber.
+
 ## 2026-08-28 — Frente de registro: validación de dominio de email + mensaje claro de país + expansión de allowlists de país (cliente 28→47 / modelo 47→57), todo a PROD
 
 **Qué:** tres arreglos del alta, desplegados a TEST y PROD (PROD sigue PRELAUNCH para cliente). A+C fueron backend `692a240` + frontend product `main.b1a946ce.js`; B es cambio de dato en `config.env` (sin rebuild). Motivación: un cliente colombiano vio "usuario registrado con éxito" pero sin cuenta ni email de verificación.
