@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sharemechat.dto.ConsentAcceptRequest;
 import com.sharemechat.entity.User;
 import com.sharemechat.exception.GlobalExceptionHandler;
+import com.sharemechat.exception.TooManyRequestsException;
+import com.sharemechat.service.ApiRateLimitService;
 import com.sharemechat.service.ConsentService;
 import com.sharemechat.service.UserService;
 import org.junit.jupiter.api.Test;
@@ -19,22 +21,29 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class ConsentControllerMockMvcTest {
 
+    private MockMvc build(ConsentService consentService, UserService userService, ApiRateLimitService rateLimit) {
+        ConsentController controller = new ConsentController(consentService, userService, rateLimit);
+        // findAndRegisterModules() registra JavaTimeModule para serializar el LocalDateTime
+        // del cuerpo de error (p.ej. el 429 de TooManyRequestsException).
+        ObjectMapper mapper = new ObjectMapper().findAndRegisterModules();
+        return MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .setMessageConverters(new MappingJackson2HttpMessageConverter(mapper))
+                .build();
+    }
+
     @Test
     void acceptConsentUpdatesAccountAndReturnsOk() throws Exception {
         ConsentService consentService = mock(ConsentService.class);
         UserService userService = mock(UserService.class);
+        ApiRateLimitService rateLimit = mock(ApiRateLimitService.class);
 
         User user = new User();
         user.setId(22L);
         user.setEmail("bob@example.com");
-
         when(userService.findByEmail("bob@example.com")).thenReturn(user);
 
-        ConsentController controller = new ConsentController(consentService, userService);
-        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller)
-                .setControllerAdvice(new GlobalExceptionHandler())
-                .setMessageConverters(new MappingJackson2HttpMessageConverter(new ObjectMapper()))
-                .build();
+        MockMvc mockMvc = build(consentService, userService, rateLimit);
 
         ConsentAcceptRequest request = new ConsentAcceptRequest();
         request.setConfirmAdult(true);
@@ -48,5 +57,36 @@ class ConsentControllerMockMvcTest {
                 .andExpect(status().isOk());
 
         verify(consentService).acceptAccountConsent(any(), eq(22L), any(ConsentAcceptRequest.class));
+    }
+
+    @Test
+    void ageGatePasaRateLimitYRegistra() throws Exception {
+        ConsentService consentService = mock(ConsentService.class);
+        ApiRateLimitService rateLimit = mock(ApiRateLimitService.class);
+        MockMvc mockMvc = build(consentService, mock(UserService.class), rateLimit);
+
+        mockMvc.perform(post("/api/consent/age-gate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isNoContent());
+
+        verify(rateLimit).checkConsentIp(any());
+        verify(consentService).recordAgeGate(any(), any(), any());
+    }
+
+    @Test
+    void ageGateRateLimitadoDevuelve429YNoRegistra() throws Exception {
+        ConsentService consentService = mock(ConsentService.class);
+        ApiRateLimitService rateLimit = mock(ApiRateLimitService.class);
+        doThrow(new TooManyRequestsException("Demasiadas solicitudes de consentimiento desde esta IP", 1000L))
+                .when(rateLimit).checkConsentIp(any());
+        MockMvc mockMvc = build(consentService, mock(UserService.class), rateLimit);
+
+        mockMvc.perform(post("/api/consent/age-gate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isTooManyRequests());
+
+        verify(consentService, never()).recordAgeGate(any(), any(), any());
     }
 }

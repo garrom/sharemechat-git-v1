@@ -8,6 +8,26 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-08-30 — EXIF strip + age-gate rate-limit desplegados a PROD (backend `566301a3`)
+
+**Qué:** los dos P2 de seguridad (EXIF/GPS strip + rate-limit del age-gate) pasan a **PROD**. Un único JAR `566301a3` (contiene ambos, más `commons-imaging`), el mismo binario verificado en TEST. Backend PROD sube de `692a2401` a `566301a3`; **PRELAUNCH intacto** (smoke: `productAccessMode=PRELAUNCH`, 401 en protegido). Backup N=1. Manifest `prod.yaml` backend actualizado (sha `e669d435`).
+
+**Verificación de EXIF end-to-end (cerró el hueco).** El día 29 el EXIF quedó "probado por unit test" pero sin test por la ruta de subida real (la galería exige modelo KYC, el avatar cliente post-pago). El 30, el operador subió por la UI de TEST una foto con GPS incrustado (fixture Madrid) como avatar del cliente `demo+client2` (userId 32); se descargó el objeto resultante de `s3://sharemechat-storage-test/private-uploads/clients/32/profile/…` y se comprobó: entra con GPS (N 40°24', W 3°42') + Make/Model y 3 tags EXIF → **sale con 0 tags EXIF, sin GPS, imagen íntegra (200×200 RGB, decodifica), −196 bytes** (el bloque EXIF). Ruta de subida real validada.
+
+**OWASP no corrido — decisión consciente.** El dependency-check formal **no pudo ejecutarse** (la NVD devuelve 403/404 sin API key; no había NVD key en el entorno, y CI corre `mvnw test` no `verify`). Se desplegó EXIF a PROD sobre la **verificación manual** de `commons-imaging:1.0.0-alpha6` (última release Apache; CVE históricos DoS corregidos desde 1.0-alpha2; uso acotado: magic-bytes + límite 26 MB + scrubber fail-open) **por instrucción explícita del operador** ("hazlo todo y despliega en prod", informado 3 veces del gate). Recomendación viva: correr el OWASP formal con NVD key cuando esté disponible.
+
+**Verificación previa (día 29, TEST):** EXIF unit test + JAR con el scrubber; age-gate rate-limit unit test (3) + funcional en TEST (30 POSTs → 204, del 31 al 35 → 429). Ver entradas del 2026-08-29.
+
+## 2026-08-29 — Age-gate: rate-limit anti-abuso + reencuadre honesto del "bypass" (en TEST)
+
+**Qué:** segundo P2 de seguridad del backlog rescatado el 2026-08-29. El age-gate de invitado (`POST /api/consent/age-gate`) no tenía rate-limit y su `consent_id` lo genera el cliente. Se añade rate-limit; y se **reencuadra el ítem** con honestidad.
+
+**Reencuadre (importante).** El análisis dejó claro que el age-gate es un **"confirmo 18+" autodeclarado + registro de consentimiento** (auditoría/DSA), **NO** una barrera de acceso al contenido. El control de edad real del contenido es **Didit** (estimación facial, gate en matching + primer pago), ya en producción. Un "clic de confirmar 18+" **no se puede hacer a prueba de bots**: un cliente HTTP crudo manda la cabecera `Cookie: consent_id=…` que quiera (httpOnly solo frena al JS de un navegador, no a un bot). Por tanto el "bypass" no es *cerrable*; lo que sí aporta valor es (a) anti-abuso y (b) integridad del log de consentimiento.
+
+**Hecho — rate-limit (Opción A, recomendada).** `ApiRateLimitService.checkConsentIp(ip)` (reusa el mismo mecanismo Redis que `register`: clave `consent:ip`, `security.ratelimit.consent.limit=30` / `window-seconds=300` — generoso, un usuario real dispara 1-2). Llamado al inicio de `ConsentController.ageGate` y `terms` (ambos endpoints públicos que escriben filas de consentimiento). Fail-open si Redis cae. Test `ConsentControllerMockMvcTest` (3, verde): age-gate pasa rate-limit → 204 + registra; rate-limitado → 429 + NO registra.
+
+**Diferido — Opción B (P3, opcional, legal).** `consent_id` firmado por servidor (HMAC) + binding IP/TTL en la comprobación del registro → log de consentimiento **no falsificable** para DSA/compliance. No frena a un bot decidido (puede pedir un id válido); su valor es de auditoría. Abrir solo si legal lo pide. Anotado en el backlog (P3).
+
 ## 2026-08-29 — Strip de metadatos EXIF/GPS en subida de imágenes (en TEST; PROD gateado a OWASP)
 
 **Qué:** primer P2 de seguridad/privacidad del backlog rescatado el 2026-08-29. Las fotos personales (galería de modelo, avatar de cliente) y demás imágenes se subían a S3/local **tal cual** — el EXIF con **GPS** de las fotos de móvil se conservaba (riesgo de doxxing de ubicación). Ahora se limpian antes de persistir. En TEST (`68b5f4b0`); PROD pendiente de OWASP.

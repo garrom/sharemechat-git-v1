@@ -38,6 +38,9 @@ public class ApiRateLimitService {
     private final int complaintLimitPerWindow;
     private final Duration complaintWindow;
 
+    private final int consentLimitPerWindow;
+    private final Duration consentWindow;
+
     public ApiRateLimitService(
             StringRedisTemplate redis,
             @Value("${security.ratelimit.login.limit:10}") int loginLimitPerWindow,
@@ -62,7 +65,10 @@ public class ApiRateLimitService {
             @Value("${security.ratelimit.ws.ping.window-seconds:10}") int wsPingWindowSeconds,
 
             @Value("${security.ratelimit.complaint.limit:5}") int complaintLimitPerWindow,
-            @Value("${security.ratelimit.complaint.window-seconds:3600}") int complaintWindowSeconds
+            @Value("${security.ratelimit.complaint.window-seconds:3600}") int complaintWindowSeconds,
+
+            @Value("${security.ratelimit.consent.limit:30}") int consentLimitPerWindow,
+            @Value("${security.ratelimit.consent.window-seconds:300}") int consentWindowSeconds
 
     ) {
         this.redis = redis;
@@ -90,6 +96,9 @@ public class ApiRateLimitService {
 
         this.complaintLimitPerWindow = complaintLimitPerWindow;
         this.complaintWindow = Duration.ofSeconds(complaintWindowSeconds);
+
+        this.consentLimitPerWindow = consentLimitPerWindow;
+        this.consentWindow = Duration.ofSeconds(consentWindowSeconds);
 
     }
 
@@ -157,6 +166,18 @@ public class ApiRateLimitService {
 
     public void checkRegister(String ip) {
         consumeOrThrow(key("register:ip", ip), registerLimitPerWindow, registerWindow, "Demasiados registros desde esta IP");
+    }
+
+    // =========================
+    // CONSENT (age-gate / terms — endpoints publicos de logging de consentimiento)
+    // =========================
+
+    // IP-only. Anti-abuso de los endpoints publicos que escriben filas de consentimiento
+    // (POST /api/consent/age-gate, /terms). No convierte el age-gate en barrera de contenido
+    // (eso es Didit); solo frena la creacion masiva automatizada de registros de consentimiento.
+    public void checkConsentIp(String ip) {
+        consumeOrThrow(key("consent:ip", ip), consentLimitPerWindow, consentWindow,
+                "Demasiadas solicitudes de consentimiento desde esta IP");
     }
 
     // =========================
