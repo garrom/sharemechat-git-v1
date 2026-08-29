@@ -96,7 +96,9 @@ Modelos y clientes NO son simétricos en two-sided marketplaces adult. El cuello
 
 **Consecuencia operativa**: la semana cero del soft launch NO es "captar clientes con blog". Es **conseguir 10 modelos verificadas activas**. Todo lo demás sigue de ahí. Esta prioridad invalida cualquier meta previa simétrica del tipo "X clientes + X modelos antes de lanzar": los dos lados no son intercambiables ni se ponderan igual.
 
-## 7. Plan concreto de las 2 semanas siguientes
+## 7. Plan concreto de arranque (secuencia)
+
+> **Nota (2026-08-29):** esta secuencia se redactó en jul-2026; el marco temporal original ("2 semanas siguientes") es **histórico**, no una fecha viva. El **estado y la prioridad reales** de estos frentes —en particular la página `/m/:slug` (punto 1)— viven en [`docs/07-roadmap/backlog-priorizado.md`](../07-roadmap/backlog-priorizado.md), única fuente de estado. Allí `/m/` figura como **P1, no implementada** (ADR-048 sigue vigente).
 
 Ejecución operativa, no aspiracional:
 
