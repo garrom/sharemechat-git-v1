@@ -41,10 +41,9 @@ La reorganización actual conserva el conocimiento útil y redistribuye su conte
   - **`04-operations/incidencias-prod/`** → base de conocimiento viva de incidencias en PROD (teoría, casos reales, técnicas de actuación). Se rellena poco a poco; empezar por su [`README.md`](04-operations/incidencias-prod/README.md).
 - `05-backoffice`: modelo operativo y de permisos del backoffice
 - `06-decisions`: decisiones arquitectónicas registradas
-- `07-roadmap`: fase actual y siguientes frentes
-- `_snapshots`: snapshots YAML estructurados de estado del sistema (generados por skill)
-- `state-inventory-skills`: skills operativas ejecutables por agentes (state-inventory, state-diff, etc.)
-- `cms/skills`: skills del pipeline editorial del CMS
+- `07-roadmap`: fase actual y siguientes frentes. **Estado y prioridades vivas** solo en `07-roadmap/backlog-priorizado.md` (única fuente de estado, verificada contra código).
+- `_data`: **fuente única de DATOS** (precios, flags, modos) — Facts as Code (ADR-061), generados a los docs por Motor 1 y anclados al runtime por tests.
+- `_archive`: material **archivado/inactivo** (snapshots `_snapshots/`, skills operativas `state-inventory-skills/`, pipelines `cms/`·`social/`, hipótesis descartadas). No es corpus vivo; ver [`documentation-governance.md`](documentation-governance.md).
 - `templates`: plantillas para mantener el corpus homogéneo
 - `project-log.md`: bitácora cronológica de hitos del proyecto (decisiones cerradas, cierres de fase, hipótesis archivadas). Mantenida por el agente local. Política operativa en `documentation-governance.md`
 

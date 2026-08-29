@@ -73,7 +73,7 @@ Los antiguos apéndices de raíz `shareme-context.md` y `shareme-aws-context.md`
 | Cómo operar algo (procedimiento repetible) | `docs/04-operations/runbooks/` |
 | Hito / paquete cerrado / aprendizaje duradero | `docs/project-log.md` (bitácora — el porqué, no el qué) |
 | Contexto para Claude en futuras sesiones (preferencia, gotcha) | memoria de Claude (no docs) |
-| Skill nueva/modificada | `.claude/skills/` (la skill ES la fuente; `docs/` NO lleva copia) |
+| Skill nueva/modificada | Las skills viven como plugin de Cowork, **fuera de este repo** (la skill ES la fuente; `docs/` NO lleva copia viva). Copias de referencia archivadas de las editoriales/sociales en `docs/_archive/{cms,social}/skills/`. |
 
 Detalle y política de la bitácora en `docs/documentation-governance.md`. Ante duda de si un hito merece bitácora, preguntar al operador.
 
@@ -110,8 +110,7 @@ Cualquier comando contra infraestructura (AWS CLI, SSH a EC2, túnel RDS, `mysql
 
 ## Objetivo
 
-**Lanzamiento a producción: 1 de julio de 2026.**
-Estado y prioridades vivas en `docs/07-roadmap/`.
+**Lanzamiento a producción: sin fecha fija.** Se lanza cuando haya suficiente masa de modelos y clientes registrados (el cuello de botella declarado es la captación de modelos). El estado, la fase y las prioridades vivas están en [`docs/07-roadmap/backlog-priorizado.md`](sharemechat-v1/docs/07-roadmap/backlog-priorizado.md), única fuente de estado (verificado contra código).
 
 ---
 
