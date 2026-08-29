@@ -765,7 +765,7 @@ Sub-tareas técnicas:
 Sub-tareas priorizadas (A0006):
 
 - **6.2.T1 — Alta en Bing Webmaster Tools (15 min, coste 0) — desbloquea que ChatGPT cite** ⭐. Verificar dominio + enviar sitemap. Importable directamente desde Google Search Console en 1 clic. Requiere ejecución del operador (necesita cuenta Microsoft/live).
-- **6.2.T2 — Envío alternativeto.net el 13-ago-2026** (cuenta ya lista según A0006 y E0001 del ledger).
+- **6.2.T2 — alternativeto.net: EN ESPERA (2026-08-30).** La cuenta esta lista y la espera anti-spam vencio, pero el envio queda condicionado a que el producto este **abierto a clientes** o exista **fecha de apertura fija**: el directorio rechaza explicitamente lo que este "proximamente" o en acceso anticipado, y solo hay un intento. El texto preparado se retiro el 2026-08-30 por declarar justo ese estado. Motivo, estado de la cuenta y hallazgos utiles para reescribirlo en `../brainstorming/artifacts/A0001.md`.
 - **6.2.T3 — Email nurture waitlist**: borrador listo en A0006 §Prioridad 4. Requiere trigger transaccional en backend (nuevo registro cliente en PRELAUNCH → email de "acceso anticipado") o envío manual mientras el volumen sea bajo. GDPR: nurture defendible para registrados en early-access, no marketing masivo.
 - **6.2.T4 — Cluster contenido US-EN GEO** (medio plazo, tras Bing indexado): páginas de valor con formato Q&A + schema + front-load para intención US:
   - "no bots / verificado" (USP, H0002 del ledger — dolor #1 del usuario US).
