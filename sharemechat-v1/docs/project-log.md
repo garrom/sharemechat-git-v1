@@ -8,6 +8,16 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-08-30 — Auditoría de cobertura de tests + arranque del backfill (Lote 1)
+
+**Qué:** revisión exhaustiva de la cobertura de tests (5 revisores en paralelo por área: dinero/PSP/Master, auth/seguridad/storage, content/KYC/GDPR, frontend/E2E, y lo añadido desde el 15-ago), cada uno leyendo los tests reales (no name-grep) para descartar falsos positivos.
+
+**Veredicto:** el **núcleo de riesgo está cubierto** (dinero de salida/webhooks con HMAC, gates de sesión/permiso, Product Operational Mode, moderación de cámara frontend, matching backend, i18n) y la disciplina "lo nuevo con test" **se mantuvo en lo esencial** (~32/36 ficheros nuevos desde el 15-ago con test; toda la lógica de negocio nueva testeada). Degradación **localizada en la capa HTTP** (2 controllers finos, `PresenceSampleJob`, endpoints `/sync` KB) y **gaps reales anteriores al framework nunca rellenados**.
+
+**Gaps de alto riesgo detectados** (van al backlog como frente priorizado): seguridad/autorización — `StorageController.canReadFile` (**IDOR** sobre documentos KYC/verificación), `AuthController` (rotación/reuso de refresh), `AdminAuthController` (gate backoffice), `ModerationReportService` (suspende cuenta + revoca sesión), `PasswordResetService`; compliance — `GdprExportService` (export art.15 con `catch→List.of()`: un rename de columna vacía datos personales sin error), `ModelContractManifestService`/`ModelContractService` (integridad SHA-256 + idempotencia de aceptación), `ModelKycController`, `AdminController` (38 endpoints, incl. aprobación KYC); dinero de ENTRADA — `PspOrchestratorService.createCheckout` (precio por pack/kill-switch/gate go-live), `PayoutMethodService` (validación rail + invariante default), `PspProviderConfigService`; storage `store()` (validación magic-bytes/traversal, el punto que tocó el EXIF); frontend — `realtime/` (WebRTC/matching: cero tests) y E2E sin streaming/onboarding-modelo/Master/soporte.
+
+**Lote 1 (hecho, unit-testable en local, verde):** `PspProviderConfigServiceTest` (7 — kill-switch: isEnabled solo con enabled+ENABLED), `ModelContractManifestServiceTest` (7 — integridad SHA-256 fail-secure: match/mismatch/validación formato/caché por versión, `RestTemplate` mockeado por reflexión), `LocalStorageServiceStoreTest` (6 — extensión/magic-bytes/tamaño/traversal + integración del scrubber EXIF end-to-end en `store()`). Siguientes lotes por el orden del backlog.
+
 ## 2026-08-30 — EXIF strip + age-gate rate-limit desplegados a PROD (backend `566301a3`)
 
 **Qué:** los dos P2 de seguridad (EXIF/GPS strip + rate-limit del age-gate) pasan a **PROD**. Un único JAR `566301a3` (contiene ambos, más `commons-imaging`), el mismo binario verificado en TEST. Backend PROD sube de `692a2401` a `566301a3`; **PRELAUNCH intacto** (smoke: `productAccessMode=PRELAUNCH`, 401 en protegido). Backup N=1. Manifest `prod.yaml` backend actualizado (sha `e669d435`).
