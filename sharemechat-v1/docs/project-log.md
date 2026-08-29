@@ -8,6 +8,12 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-08-29 — Las landings de captación servían el shell SPA a los crawlers: un paso manual de runbook se pudrió en silencio
+
+Las cuatro landings públicas de captación (`/modelos` y `/for-studios`, ES+EN) llevaban tiempo devolviendo a los crawlers el shell de la SPA (3,7 KB, sin canonical y con el título genérico de la home) en lugar del HTML pre-renderizado. Google tenía `/modelos` como "URL desconocida, nunca rastreada" pese a estar en el sitemap desde junio. La causa no fue un error de código: `prerender-landings-prod.ps1` se diseñó como on-demand porque las landings cambian poco, de modo que dependía de que un humano lo relanzase después de cada despliegue de frontend. El blog no sufre el problema porque tiene cron auto-curativo cada 15 minutos (ADR-042 G3). Se reparó ejecutando el script y se enganchó al despliegue como paso [4.6/N] de `deploy-frontend.ps1`, con la misma política de fallo no bloqueante que el bloque del blog.
+
+El aprendizaje que justifica esta entrada no es el arreglo sino el modo de fallo: la degradación estaba diseñada para no romper la página (Custom Error Response 403 a 200 sirviendo el shell), y esa amabilidad la volvió invisible. Un crawler recibía 200 OK y nadie tenía motivo para mirar. Cualquier mecanismo que degrade en silencio y dependa de un paso manual acabará podrido; la contramedida no es documentar mejor el paso, es eliminarlo automatizándolo. Queda como criterio para el resto de piezas on-demand del repo.
+
 ## 2026-08-28 — Frente de registro: validación de dominio de email + mensaje claro de país + expansión de allowlists de país (cliente 28→47 / modelo 47→57), todo a PROD
 
 **Qué:** tres arreglos del alta, desplegados a TEST y PROD (PROD sigue PRELAUNCH para cliente). A+C fueron backend `692a240` + frontend product `main.b1a946ce.js`; B es cambio de dato en `config.env` (sin rebuild). Motivación: un cliente colombiano vio "usuario registrado con éxito" pero sin cuenta ni email de verificación.
