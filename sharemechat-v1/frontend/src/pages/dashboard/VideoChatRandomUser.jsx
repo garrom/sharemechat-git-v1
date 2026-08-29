@@ -134,7 +134,7 @@ export default function VideoChatRandomUser(props) {
         id: item.modelId,
         title: t('dashboardUserClient.videoChatRandomUser.promoTeaserTitle', { name: item.modelName }),
         modelName: item.modelName,
-        thumb: item.avatarUrl || '/img/avatarChica.png',
+        thumb: item.avatarUrl || '/img/avatar-model.svg',
         src: item.videoUrl,
         durationSec: null,
         // ADR-052 Superficie 2 (2026-07-25): precio autoservicio de la
@@ -203,7 +203,7 @@ export default function VideoChatRandomUser(props) {
 
   const renderCallTopMeta = () => (
     <StyledCallTopMeta>
-      <StyledTitleAvatar src={modelAvatar || '/img/avatarChica.png'} alt="" />
+      <StyledTitleAvatar src={modelAvatar || '/img/avatar-model.svg'} alt="" />
       <StyledCallTopMetaText>
         {modelNickname || t('dashboardUserClient.report.displayName')}
       </StyledCallTopMetaText>
@@ -476,7 +476,7 @@ export default function VideoChatRandomUser(props) {
                       CTA "hazte cliente" (onGoPremium). */}
                   <StyledCallChatColumn>
                     <StyledCallChatColHeader>
-                      <StyledTitleAvatar src={modelAvatar || '/img/avatarChica.png'} alt="" style={{ width: 28, height: 28 }} />
+                      <StyledTitleAvatar src={modelAvatar || '/img/avatar-model.svg'} alt="" style={{ width: 28, height: 28 }} />
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ fontSize: 13, fontWeight: 600, color: '#e7ebf0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {modelNickname || t('dashboardUserClient.report.displayName')}

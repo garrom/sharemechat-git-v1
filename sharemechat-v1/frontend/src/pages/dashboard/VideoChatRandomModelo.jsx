@@ -771,7 +771,7 @@ export default function VideoChatRandomModelo(props) {
   const renderCallTopMeta = (hud = null) => (
     <StyledCallTopMeta>
       {showTrialBadge && <TrialBadge />}
-      <StyledTitleAvatar src={clientAvatar || '/img/avatarChico.png'} alt="" />
+      <StyledTitleAvatar src={clientAvatar || '/img/avatar-client.svg'} alt="" />
       <div style={{display:'flex',flexDirection:'column',minWidth:0,lineHeight:1.15}}>
         <StyledCallTopMetaText>
           {clientNickname || t('dashboardModel.videoChatRandomModelo.labels.clientDefault')}
@@ -1055,7 +1055,7 @@ export default function VideoChatRandomModelo(props) {
 
                   <StyledCallChatColumn>
                     <StyledCallChatColHeader>
-                      <StyledTitleAvatar src={clientAvatar || '/img/avatarChico.png'} alt="" style={{ width: 28, height: 28 }} />
+                      <StyledTitleAvatar src={clientAvatar || '/img/avatar-client.svg'} alt="" style={{ width: 28, height: 28 }} />
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ fontSize: 13, fontWeight: 600, color: '#e7ebf0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {clientNickname || t('dashboardModel.videoChatRandomModelo.labels.clientDefault')}

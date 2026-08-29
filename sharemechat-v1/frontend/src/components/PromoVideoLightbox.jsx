@@ -10,7 +10,7 @@ export default function PromoVideoLightbox({ videos, activeIndex, onClose, onPre
   if (activeIndex == null || activeIndex < 0 || activeIndex >= videos.length) return null;
 
   const video = videos[activeIndex];
-  const avatarSrc = video.thumb || '/img/avatarChica.png';
+  const avatarSrc = video.thumb || '/img/avatar-model.svg';
   const modelName = video.modelName || 'Modelo';
   // ADR-052 Superficie 2: precio por minuto elegido por la modelo dentro
   // de su tramo. Se muestra "X €/min" bajo el nombre; si el DTO no trae

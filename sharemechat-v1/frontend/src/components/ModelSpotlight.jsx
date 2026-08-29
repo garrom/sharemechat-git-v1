@@ -60,16 +60,20 @@ const Cover = styled.div`
   }
 `;
 
+// Sin foto (2026-08-28): silueta neutra en trazo, gradiente por rol (unificado
+// con /img/avatar-*.svg). MODEL por defecto; CLIENT en el spotlight simple.
 const NoPhoto = styled.div`
   width: 100%;
   height: 100%;
   display: grid;
   place-items: center;
-  font-size: 72px;
-  font-weight: 800;
-  color: #fff;
   background: linear-gradient(135deg, #ff5c8a, #a78bfa);
   user-select: none;
+
+  &[data-role='client'] { background: linear-gradient(135deg, #3b82f6, #22d3ee); }
+  &[data-role='master'] { background: linear-gradient(135deg, #f7b733, #e0700b); }
+
+  svg { width: 96px; height: 96px; }
 `;
 
 const CoverInfo = styled.div`
@@ -353,7 +357,6 @@ const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = fal
     : { c: '#8891a0', label: t('common.presence.offline', 'desconectado') };
 
   const name = nickname || profile?.nickname || '';
-  const initial = (name || '?').trim().charAt(0).toUpperCase() || '?';
 
   const rate = profile?.chosenRateEurPerMin != null ? Number(profile.chosenRateEurPerMin) : null;
   const rateTxt = rate != null
@@ -394,7 +397,14 @@ const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = fal
   return (
     <Panel>
       <Cover>
-        {photo ? <img src={photo} alt="" /> : <NoPhoto aria-hidden="true">{initial}</NoPhoto>}
+        {photo ? <img src={photo} alt="" /> : (
+          <NoPhoto data-role={simple ? 'client' : 'model'} aria-hidden="true">
+            <svg viewBox="0 0 120 120" fill="none" stroke="#ffffff" strokeWidth="6" strokeLinecap="round">
+              <circle cx="60" cy="48" r="17" />
+              <path d="M31 98c0-16 13-26 29-26s29 10 29 26" />
+            </svg>
+          </NoPhoto>
+        )}
         <CoverInfo>
           <Name>{name}</Name>
           <Presence $c={presMeta.c}>

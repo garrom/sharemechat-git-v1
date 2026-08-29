@@ -746,7 +746,7 @@ export default function VideoChatFavoritosCliente(props){
                               <StyledCallStage>
                                 <StyledCallTopBar>
                                   <StyledCallTopMeta>
-                                    <StyledTitleAvatar src={callPeerAvatar||'/img/avatarChica.png'} alt=""/>
+                                    <StyledTitleAvatar src={callPeerAvatar||'/img/avatar-model.svg'} alt=""/>
                                     <StyledCallTopMetaText>
                                       {callPeerName||t('dashboardClient.videoChatFavoritosCliente.labels.remote')}
                                     </StyledCallTopMetaText>
@@ -812,7 +812,7 @@ export default function VideoChatFavoritosCliente(props){
 
                           <StyledCallChatColumn>
                             <StyledCallChatColHeader>
-                              <StyledTitleAvatar src={callPeerAvatar||'/img/avatarChica.png'} alt="" style={{ width: 28, height: 28 }} />
+                              <StyledTitleAvatar src={callPeerAvatar||'/img/avatar-model.svg'} alt="" style={{ width: 28, height: 28 }} />
                               <div style={{ minWidth: 0, flex: 1 }}>
                                 <div style={{ fontSize: 13, fontWeight: 600, color: '#e7ebf0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                   {callPeerName||t('dashboardClient.videoChatFavoritosCliente.labels.remote')}
@@ -1045,7 +1045,7 @@ export default function VideoChatFavoritosCliente(props){
                 <StyledVideoArea style={{display:callStatus==='in-call'?'block':'none',position:'relative'}}>
                   <StyledRemoteVideo ref={callRemoteWrapRef}>
                     <StyledVideoTitle>
-                      <StyledTitleAvatar src={callPeerAvatar||'/img/avatarChico.png'} alt=""/>
+                      <StyledTitleAvatar src={callPeerAvatar||'/img/avatar-client.svg'} alt=""/>
                       {callPeerName||t('dashboardClient.videoChatFavoritosCliente.labels.remote')}
                     </StyledVideoTitle>
                     <video ref={callRemoteVideoRef} autoPlay playsInline style={{width:'100%',height:'100%',objectFit:'cover'}}/>
