@@ -1,6 +1,8 @@
 package com.sharemechat.controller;
 
+import com.sharemechat.config.IpConfig;
 import com.sharemechat.dto.ConsentAcceptRequest;
+import com.sharemechat.service.ApiRateLimitService;
 import com.sharemechat.service.ConsentService;
 import com.sharemechat.service.UserService;
 import jakarta.servlet.http.Cookie;
@@ -19,16 +21,19 @@ public class ConsentController {
 
     private final ConsentService consentService;
     private final UserService userService;
+    private final ApiRateLimitService rateLimit;
 
-    public ConsentController(ConsentService consentService, UserService userService) {
+    public ConsentController(ConsentService consentService, UserService userService, ApiRateLimitService rateLimit) {
         this.consentService = consentService;
         this.userService = userService;
+        this.rateLimit = rateLimit;
     }
 
     // Body opcional: { "path": "/ruta/donde/acepta" }
     @PostMapping("/age-gate")
     public ResponseEntity<Void> ageGate(@RequestBody(required = false) Map<String, Object> body,
                                         HttpServletRequest request) {
+        rateLimit.checkConsentIp(IpConfig.getClientIp(request));
         String consentId = readConsentIdCookie(request);
         String path = bodyPath(body, request);
         consentService.recordAgeGate(request, consentId, path);
@@ -41,6 +46,7 @@ public class ConsentController {
     public ResponseEntity<Void> terms(@RequestParam(name = "v", required = false) String version,
                                       @RequestBody(required = false) Map<String, Object> body,
                                       HttpServletRequest request) {
+        rateLimit.checkConsentIp(IpConfig.getClientIp(request));
         String consentId = readConsentIdCookie(request);
         String path = bodyPath(body, request);
         consentService.recordTerms(request, consentId, path, version);
