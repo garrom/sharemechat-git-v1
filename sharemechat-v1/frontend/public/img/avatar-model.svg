@@ -1,11 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="Modelo sin foto">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#ff5c8a"/>
-      <stop offset="1" stop-color="#a78bfa"/>
-    </linearGradient>
-  </defs>
-  <circle cx="60" cy="60" r="60" fill="url(#g)"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="Sin foto">
+  <circle cx="60" cy="60" r="60" fill="#000000"/>
   <circle cx="60" cy="48" r="17" fill="none" stroke="#ffffff" stroke-width="6"/>
   <path d="M31 98c0-16 13-26 29-26s29 10 29 26" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round"/>
 </svg>
