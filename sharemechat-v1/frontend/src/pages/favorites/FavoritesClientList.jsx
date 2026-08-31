@@ -11,7 +11,6 @@ import {
   StateRow,
   ItemCard,
   Avatar,
-  LetterAvatar,
   Name,
   DotWrap,
   StatusDot,
@@ -84,7 +83,6 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
   // Bot: el menú de acciones no aplica (no se puede bloquear, reportar ni eliminar; se ocultará entero).
   const isMenuDisabled = invited === 'pending' || invited === 'sent' || (isBlocked && !blockedByMe);
   const displayName = isBot ? i18n.t('support.chat.agentName') : (user?.nickname || `Usuario #${user?.id}`);
-  const avatarInitial = (displayName || '?').trim().charAt(0).toUpperCase() || '?';
   const hasRealAvatar = !!avatarUrl && !imgFailed;
   const previewText = isBot ? i18n.t('dashboardClient.favorites.botSubtitle') : formatPreview(preview, giftEmojiByName);
   const timeText = isBot ? '' : formatConvTime(lastAt);
@@ -112,7 +110,7 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
             onError={() => setImgFailed(true)}
           />
         ) : (
-          <LetterAvatar $size={44} aria-hidden="true">{avatarInitial}</LetterAvatar>
+          <Avatar src="/img/avatar-model.svg" alt="" $size={44} aria-hidden="true" />
         )}
         <StatusDot
           className={presence === 'busy' ? 'busy' : presence === 'online' ? 'online' : 'offline'}

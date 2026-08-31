@@ -36,7 +36,7 @@ const FavoriteItem = ({ user, onClick, onRemove, removing, onChat }) => {
   };
 
   const role = String(user?.role || user?.userType || '').toUpperCase();
-  const fallback = role === 'MODEL' ? '/img/avatarChica.png' : '/img/avatarChico.png';
+  const fallback = role === 'MODEL' ? '/img/avatar-model.svg' : '/img/avatar-client.svg';
   const avatar = resolveProfilePic(user, 'FavoriteItem') || fallback;
 
 
@@ -54,7 +54,7 @@ const FavoriteItem = ({ user, onClick, onRemove, removing, onChat }) => {
         alt={user.nickname || user.email || 'user'}
         onError={(e) => {
           const r = String(user?.role || user?.userType || '').toUpperCase();
-          e.currentTarget.src = r === 'MODEL' ? '/img/avatarChica.png' : '/img/avatarChico.png';
+          e.currentTarget.src = r === 'MODEL' ? '/img/avatar-model.svg' : '/img/avatar-client.svg';
         }}
       />
       <Info>

@@ -850,7 +850,7 @@ export default function VideoChatFavoritosModelo(props) {
                                 <StyledCallStage>
                                   <StyledCallTopBar>
                                     <StyledCallTopMeta>
-                                      <StyledTitleAvatar src={callPeerAvatar || '/img/avatarChico.png'} alt="" />
+                                      <StyledTitleAvatar src={callPeerAvatar || '/img/avatar-client.svg'} alt="" />
                                       <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, lineHeight: 1.15 }}>
                                         <StyledCallTopMetaText>
                                           {callPeerName || t('dashboardModel.favorites.call.remote')}
@@ -916,7 +916,7 @@ export default function VideoChatFavoritosModelo(props) {
 
                             <StyledCallChatColumn>
                               <StyledCallChatColHeader>
-                                <StyledTitleAvatar src={callPeerAvatar || '/img/avatarChico.png'} alt="" style={{ width: 28, height: 28 }} />
+                                <StyledTitleAvatar src={callPeerAvatar || '/img/avatar-client.svg'} alt="" style={{ width: 28, height: 28 }} />
                                 <div style={{ minWidth: 0, flex: 1 }}>
                                   <div style={{ fontSize: 13, fontWeight: 600, color: '#e7ebf0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                     {callPeerName || t('dashboardModel.favorites.call.remote')}
@@ -1154,7 +1154,7 @@ export default function VideoChatFavoritosModelo(props) {
                     <StyledRemoteVideo ref={callRemoteWrapRef}>
                       <StyledVideoTitle>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <StyledTitleAvatar src={callPeerAvatar || '/img/avatarChico.png'} alt="" />
+                          <StyledTitleAvatar src={callPeerAvatar || '/img/avatar-client.svg'} alt="" />
 
                           <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15, minWidth: 0 }}>
                             <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>

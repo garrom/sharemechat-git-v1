@@ -216,7 +216,7 @@ export default function VideoChatRandomCliente(props) {
         id: item.modelId,
         title: t('dashboardClient.videoChatRandomCliente.promoTeaserTitle', { name: item.modelName }),
         modelName: item.modelName,
-        thumb: item.avatarUrl || '/img/avatarChica.png',
+        thumb: item.avatarUrl || '/img/avatar-model.svg',
         src: item.videoUrl,
         durationSec: null,
         // ADR-052 Superficie 2 (2026-07-25): precio por minuto elegido
@@ -903,7 +903,7 @@ export default function VideoChatRandomCliente(props) {
                         <BlurredPreview
                           type="video"
                           src={currentPromo.src}
-                          poster={currentPromo.thumb || '/img/avatarChica.png'}
+                          poster={currentPromo.thumb || '/img/avatar-model.svg'}
                           muted={true}
                           autoPlay={true}
                           loop={true}
@@ -1013,7 +1013,7 @@ export default function VideoChatRandomCliente(props) {
                       <StyledCallStage>
                         <StyledCallTopBar>
                           <StyledCallTopMeta>
-                            <StyledTitleAvatar src={modelAvatar || '/img/avatarChica.png'} alt="" />
+                            <StyledTitleAvatar src={modelAvatar || '/img/avatar-model.svg'} alt="" />
                             <StyledCallTopMetaText>
                               {modelNickname || t('dashboardUserClient.report.displayName')}
                             </StyledCallTopMetaText>
@@ -1117,7 +1117,7 @@ export default function VideoChatRandomCliente(props) {
 
                   <StyledCallChatColumn>
                     <StyledCallChatColHeader>
-                      <StyledTitleAvatar src={modelAvatar || '/img/avatarChica.png'} alt="" style={{ width: 28, height: 28 }} />
+                      <StyledTitleAvatar src={modelAvatar || '/img/avatar-model.svg'} alt="" style={{ width: 28, height: 28 }} />
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ fontSize: 13, fontWeight: 600, color: '#e7ebf0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {modelNickname || t('dashboardUserClient.report.displayName')}
@@ -1178,7 +1178,7 @@ export default function VideoChatRandomCliente(props) {
                       />
                       <StyledCallTopBar>
                         <StyledCallTopMeta>
-                          <StyledTitleAvatar src={modelAvatar || '/img/avatarChica.png'} alt="" />
+                          <StyledTitleAvatar src={modelAvatar || '/img/avatar-model.svg'} alt="" />
                           <StyledCallTopMetaText>
                             {modelNickname || t('dashboardUserClient.report.displayName')}
                           </StyledCallTopMetaText>

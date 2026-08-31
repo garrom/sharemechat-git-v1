@@ -10,7 +10,6 @@ import {
   StateRow,
   ItemCard,
   Avatar,
-  LetterAvatar,
   Name,
   DotWrap,
   StatusDot,
@@ -80,7 +79,6 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
   // Bot: menú de acciones oculto entero.
   const isMenuDisabled = invited === 'pending' || invited === 'sent' || (isBlocked && !blockedByMe);
   const displayName = isBot ? i18n.t('support.chat.agentName') : (user?.nickname || `Usuario #${user?.id}`);
-  const avatarInitial = (displayName || '?').trim().charAt(0).toUpperCase() || '?';
   const hasRealAvatar = !!avatarUrl && !imgFailed;
   const previewText = isBot ? i18n.t('dashboardClient.favorites.botSubtitle') : formatPreview(preview, giftEmojiByName);
   const timeText = isBot ? '' : formatConvTime(lastAt);
@@ -108,7 +106,7 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
             onError={() => setImgFailed(true)}
           />
         ) : (
-          <LetterAvatar $size={38} aria-hidden="true">{avatarInitial}</LetterAvatar>
+          <Avatar src="/img/avatar-client.svg" alt="" $size={38} aria-hidden="true" />
         )}
         <StatusDot
           className={presence === 'busy' ? 'busy' : presence === 'online' ? 'online' : 'offline'}
