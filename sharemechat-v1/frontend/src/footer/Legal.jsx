@@ -148,7 +148,9 @@ export default function Legal() {
       nextTab === 'contact' ||
       nextTab === 'complaints' ||
       nextTab === 'appeals' ||
-      nextTab === 'ai-disclosure'
+      nextTab === 'ai-disclosure' ||
+      nextTab === 'age-verification' ||
+      nextTab === 'chargeback'
     ) {
       setTab(nextTab);
     }
@@ -306,6 +308,28 @@ export default function Legal() {
               aria-pressed={tab === 'records-2257'}
             >
               2257 Statement
+            </button>
+
+            <button
+              type="button"
+              style={tabStyle('age-verification')}
+              onClick={() => setTab('age-verification')}
+              onMouseEnter={() => setHoveredTab('age-verification')}
+              onMouseLeave={() => setHoveredTab(null)}
+              aria-pressed={tab === 'age-verification'}
+            >
+              Age Verification
+            </button>
+
+            <button
+              type="button"
+              style={tabStyle('chargeback')}
+              onClick={() => setTab('chargeback')}
+              onMouseEnter={() => setHoveredTab('chargeback')}
+              onMouseLeave={() => setHoveredTab(null)}
+              aria-pressed={tab === 'chargeback'}
+            >
+              Chargeback &amp; Fraud
             </button>
 
           </div>
@@ -1304,6 +1328,263 @@ export default function Legal() {
                   schedule, or in the contact details of the Custodian of
                   Records. The most recent version is the one published on this
                   page.
+                </p>
+              </div>
+            </>
+          )}
+
+          {tab === 'age-verification' && (
+            <>
+              <h2 style={DocTitle}>Consumer Age Verification Policy</h2>
+
+              <p style={DocIntro}>
+                This Consumer Age Verification Policy explains how SharemeChat confirms
+                that every user who accesses adult-themed features is an adult aged 18 or
+                older, and how the platform verifies the identity and the adult age of the
+                content providers (models) who deliver those features. It reflects
+                SharemeChat's zero-tolerance approach to the involvement of minors and
+                supports compliance with Card Brand rules (including Mastercard Announcement
+                AN&nbsp;5196 and Visa Rule ID&nbsp;0003356) and applicable law.
+              </p>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>1. Principle and Layered Approach</h3>
+                <p style={Paragraph}>
+                  SharemeChat is strictly intended for adults aged 18 or older, and access
+                  or use by minors is prohibited without exception. Age assurance is applied
+                  in layers: a self-declared age gate on entry to adult areas, third-party
+                  age verification of clients before any adult session, and full identity and
+                  age verification of content providers before onboarding. No adult-themed
+                  interaction can take place unless both participants have completed the
+                  verification applicable to their role.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>2. Age Gate on Entry</h3>
+                <p style={Paragraph}>
+                  Before reaching any adult-themed area of the platform, a user must pass an
+                  age gate confirming that they are at least 18 years old and that they
+                  consent to viewing adult-oriented content. A user who does not confirm this
+                  is not granted access. The consent event is logged with a timestamp and the
+                  originating IP address. The age gate is a first friction and consent-record
+                  layer; it does not replace the verification described below.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>3. Client Age Verification</h3>
+                <p style={Paragraph}>
+                  Before a client can be matched into a private session with a model or
+                  access paid adult features, the client completes age verification through
+                  Didit, the platform's third-party identity verification processor. Client
+                  verification uses facial age estimation, with a document-based identity
+                  check as a fallback where estimation is inconclusive or where higher
+                  assurance is required. A client who does not obtain a successful
+                  age-verification outcome cannot enter an adult session and cannot access
+                  paid adult features.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>4. Content Provider Identity and Age Verification</h3>
+                <p style={Paragraph}>
+                  Every content provider (model) is required to complete identity and age
+                  verification through Didit before onboarding and before initiating any live
+                  session. The procedure includes:
+                </p>
+                <ul style={List}>
+                  <li>Government-issued identification document verification.</li>
+                  <li>Selfie capture with liveness detection.</li>
+                  <li>Face match between the selfie and the identification document.</li>
+                  <li>Device and IP analysis at the time of verification.</li>
+                </ul>
+                <p style={Paragraph}>
+                  No content provider is permitted to start live sessions without a
+                  successful verification outcome.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>5. Verification Provider</h3>
+                <p style={Paragraph}>
+                  Age and identity verification is carried out by Didit, a third-party
+                  identity verification processor acting on behalf of SharemeChat. The
+                  categories of data processed, the purpose of the processing, and the
+                  applicable retention are described in the Privacy Policy.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>6. Blocking and Failure Handling</h3>
+                <p style={Paragraph}>
+                  Where verification fails, is incomplete, has expired, or cannot be relied
+                  upon, access to adult-themed features is denied and a session cannot start.
+                  Attempts to bypass age or identity verification, to share accounts, or to
+                  present another person for verification are treated as prohibited conduct
+                  and may result in restriction, suspension, or permanent removal from the
+                  service.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>7. Re-Verification</h3>
+                <p style={Paragraph}>
+                  The platform may require re-verification where there is a reasonable
+                  indication that a prior verification is no longer reliable, for example
+                  suspected account sharing or a material inconsistency observed during use.
+                  During live sessions the verified user must be the only person visible on
+                  camera, and no other person, in particular no minor, may appear at any time.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>8. Evidence, Storage, and Retention</h3>
+                <p style={Paragraph}>
+                  Verification outcomes and their associated records are stored securely and
+                  access-controlled. Content-provider verification records, including the
+                  acceptance trail of the Model Collaboration Agreement (timestamp,
+                  originating IP address, user agent, and SHA-256 hash of the executed
+                  version), are retained for a minimum of seven (7) years after the provider's
+                  last activity on the platform. Client age-verification outcomes are retained
+                  for as long as necessary for compliance, security, and the resolution of
+                  disputes.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>9. Data Protection</h3>
+                <p style={Paragraph}>
+                  Facial age estimation and identity checks may process biometric and
+                  special-category personal data. This processing is limited to age and
+                  identity verification and is carried out on the basis of the user's explicit
+                  consent. The processing, the verification provider, the retention periods,
+                  and the rights available to users are described in the Privacy Policy. Users
+                  may exercise their data-protection rights by contacting{' '}
+                  <a href="mailto:contact+gdpr@sharemechat.com" style={LinkLike}>contact@sharemechat.com</a>.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>10. Updates</h3>
+                <p style={Paragraph}>
+                  This policy may be updated to reflect changes in applicable rules, in the
+                  verification provider, or in the platform's verification procedures. The most
+                  recent version published on this page is the one that applies.
+                </p>
+              </div>
+            </>
+          )}
+
+          {tab === 'chargeback' && (
+            <>
+              <h2 style={DocTitle}>Chargeback &amp; Fraud Mitigation Policy</h2>
+
+              <p style={DocIntro}>
+                This Chargeback and Fraud Mitigation Policy describes how SharemeChat
+                prevents, detects, and responds to payment fraud, payment disputes, and
+                chargebacks, and the evidence the platform preserves to resolve them. It
+                supports the requirements of adult-specialist acquirers and Card Brand rules.
+              </p>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>1. Prepaid Model and Its Effect on Risk</h3>
+                <p style={Paragraph}>
+                  SharemeChat operates on a prepaid balance model. Users purchase balance,
+                  which is credited to the account only after the relevant payment processor
+                  has confirmed the payment. Premium features, including live sessions and
+                  virtual gifts, consume that pre-funded balance. Because value is delivered
+                  against confirmed, pre-funded balance rather than post-paid credit, the
+                  platform's exposure to disputed transactions is structurally reduced.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>2. Fraud Prevention Controls</h3>
+                <p style={Paragraph}>The platform applies preventive controls including:</p>
+                <ul style={List}>
+                  <li>Identity and age verification through the third-party processor before access to paid adult features.</li>
+                  <li>Progressive authentication-risk controls, including rate limiting, temporary lockouts, and escalating friction on suspicious sign-in and account activity.</li>
+                  <li>Anti-bot and access controls, and restrictions on bulk accounts, account sharing, and attempts to bypass safeguards.</li>
+                  <li>Balance checks before premium features start and immediate balance consumption for virtual gifts.</li>
+                </ul>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>3. Fraud Detection Signals</h3>
+                <p style={Paragraph}>
+                  The platform evaluates signals such as anomalous sign-in patterns, purchase
+                  velocity, mismatched device or IP data, verification anomalies, and irregular
+                  consumption patterns. Where defined thresholds are crossed, automated measures
+                  may apply, such as restricting purchases or premium access, delaying account
+                  changes, or flagging the account for manual review.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>4. Evidence Preserved for Dispute Defense</h3>
+                <p style={Paragraph}>
+                  To respond to disputes and chargebacks, the platform preserves, to the extent
+                  applicable:
+                </p>
+                <ul style={List}>
+                  <li>Identity and age-verification records for the account, including the acceptance trail of applicable agreements.</li>
+                  <li>Transaction and wallet ledger entries, including the payment processor's transaction reference.</li>
+                  <li>Technical session records, including confirmed billable session start and measured duration.</li>
+                  <li>Consumption records for premium features and virtual gifts.</li>
+                  <li>Authentication and access logs, including IP address, device, and timestamps.</li>
+                  <li>Moderation and enforcement records relevant to the account.</li>
+                </ul>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>5. Handling of Chargebacks and Disputes</h3>
+                <p style={Paragraph}>
+                  On notice of a payment dispute or chargeback, the platform investigates using
+                  the records described in Section&nbsp;4. During the review it may suspend or
+                  restrict the account and its access to premium features, and it cooperates
+                  with the payment processor by supplying the relevant evidence within the
+                  timeframe the processor requires.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>6. Refunds and Balance Reversal</h3>
+                <p style={Paragraph}>
+                  Where a payment is refunded or reversed, the corresponding credited balance,
+                  including any linked promotional credit, is reversed from the account by
+                  internal ledger correction. Where the balance has already been consumed, the
+                  case is escalated to manual review before any further adjustment is made.
+                  Refund requests are handled as described in the Refund Policy.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>7. Account Actions During Review</h3>
+                <p style={Paragraph}>
+                  Consistent with the Terms of Service, the platform may suspend or restrict
+                  accounts, limit access to premium features, delay account changes, or adjust
+                  balances or credits that were improperly obtained or retained while a fraud or
+                  dispute review is open.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>8. Cooperation and Reporting</h3>
+                <p style={Paragraph}>
+                  The platform cooperates with its payment processor and, where applicable, with
+                  competent authorities in the investigation of fraud and payment disputes, and
+                  it maintains records to support the periodic reporting required under its
+                  acquiring agreements.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>9. Updates</h3>
+                <p style={Paragraph}>
+                  This policy may be updated to reflect changes in applicable rules, payment
+                  processors, or the platform's fraud and dispute procedures. The most recent
+                  version published on this page is the one that applies.
                 </p>
               </div>
             </>
