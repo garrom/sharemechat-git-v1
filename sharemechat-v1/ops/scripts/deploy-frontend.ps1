@@ -953,6 +953,60 @@ try {
     }
 
     # -----------------------------------------------------------
+    # [4.6/N] Pre-render de las landings publicas de captacion
+    # -----------------------------------------------------------
+    # Mismo mecanismo que [4.5/N] pero para /modelos y /for-studios
+    # (ES+EN). La funcion edge redirect-spa-prod ya reescribe esas 4
+    # rutas a <path>/index.html via su tabla prerenderedLandings; si el
+    # objeto no existe, el CER (403 -> 200 + /index.html) degrada al
+    # shell SPA sin pagina rota, es decir EN SILENCIO: un crawler ve un
+    # shell de ~3.7 KB, sin canonical y sin contenido.
+    #
+    # Por que aqui y no en un cron: a diferencia del blog (cron
+    # auto-curativo cada 15 min, ADR-042 G3), las landings solo cambian
+    # con un deploy de frontend. Pero el script de landings era
+    # on-demand y dependia de que un humano recordase lanzarlo tras el
+    # deploy. Fallo observado en PROD el 2026-08-29: las 4 landings
+    # servian shell. Engancharlo al deploy elimina el paso manual.
+    #
+    # Politica de fallos: identica a [4.5/N]. Un fallo NO aborta el
+    # deploy; el CER cubre las rutas con el shell y el siguiente deploy
+    # reintenta.
+    if ($Environment -eq 'prod' -and $Surface -eq 'product' -and -not $StandbyMode) {
+        Write-Step "4.6/N" "Pre-render de landings de captacion (Puppeteer -> s3://$bucketName/)"
+
+        $landingsScript = Join-Path $PSScriptRoot 'prerender-landings-prod.ps1'
+        if (-not (Test-Path $landingsScript)) {
+            Write-Warning "No existe $landingsScript. Saltando pre-render de landings."
+        } else {
+            $landingsExit = 0
+            try {
+                & $landingsScript -Hostname $baseUrl -Bucket $bucketName -DistributionId $distributionId
+                $landingsExit = $LASTEXITCODE
+            } catch {
+                Write-Warning "Pre-render de landings lanzo excepcion: $($_.Exception.Message)"
+                $landingsExit = 99
+            }
+
+            if ($landingsExit -ne 0) {
+                Write-Host ""
+                Write-Warning "Pre-render de landings fallo con exit code $landingsExit."
+                Write-Warning "El bundle SPA esta arriba y operativo. El CER sirve el shell en las"
+                Write-Warning "landings mientras tanto. El siguiente deploy reintenta."
+                # NO abortamos el deploy: el bundle SPA esta arriba y operativo.
+            } else {
+                Write-Host ""
+                Write-Host "    Pre-render de landings OK. Invalidando las 4 rutas en CF..."
+                Invoke-Native -Label "aws cloudfront create-invalidation landings" -Block {
+                    aws cloudfront create-invalidation --distribution-id $distributionId --paths "/modelos" "/en/modelos" "/for-studios" "/en/for-studios" --output json | Out-Null
+                }
+                Write-Host "    OK - landings invalidadas en $distributionId."
+            }
+        }
+    }
+
+
+    # -----------------------------------------------------------
     # [5.5/N] Update deploy-state manifest (Fase 1 paso 2a)
     # -----------------------------------------------------------
     # Tras smoke OK, registra el estado real desplegado en
