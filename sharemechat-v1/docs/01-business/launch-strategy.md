@@ -98,11 +98,13 @@ Modelos y clientes NO son simétricos en two-sided marketplaces adult. El cuello
 
 ## 7. Plan concreto de arranque (secuencia)
 
-> **Nota (2026-08-29):** esta secuencia se redactó en jul-2026; el marco temporal original ("2 semanas siguientes") es **histórico**, no una fecha viva. El **estado y la prioridad reales** de estos frentes —en particular la página `/m/:slug` (punto 1)— viven en [`docs/07-roadmap/backlog-priorizado.md`](../07-roadmap/backlog-priorizado.md), única fuente de estado. Allí `/m/` figura como **P1, no implementada** (ADR-048 sigue vigente).
+> **Nota (2026-08-29):** esta secuencia se redactó en jul-2026; el marco temporal original ("2 semanas siguientes") es **histórico**, no una fecha viva. El **estado y la prioridad reales** de estos frentes viven en [`docs/07-roadmap/backlog-priorizado.md`](../07-roadmap/backlog-priorizado.md), única fuente de estado.
+>
+> **Actualización (2026-08-31):** el **punto 1 (`/m/:slug`) se DESCARTA** por [ADR-063](../06-decisions/adr-063-modelo-random-match-descarta-pagina-publica-modelo.md): el producto es match aleatorio 1-a-1 tipo CooMeet (sin escaparate por modelo); las páginas públicas por modelo son patrón de cam site, no de este producto. Con ello el pivote pierde su "pilar técnico" A+D+E: **queda sin palanca de producto-visible / SEO**, y la captación de modelos pasa a depender del **reclutamiento directo / B2B** (punto 3), pendiente de diseñar como frente propio.
 
 Ejecución operativa, no aspiracional:
 
-1. **Lanzar infraestructura de página pública de modelo `/m/:slug`** con SEO + tracking de afiliación integrado. Aprovechar el CMS bilingüe, el prerender S3+CloudFront y el multi-asset Layer 2 ya existentes.
+1. ~~**Lanzar infraestructura de página pública de modelo `/m/:slug`**~~ — **DESCARTADO 2026-08-31** ([ADR-063](../06-decisions/adr-063-modelo-random-match-descarta-pagina-publica-modelo.md)). No encaja con un producto de match aleatorio tipo CooMeet. El hueco que dejaba (palanca de captación de modelos) se cubre con reclutamiento directo/B2B (punto 3), no con SEO de perfiles.
 2. **Pasar de coming-soon a soft-launch** con banner discreto en el header: "beta, pagos en cripto de momento, tarjeta próximamente". Cambio de percepción: de "empresa que no existe todavía" a "empresa que ya opera con limitación acotada".
 3. **Primer batch de 5-10 modelos verificadas** por dos vías paralelas: (a) 2-3 estudios pequeños Colombia/Rumanía como B2B, (b) modelos independientes activas en X con audiencia propia identificada.
 4. **Anuncio público del soft-launch**: post en r/CamGirlProblems (respetando el pipeline social-ops de [ADR-040](../06-decisions/adr-040-pivote-target-subs-social-ops.md), disclosure explicit + audiencia models), pin en X. Ángulo: plataforma nueva en beta con **reparto 50-60% modelo escalonado del bruto** (vs 30-35% habitual del sector adult cam entry: LiveJasmin L1 30%, BongaCams ~35%), **rango de precio autoservicio** hasta 9 €/min y **Estatus Pro** para modelos que superen 1.500 €/mes (control opcional del trial).
@@ -111,7 +113,8 @@ Ejecución operativa, no aspiracional:
 
 - [promo-100-primeros-clientes.md](promo-100-primeros-clientes.md) — bono de bienvenida 10 € a los 100 primeros clientes (adquisición) e impacto económico.
 - [ADR-047 — Pivote de coming-soon a soft launch con PSP puente cripto + Paxum](../06-decisions/adr-047-pivote-soft-launch-cripto-paxum.md)
-- [ADR-048 — Página pública de modelo `/m/:slug` como palanca central](../06-decisions/adr-048-pagina-publica-modelo-slug.md)
+- [ADR-048 — Página pública de modelo `/m/:slug`](../06-decisions/adr-048-pagina-publica-modelo-slug.md) — **SUPERSEDED** por ADR-063 (descartada).
+- [ADR-063 — Modelo random-match tipo CooMeet; se descarta la página pública por modelo](../06-decisions/adr-063-modelo-random-match-descarta-pagina-publica-modelo.md)
 - [ADR-052 — Rediseño estructural del reparto, rango de precio autoservicio y retirada del programa de afiliadas](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md)
 - [psp-strategy.md](psp-strategy.md) — estrategia de pagos vigente (cobro y pago). Vías descartadas en [pagos-descartados.md](pagos-descartados.md).
 - [model-profile-strategy.md](model-profile-strategy.md) — detalle de la página pública de modelo.

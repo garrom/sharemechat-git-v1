@@ -1,14 +1,14 @@
 # ADR-048 — Página pública de modelo `/m/:slug` como palanca central de producto, SEO y afiliación
 
-> Estado: VIGENTE
-> Fecha: 2026-07-09
-> Vigencia esperada: indefinida (superficie de producto estable)
+> Estado: **SUPERSEDED por [ADR-063](adr-063-modelo-random-match-descarta-pagina-publica-modelo.md) (2026-08-31)** — se descarta la página pública por modelo. El modelo de producto es match aleatorio 1-a-1 tipo CooMeet (que NO tiene escaparate por modelo); `/m/:slug` era el patrón de los cam sites. Además la pata de afiliación ya había caído (ADR-052). Este fichero se conserva por trazabilidad histórica; no describe producto vigente.
+> Fecha original: 2026-07-09
+> Vigencia esperada: N/A (superseded)
 > Reemplaza: N/A (documento nuevo)
 > Ver también: [ADR-018](adr-018-blog-static-rendering.md), [ADR-019](adr-019-blog-spa-react.md), [ADR-022](adr-022-blog-cms-multilingual-es-en.md), [ADR-033](adr-033-noindex-non-prod-environments.md), [ADR-042](adr-042-prerender-cron-on-backend-ec2.md), [ADR-047](adr-047-pivote-soft-launch-cripto-paxum.md), [`../01-business/model-profile-strategy.md`](../01-business/model-profile-strategy.md), [`../01-business/affiliate-program.md`](../01-business/affiliate-program.md), [`../01-business/launch-strategy.md`](../01-business/launch-strategy.md)
 
 ## Estado
 
-Aceptada.
+**SUPERSEDED (2026-08-31) por [ADR-063](adr-063-modelo-random-match-descarta-pagina-publica-modelo.md).** Originalmente Aceptada (2026-07-09); descartada sin implementar. Lo que sigue es el contenido histórico del ADR.
 
 ## Contexto
 

@@ -1,9 +1,9 @@
 # Estrategia de página pública de modelo
 
-> Estado: VIGENTE
-> Fecha: 2026-07-09
-> Última revisión: 2026-07-24 (retirada §4 tracking de afiliación por [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md); actualización CTA con rango de precio autoservicio)
-> Vigencia esperada: indefinida (producto estable, evoluciona con el producto)
+> Estado: **SUPERSEDED por [ADR-063](../06-decisions/adr-063-modelo-random-match-descarta-pagina-publica-modelo.md) (2026-08-31)** — se descarta la página pública por modelo `/m/:slug`. El producto es match aleatorio 1-a-1 tipo CooMeet, sin escaparate por modelo. Documento conservado por trazabilidad histórica; NO describe producto vigente.
+> Fecha original: 2026-07-09
+> Última revisión: 2026-07-24 (retirada §4 tracking de afiliación por [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md))
+> Vigencia esperada: N/A (superseded)
 > Reemplaza: N/A (documento nuevo)
 > Ver también: [ADR-048](../06-decisions/adr-048-pagina-publica-modelo-slug.md), [ADR-018](../06-decisions/adr-018-blog-static-rendering.md), [ADR-019](../06-decisions/adr-019-blog-spa-react.md), [ADR-022](../06-decisions/adr-022-blog-cms-multilingual-es-en.md), [ADR-033](../06-decisions/adr-033-noindex-non-prod-environments.md), [ADR-042](../06-decisions/adr-042-prerender-cron-on-backend-ec2.md), [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md), [launch-strategy.md](launch-strategy.md), [sistema-tiers-modelos.md](sistema-tiers-modelos.md)
 
