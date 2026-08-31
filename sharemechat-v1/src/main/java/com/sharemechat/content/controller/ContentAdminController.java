@@ -35,10 +35,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.sharemechat.config.PublicSiteProperties;
+import com.sharemechat.content.publishing.IndexNowService;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.NoSuchFileException;
 import java.util.LinkedHashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -76,14 +80,21 @@ public class ContentAdminController {
     private final MarkdownRendererService markdownRenderer;
     private final UserService userService;
 
+    private final IndexNowService indexNowService;
+    private final PublicSiteProperties publicSiteProperties;
+
     public ContentAdminController(ContentArticleService articleService,
                                   ContentBodyStorageService bodyStorageService,
                                   MarkdownRendererService markdownRenderer,
-                                  UserService userService) {
+                                  UserService userService,
+                                  IndexNowService indexNowService,
+                                  PublicSiteProperties publicSiteProperties) {
         this.articleService = articleService;
         this.bodyStorageService = bodyStorageService;
         this.markdownRenderer = markdownRenderer;
         this.userService = userService;
+        this.indexNowService = indexNowService;
+        this.publicSiteProperties = publicSiteProperties;
     }
 
     // ================================================================
@@ -314,7 +325,16 @@ public class ContentAdminController {
         }
         Long actorUserId = resolveUserId(authentication);
         boolean isAdmin = isAdmin(authentication);
-        return articleService.transitionState(articleId, request, actorUserId, isAdmin);
+        ArticleDetailDTO result = articleService.transitionState(articleId, request, actorUserId, isAdmin);
+        // ADR-062: al publicar, avisar a IndexNow. Va AQUI y no dentro del
+        // service por dos motivos: (a) transitionState es @Transactional, asi
+        // que al volver ya ha commiteado y no se notifica un publish que luego
+        // revierta; (b) IndexNowService vive en content.publishing, que ya
+        // depende de content.service (SitemapController), y llamarlo desde el
+        // service cerraria un ciclo entre paquetes. Este es el unico llamante
+        // de transitionState en todo el codigo.
+        notifyIndexNowIfPublished(result);
+        return result;
     }
 
     // ================================================================
@@ -430,5 +450,70 @@ public class ContentAdminController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Permiso requerido: " + permissionCode);
         }
+    }
+
+    // ================================================================
+    // IndexNow (ADR-062)
+    // ================================================================
+
+    /**
+     * Notifica a IndexNow las URLs publicas del articulo recien publicado.
+     *
+     * <p>Fail-open por contrato del servicio: no lanza. Si la capa esta
+     * apagada, el entorno no es el apex PROD o falta clave, se descarta en
+     * silencio. Publicar nunca puede fallar por esto.
+     */
+    private void notifyIndexNowIfPublished(ArticleDetailDTO article) {
+        if (article == null || !"PUBLISHED".equals(article.state())) {
+            return;
+        }
+        String baseUrl = publicSiteProperties == null ? null : publicSiteProperties.getBaseUrl();
+        if (baseUrl == null || baseUrl.isBlank() || article.translations() == null) {
+            return;
+        }
+        List<String> urls = new ArrayList<>();
+        for (TranslationDetailDTO t : article.translations()) {
+            if (t.locale() != null && t.slug() != null && !t.slug().isBlank()) {
+                urls.add(baseUrl + "/blog/" + t.locale() + "/" + t.slug());
+            }
+        }
+        // El listado del blog cambia al publicar: tambien merece aviso.
+        for (TranslationDetailDTO t : article.translations()) {
+            if (t.locale() != null) {
+                String index = baseUrl + "/blog/" + t.locale();
+                if (!urls.contains(index)) urls.add(index);
+            }
+        }
+        indexNowService.submitAsync(urls);
+    }
+
+    /**
+     * Reenvio masivo a IndexNow de todas las URLs publicadas. Sincrono: el
+     * operador que lo lanza quiere ver el resultado. Util tras rotar la clave
+     * o para sembrar un catalogo entero.
+     *
+     * <p>Cae bajo el catch-all /api/admin/** (ROLE_ADMIN) de SecurityConfig;
+     * no requiere matcher propio. Exige CONTENT.PUBLISH: es la misma potestad
+     * que hacer publico un contenido.
+     */
+    @PostMapping("/indexnow/resubmit")
+    public Map<String, Object> indexNowResubmit(Authentication authentication) {
+        requirePermission(authentication, BackofficeAuthorities.PERM_CONTENT_PUBLISH);
+        String baseUrl = publicSiteProperties.getBaseUrl();
+        List<String> urls = new ArrayList<>();
+        for (ContentArticleService.PublishedArticleSnapshot snap : articleService.listPublishedForSitemap()) {
+            for (var t : snap.translations()) {
+                if (t.getLocale() != null && t.getSlug() != null) {
+                    urls.add(baseUrl + "/blog/" + t.getLocale() + "/" + t.getSlug());
+                }
+            }
+        }
+        urls.add(baseUrl + "/blog/es");
+        urls.add(baseUrl + "/blog/en");
+        String outcome = indexNowService.submit(urls);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("requested", urls.size());
+        out.put("outcome", outcome);
+        return out;
     }
 }

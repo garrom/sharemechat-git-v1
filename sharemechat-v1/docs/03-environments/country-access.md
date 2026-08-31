@@ -79,6 +79,25 @@ Mantener **TEST = PROD** (mismas cadenas) para no acumular drift. Nunca meter pa
 embargo integral (p. ej. `CU`) ni de alto riesgo (`RU`) en la lista de **modelo**
 (implica payout a esa jurisdicción).
 
+### Ampliación 2026-08-30 — `UA` y `VE` solo en la lista de MODELO
+
+`modelAllowed` pasa de **57 a 59** en TEST y PROD (`unionAllowed` 67). La lista de
+**cliente** no se toca.
+
+Motivo, tras el estudio de competencia del mismo día:
+
+- **`VE` (Venezuela)** corrige una incoherencia propia: ya estaba admitida como
+  **cliente** y rechazada como **modelo**. Además, buena parte de la mano de obra de
+  los estudios colombianos es venezolana migrante.
+- **`UA` (Ucrania)** es el sexto mercado mundial de oferta (~19.600 cuentas de modelo)
+  y la actividad es legal allí, con encaje fiscal propio. Se asume el riesgo de
+  fiabilidad de conexión y de cobro derivado de la guerra: el payout es cripto, no
+  depende de banca local.
+
+Ninguna de las dos es sancionada de forma integral. Se mantienen fuera `RU` y `BY`
+(sanciones) y `CN`, `TH`, `ID`, `IN`, `VN`, donde producir contenido adulto es delito
+para la propia modelo — abrirlas sería reclutar a alguien para delinquir en su país.
+
 ## 2. Validación de dominio de email
 
 `EmailDomainValidator` (usado en `UserService.registerClient` y `registerModel`): antes

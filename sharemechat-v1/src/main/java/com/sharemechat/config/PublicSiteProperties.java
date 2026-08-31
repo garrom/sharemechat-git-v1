@@ -3,6 +3,8 @@ package com.sharemechat.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import java.net.URI;
+
 /**
  * Host canonico del producto publico por entorno (ADR-015).
  *
@@ -22,6 +24,12 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "app.public")
 public class PublicSiteProperties {
 
+    /**
+     * Host canonico del apex PROD (ADR-015). Discriminante unico de "este
+     * entorno es el sitio publico real" para toda la capa SEO.
+     */
+    public static final String PROD_APEX_HOST = "sharemechat.com";
+
     /** URL absoluta del host canonico, sin barra final (p.ej. "https://test.sharemechat.com"). */
     private String baseUrl;
 
@@ -38,5 +46,40 @@ public class PublicSiteProperties {
             trimmed = trimmed.substring(0, trimmed.length() - 1);
         }
         this.baseUrl = trimmed;
+    }
+
+    /**
+     * {@code true} solo si el {@code baseUrl} configurado es EXACTAMENTE el
+     * apex PROD canonico: esquema https, host {@value #PROD_APEX_HOST} y
+     * puerto por defecto. Cualquier otra cosa (TEST, AUDIT, www, host
+     * desconocido, vacio, mal formado) devuelve {@code false}.
+     *
+     * <p>Es el discriminante fail-closed de ADR-033: la capa SEO publica
+     * ({@code /robots.txt}, {@code /sitemap.xml}, fichero de clave IndexNow
+     * de ADR-062) solo se expone en el sitio publico real. Un entorno
+     * secundario nunca debe ofrecer URLs canonicas ni pedir que le rastreen.
+     *
+     * <p>Vive aqui, y no en cada controller, para que exista UNA sola
+     * definicion de "soy el apex PROD": duplicarla en cada consumidor es la
+     * via directa a que un entorno quede indexable por olvido.
+     */
+    public boolean isProdApex() {
+        if (baseUrl == null || baseUrl.isBlank()) {
+            return false;
+        }
+        try {
+            URI uri = URI.create(baseUrl);
+            if (!"https".equalsIgnoreCase(uri.getScheme())) {
+                return false;
+            }
+            String host = uri.getHost();
+            if (host == null || !PROD_APEX_HOST.equalsIgnoreCase(host)) {
+                return false;
+            }
+            int port = uri.getPort();
+            return port == -1 || port == 443;
+        } catch (IllegalArgumentException ex) {
+            return false;
+        }
     }
 }

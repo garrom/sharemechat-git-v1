@@ -22,6 +22,33 @@ El operador, manualmente. Los datos no se ingestan desde el repo: requieren logi
 | Aportes X / Promos X publicados ese mes | Ledger interno | Conteo desde `docs/social/social-state.json` cruzado con el feed `@shareme_chat` |
 | Artículos blog publicados ese mes | Repo + GSC | `git log --since` sobre `docs/cms/` o conteo de PUBLISHED en GSC |
 
+## Qué métrica mirar, y en qué orden (2026-08-30)
+
+Orden de fiabilidad, fijado tras depurar tres meses de datos contra los sistemas vivos.
+**No leer las tablas de abajo sin esto delante.**
+
+1. **Registros: panel de Adquisición del backoffice.** Es el dato del servidor. No
+   depende de cookies ni de consentimiento y un robot no lo puede tocar. Para la
+   pregunta "cuánta gente se registra y de dónde viene", manda este y solo este.
+2. **Visitas: `sesiones con interacción`, NUNCA `sesiones`.** Una visita cuenta si dura
+   más de 10 s, o ve 2+ páginas, o dispara una conversión. Se escapa quien rebota en
+   menos de 10 s: en agosto de 2026 eso fue **una sola visita real de 19**, mientras que
+   la métrica bruta inflaba el mes con 1.813 sesiones falsas.
+3. **`sesiones` brutas: solo como termómetro de ruido.** Si se separan mucho de las de
+   interacción, hay una campaña de robots en marcha. Si van juntas, el tráfico es
+   limpio. Nunca como respuesta a "cuánta gente me visitó".
+
+No se intenta filtrar el robot por IP: rota de dirección y la limpieza dura días. La
+defensa es usar una métrica que no pueda ensuciar — un robot que entra 2 segundos y ve
+1,0 páginas nunca cumple el criterio de interacción.
+
+Referencia de agosto 2026 (30 días), por canal, `sesiones` → `con interacción`:
+Direct 1.813 → 10 (1 %) · Unassigned 305 → 1 · Referral 24 → 16 · AI Assistant 10 → 9
+· Organic Search 7 → 7 (100 %) · Paid Search 2 → 2. En los canales con gente real se
+conserva casi todo; el descarte se lo lleva íntegro el ruido.
+
+---
+
 ## Convención de rellenado
 
 - **"—"**: el documento de estrategia no proyecta este KPI para este mes. Dejar vacío en la columna "real" hasta que haya dato real.
