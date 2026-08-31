@@ -62,16 +62,15 @@ const Cover = styled.div`
 
 // Sin foto (2026-08-28): silueta neutra en trazo, gradiente por rol (unificado
 // con /img/avatar-*.svg). MODEL por defecto; CLIENT en el spotlight simple.
+// Sin foto (2026-08-30): fondo negro + silueta blanca, igual para todos los
+// roles (unificado con /img/avatar-*.svg). El aro rojo lo aporta el navbar.
 const NoPhoto = styled.div`
   width: 100%;
   height: 100%;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, #ff5c8a, #a78bfa);
+  background: #000000;
   user-select: none;
-
-  &[data-role='client'] { background: linear-gradient(135deg, #3b82f6, #22d3ee); }
-  &[data-role='master'] { background: linear-gradient(135deg, #f7b733, #e0700b); }
 
   svg { width: 96px; height: 96px; }
 `;
@@ -398,7 +397,7 @@ const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = fal
     <Panel>
       <Cover>
         {photo ? <img src={photo} alt="" /> : (
-          <NoPhoto data-role={simple ? 'client' : 'model'} aria-hidden="true">
+          <NoPhoto aria-hidden="true">
             <svg viewBox="0 0 120 120" fill="none" stroke="#ffffff" strokeWidth="6" strokeLinecap="round">
               <circle cx="60" cy="48" r="17" />
               <path d="M31 98c0-16 13-26 29-26s29 10 29 26" />

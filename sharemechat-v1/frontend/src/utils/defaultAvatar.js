@@ -1,9 +1,10 @@
-// Avatar por defecto unificado (2026-08-28). Sustituye a los PNG con género
-// (avatarChica/avatarChico) y a las iniciales (LetterAvatar/NoPhoto) por una
-// silueta neutra en trazo (estilo "línea"), diferenciada solo por ROL:
-//   - CLIENT  → azul→cian     (/img/avatar-client.svg)
-//   - MODEL   → coral→violeta (/img/avatar-model.svg)   [identidad de marca]
-//   - MASTER  → dorado        (/img/avatar-master.svg)
+// Avatar por defecto unificado. Sustituye a los PNG con género (avatarChica/
+// avatarChico) y a las iniciales (LetterAvatar/NoPhoto).
+// 2026-08-30 (decisión operador): UN ÚNICO diseño para todos los roles —
+// fondo negro + silueta blanca en trazo. El aro rojo de marca lo aporta el
+// navbar (box-shadow de StyledNavAvatar), no el propio SVG. Los 3 ficheros
+// avatar-{client,model,master}.svg son idénticos hoy; se mantienen separados
+// por si en el futuro se quiere volver a diferenciar por rol sin re-cablear.
 // Neutro de género a propósito (antes chica=modelo / chico=cliente asumía sexo).
 
 export const AVATAR_CLIENT = '/img/avatar-client.svg';
