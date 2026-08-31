@@ -6,7 +6,7 @@
 >
 > **Lo que sigue pendiente** y por tanto este documento aún NO se reescribe:
 > - El Model Collaboration Agreement vivo (PDF `v4_2026-03-23` firmado por 18 modelos en TEST + cuentas en PROD/AUDIT) sigue con lenguaje del régimen previo. Su refactor exige bump v5, re-aceptación forzada y coordinación legal (sub-paquete R5 con deuda registrada en `known-debt.md` entrada 2026-06-27 puntos R5 / G4).
-> - Las cinco políticas formales que el PSP exige (§2 abajo) siguen como "estado PLANIFICADO" en este documento porque ninguna está aún firmada legalmente; existen como textos en `Legal.jsx` y en los PDFs generables por el script, pero la firma legal definitiva exige revisión por asesoría externa. Bloqueante para cerrar onboarding CardBilling / Verotel y para go-live público.
+> - Las cinco políticas formales que el PSP exige (§2 abajo) están **producidas como documento propio** (verificado contra código 2026-08-31): las tres que ya existían (Content Management, Complaint & Content Removal = Complaints + Appeals, Model Collaboration Agreement) más las **dos redactadas el 2026-08-31** (Consumer Age Verification Policy y Chargeback and Fraud Mitigation Policy, antes solo embebidas en el ToS §2/§11). Las 12 salen de `ops/legal-pdfs/generate_legal_pdfs.py`. El bloqueante restante es doble: **(a) firma/revisión legal externa** del set (a criterio del operador) y **(b) backing técnico** de lo que algunas prometen — canal de quejas público (§3), SLA de 5 días y reporting mensual al PSP (§4) — que son frentes técnicos aparte. Bloqueante para cerrar onboarding CardBilling / Verotel y para go-live público.
 > - Tracking de aceptación versionada de policies públicas (deuda G3): cuando `Legal.jsx` se modifique en el futuro, no hay flag forzando re-aceptación de usuarios existentes. Gap regulatorio para go-live PROD.
 >
 > Las tres pendencias viven como deudas estratégicas en `docs/04-operations/known-debt.md` entrada 2026-06-27. Este documento se mantiene direccional (lista accionable de obligaciones de compliance), no se convierte en cuerpo de las policies formales.
@@ -38,7 +38,7 @@ Ningún entregable está cerrado al cierre de este documento. Se listan como obl
 
 Cinco documentos a producir antes de cerrar el onboarding con CardBilling / Verotel. Aplican aunque el PSP final cambie: son obligaciones derivadas del régimen adult, no específicas de CardBilling / Verotel.
 
-**Estado**: PLANIFICADO. Ninguna de las cinco está producida formalmente, aunque el contenido conceptual de varias se desprende de otras decisiones (ADR-029, ADR-030, ADR-011, ADR-012).
+**Estado** (actualizado 2026-08-31, verificado contra código): las cinco están **producidas como documento propio** en `ops/legal-pdfs/generate_legal_pdfs.py` → mapeo: 2.1 = `SharemeChat_Content_Management_Policy.pdf`; 2.2 = `SharemeChat_Age_Verification_Policy.pdf`; 2.3 = `SharemeChat_Complaints_Policy.pdf` + `SharemeChat_Appeals_Policy.pdf`; 2.4 = `SharemeChat_Model_Collaboration_Agreement.pdf` (v4.2, firmado por modelos); 2.5 = `SharemeChat_Chargeback_Fraud_Mitigation_Policy.pdf`. Falta **firma/revisión legal externa** (a criterio del operador) y el **backing técnico** de §3/§4 (canal público de quejas, SLA 5 días, reporting mensual).
 
 ### 2.1 Content Management Policy & Procedures
 
@@ -60,7 +60,7 @@ Qué cubre:
 - Procedimiento de re-verificación periódica si procede.
 - Almacenamiento de evidencia de verificación.
 
-Base interna existente: ADR-029 (estimación facial + secundaria) consolidada en ADR-035 sobre Didit como vendor único KYC. Falta producir el documento externo.
+Base interna existente: ADR-029 (estimación facial + secundaria) consolidada en ADR-035 sobre Didit como vendor único KYC. **Producida** como `SharemeChat_Age_Verification_Policy.pdf` el 2026-08-31 (antes solo embebida en ToS §2).
 
 ### 2.3 Complaint & Content Removal Policy
 
@@ -94,7 +94,7 @@ Qué cubre:
 - Procedimiento antifraude (señales detectadas, umbrales, acciones automáticas).
 - Cooperación con el PSP en disputas.
 
-Base interna existente: auth-risk progresivo ([ADR-008](../06-decisions/adr-008-auth-risk-progressive-response.md)), ledger de transacciones, stream records con `billable_start` confirmado. Falta consolidar la política externa y conectarla con el attendance log (planificado en ADR-030).
+Base interna existente: auth-risk progresivo ([ADR-008](../06-decisions/adr-008-auth-risk-progressive-response.md)), ledger de transacciones, stream records con `billable_start` confirmado. **Producida** como `SharemeChat_Chargeback_Fraud_Mitigation_Policy.pdf` el 2026-08-31 (antes solo embebida en ToS §11 + Refund Policy); el attendance log dedicado sigue planificado (ADR-030).
 
 ## 3. Resolución de quejas en 5 días hábiles
 
