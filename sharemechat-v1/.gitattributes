@@ -1,2 +1,13 @@
 /mvnw text eol=lf
 *.cmd text eol=crlf
+
+# Binarios: nunca aplicar conversion de fin de linea (corromperia el byte-stream).
+# Critico para los PDFs legales: su sha256 se verifica contra el manifest
+# (ModelContractManifestService). Una conversion CRLF rompe esa verificacion.
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
