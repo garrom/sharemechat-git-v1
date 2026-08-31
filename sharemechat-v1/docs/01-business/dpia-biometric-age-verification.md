@@ -20,6 +20,13 @@
 | Fecha | 2026-08-31 |
 | Revisión | Anual, o ante cambio de vendor, de finalidad o del flujo |
 
+> **Copias y custodia.** Fuente autoritativa: este documento en el repo (git, versionado).
+> Copia PDF entregable (regulador / PSP *on request*) en el bucket **privado**
+> `sharemechat-content-private-<env>/compliance/` — **nunca** en el bucket público `assets/legal/`.
+> Copia inmutable archivada en `ops/legal-history/compliance/`. Regenerable con
+> `ops/legal-pdfs/generate_dpia_pdf.py`. Desplegada en TEST el 2026-08-31 (`v1`, sha256
+> `9ee25ac9…`).
+
 ## 1. Necesidad de la DPIA
 
 Bajo el Art. 35 GDPR, una DPIA es obligatoria cuando un tratamiento es susceptible de entrañar un
