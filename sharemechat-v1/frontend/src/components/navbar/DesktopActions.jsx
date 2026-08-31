@@ -102,6 +102,7 @@ const DesktopActions = ({
         >
           <StyledNavAvatar
             src={avatarUrl || avatarFallback}
+            $plain={!avatarUrl}
             alt="avatar"
             title={avatarTitle}
             onClick={onAvatarClick}
