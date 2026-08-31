@@ -132,7 +132,7 @@ Base interna existente: auth-risk progresivo ([ADR-008](../06-decisions/adr-008-
 
 La estimación facial de edad para clientes (ADR-029) procesa datos biométricos. Como OÜ estonia, GDPR aplica plenamente.
 
-**Estado**: PLANIFICADO. No hay DPIA del flujo biométrico, no hay base jurídica documentada para el procesamiento.
+**Estado** (actualizado 2026-08-31): **DPIA redactada** en [dpia-biometric-age-verification.md](dpia-biometric-age-verification.md) (borrador), con base jurídica documentada (consentimiento explícito Art. 9(2)(a) + refuerzo Art. 9(2)(g); Art. 6(1)(b)/(c)). La validación biométrica **está implementada y activa** (Didit: estimación de edad cliente + identidad completa modelo; enforcement `CLIENT_KYC_REQUIRED` en matching); lo que faltaba era la documentación GDPR, ahora en borrador. Pendiente: DPA+TOMs con Didit, plazo de retención en consola, enriquecer Privacy Policy, y validación legal externa (a criterio del operador).
 
 **Antes de activar el flujo de cliente**:
 
