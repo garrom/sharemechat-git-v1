@@ -871,6 +871,257 @@ function Write-DeployDriftReport {
     Write-Host ""
 }
 
+# ===============================================================
+# OOB (out-of-band) artifacts — Schema v2
+# ---------------------------------------------------------------
+# Artefactos desplegados FUERA del build (no son un commit de git):
+# PDFs de compliance en buckets privados, assets estaticos, etc. El
+# manifest commit-centrico no los ve. Estos helpers los registran por
+# entorno y detectan el gap cross-entorno (p. ej. presente en TEST,
+# ausente en PROD) para que la nivelacion no se olvide de ninguno.
+#
+# Alcance v1: SOLO artefactos que deben replicarse IDENTICOS entre
+# entornos (mismo sha256). config.env queda fuera a proposito: sus
+# valores difieren por diseno entre entornos (PRELAUNCH vs OPEN,
+# allowlists distintas), asi que el modelo "gap = falta/idem sha" no
+# aplica; es otro mecanismo.
+# ===============================================================
+
+function _Get-OobList {
+    param($Manifest)
+    if (-not $Manifest -or -not $Manifest.oob_artifacts) { return @() }
+    return @($Manifest.oob_artifacts)
+}
+
+# ---------------------------------------------------------------
+# Writer: Update-DeployStateManifestOob
+#   Anade/actualiza (por id) o elimina (-Remove) un artefacto OOB en
+#   el manifest del entorno. Idempotente. SOLO escribe el fichero; no
+#   commitea (decision D2). Bumpea schema_version a 2.
+# ---------------------------------------------------------------
+function Update-DeployStateManifestOob {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('audit', 'test', 'prod')]
+        [string]$Env,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Id,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('compliance_pdf', 'bucket_asset')]
+        [string]$Kind,
+
+        [Parameter(Mandatory = $false)]
+        [string]$Location,
+
+        [Parameter(Mandatory = $false)]
+        [string]$Sha256,
+
+        [Parameter(Mandatory = $false)]
+        [string]$Source,
+
+        [Parameter(Mandatory = $true)]
+        [string]$DeployedBy,
+
+        [Parameter(Mandatory = $false)]
+        [string]$Notes,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$Remove,
+
+        [Parameter(Mandatory = $false)]
+        [string]$ManifestPath
+    )
+
+    _Ensure-Yaml
+    $manifestFile = _Resolve-ManifestPath -Env $Env -Override $ManifestPath
+    $m = ConvertFrom-Yaml (Get-Content $manifestFile -Raw)
+    $now = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+
+    if (-not $Remove) {
+        if (-not $Kind)     { throw "-Kind es obligatorio salvo con -Remove." }
+        if (-not $Location) { throw "-Location es obligatorio salvo con -Remove." }
+        if (-not $Sha256)   { throw "-Sha256 es obligatorio salvo con -Remove." }
+    }
+
+    $existing = _Get-OobList $m
+    $newList = New-Object System.Collections.ArrayList
+    $found = $false
+    foreach ($a in $existing) {
+        if ([string]$a.id -eq $Id) { $found = $true; continue }  # se reemplaza/elimina
+        [void]$newList.Add($a)
+    }
+    if (-not $Remove) {
+        $entry = [ordered]@{
+            id          = $Id
+            kind        = $Kind
+            location    = $Location
+            sha256      = $Sha256.ToLower()
+            source      = $Source
+            deployed_at = $now
+            deployed_by = $DeployedBy
+            notes       = $Notes
+        }
+        [void]$newList.Add($entry)
+    }
+
+    $m.schema_version    = 2
+    $m.oob_artifacts     = @($newList)
+    $m.last_updated_at   = $now
+    $m.last_update_by    = $DeployedBy
+    $m.last_update_source = 'register-oob-artifact.ps1'
+
+    $newYaml = ConvertTo-Yaml $m
+    $header = @(
+        "# Manifest de estado de despliegue - entorno $($Env.ToUpper())"
+        "# Schema v2. Incluye oob_artifacts (artefactos fuera de banda: PDFs de"
+        "# compliance, assets a bucket) gestionados por register-oob-artifact.ps1."
+        "# Las secciones de commits las gestionan deploy-frontend.ps1 y"
+        "# update-manifest-backend.ps1. NO se commitea automaticamente (decision D2)."
+        "#"
+    ) -join "`n"
+    Set-Content -Path $manifestFile -Value ($header + "`n" + $newYaml) -Encoding UTF8
+
+    return [PSCustomObject]@{
+        ManifestFile = $manifestFile
+        Id           = $Id
+        Action       = if ($Remove) { if ($found) { 'removed' } else { 'noop-not-found' } } elseif ($found) { 'updated' } else { 'added' }
+        UpdatedAt    = $now
+    }
+}
+
+# ---------------------------------------------------------------
+# Check: Invoke-OobDriftCheck
+#   Compara la lista OOB de SourceEnv contra TargetEnv. Modelo
+#   manifest-vs-manifest (mismo modelo de confianza que el drift de
+#   commits). Clasifica cada artefacto de Source: OK / PENDING (falta
+#   en Target) / STALE (sha distinto en Target). Read-only.
+# ---------------------------------------------------------------
+function Invoke-OobDriftCheck {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('audit', 'test', 'prod')]
+        [string]$SourceEnv,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('audit', 'test', 'prod')]
+        [string]$TargetEnv,
+
+        [Parameter(Mandatory = $false)]
+        [string]$SourceManifestPath,
+
+        [Parameter(Mandatory = $false)]
+        [string]$TargetManifestPath
+    )
+
+    _Ensure-Yaml
+    $src = ConvertFrom-Yaml (Get-Content (_Resolve-ManifestPath -Env $SourceEnv -Override $SourceManifestPath) -Raw)
+    $tgt = ConvertFrom-Yaml (Get-Content (_Resolve-ManifestPath -Env $TargetEnv -Override $TargetManifestPath) -Raw)
+
+    $srcList = _Get-OobList $src
+    $tgtList = _Get-OobList $tgt
+    $tgtById = @{}
+    foreach ($a in $tgtList) { $tgtById[[string]$a.id] = $a }
+
+    $items = New-Object System.Collections.Generic.List[object]
+    $pending = 0; $stale = 0; $ok = 0
+    foreach ($a in $srcList) {
+        $id = [string]$a.id
+        if (-not $tgtById.ContainsKey($id)) {
+            $items.Add([PSCustomObject]@{ Id = $id; Kind = [string]$a.kind; Status = 'PENDING'; SourceSha = [string]$a.sha256; TargetSha = $null; Location = [string]$a.location; Notes = [string]$a.notes })
+            $pending++
+        } else {
+            $t = $tgtById[$id]
+            if ([string]$a.sha256 -ne [string]$t.sha256) {
+                $items.Add([PSCustomObject]@{ Id = $id; Kind = [string]$a.kind; Status = 'STALE'; SourceSha = [string]$a.sha256; TargetSha = [string]$t.sha256; Location = [string]$a.location; Notes = [string]$a.notes })
+                $stale++
+            } else {
+                $items.Add([PSCustomObject]@{ Id = $id; Kind = [string]$a.kind; Status = 'OK'; SourceSha = [string]$a.sha256; TargetSha = [string]$t.sha256; Location = [string]$a.location; Notes = [string]$a.notes })
+                $ok++
+            }
+        }
+    }
+
+    $severity = if (($pending + $stale) -gt 0) { 'WARN' } else { 'OK' }
+    return [PSCustomObject]@{
+        SourceEnv    = $SourceEnv
+        TargetEnv    = $TargetEnv
+        Items        = $items.ToArray()
+        PendingCount = $pending
+        StaleCount   = $stale
+        OkCount      = $ok
+        Severity     = $severity
+    }
+}
+
+# ---------------------------------------------------------------
+# Render CLI del reporte OOB (para check-oob-drift.ps1 directo).
+# ---------------------------------------------------------------
+function Write-OobDriftReport {
+    param([Parameter(Mandatory = $true)]$Result)
+    $r = $Result
+    $color = if ($r.Severity -eq 'OK') { 'Green' } else { 'Yellow' }
+
+    Write-Host ""
+    Write-Host "=== OOB drift: $($r.SourceEnv.ToUpper()) -> $($r.TargetEnv.ToUpper()) ===" -ForegroundColor $color
+    Write-Host "(artefactos fuera de banda: PDFs compliance / assets; deben replicarse identicos)"
+    Write-Host ""
+    if ($r.Items.Count -eq 0) {
+        Write-Host "Sin artefactos OOB registrados en $($r.SourceEnv.ToUpper())." -ForegroundColor DarkGray
+        Write-Host ""
+        return
+    }
+    $fmt = "{0,-10} {1,-22} {2,-16}"
+    Write-Host ($fmt -f 'status', 'id', 'kind') -ForegroundColor DarkGray
+    Write-Host ($fmt -f '------', '--', '----') -ForegroundColor DarkGray
+    foreach ($it in $r.Items) {
+        $c = switch ($it.Status) { 'OK' { 'Green' } 'STALE' { 'DarkYellow' } default { 'Yellow' } }
+        Write-Host ($fmt -f $it.Status, $it.Id, $it.Kind) -ForegroundColor $c
+    }
+    Write-Host ""
+    Write-Host "Severity: $($r.Severity)  (PENDING=$($r.PendingCount), STALE=$($r.StaleCount), OK=$($r.OkCount))" -ForegroundColor $color
+    if (($r.PendingCount + $r.StaleCount) -gt 0) {
+        Write-Host "Resolver: subir el artefacto al entorno $($r.TargetEnv.ToUpper()) y registrarlo con register-oob-artifact.ps1." -ForegroundColor $color
+    }
+    Write-Host ""
+}
+
+# ---------------------------------------------------------------
+# Surface embebido para los deploy scripts: imprime los OOB
+# PENDING/STALE al desplegar a un entorno superior. NO bloquea.
+# ---------------------------------------------------------------
+function Write-OobPendingSurface {
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('audit', 'test', 'prod')]
+        [string]$TargetEnv,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('audit', 'test', 'prod')]
+        [string]$SourceEnv = 'test'
+    )
+    if ($SourceEnv -eq $TargetEnv) { return }
+    $r = Invoke-OobDriftCheck -SourceEnv $SourceEnv -TargetEnv $TargetEnv
+    $pend = @($r.Items | Where-Object { $_.Status -ne 'OK' })
+    if ($pend.Count -eq 0) {
+        Write-Host "    OOB: sin artefactos fuera de banda pendientes vs $($SourceEnv.ToUpper())." -ForegroundColor DarkGray
+        return
+    }
+    Write-Host ""
+    Write-Host "    *** OOB ARTIFACTS PENDIENTES (fuera de banda; NO van con el bundle) ***" -ForegroundColor Yellow
+    Write-Host "    $($SourceEnv.ToUpper()) -> $($TargetEnv.ToUpper()): estos artefactos hay que replicarlos a mano en $($TargetEnv.ToUpper()):" -ForegroundColor Yellow
+    foreach ($it in $pend) {
+        Write-Host ("      - [{0}] {1} ({2})" -f $it.Status, $it.Id, $it.Kind) -ForegroundColor Yellow
+        if ($it.Location) { Write-Host ("          location(src): {0}" -f $it.Location) -ForegroundColor DarkGray }
+        if ($it.Notes)    { Write-Host ("          {0}" -f $it.Notes) -ForegroundColor DarkGray }
+    }
+    Write-Host "    Tras subirlo al entorno, registrar con register-oob-artifact.ps1. (No bloquea el deploy.)" -ForegroundColor Yellow
+    Write-Host ""
+}
+
 # ---------------------------------------------------------------
 # Entry point: solo si el script se invoca directamente (no dot-source).
 # Si se dot-source, solo expone las funciones publicas.

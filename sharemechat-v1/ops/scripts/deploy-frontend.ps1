@@ -612,6 +612,20 @@ if (-not $SkipDriftCheck) {
         }
         default { Write-Host "    Severidad desconocida: $($driftResult.Severity). Continuando." -ForegroundColor DarkGray }
     }
+
+    # ---- Auto-surface OOB (Schema v2) ----
+    # Al desplegar a un entorno superior (audit/prod), muestra los artefactos
+    # fuera de banda (PDFs de compliance, assets) que estan en TEST y faltan o
+    # difieren aqui. NO bloquea (no viajan con el bundle; pero deben verse en la
+    # nivelacion para no olvidarlos). Las funciones vienen del check dot-sourceado.
+    if ($Environment -in @('audit', 'prod')) {
+        try {
+            Write-Step "0.6/N" "Surface OOB (artefactos fuera de banda pendientes en $Environment)"
+            Write-OobPendingSurface -TargetEnv $Environment -SourceEnv 'test'
+        } catch {
+            Write-Host "    (surface OOB no disponible: $($_.Exception.Message))" -ForegroundColor DarkGray
+        }
+    }
 }
 
 if ($DryRun) {

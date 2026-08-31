@@ -120,6 +120,29 @@ ops/scripts/check-deploy-drift.ps1 -Env <audit|test|prod> [-ManifestPath <ruta>]
 
 Dot-source-able. Carga el manifest del entorno, compara los tres commits entre sí y contra `origin/main`, devuelve severidad + tabla legible sin tocar nada. `-ManifestPath` permite apuntar a un manifest sintético (útil para reproducir escenarios pasados, como el del incidente 2026-06-08). El script nunca falla con exit code distinto de 0 por severidad — solo informa.
 
+### Artefactos fuera de banda (OOB) — Schema v2
+
+El drift de commits **no ve** lo que se despliega fuera del build: PDFs de compliance en buckets privados, assets estáticos, etc. Una nivelación podría olvidarlos. El manifest v2 los registra por entorno en la sección `oob_artifacts` (id estable, `kind`, `location`, `sha256`, `source`, `deployed_at`) y hay tooling para no perderlos de vista.
+
+**Alcance (v1):** solo artefactos que deben replicarse **idénticos** entre entornos (mismo `sha256`). `config.env` queda fuera a propósito: sus valores difieren por diseño entre entornos (PRELAUNCH vs OPEN, allowlists distintas); es otro problema, no el de "falta un artefacto idéntico".
+
+**Regla — al desplegar algo fuera de banda a un entorno, regístralo:**
+
+```
+ops/scripts/register-oob-artifact.ps1 -Environment <env> -Id <id-estable> -Kind <compliance_pdf|bucket_asset> `
+    -Location <uri-en-ese-entorno> -File <ruta-local-para-sha256> -Source <ruta-en-repo> -Notes "<descripción>"
+```
+
+No commitea (decisión D2): commitea el manifest cuando te convenga. `-Remove -Id <id>` retira un artefacto.
+
+**Regla — al nivelar PROD (o AUDIT), comprueba el gap OOB y resuélvelo:**
+
+```
+ops/scripts/check-oob-drift.ps1 -SourceEnv test -TargetEnv prod
+```
+
+Lista los artefactos que están en TEST y faltan (`PENDING`) o difieren (`STALE`) en el destino. Súbelos al entorno destino y regístralos allí con `register-oob-artifact.ps1`. Además, **los propios deploy scripts** (`deploy-frontend.ps1` paso `[0.6/N]` y `update-manifest-backend.ps1`) muestran automáticamente los OOB pendientes al desplegar a `audit`/`prod` — es un aviso **no bloqueante** (un PDF de compliance ausente no rompe el entorno, pero debe verse en la nivelación).
+
 
 
 - comprobar disponibilidad de superficie pública

@@ -1,11 +1,19 @@
 ﻿# Manifest de estado de despliegue - entorno TEST
-# Schema v1. Auto-gestionado por deploy-frontend.ps1 (Fase 1
-# paso 2a). El paso [5.5/N] de cada deploy escribe el bloque
-# correspondiente al surface desplegado tras smoke OK. NO se
-# hace commit automatico: el operador commitea el manifest
-# cuando le conviene (decision D2).
+# Schema v2. Incluye oob_artifacts (artefactos fuera de banda: PDFs de
+# compliance, assets a bucket) gestionados por register-oob-artifact.ps1.
+# Las secciones de commits las gestionan deploy-frontend.ps1 y
+# update-manifest-backend.ps1. NO se commitea automaticamente (decision D2).
 #
-schema_version: 1
+schema_version: 2
+oob_artifacts:
+- id: dpia-biometric
+  kind: compliance_pdf
+  location: s3://sharemechat-content-private-test/compliance/dpia_biometric_v1_2026-08-31.pdf
+  sha256: 9ee25ac9bb65d32c999259653aca554dd5ba63cb5f7a96c5e85021e60e09d9a4
+  source: ops/legal-history/compliance/dpia_biometric_v1_2026-08-31.pdf
+  deployed_at: 2026-08-31T19:28:44Z
+  deployed_by: alain@LAPTOP-8UEIKVUT
+  notes: DPIA GDPR Art.35 (interno). Copia entregable on-request en bucket privado.
 frontend_product:
   cloudfront_invalidation_id: I3GXT4J3Y6CG38AMANXDIMX9HR
   verification:
@@ -22,7 +30,7 @@ frontend_product:
   working_tree_clean: false
   bucket: sharemechat-frontend-test
   bundle: main.7e867788.js
-last_update_source: deploy-frontend.ps1-fase1-paso2a
+last_update_source: register-oob-artifact.ps1
 last_update_by: alain@LAPTOP-8UEIKVUT
 environment: test
 backend:
@@ -40,7 +48,7 @@ backend:
   systemd_unit: sharemechat-test.service
   git_commit: ecabfd2232a921cabbc2056bed45caf5866da3a3
   git_commit_short: ecabfd22
-last_updated_at: 2026-08-31T18:58:48Z
+last_updated_at: 2026-08-31T19:28:44Z
 frontend_admin:
   cloudfront_invalidation_id: ICFKCRLUQ0E664D9GPC26VAYV5
   verification:

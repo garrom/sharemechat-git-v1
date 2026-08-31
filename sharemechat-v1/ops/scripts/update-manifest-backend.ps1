@@ -383,3 +383,17 @@ Write-Host ""
 Write-Host "OK - manifest actualizado: $($result.ManifestFile)" -ForegroundColor Green
 Write-Host "     UpdatedAt: $($result.UpdatedAt)" -ForegroundColor DarkGray
 Write-Host "     (recordatorio: el commit del manifest lo decides tu; no se hace auto-commit.)" -ForegroundColor DarkGray
+
+# ---- Auto-surface OOB (Schema v2) ----
+# Tras nivelar el backend de un entorno superior (audit/prod), recuerda los
+# artefactos fuera de banda (PDFs de compliance, assets) que estan en TEST y
+# faltan/difieren aqui. NO bloquea; solo los surface para no olvidarlos.
+if ($Environment -in @('audit', 'prod')) {
+    try {
+        Write-Host ""
+        Write-Host "=== Surface OOB (artefactos fuera de banda pendientes en $Environment) ===" -ForegroundColor Cyan
+        Write-OobPendingSurface -TargetEnv $Environment -SourceEnv 'test'
+    } catch {
+        Write-Host "    (surface OOB no disponible: $($_.Exception.Message))" -ForegroundColor DarkGray
+    }
+}
