@@ -120,6 +120,62 @@ presupuesto de viaje a LALEXPO, etc.— que convenga anotar aquí?
 
 ---
 
+### Punto 3 — El estudio dice sí al %, pero ¿por qué va a conectar a sus chicas si al principio ganan cero? 🟡
+
+**Por qué importa:** este es el muro de verdad, el que tiró el plan estos meses. El
+Punto 2 consigue que el dueño del estudio diga *"vale, me interesa tu %"*. Pero
+decir "sí" y **poner de verdad a sus chicas a trabajar en tu web** son dos cosas
+distintas — y la segunda no pasa sola.
+
+**El problema, despacio:** un estudio es un negocio. Tiene, pongamos, 10 chicas y
+cada una hace un turno. El dueño reparte esas horas entre las webs que **más le
+pagan por hora**. Sus chicas ya están ganando en LiveJasmin o donde sea. Si mete
+una hora en tu web y en esa hora no entra ningún cliente, esa hora ha valido
+**cero** — y encima ha dejado de ganar en la web de siempre. Por muy bueno que sea
+tu 50-60%, **el 50-60% de cero sigue siendo cero**. Así que, aunque le guste tu %,
+no te dará horas de sus chicas hasta que vea que en tu web se gana. Y en tu web no
+se gana hasta que hay chicas conectadas cuando entra un cliente. **Ese es el
+círculo** — el mismo huevo y la gallina del principio, ahora del lado del estudio.
+
+**Cómo se rompe el círculo (la ventana):** no intentes tener chicas las 24 horas
+— es justo lo que hace que todo quede vacío y no se gane nunca. Haz lo contrario:
+**concentra todo en una franja corta**. Por ejemplo, 2 horas, tres noches por
+semana, en hora punta (España o EE. UU., lo que mejor te venga). En esa franja:
+
+- **Pocas chicas bastan** (Punto 1): con 4-5 conectadas cubres a los clientes que
+  entren.
+- **Metes ahí TODO el poco tráfico de clientes que puedas conseguir**, en vez de
+  repartirlo por todo el día. Así, cuando el cliente entra hay chica, y cuando la
+  chica está conectada entra algún cliente. Por primera vez, las dos partes
+  coinciden en el tiempo.
+- **Y aquí está la pieza que desatasca:** para esas pocas horas concretas, sí
+  puedes **pagar un poco a las chicas por estar conectadas** aunque no entre
+  cliente (un fijo pequeño por hora, un "suelo"). Es un gasto **cerrado y
+  medible** —5 chicas × 2 horas × 3 noches × poco dinero—, no un pozo sin fondo.
+  Es lo único que hace que el estudio meta a sus chicas el primer día: le
+  garantizas que su hora en tu web no vale cero mientras la cosa arranca. En
+  cuanto entren clientes de pago de verdad, ese suelo se retira.
+
+**Y de paso, conviertes tu debilidad en producto:** como no puedes estar abierto
+24 horas, **no finjas que lo estás**. Anúncialo al revés: *"estamos en directo de
+21:00 a 23:00"*. Eso concentra a los clientes en esa franja (lo que quieres), hace
+que salga barato tener chicas conectadas, y le da aire de **evento** que las webs
+gigantes no se molestan en montar. Tú, siendo uno solo, sí puedes.
+
+**Mi opinión (rebatible):** el orden real de ataque no es "estudios → registro".
+Es: **(1)** elegir UNA franja corta, **(2)** meter unas pocas chicas de un estudio
+en esa franja pagándoles un suelo por estar, **(3)** empujar todo el tráfico de
+clientes que tengas a esa misma franja. Es un experimento pequeño, barato y
+medible. Si en esa franja las chicas empiezan a ganar por **clientes reales** (no
+por tu suelo), ensanchas la franja. Si no, cambias algo y repites — y puedes
+repetir durante años, que es tu verdadera ventaja.
+
+**Tu turno:** ¿te chirría lo de pagar un suelo por presencia unas horas, o lo ves
+como lo que es (un gasto pequeño y cerrado para arrancar)? ¿Y la idea de "noches
+en vivo" como producto, en vez de fingir 24 horas — te convence o la ves floja?
+
+---
+
 ## Acordado (firme)
 
 *(vacío por ahora — aquí solo entra lo que cerremos de verdad)*
