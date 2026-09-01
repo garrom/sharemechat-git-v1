@@ -414,7 +414,10 @@ export const StyledNavAvatar = styled.img`
   height: 36px;
   border-radius: 50%;
   object-fit: cover;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  /* Hilo blanco solo para FOTOS reales (separa la foto del gap). El avatar por
+     defecto (silueta negra, $plain) va sin border: negro pleno dentro del aro
+     rojo, sin segundo aro blanco interior. */
+  border: ${(p) => (p.$plain ? 'none' : '1px solid rgba(255, 255, 255, 0.35)')};
   /* Aro alrededor de la foto (mismo patrón que el avatar de "Perfil": gap +
      anillo) pero en rojo de marca vivo, no el rosa suave del perfil. El gap usa
      el color del navbar para leerse como separación limpia. */
