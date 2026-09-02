@@ -108,6 +108,14 @@ Cualquier comando contra infraestructura (AWS CLI, SSH a EC2, túnel RDS, `mysql
 
 ---
 
+## Búsqueda profunda (SONDA)
+
+Cuando el operador pida una **búsqueda / investigación profunda** (o "estudio a fondo"), aplicar el protocolo **SONDA**: [`docs/04-operations/protocolo-sonda.md`](sharemechat-v1/docs/04-operations/protocolo-sonda.md).
+
+En corto: hacer **estas 3 preguntas en un solo mensaje, en prosa** (nunca desplegable) — **(1)** tiempo aproximado (vistazo ~20 min / estándar ~1 h / a fondo ~3 h / exhaustiva), **(2)** foco o límite, **(3)** qué se quiere al final (solo datos+evidencias, o además recomendación accionable). La respuesta de **tiempo fija el nivel N1-N4** (nº de agentes paralelos, dimensiones, fuentes mín./dato, verificación, formato de salida); **confirmar el alcance en 2 líneas** y lanzar el fan-out de subagentes en paralelo (Agent tool). SIEMPRE: etiquetar evidencia (dato duro / impresión / no verificado) y cerrar con una sección "lo no verificado". La petición + la elección de nivel **ES la autorización** del fan-out.
+
+---
+
 ## Objetivo
 
 **Lanzamiento a producción: sin fecha fija.** Se lanza cuando haya suficiente masa de modelos y clientes registrados (el cuello de botella declarado es la captación de modelos). El estado, la fase y las prioridades vivas están en [`docs/07-roadmap/backlog-priorizado.md`](sharemechat-v1/docs/07-roadmap/backlog-priorizado.md), única fuente de estado (verificado contra código).
