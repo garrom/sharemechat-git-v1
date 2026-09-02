@@ -1,6 +1,6 @@
 // DashboardModel.jsx
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
-import { playSound } from '../../utils/sounds';
+import { playSound, startIncomingCall, stopIncomingCall } from '../../utils/sounds';
 import i18n from '../../i18n';
 import { getResolvedLocale } from '../../i18n/localeUtils';
 import { useHistory, useLocation } from 'react-router-dom';
@@ -874,6 +874,14 @@ const DashboardModel = () => {
     callStatusRef.current = callStatus;
   }, [callStatus]);
 
+  // Sonido de llamada entrante ("Clásico" en bucle): suena mientras callStatus
+  // sea 'incoming' y para en cualquier otro estado (aceptar/rechazar/colgar/timeout).
+  useEffect(() => {
+    if (callStatus === 'incoming') startIncomingCall();
+    else stopIncomingCall();
+    return () => stopIncomingCall();
+  }, [callStatus]);
+
 
   useEffect(() => {
     meIdRef.current = Number(sessionUser?.id) || null;
@@ -1579,6 +1587,8 @@ const DashboardModel = () => {
           if (m.id && centerSeenIdsRef.current.has(m.id)) return;
           if (m.id) centerSeenIdsRef.current.add(m.id);
 
+          if (m.senderId === peer) playSound('message'); // "Ding" P2P solo del peer
+
           setCenterMessages(prev => [...prev, m]);
           queueMicrotask(() => {
             const el = modelCenterListRef.current;
@@ -1611,6 +1621,8 @@ const DashboardModel = () => {
           const mid = data.messageId;
           if (mid && centerSeenIdsRef.current.has(mid)) return;
           if (mid) centerSeenIdsRef.current.add(mid);
+
+          playSound(item.senderId === me ? 'giftSent' : 'giftReceived'); // regalo P2P favoritos
 
           setCenterMessages(prev => [...prev, item]);
           queueMicrotask(() => {
