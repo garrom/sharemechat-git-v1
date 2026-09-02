@@ -47,7 +47,11 @@ que hay poca gente y se va? (dímelo con tus palabras, aquí debajo)
 
 ---
 
-### Punto 2 — ¿De dónde salen las chicas, y cómo las traemos? 🟡
+### Punto 2 — ¿De dónde salen las chicas, y cómo las traemos? ⛔ SUPERADO por A1 (2026-09-02)
+
+> **Este punto proponía estudios-first; se descarta.** El rumbo acordado es
+> captación DIRECTA (ver *Acordado A1*). Se conserva abajo por trazabilidad del
+> debate. La parte de **canales/legalidad por país** sí sigue siendo útil.
 
 **Por qué importa:** el Punto 1 dice que bastan pocas chicas conectadas a la vez.
 Vale. Pero no dice de dónde salen esas chicas. Ese es el hueco que hay que tapar,
@@ -178,4 +182,53 @@ en vivo" como producto, en vez de fingir 24 horas — te convence o la ves floja
 
 ## Acordado (firme)
 
-*(vacío por ahora — aquí solo entra lo que cerremos de verdad)*
+### A1 — Rumbo: captación DIRECTA (plataforma → modelo), NO estudios 🟢 (2026-09-02)
+
+Decisión del operador. **La línea principal es directa: plataforma → modelo.** Los
+estudios dejan de ser la puerta de entrada y pasan a canal **secundario/oportunista**
+(si una modelo viene con estudio, el sistema Master ya lo soporta; pero **no se
+dedica esfuerzo** a ferias/federaciones/B2B). Esto **supersede el Punto 2** (que
+proponía estudios-first).
+
+**Motivos (del operador, compartidos):**
+- El 1-a-1 de dating es **baja producción**: laptop + cámara + internet desde casa
+  basta. La sala/luz/equipo del estudio es para el cam broadcast, no para este
+  producto → el estudio aporta poco valor aquí.
+- **Economía:** directo, la modelo se queda el **50-60% entero**. Vía estudio, el
+  intermediario le come la mitad → la ventaja de "pagamos mejor" se evapora antes
+  de llegar a ella. El mejor % **solo es un arma real en la relación directa**.
+- El reto directo no es "no existen modelos" (frase mala corregida) — es
+  **confianza + primer contacto**: una desconocida recela de una web nueva. Se
+  resuelve con cómo te presentas (cara visible, oferta concreta, pago inmediato,
+  fricción mínima) y **boca a boca** desde la primera bien tratada.
+
+### A2 — Países foco 🟢
+
+Los **legales "buenos"** del estudio de captación ([`captacion-modelos/`](captacion-modelos/)):
+**Colombia, Brasil, Rumanía, México** (+ Sudáfrica). El **filtro legal** de ese
+estudio sigue vigente y útil (dice de qué países captar); lo único que se anula es
+su conclusión de **canal** (estudios-first). El canal ahora es **directo a la chica**.
+
+### A3 — Sigue vivo del debate (no cerrado)
+
+- **Punto 1** (bastan pocas chicas conectadas a la vez) — en pie.
+- **Punto 3** (la ventana / suelo de presencia para arrancar) — en pie: el muro del
+  cold-start (primera modelo sin clientes gana cero) **no desaparece** por ir
+  directo; pero directo tiene ventaja (cuando llega el cliente, ella se lleva todo
+  el % → más incentivo para aguantar).
+
+### A4 — Próximo trabajo con esfuerzo dedicado (pendiente, sesión aparte)
+
+**Investigación PROFUNDA y con evidencias de CÓMO llegar a la modelo directamente**,
+centrada en **DOS canales, solo esos dos**:
+1. **Prensa / bolsa de empleo** (anuncios tipo "trabajo desde casa").
+2. **Redes — X**.
+
+Búsqueda a fondo, con fuentes y evidencias por canal (dónde, cómo, qué mensaje, qué
+funciona, coste, riesgo). Se aborda como frente propio más adelante.
+
+### A5 — A verificar antes de vender el gancho
+
+La afirmación "ofrecemos mejores condiciones que la competencia" hay que
+sostenerla con **números reales** (qué netea una modelo en LiveJasmin/CooMeet vs en
+SharemeChat directo). Pendiente de comprobar.
