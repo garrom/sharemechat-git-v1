@@ -272,3 +272,13 @@ SharemeChat directo). Pendiente de comprobar.
 4. **Capacidad (operador solo)** — publicar + filtrar + onboardar una a una es
    intensivo; el embudo (anuncio → captura → contacto → alta en SharemeChat) debe ser
    eficiente o se ahoga.
+
+### A8 — Ejecución: identidad del anuncio y canal social 🟢 (2026-09-03)
+
+- **Prensa:** el anuncio se publica como **PERSONA FÍSICA** (no la OÜ). Método
+  anti-ingenuidad: **no esperar que un portal diga "acepta adult"**; mirar **cómo lo
+  hacen los estudios reales**, inferir de los anuncios existentes qué patrón/eufemismo
+  usan, y **hacer lo mismo**. Investigar si publicar cuesta dinero (sin quedarse ahí).
+- **Social (X):** forma elegida = **Chrome logueado del operador + herramienta "Claude
+  en Chrome"** (gratis, sin API, sin que la IA toque la contraseña — la mete el
+  operador). **SONDA social EN ESPERA**: se lanza cuando el operador esté logueado.
