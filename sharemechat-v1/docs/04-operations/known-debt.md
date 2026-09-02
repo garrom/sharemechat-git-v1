@@ -20,7 +20,7 @@ Mitigaciones ya presentes que se quedan cortas: `StyledChatInput` (~L882-909) ti
 
 Matiz importante: hay artículos recientes que afirman "con `dvh` + `interactive-widget` basta, sin JS" — cierto **solo porque dejan iOS fuera** (iOS ignora `interactive-widget`). Para nuestro tráfico móvil iOS, la Capa 2 (visualViewport) es **necesaria**; no basta con "dvh es suficiente".
 
-**Riesgo de implementación**: el shell `100dvh overflow:hidden` es *load-bearing* para el scroll del chat P2P (ver `docs/04-operations/scroll-dashboard-favoritos-investigation-2026-08-08.md`). El hook debe activarse solo con teclado abierto y revertir en blur, para no romper el layout de columnas ni el scroller interno.
+**Riesgo de implementación**: el shell `100dvh overflow:hidden` es *load-bearing* para el scroll del chat P2P (ver `docs/_archive/04-operations/scroll-dashboard-favoritos-investigation-2026-08-08.md`). El hook debe activarse solo con teclado abierto y revertir en blur, para no romper el layout de columnas ni el scroller interno.
 
 **Prioridad**: P4 (UX, "tras lo importante") — ver backlog §P4 (bullet "teclado móvil en chat"). **Fuentes**: HTMHell *interactive-widget* (adventcalendar 2024/4), WebKit standards-positions #65, w3c/csswg-drafts #10464.
 
