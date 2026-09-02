@@ -12,6 +12,14 @@
 | 2 | Prensa — **jooble** (co.jooble.org) | [`jooble.md`](jooble.md) |
 | 3 | Prensa — **otras bolsas CO** (computrabajo, magneto, bumeran, indeed) | [`otras-bolsas.md`](otras-bolsas.md) |
 | 4 | **X (social)** | [`x-social.md`](x-social.md) |
+| 5 | **CÓMO PUBLICAR** tú el anuncio (feasibility + coste + patrón + plantilla) | [`como-publicar.md`](como-publicar.md) |
+
+> **Actualización 2026-09-03 (2ª tanda SONDA):** al mapa de "qué hay" se suma
+> [`como-publicar.md`](como-publicar.md) — cómo publicar TÚ como particular: **elempleo** (1ª gratis,
+> luego ~30 USD; "webcam" en claro) y **beBee/trabajo.org** (1ª gratis; alimenta a Jooble) son
+> viables; **OLX prohibido**; **TikTok/Facebook/web propia** gratis para captación fría. Coste de
+> arranque ≈ 0. Dato que choca con "persona física, punto": el patrón ganador es **marca ligera de
+> estudio**, no individuo desnudo (decisión del operador).
 
 ## Resumen por canal (una línea cada uno)
 
