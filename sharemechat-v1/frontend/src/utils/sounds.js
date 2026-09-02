@@ -144,7 +144,12 @@ export function playSound(name) {
     if (!fn) return;
     const c = ensureCtx();
     if (!c) return;
-    if (c.state === 'suspended') { c.resume().catch(() => {}); return; } // aún sin gesto: no suena, no rompe
+    if (c.state === 'suspended') {
+      // Reanuda y REPRODUCE tras reanudar (no solo reanudar). Si ya hubo algún
+      // gesto del usuario en la app, resume() resuelve y el sonido suena.
+      c.resume().then(() => { try { fn(); } catch (_) {} }).catch(() => {});
+      return;
+    }
     fn();
   } catch (_) { /* nunca romper la UI por un sonido */ }
 }
@@ -156,11 +161,14 @@ export function startIncomingCall() {
     stopIncomingCall();
     const c = ensureCtx();
     if (!c) return;
-    if (c.state === 'suspended') { c.resume().catch(() => {}); return; }
-    sndIncomingCall();
-    ringTimer = setInterval(() => {
-      try { if (isSoundsEnabled() && ctx && ctx.state === 'running') sndIncomingCall(); } catch (_) {}
-    }, 3000);
+    const startLoop = () => {
+      try { sndIncomingCall(); } catch (_) {}
+      ringTimer = setInterval(() => {
+        try { if (isSoundsEnabled() && ctx && ctx.state === 'running') sndIncomingCall(); } catch (_) {}
+      }, 3000);
+    };
+    if (c.state === 'suspended') { c.resume().then(startLoop).catch(() => {}); return; }
+    startLoop();
   } catch (_) {}
 }
 
