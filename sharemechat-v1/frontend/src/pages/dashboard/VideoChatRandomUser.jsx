@@ -3,6 +3,7 @@ import i18n from '../../i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { TEASERS_PAGE_SIZE, TEASERS_PAGE_DEFAULT } from '../../config/appConfig';
 import { apiFetch } from '../../config/http';
+import PeerTitleAvatar from '../../components/PeerTitleAvatar';
 import {
   faUserPlus,
   faVideo,
@@ -26,7 +27,6 @@ import {
   StyledPrecallLocalStage,
   StyledRemoteVideo,
   StyledRemoteVideoBlur,
-  StyledTitleAvatar,
   StyledPreCallCenter,
   StyledHelperLine,
   StyledRandomSearchControls,
@@ -203,7 +203,7 @@ export default function VideoChatRandomUser(props) {
 
   const renderCallTopMeta = () => (
     <StyledCallTopMeta>
-      <StyledTitleAvatar src={modelAvatar || '/img/avatar-model.svg'} alt="" />
+      <PeerTitleAvatar photoUrl={modelAvatar} name={modelNickname} />
       <StyledCallTopMetaText>
         {modelNickname || t('dashboardUserClient.report.displayName')}
       </StyledCallTopMetaText>
@@ -476,7 +476,7 @@ export default function VideoChatRandomUser(props) {
                       CTA "hazte cliente" (onGoPremium). */}
                   <StyledCallChatColumn>
                     <StyledCallChatColHeader>
-                      <StyledTitleAvatar src={modelAvatar || '/img/avatar-model.svg'} alt="" style={{ width: 28, height: 28 }} />
+                      <PeerTitleAvatar photoUrl={modelAvatar} name={modelNickname} />
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ fontSize: 13, fontWeight: 600, color: '#e7ebf0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {modelNickname || t('dashboardUserClient.report.displayName')}

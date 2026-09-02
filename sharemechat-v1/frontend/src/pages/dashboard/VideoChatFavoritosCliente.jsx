@@ -1,6 +1,7 @@
 // src/pages/dashboard/VideoChatFavoritosCliente.jsx
 import React,{useEffect,useRef,useState,useMemo} from 'react';
 import i18n from '../../i18n';
+import PeerTitleAvatar from '../../components/PeerTitleAvatar';
 import { apiFetch } from '../../config/http';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faPhoneSlash, faVideo, faPaperPlane, faExpand } from '@fortawesome/free-solid-svg-icons';
@@ -12,7 +13,7 @@ import { useTranslationSettings } from '../../hooks/useTranslationSettings';
 import { useMessageTranslations } from '../../hooks/useMessageTranslations';
 import { StyledCenter,StyledFavoritesShell,StyledFavoritesColumns,StyledCenterPanel,StyledCenterBody,
     StyledChatScroller,StyledChatDock,StyledChatInput,StyledVideoArea,StyledRemoteVideo,StyledVideoTitle,
-    StyledTitleAvatar,StyledLocalVideo,StyledTopActions,StyledChatWhatsApp,StyledChatContainer,StyledRemoteVideoBlur,
+    StyledLocalVideo,StyledTopActions,StyledChatWhatsApp,StyledChatContainer,StyledRemoteVideoBlur,
     StyledChatList,StyledChatMessageRow,StyledGiftMessage,StyledGiftIcon,StyledPreCallCenter,StyledHelperLine,
     StyledBottomActionsMobile,StyledMobile3ColBar,StyledTopCenter,StyledConnectedText,StyledFloatingHangup,
     StyledCallCardDesktop,StyledCallChatColumn,StyledCallChatColHeader,StyledCallChatColScroll,StyledCallFooterDesktop,StyledCallVideoArea,StyledCallStage,StyledCallTopBar,
@@ -746,7 +747,7 @@ export default function VideoChatFavoritosCliente(props){
                               <StyledCallStage>
                                 <StyledCallTopBar>
                                   <StyledCallTopMeta>
-                                    <StyledTitleAvatar src={callPeerAvatar||'/img/avatar-model.svg'} alt=""/>
+                                    <PeerTitleAvatar photoUrl={callPeerAvatar} name={callPeerName} />
                                     <StyledCallTopMetaText>
                                       {callPeerName||t('dashboardClient.videoChatFavoritosCliente.labels.remote')}
                                     </StyledCallTopMetaText>
@@ -812,7 +813,7 @@ export default function VideoChatFavoritosCliente(props){
 
                           <StyledCallChatColumn>
                             <StyledCallChatColHeader>
-                              <StyledTitleAvatar src={callPeerAvatar||'/img/avatar-model.svg'} alt="" style={{ width: 28, height: 28 }} />
+                              <PeerTitleAvatar photoUrl={callPeerAvatar} name={callPeerName} />
                               <div style={{ minWidth: 0, flex: 1 }}>
                                 <div style={{ fontSize: 13, fontWeight: 600, color: '#e7ebf0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                   {callPeerName||t('dashboardClient.videoChatFavoritosCliente.labels.remote')}
@@ -1045,7 +1046,7 @@ export default function VideoChatFavoritosCliente(props){
                 <StyledVideoArea style={{display:callStatus==='in-call'?'block':'none',position:'relative'}}>
                   <StyledRemoteVideo ref={callRemoteWrapRef}>
                     <StyledVideoTitle>
-                      <StyledTitleAvatar src={callPeerAvatar||'/img/avatar-client.svg'} alt=""/>
+                      <PeerTitleAvatar photoUrl={callPeerAvatar} name={callPeerName} />
                       {callPeerName||t('dashboardClient.videoChatFavoritosCliente.labels.remote')}
                     </StyledVideoTitle>
                     <video ref={callRemoteVideoRef} autoPlay playsInline style={{width:'100%',height:'100%',objectFit:'cover'}}/>

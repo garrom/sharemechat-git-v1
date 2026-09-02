@@ -16,6 +16,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import styled from 'styled-components';
 import i18n from '../i18n';
+import { initialOf } from '../utils/defaultAvatar';
 import { apiFetch } from '../config/http';
 import RoyaltyBadge from './RoyaltyBadge';
 import GiftIcon from './gifts/GiftIcon';
@@ -60,19 +61,21 @@ const Cover = styled.div`
   }
 `;
 
-// Sin foto (2026-08-28): silueta neutra en trazo, gradiente por rol (unificado
-// con /img/avatar-*.svg). MODEL por defecto; CLIENT en el spotlight simple.
-// Sin foto (2026-08-30): fondo negro + silueta blanca, igual para todos los
-// roles (unificado con /img/avatar-*.svg). El aro rojo lo aporta el navbar.
+// Sin foto (2026-09-02): inicial del nickname sobre círculo degradado (misma
+// familia que LetterAvatar de la lista). La silueta negra queda SOLO para el
+// avatar propio del navbar; cualquier OTRO usuario sin foto muestra su inicial.
 const NoPhoto = styled.div`
   width: 100%;
   height: 100%;
   display: grid;
   place-items: center;
-  background: #000000;
+  background: linear-gradient(135deg, #ff5c8a, #a78bfa);
+  color: #fff;
+  font-weight: 800;
+  font-size: 96px;
+  line-height: 1;
+  text-transform: uppercase;
   user-select: none;
-
-  svg { width: 96px; height: 96px; }
 `;
 
 const CoverInfo = styled.div`
@@ -397,12 +400,7 @@ const ModelSpotlight = ({ userId, nickname, presence, onStartCall, canCall = fal
     <Panel>
       <Cover>
         {photo ? <img src={photo} alt="" /> : (
-          <NoPhoto aria-hidden="true">
-            <svg viewBox="0 0 120 120" fill="none" stroke="#ffffff" strokeWidth="6" strokeLinecap="round">
-              <circle cx="60" cy="48" r="17" />
-              <path d="M31 98c0-16 13-26 29-26s29 10 29 26" />
-            </svg>
-          </NoPhoto>
+          <NoPhoto aria-hidden="true">{initialOf(name)}</NoPhoto>
         )}
         <CoverInfo>
           <Name>{name}</Name>

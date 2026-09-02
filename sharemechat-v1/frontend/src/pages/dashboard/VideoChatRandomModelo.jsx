@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import i18n from '../../i18n';
+import PeerTitleAvatar from '../../components/PeerTitleAvatar';
 import SessionHUD from '../../components/SessionHUD';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUserPlus, faVideo, faPhoneSlash, faForward, faPaperPlane, faBan, faFlag, faExpand } from '@fortawesome/free-solid-svg-icons';
@@ -21,7 +22,6 @@ import {
   StyledRemoteVideoMedia,
   StyledRemoteVideoBlur,
   StyledRemoteVideoPlaceholder,
-  StyledTitleAvatar,
   StyledPaneCenter,
   StyledPaneCenterStack,
   StyledPreCallCenter,
@@ -771,7 +771,7 @@ export default function VideoChatRandomModelo(props) {
   const renderCallTopMeta = (hud = null) => (
     <StyledCallTopMeta>
       {showTrialBadge && <TrialBadge />}
-      <StyledTitleAvatar src={clientAvatar || '/img/avatar-client.svg'} alt="" />
+      <PeerTitleAvatar photoUrl={clientAvatar} name={clientNickname} />
       <div style={{display:'flex',flexDirection:'column',minWidth:0,lineHeight:1.15}}>
         <StyledCallTopMetaText>
           {clientNickname || t('dashboardModel.videoChatRandomModelo.labels.clientDefault')}
@@ -1055,7 +1055,7 @@ export default function VideoChatRandomModelo(props) {
 
                   <StyledCallChatColumn>
                     <StyledCallChatColHeader>
-                      <StyledTitleAvatar src={clientAvatar || '/img/avatar-client.svg'} alt="" style={{ width: 28, height: 28 }} />
+                      <PeerTitleAvatar photoUrl={clientAvatar} name={clientNickname} />
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ fontSize: 13, fontWeight: 600, color: '#e7ebf0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {clientNickname || t('dashboardModel.videoChatRandomModelo.labels.clientDefault')}
