@@ -33,6 +33,34 @@ LiveJasmin, Chaturbate) obliga a matizar la etiqueta binaria ✅/❌:
 Por eso los tres niveles son: **✅ legal · 🟡 gris tolerado (ilegal en papel,
 industria real de facto) · ❌ prohibido sin industria tolerada documentada.**
 
+### Cómo operan las grandes en el gris (mecanismo de subcontrata)
+
+En los países 🟡 (Ucrania, Filipinas…), OnlyFans, LiveJasmin y Chaturbate **NO
+contratan ni verifican a la modelo directamente.** Entre la plataforma y la mujer
+hay un **intermediario** —un estudio o agencia local— que:
+
+- es quien tiene la relación real (contrato, verificación, pago) con la modelo;
+- es la **contraparte** de la plataforma: la plataforma trata con el estudio, no
+  con la mujer;
+- **absorbe el riesgo legal** en la jurisdicción de la modelo, porque es él —no la
+  plataforma— quien la "emplea"/relaciona localmente.
+
+Resultado: **la modelo no se relaciona con la plataforma; su vínculo es con la
+subcontrata.** La plataforma se mantiene a distancia y nunca genera un rastro
+nominal directo (identidad verificada de esa mujer concreta ligada a la
+plataforma) en un país donde el acto es ilegal en el papel. Ese es el mecanismo
+que les permite nutrirse de países 🟡.
+
+**Si SharemeChat quisiera hacer lo mismo**, tendría que adaptar esa casuística en
+**backend y frontend**: que la contraparte verificada y pagada sea el
+**estudio/subcontrata** (no la modelo individual), que la modelo cuelgue del
+estudio como sub-cuenta gestionada por él, y que el vínculo contractual, de
+verificación y de payout de SharemeChat sea con el estudio, no con la mujer. Es
+una variante del sistema Master ya existente, pero reorientada para que la
+relación directa de la plataforma sea con el intermediario. **Si conviene hacerlo
+o no es decisión de negocio y de backend del operador; aquí solo se describe el
+mecanismo.**
+
 ## La shortlist (46 países investigados)
 
 **Grupo A — Legal + canal B2B legítimo y escalable (donde de verdad se puede):**
