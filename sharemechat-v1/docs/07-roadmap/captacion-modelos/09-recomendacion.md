@@ -48,11 +48,18 @@ por buenas:
    trata/fraude → no reclutable de forma limpia. Costa de Marfil, Camerún y
    Senegal son directamente delito. La corazonada de "filón francófono barato"
    no sobrevive al filtro.
-2. **"CooMeet usa operadoras pagadas" y "hay muchas malgaches en CooMeet" son
-   IMPRESIÓN, no dato.** A7 lo dictamina: la primera está sin verificar; la
-   segunda es una conflación con el ecosistema de citas de texto francófono
-   (empresas de "animatrices"), desmentida dentro del propio análisis de
-   plataformas. **Dejar de citarlas como hechos.**
+2. **Distinguir dos frases que se habían juntado mal:**
+   - *"CooMeet usa operadoras pagadas"* → **sin verificar**: no hay fuente
+     pública que confirme que CooMeet contrata y paga a las mujeres.
+   - *"Hay malgaches en CooMeet"* → **HECHO confirmado por observación directa
+     del operador** (ha hablado en vídeo con 7+ mujeres malgaches en CooMeet).
+     Lo único que no existe es un *dataset público* que lo cuantifique; eso no
+     niega la evidencia de primera mano. **Sí hay oferta malgache real.**
+   - Consecuencia: Madagascar NO cae por falta de oferta (la hay), sino por
+     (a) zona gris legal para una plataforma con KYC y (b) ausencia de canal
+     organizado para llegar a ellas salvo de una en una. **Presencia ≠
+     reclutabilidad.** El propio operador lo ilustra: conoció a 7+, solo 1 está
+     dispuesta.
 
 ## Nivel de confianza (dato duro vs impresión)
 
