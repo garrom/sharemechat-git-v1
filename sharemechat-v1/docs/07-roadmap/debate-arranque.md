@@ -239,3 +239,36 @@ SONDA para los siguientes países (Brasil, Rumanía, México).
 La afirmación "ofrecemos mejores condiciones que la competencia" hay que
 sostenerla con **números reales** (qué netea una modelo en LiveJasmin/CooMeet vs en
 SharemeChat directo). Pendiente de comprobar.
+
+### A6 — Segmento objetivo y vector de entrada 🟢 (2026-09-03)
+
+- **Segmento = PRINCIPIANTES sin audiencia.** Son baratas de captar, sin palanca y
+  no exigen facturar el minuto 1; son quienes responden a "trabajo desde casa".
+  **Chicas con audiencia propia = prioridad BAJA** (tienen palanca, quieren facturar
+  ya → caras de traer); "algo por si cuela", con login de X/redes si llega el momento.
+- **Vector de entrada = publicar TU PROPIO anuncio** en las bolsas (elempleo el más
+  usado), con el encuadre "estudio/plataforma que empieza" — que es el **idioma del
+  canal**, no una mentira: reclutas DIRECTO y ofreces lo que un estudio no puede
+  (trabajar desde casa, solo el móvil, y **quedarse con más %** porque no hay
+  intermediario que se lleve la mitad). Es lead-gen: el anuncio es el gancho.
+- **Materia prima del mensaje** = el vocabulario/eufemismos ya capturados en
+  [`captacion-modelos/canales-colombia/`](captacion-modelos/canales-colombia/00-indice-y-sintesis.md)
+  ("streamer de videollamadas", "solo tu móvil", "pagos en dólares", "+18", "sin
+  experiencia"). El método correcto es **PUBLICAR, no rastrear** (los portales son
+  duros de leer — confirmado en el SONDA).
+- Este movimiento gana la **ADQUISICIÓN** (llegar a modelos baratas). **NO gana la
+  retención** (sin clientes gana cero → ver A3 / Punto 3). Son dos batallas distintas.
+
+### A7 — Pendiente de analizar ANTES de actuar (los 4 nudos, en modo análisis)
+
+1. **Mensaje del anuncio** — encuadre estudio↔plataforma y redacción exacta (verdad,
+   sin confundir a la candidata sobre dónde va a trabajar).
+2. **Retención / ventana** — el muro que queda: adquisición sin retención = cubo
+   agujereado. La ventana / suelo de presencia (Punto 3) es la pieza que falta.
+3. **Compliance / datos** — al publicar y recibir candidatas acabas con **PII** de
+   ellas (OÜ estonia → GDPR); y el reclutamiento de principiantes en Colombia roza la
+   zona de trata. KYC + operar legal protegen si se hace limpio; hay que analizar cómo
+   se capta y guarda ese dato.
+4. **Capacidad (operador solo)** — publicar + filtrar + onboardar una a una es
+   intensivo; el embudo (anuncio → captura → contacto → alta en SharemeChat) debe ser
+   eficiente o se ahoga.
