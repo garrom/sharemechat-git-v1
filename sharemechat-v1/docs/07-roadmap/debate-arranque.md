@@ -225,7 +225,14 @@ centrada en **DOS canales, solo esos dos**:
 2. **Redes — X**.
 
 Búsqueda a fondo, con fuentes y evidencias por canal (dónde, cómo, qué mensaje, qué
-funciona, coste, riesgo). Se aborda como frente propio más adelante.
+funciona, coste, riesgo).
+
+**Estado (2026-09-03): COLOMBIA hecho** (SONDA N2, mapa de datos con evidencia) →
+[`captacion-modelos/canales-colombia/`](captacion-modelos/canales-colombia/00-indice-y-sintesis.md).
+Titular: los 2 canales están dominados por **estudios**, no por captación directa; el
+perfil "chica con audiencia propia" está en **TikTok/Instagram/OnlyFans, NO en X**;
+X no se lee sin login. Falta la **fase de recomendación** (qué hacer) y repetir el
+SONDA para los siguientes países (Brasil, Rumanía, México).
 
 ### A5 — A verificar antes de vender el gancho
 
