@@ -16,21 +16,21 @@ oob_artifacts:
   location: s3://sharemechat-content-private-test/compliance/dpia_biometric_v1_2026-08-31.pdf
   deployed_by: alain@LAPTOP-8UEIKVUT
 frontend_product:
-  cloudfront_invalidation_id: ICXYFKX0XL66AEDN1E4NNWI4ZX
+  cloudfront_invalidation_id: I5C6Z46482CVC1629FJBW5SA5T
   verification:
-    method: deploy-frontend.ps1-live-build_2026-08-31T22:30:37Z
+    method: deploy-frontend.ps1-live-build_2026-09-02T15:59:29Z
     git_commit_provenance: recorded_by_deploy_script
     notes: Actualizado automaticamente por deploy-frontend.ps1 (Fase 1 paso 2a) tras smoke OK del propio script.
-  deployed_at: 2026-08-31T22:30:37Z
-  built_at: 2026-08-31T22:30:37Z
-  bundle_sha256: aa9d1a2dca936f54cc39681c5092f51668bf2034875f328e645d26f36682ec80
-  git_commit_short: e717ffe0
-  git_commit: e717ffe005510a35b4c43bacd09fc66f2a68e850
+  deployed_at: 2026-09-02T15:59:29Z
+  built_at: 2026-09-02T15:59:29Z
+  bundle_sha256: 2c4bb38d4b00330e46b03036926a12210e3d207e9a25139c21e3bfa8ebc3d896
+  git_commit_short: fa964ef4
+  git_commit: fa964ef4bf6a09f48bd38ef0f5199b2ea2e70c9e
   cloudfront_distribution: E2Q4VNDDWD5QBU
   deployed_by: alain@LAPTOP-8UEIKVUT
-  working_tree_clean: false
+  working_tree_clean: true
   bucket: sharemechat-frontend-test
-  bundle: main.4ecbc6e4.js
+  bundle: main.ffd6446c.js
 last_update_source: deploy-frontend.ps1-fase1-paso2a
 last_update_by: alain@LAPTOP-8UEIKVUT
 environment: test
@@ -49,7 +49,7 @@ backend:
   systemd_unit: sharemechat-test.service
   git_commit: ecabfd2232a921cabbc2056bed45caf5866da3a3
   git_commit_short: ecabfd22
-last_updated_at: 2026-08-31T22:30:37Z
+last_updated_at: 2026-09-02T15:59:29Z
 frontend_admin:
   cloudfront_invalidation_id: ICFKCRLUQ0E664D9GPC26VAYV5
   verification:
