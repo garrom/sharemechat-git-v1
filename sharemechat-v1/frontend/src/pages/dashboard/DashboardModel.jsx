@@ -1,5 +1,6 @@
 // DashboardModel.jsx
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
+import { playSound } from '../../utils/sounds';
 import i18n from '../../i18n';
 import { getResolvedLocale } from '../../i18n/localeUtils';
 import { useHistory, useLocation } from 'react-router-dom';
@@ -694,6 +695,7 @@ const DashboardModel = () => {
         try {
           if (data.peerRole === 'client' && Number.isFinite(Number(data.peerUserId))) {
             setCurrentClientId(Number(data.peerUserId));
+            playSound('match'); // sonido "Conexión" al emparejar
           } else {
             setCurrentClientId(null);
           }
@@ -737,6 +739,7 @@ const DashboardModel = () => {
       // /messages/translate-batch con el id real de BD desde random chat.
       onChatMessage: (data) => {
         if (!isEcho(data.message)) {
+          playSound('message'); // "Ding" solo en mensajes del peer, no en los propios
           setMessages((prev) => [...prev, {
             from: 'peer',
             text: data.message,
@@ -748,6 +751,7 @@ const DashboardModel = () => {
 
       onGiftMessage: (data) => {
         const mine = Number(data.fromUserId) === Number(sessionUser?.id);
+        playSound(mine ? 'giftSent' : 'giftReceived'); // "Whoosh+pop" / "Chispas"
         const gift = normalizeGiftFromPayload(data.gift);
 
         setMessages((prev) => [

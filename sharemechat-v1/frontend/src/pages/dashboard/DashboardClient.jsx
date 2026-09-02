@@ -1,5 +1,6 @@
 // DashboardClient.jsx
 import React, { useState, useRef, useEffect,useLayoutEffect, useCallback } from 'react';
+import { playSound } from '../../utils/sounds';
 import i18n from '../../i18n';
 import { getResolvedLocale } from '../../i18n/localeUtils';
 import { useHistory, useLocation } from 'react-router-dom';
@@ -540,6 +541,7 @@ const DashboardClient = () => {
         try {
           if (data.peerRole === 'model' && Number.isFinite(Number(data.peerUserId))) {
             setCurrentModelId(Number(data.peerUserId));
+            playSound('match'); // sonido "Conexión" al emparejar
           } else {
             setCurrentModelId(null);
           }
@@ -556,6 +558,7 @@ const DashboardClient = () => {
 
       onChatMessage: (data) => {
         if (!isEcho(data.message)) {
+          playSound('message'); // "Ding" solo en mensajes del peer, no en los propios
           // pending-hardening §5.3 (2026-08-08): retenemos msgId + senderId
           // que envia el backend (MatchingHandlerSupport:chat handler) para
           // poder usar /messages/translate-batch con el id real de BD.
@@ -571,6 +574,7 @@ const DashboardClient = () => {
       // Gift (igual que tú)
       onGiftMessage: (data) => {
         const mine = Number(data.fromUserId) === Number(sessionUser?.id);
+        playSound(mine ? 'giftSent' : 'giftReceived'); // "Whoosh+pop" / "Chispas"
 
         setMessages((p) => [
           ...p,

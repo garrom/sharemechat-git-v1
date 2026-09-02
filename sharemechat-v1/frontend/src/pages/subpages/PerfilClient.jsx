@@ -8,6 +8,7 @@ import i18n from '../../i18n';
 import LocaleSwitcher from '../../components/LocaleSwitcher';
 import LinkedAccountsCard from '../../components/LinkedAccountsCard';
 import MyLanguagesCard from '../../components/MyLanguagesCard';
+import SoundToggle from '../../components/SoundToggle';
 import { isGoogleOAuthEnabled } from '../../config/runtimeEnv';
 
 // Navbar unificado
@@ -499,6 +500,8 @@ const PerfilClient = () => {
                   de chat + idioma del perfil. Se auto-oculta si la traducción
                   no está habilitada en el entorno. */}
               <MyLanguagesCard />
+
+              <SoundToggle t={t} />
 
               <SecurityCard>
                 <CardHeader>

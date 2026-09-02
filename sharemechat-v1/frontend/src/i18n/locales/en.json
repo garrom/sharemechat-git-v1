@@ -333,6 +333,10 @@
     }
   },
   "profileCommon": {
+    "sounds": {
+      "label": "Sounds",
+      "desc": "Sound alerts for calls, gifts and messages."
+    },
     "accountTitle": "Account",
     "completeness": {
       "complete": "complete",

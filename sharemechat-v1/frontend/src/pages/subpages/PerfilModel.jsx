@@ -64,6 +64,7 @@ import {
 
 import MyAssetsManager from './MyAssetsManager';
 import MyLanguagesCard from '../../components/MyLanguagesCard';
+import SoundToggle from '../../components/SoundToggle';
 import ModelReputationCard from '../../components/ModelReputationCard';
 import ModelRankingModal from '../../components/ModelRankingModal';
 import ModelProfileExpanded from './ModelProfileExpanded';
@@ -638,6 +639,8 @@ const PerfilModel = () => {
                   de chat + idioma del perfil. Se auto-oculta si la traducción
                   no está habilitada en el entorno. */}
               <MyLanguagesCard />
+
+              <SoundToggle t={t} />
 
               <SecurityCard>
                 <CardHeader>

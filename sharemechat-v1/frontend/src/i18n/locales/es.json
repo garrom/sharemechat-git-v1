@@ -333,6 +333,10 @@
     }
   },
   "profileCommon": {
+    "sounds": {
+      "label": "Sonidos",
+      "desc": "Avisos sonoros de llamada, regalos y mensajes."
+    },
     "accountTitle": "Cuenta",
     "completeness": {
       "complete": "completo",

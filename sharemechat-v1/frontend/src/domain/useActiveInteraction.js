@@ -9,6 +9,7 @@ import {
   normalizeFavoriteRelation,
   normalizePeerMeta,
 } from './activeInteraction';
+import { startIncomingCall, stopIncomingCall } from '../utils/sounds';
 
 const toPositiveNumber = (value) => {
   const parsed = Number(value);
@@ -107,6 +108,7 @@ export const useActiveInteraction = (initialInteraction) => {
   }, [setInteraction]);
 
   const setIncomingCallInteraction = useCallback((peerMeta, favoriteRelation, options = {}) => {
+    try { startIncomingCall(); } catch (_) {} // timbre "Clásico" en bucle hasta responder/colgar
     setInteraction((prevInteraction) =>
       createFavoritesCallInteraction(
         peerMeta,
@@ -127,6 +129,7 @@ export const useActiveInteraction = (initialInteraction) => {
   }, [setInteraction]);
 
   const markCallAcceptedOnInteraction = useCallback((options = {}) => {
+    try { stopIncomingCall(); } catch (_) {} // se aceptó la llamada: corta el timbre
     setInteraction((prevInteraction) => {
       if (!prevInteraction || !prevInteraction.peer) {
         return prevInteraction || createIdleInteraction();
@@ -235,6 +238,7 @@ export const useActiveInteraction = (initialInteraction) => {
   }, [setInteraction]);
 
   const clearInteraction = useCallback(() => {
+    try { stopIncomingCall(); } catch (_) {} // llamada rechazada/terminada: corta el timbre
     setInteraction(createIdleInteraction());
   }, [setInteraction]);
 
