@@ -281,4 +281,13 @@ SharemeChat directo). Pendiente de comprobar.
   usan, y **hacer lo mismo**. Investigar si publicar cuesta dinero (sin quedarse ahí).
 - **Social (X):** forma elegida = **Chrome logueado del operador + herramienta "Claude
   en Chrome"** (gratis, sin API, sin que la IA toque la contraseña — la mete el
-  operador). **SONDA social EN ESPERA**: se lanza cuando el operador esté logueado.
+  operador). **SONDA social HECHA (2026-09-03)** con perfil de Chrome dedicado
+  (mikroship99@) + cuentas de trabajo @shareme_chat (X) y @Chat (TikTok):
+  - **Veredicto: TikTok es EL canal social; X es marginal.** Detalle en
+    [`captacion-modelos/canales-colombia/tiktok.md`](captacion-modelos/canales-colombia/tiktok.md)
+    y bloque "con login" de [`.../x-social.md`](captacion-modelos/canales-colombia/x-social.md).
+  - TikTok: estudios activos con audiencias 17K-32K, playbook #modelowc/"desde casa"/"sin
+    experiencia"/"70%", funnel **vídeo→smartlink en bio→WhatsApp**. X: estudios muertos,
+    ~2 posts vivos, filtro de sensibilidad ocultando material.
+  - **Próximo (nudo 1):** redactar el anuncio/mensaje y elegir nombre de marca ligera
+    (Lumina/Nova/Vibra/Shareme Models…) para publicar como estudio-que-empieza.

@@ -1,6 +1,24 @@
 # X (Twitter) — ecosistema webcam/videochat Colombia: evidencia
 
-> SONDA N2 · 2026-09-03. Índice en [`00-indice-y-sintesis.md`](00-indice-y-sintesis.md). Método: **solo índice de Google** (snippets); lectura directa de X imposible.
+> SONDA N2 · 2026-09-03. Índice en [`00-indice-y-sintesis.md`](00-indice-y-sintesis.md). Método (1ª tanda): **solo índice de Google** (snippets); lectura directa de X imposible. **Actualizado 2026-09-03 CON LOGIN** (cuenta de trabajo @shareme_chat en perfil dedicado) — ver bloque "Verificación con login" al final.
+
+---
+
+## ⚑ Verificación CON LOGIN (2026-09-03) — DATO DURO
+
+Con sesión iniciada, X **sí es legible**, y confirma en vivo lo que la 1ª tanda solo intuía. **Veredicto: X es un canal marginal para captación.**
+
+- **Estudios muertos:** `@studioseduccion` ("Seduccion Colombia Estudio Webcam") = **0 posts, 4 followers**. Cuentas-tarjeta, no reclutan aquí.
+- **Reclutamiento escaso pero REAL:** bajo `#modelowebcam` (pestaña *Latest*) apenas ~2 posts vivos. El único anuncio de captación:
+  > **@Clepsidra_S (SATOR)** · Feb 19: *"Oportunidad en Cali! Buscamos Modelos Webcam para unirte a nuestra agencia. Ganancias en dólares, horarios flexibles y ambiente seguro. Si eres mayor de edad y vives en el Valle, escríbeme DM."* `#TrabajoEnCali #ModeloWebcam #EmpleosCali #GanaEnDolares #TalentoCaleño`
+  - Adjunta un **póster "CONVOCATORIA Webcam" con el WhatsApp quemado dentro de la imagen** (316 8566542), **no en texto** → esquiva el filtro de búsqueda. Patrón anti-ingenuidad.
+- **"streamer de videollamadas" = 0 resultados** en X (es lenguaje de bolsas de empleo, no de X).
+- **Filtro de contenido sensible:** X avisa de que sus ajustes de contenido sensible pueden estar **ocultando** material adulto en los resultados (no se tocó el ajuste de la cuenta). X queda doblemente débil: escaso + filtrado.
+- **Contraste de audiencia:** los estudios en X tienen **37-122 followers**; los de TikTok, **17.000-32.500** (ver [`tiktok.md`](tiktok.md)). El público de aspirantes NO está en X.
+
+**Implicación:** X no merece el esfuerzo de captación; el canal social es **TikTok** ([`tiktok.md`](tiktok.md)). Lo que sigue abajo es la 1ª tanda (solo Google), conservado como registro.
+
+---
 
 ## Accesibilidad (lo primero, porque condiciona todo) — DATO DURO
 - **X está cerrado a lectura sin login:** WebFetch a `x.com/<handle>` y a posts → **HTTP 402 Payment Required** en el 100% de intentos. No se lee timeline, followers reales ni texto completo de posts.
