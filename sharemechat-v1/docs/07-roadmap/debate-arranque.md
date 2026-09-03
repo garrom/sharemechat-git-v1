@@ -303,3 +303,13 @@ de razonamiento, no auditadas.
     Copy borrador (bio/guion/WhatsApp) y razonamiento del % en
     [`captacion-modelos/nudo-1-marca-y-mensaje.md`](captacion-modelos/nudo-1-marca-y-mensaje.md).
     Pendiente: verificar handles + pulir guion; luego nudos 2/3/4.
+- **Publicidad PAGADA (SONDA 2026-09-03): descartada para captar modelos.** El operador
+  preguntó si pagando se salta el geo (número/ubicación España). Respuesta con evidencia:
+  **TikTok/Meta/Google PROHÍBEN el vertical** (TikTok Ads: "sexcamming/nude modeling not
+  allowed"; Meta lo trata como explotación humana y banea al reclutador) y el intento
+  **arrastra los activos conectados** (Business Manager, Pages, pixels). Los eufemismos solo
+  retrasan la detección (revisan la landing). Las **ad networks adultas** sirven para captar
+  CLIENTES, no modelos (audiencia = consumidores). El problema no era el geo, **era el
+  contenido**. La independencia real = orgánico con cuenta geo-colombiana (número +57 virtual
+  propio + VPN) + bolsas + job boards adultos. Detalle:
+  [`captacion-modelos/publicidad-pagada.md`](captacion-modelos/publicidad-pagada.md).
