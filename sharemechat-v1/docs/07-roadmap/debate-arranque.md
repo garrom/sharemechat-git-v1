@@ -234,11 +234,19 @@ perfil "chica con audiencia propia" está en **TikTok/Instagram/OnlyFans, NO en 
 X no se lee sin login. Falta la **fase de recomendación** (qué hacer) y repetir el
 SONDA para los siguientes países (Brasil, Rumanía, México).
 
-### A5 — A verificar antes de vender el gancho
+### A5 — A verificar antes de vender el gancho 🟢 (2026-09-03, razonado)
 
 La afirmación "ofrecemos mejores condiciones que la competencia" hay que
-sostenerla con **números reales** (qué netea una modelo en LiveJasmin/CooMeet vs en
-SharemeChat directo). Pendiente de comprobar.
+sostenerla con **números reales**. **Resuelto por razonamiento** (detalle en
+[`captacion-modelos/nudo-1-marca-y-mensaje.md`](captacion-modelos/nudo-1-marca-y-mensaje.md)):
+el "70% de los estudios" NO nos gana porque los porcentajes viven sobre **bases
+distintas**. El 70% del estudio es sobre **su parte tras la mordida de una cam de
+terceros** (dos capas → la chica netea ~35-42 de cada 100 que paga el cliente); nuestro
+50-60% es sobre el pago directo (una capa → ~50-60 de cada 100). **Un % más bajo que
+deja más dinero.** Corolario: el % **no va en el gancho público** (en superficie 70>60);
+se explica solo en el WhatsApp como "cuánto te queda por cada dólar del cliente". Caveat:
+gana frente a estudio+cam de terceros; frente a solo-directo la brecha se estrecha. Cifras
+de razonamiento, no auditadas.
 
 ### A6 — Segmento objetivo y vector de entrada 🟢 (2026-09-03)
 
@@ -289,5 +297,9 @@ SharemeChat directo). Pendiente de comprobar.
   - TikTok: estudios activos con audiencias 17K-32K, playbook #modelowc/"desde casa"/"sin
     experiencia"/"70%", funnel **vídeo→smartlink en bio→WhatsApp**. X: estudios muertos,
     ~2 posts vivos, filtro de sensibilidad ocultando material.
-  - **Próximo (nudo 1):** redactar el anuncio/mensaje y elegir nombre de marca ligera
-    (Lumina/Nova/Vibra/Shareme Models…) para publicar como estudio-que-empieza.
+  - **Nudo 1 avanzado (2026-09-03):** marca fijada = **`Lumina Studio`**; enfoque
+    **honesto y neutro** (sin promesa de ingresos, sin ángulo "fundadora" — descartado
+    por el operador); diferencial publicable = directo-a-plataforma + tú pones límites.
+    Copy borrador (bio/guion/WhatsApp) y razonamiento del % en
+    [`captacion-modelos/nudo-1-marca-y-mensaje.md`](captacion-modelos/nudo-1-marca-y-mensaje.md).
+    Pendiente: verificar handles + pulir guion; luego nudos 2/3/4.
