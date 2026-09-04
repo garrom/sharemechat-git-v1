@@ -39,8 +39,25 @@ Modelos de videollamada — desde casa, tu horario
 **Primer mensaje de WhatsApp (respuesta a quien escribe):**
 > "¡Hola! Gracias por escribir a Lumina 💜 Te cuento rápido: somos una plataforma de videollamadas 1-a-1. Trabajas desde casa, con tu horario, y tú decides tus límites. Para empezar solo necesito confirmar que eres mayor de edad (con documento). ¿Te gustaría que te explique cómo funciona?"
 
+## Ejecución — beBee (2026-09-04)
+
+Primer canal puesto en marcha: **beBee** (bolsa sin NIT, verificada; ver [`canales-colombia/como-publicar.md`](canales-colombia/como-publicar.md)).
+
+- **Cuenta creada:** perfil de reclutador vía Google **mikroship99@gmail.com**, usuario **"Alex"**, país **CO**. Onboarding: objetivo = *"Recluto / Publico ofertas"*.
+- **Título profesional del perfil:** **"Estudio de modelos webcam"** (término real de estudios, verificado en TikTok/elempleo; el operador lo prefirió al genérico).
+- **Anuncio redactado** (formulario `/co/jobs/new`), enfoque honesto-neutro, SIN cifra de salario:
+  - **Título del puesto:** *"Modelo webcam — sin experiencia — trabaja desde casa"*
+  - **Ubicación:** Medellín · **Tipo:** Tiempo parcial · **Modalidad:** 100% Remoto
+  - **Descripción:** marca **Lumina Studio**; "modelos de videollamada (webcam) desde casa, tu horario"; qué ofrecemos (remoto, tú decides horarios/límites, sin experiencia te acompañamos, **directo con la plataforma no páginas de terceros**, ingresos variables); requisitos (+18 con documento, espacio privado + internet, ganas de aprender); CTA "aplica aquí".
+  - **Palabras clave:** modelo webcam · webcam · trabajo desde casa · sin experiencia · modelo videollamada · creadora de contenido.
+  - **Salario:** en blanco (no prometer ingresos que hoy no se garantizan).
+- **ESTADO: PENDIENTE DE PUBLICAR.** Al pulsar "Publicar empleo", beBee exige **verificar un móvil por SMS** (por defecto **+57 Colombia**). El operador no tenía a mano número CO; lo tendrá **la tarde del 2026-09-04** (de un contacto). Se publicará verificando con ese **+57** (no con el +34 personal). El texto completo queda guardado aquí para re-rellenar en 1 min si el borrador se pierde.
+- **Contacto en el anuncio:** por ahora las interesadas **aplican por beBee** (llegan a mensajes). Cuando haya WhatsApp **+57**, se añade a la descripción y se cierra por ahí.
+
 ## Pendientes
 
+- **Publicar la oferta en beBee** verificando el móvil +57 (tarde del 2026-09-04).
+- Añadir **WhatsApp +57** a la descripción cuando se tenga.
 - **Verificar handles** `@lumina…` libres (TikTok/IG/WhatsApp) antes de fijar el nombre del todo.
 - **Pulir el guion** de vídeo (formato, cara/no cara, duración, hook).
 - Enlaza con **nudo 2** (retención/ventana: sin clientes ella no gana → el mensaje no puede prometer ingresos), **nudo 3** (compliance/PII, ToS TikTok, +18) y **nudo 4** (capacidad, operador solo).

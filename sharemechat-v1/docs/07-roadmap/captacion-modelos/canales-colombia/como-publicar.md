@@ -49,9 +49,16 @@
 2. **Ventaja de honestidad de SharemeChat.** Los estudios envían a la chica a "páginas internacionales" de terceros (Chaturbate/Stripchat). SharemeChat **es el destino** → puedes reclutar para TU plataforma directamente, lo cual es **más limpio y más honesto** que el patrón del estudio. Es un argumento de venta y de compliance a tu favor.
 3. **Riesgo ToS de TikTok/FB.** Reclutar +18 en TikTok/FB roza sus ToS (por eso ofuscan → riesgo de baneo). A sopesar antes de replicar el patrón ahí.
 
+## beBee — flujo de publicación verificado END-TO-END (2026-09-04, [VERIFICADO EN VIVO])
+- **Alta de cuenta:** solo nombre+email+contraseña (o Google/LinkedIn). **Sin NIT.** Onboarding: elegir objetivo *"Recluto / Publico ofertas"*, luego un **título profesional** obligatorio (se usó "Estudio de modelos webcam").
+- **Formulario de publicar oferta** (`/co/jobs/new`): obligatorios **solo Título + Descripción + Ubicación**; opcionales tipo de contrato, modalidad (100% Remoto), salario mín/máx, palabras clave. **NO pide NIT, razón social ni facturación en ningún punto.**
+- **Para publicar exige verificar un MÓVIL por SMS** ("para garantizar que las solicitudes son reales"), con selector de país que por defecto pone **+57 Colombia**. Es verificación anti-fraude del anunciante (no necesariamente contacto público). → conviene verificar con un **+57**, no con el +34 personal.
+- **Coste:** 1ª oferta gratis (FAQ oficial); volumen/destacados = precio a medida no publicado.
+
 ## Lo que NO se verificó
 - ~~Alta en elempleo como C.C.~~ → **YA VERIFICADO (2026-09-03): elempleo EXIGE NIT** (campo obligatorio) → no viable como persona física. Corregido en la tabla.
-- ~~beBee: si acepta persona física sin NIT~~ → **YA VERIFICADO (2026-09-03): el alta de beBee NO pide NIT** (solo nombre+email+contraseña). Pendiente solo el formulario de publicar-oferta end-to-end (tras crear cuenta) y si la oferta de pago pide facturación.
+- ~~beBee end-to-end~~ → **YA VERIFICADO (2026-09-04): sin NIT en todo el flujo; solo exige verificación SMS de un móvil (+57 por defecto) para publicar.** (Ver bloque de arriba.)
+- Si la **oferta de PAGO** (destacada) de beBee pide datos de facturación (la gratuita no).
 - Precios exactos de los planes de pago de Jooble/beBee (ocultos tras registro).
 - Que beBee entregue su feed específicamente a Jooble (inferido de la oferta idéntica, no leído en doc).
 - Si Jooble/portales aceptan el posting directo +18 por su flujo de empleador (no probado; CAPTCHA).
