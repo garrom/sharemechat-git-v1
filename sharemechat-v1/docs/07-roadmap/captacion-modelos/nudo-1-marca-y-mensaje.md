@@ -51,13 +51,16 @@ Primer canal puesto en marcha: **beBee** (bolsa sin NIT, verificada; ver [`canal
   - **Descripción:** marca **Lumina Studio**; "modelos de videollamada (webcam) desde casa, tu horario"; qué ofrecemos (remoto, tú decides horarios/límites, sin experiencia te acompañamos, **directo con la plataforma no páginas de terceros**, ingresos variables); requisitos (+18 con documento, espacio privado + internet, ganas de aprender); CTA "aplica aquí".
   - **Palabras clave:** modelo webcam · webcam · trabajo desde casa · sin experiencia · modelo videollamada · creadora de contenido.
   - **Salario:** en blanco (no prometer ingresos que hoy no se garantizan).
-- **ESTADO: PENDIENTE DE PUBLICAR.** Al pulsar "Publicar empleo", beBee exige **verificar un móvil por SMS** (por defecto **+57 Colombia**). El operador no tenía a mano número CO; lo tendrá **la tarde del 2026-09-04** (de un contacto). Se publicará verificando con ese **+57** (no con el +34 personal). El texto completo queda guardado aquí para re-rellenar en 1 min si el borrador se pierde.
-- **Contacto en el anuncio:** por ahora las interesadas **aplican por beBee** (llegan a mensajes). Cuando haya WhatsApp **+57**, se añade a la descripción y se cierra por ahí.
+- **ESTADO: PUBLICADA (2026-09-04)** y visible para candidatos en beBee Colombia.
+  - Se publicó con título **"Modelo de videollamada - sin experiencia - desde casa"** (no "webcam").
+  - **CAUSA REAL del error 400 al publicar (corregido por el operador):** NO era la palabra "webcam" (hipótesis mía errónea). Era un **conflicto de validación**: **Ubicación = ciudad concreta (Medellín) + Modalidad = "100% Remoto"** → beBee rechaza esa combinación. **Fix: si pones ciudad, deja la Modalidad VACÍA** (o presencial). Publicado con modalidad en blanco.
+  - Para publicar, beBee exige verificación SMS de un móvil (+57 por defecto); se hizo con el número colombiano.
+- **Contacto en el anuncio:** las interesadas **aplican por beBee** (llegan a mensajes). **El número de WhatsApp NO tiene campo propio en beBee** → se escribe **dentro de la Descripción** (ej.: "📲 Escríbenos por WhatsApp: +57…") y/o en la bio del perfil.
 
 ## Pendientes
 
-- **Publicar la oferta en beBee** verificando el móvil +57 (tarde del 2026-09-04).
-- Añadir **WhatsApp +57** a la descripción cuando se tenga.
-- **Verificar handles** `@lumina…` libres (TikTok/IG/WhatsApp) antes de fijar el nombre del todo.
-- **Pulir el guion** de vídeo (formato, cara/no cara, duración, hook).
-- Enlaza con **nudo 2** (retención/ventana: sin clientes ella no gana → el mensaje no puede prometer ingresos), **nudo 3** (compliance/PII, ToS TikTok, +18) y **nudo 4** (capacidad, operador solo).
+- (Opcional) **Editar la oferta viva** a la versión completa (descripción con viñetas, palabras clave) y **añadir el WhatsApp +57 en la Descripción**.
+- **TikTok orgánico** (lo lleva el amigo del operador): montar cuenta geo-colombiana (+57 + VPN) y arrancar el motor de contenido (playbook aparte).
+- **Anuncios pagados** (lane del operador): promocionar/destacar en bolsas (beBee/otras); las redes sociales pagadas están vetadas para el vertical.
+- **Verificar handles** `@lumina…` libres.
+- **nudo 2** (retención/demanda): se aborda **cuando haya resultados de captación** (decisión del operador; no reabrir antes).
