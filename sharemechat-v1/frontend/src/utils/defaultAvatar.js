@@ -20,4 +20,14 @@ export function defaultAvatarFor(role) {
   return AVATAR_CLIENT;
 }
 
+// Inicial para el avatar "sin foto": primera letra del nombre en mayúscula.
+// Fallback '?' si no hay nombre. Array.from respeta caracteres unicode (emoji,
+// acentos compuestos). La silueta negra queda SOLO para el navbar; el resto de
+// superficies (listas, cabecera de chat) muestran foto o esta inicial.
+export function initialOf(name) {
+  const s = String(name || '').trim();
+  if (!s) return '?';
+  return Array.from(s)[0].toUpperCase();
+}
+
 export default defaultAvatarFor;

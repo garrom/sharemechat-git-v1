@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import i18n from '../../i18n';
+import PeerTitleAvatar from '../../components/PeerTitleAvatar';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import BlurredPreview from '../../components/BlurredPreview';
 import LikeHeart from '../../components/LikeHeart';
@@ -33,7 +34,6 @@ import {
   StyledRemoteVideoMedia,
   StyledRemoteVideoBlur,
   StyledRemoteVideoPlaceholder,
-  StyledTitleAvatar,
   StyledPaneCenter,
   StyledPaneCenterStack,
   StyledStatusText,
@@ -1013,7 +1013,7 @@ export default function VideoChatRandomCliente(props) {
                       <StyledCallStage>
                         <StyledCallTopBar>
                           <StyledCallTopMeta>
-                            <StyledTitleAvatar src={modelAvatar || '/img/avatar-model.svg'} alt="" />
+                            <PeerTitleAvatar photoUrl={modelAvatar} name={modelNickname} />
                             <StyledCallTopMetaText>
                               {modelNickname || t('dashboardUserClient.report.displayName')}
                             </StyledCallTopMetaText>
@@ -1117,7 +1117,7 @@ export default function VideoChatRandomCliente(props) {
 
                   <StyledCallChatColumn>
                     <StyledCallChatColHeader>
-                      <StyledTitleAvatar src={modelAvatar || '/img/avatar-model.svg'} alt="" style={{ width: 28, height: 28 }} />
+                      <PeerTitleAvatar photoUrl={modelAvatar} name={modelNickname} />
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ fontSize: 13, fontWeight: 600, color: '#e7ebf0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {modelNickname || t('dashboardUserClient.report.displayName')}
@@ -1178,7 +1178,7 @@ export default function VideoChatRandomCliente(props) {
                       />
                       <StyledCallTopBar>
                         <StyledCallTopMeta>
-                          <StyledTitleAvatar src={modelAvatar || '/img/avatar-model.svg'} alt="" />
+                          <PeerTitleAvatar photoUrl={modelAvatar} name={modelNickname} />
                           <StyledCallTopMetaText>
                             {modelNickname || t('dashboardUserClient.report.displayName')}
                           </StyledCallTopMetaText>

@@ -1,8 +1,9 @@
 //FavoriteItem.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import i18n from '../../i18n';
+import { initialOf } from '../../utils/defaultAvatar';
 import {
-  ItemCard, Avatar, Info, Name, Meta, Actions, Btn,
+  ItemCard, Avatar, LetterAvatar, Info, Name, Meta, Actions, Btn,
 } from '../../styles/pages-styles/FavoritesStyles';
 
 const resolveProfilePic = (user = {}, ctx = 'FavoriteItem') => {
@@ -35,9 +36,10 @@ const FavoriteItem = ({ user, onClick, onRemove, removing, onChat }) => {
     else window.dispatchEvent(new CustomEvent('open-fav-chat', { detail: { user } }));
   };
 
-  const role = String(user?.role || user?.userType || '').toUpperCase();
-  const fallback = role === 'MODEL' ? '/img/avatar-model.svg' : '/img/avatar-client.svg';
-  const avatar = resolveProfilePic(user, 'FavoriteItem') || fallback;
+  const [imgFailed, setImgFailed] = useState(false);
+  const photo = resolveProfilePic(user, 'FavoriteItem');
+  const hasPhoto = !!photo && !imgFailed;
+  const initialName = user?.nickname || user?.name || user?.email;
 
 
   return (
@@ -49,14 +51,15 @@ const FavoriteItem = ({ user, onClick, onRemove, removing, onChat }) => {
         onClick && onClick(user);
       }}
     >
-      <Avatar
-        src={avatar}
-        alt={user.nickname || user.email || 'user'}
-        onError={(e) => {
-          const r = String(user?.role || user?.userType || '').toUpperCase();
-          e.currentTarget.src = r === 'MODEL' ? '/img/avatar-model.svg' : '/img/avatar-client.svg';
-        }}
-      />
+      {hasPhoto ? (
+        <Avatar
+          src={photo}
+          alt={user.nickname || user.email || 'user'}
+          onError={() => setImgFailed(true)}
+        />
+      ) : (
+        <LetterAvatar $size={40} aria-hidden="true">{initialOf(initialName)}</LetterAvatar>
+      )}
       <Info>
         <Name>{user.nickname || user.name || user.email || i18n.t('favorites.states.unknownUser', { id: user.id })}</Name>
         <Meta>

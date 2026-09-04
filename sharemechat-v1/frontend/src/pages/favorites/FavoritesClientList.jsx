@@ -11,6 +11,7 @@ import {
   StateRow,
   ItemCard,
   Avatar,
+  LetterAvatar,
   Name,
   DotWrap,
   StatusDot,
@@ -35,6 +36,7 @@ import { useAppModals } from '../../components/useAppModals';
 import { useSession } from '../../components/SessionProvider';
 import { apiFetch } from '../../config/http';
 import i18n from '../../i18n';
+import { initialOf } from '../../utils/defaultAvatar';
 
 // Formatea la hora del último mensaje para el preview de la lista: hoy -> HH:mm,
 // esta semana -> día abreviado, resto -> dd/MM. Solo display (sin comparar con
@@ -110,7 +112,7 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
             onError={() => setImgFailed(true)}
           />
         ) : (
-          <Avatar src="/img/avatar-model.svg" alt="" $size={44} aria-hidden="true" />
+          <LetterAvatar $size={44} aria-hidden="true">{initialOf(displayName)}</LetterAvatar>
         )}
         <StatusDot
           className={presence === 'busy' ? 'busy' : presence === 'online' ? 'online' : 'offline'}

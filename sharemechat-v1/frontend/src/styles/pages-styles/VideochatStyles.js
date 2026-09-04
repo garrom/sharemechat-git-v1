@@ -596,6 +596,30 @@ export const StyledTitleAvatar = styled.img`
   border: 1px solid rgba(255,255,255,0.35);
 `;
 
+// Variante "sin foto" de StyledTitleAvatar: mismo tamaño/forma pero círculo con
+// la inicial del nickname (coherente con LetterAvatar de la lista de favoritos).
+// La silueta negra es SOLO del navbar; en la cabecera del chat/llamada, un peer
+// sin foto se muestra con su inicial. Se usa vía el componente PeerTitleAvatar.
+export const StyledTitleInitial = styled.div`
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  margin-right: 8px;
+  border: 1px solid rgba(255,255,255,0.35);
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1;
+  background: linear-gradient(135deg, #ff5c8a, #a78bfa);
+  text-transform: uppercase;
+  user-select: none;
+`;
+
 export const StyledChatDock = styled.div`
   width: 100%;
   min-width: 0;
