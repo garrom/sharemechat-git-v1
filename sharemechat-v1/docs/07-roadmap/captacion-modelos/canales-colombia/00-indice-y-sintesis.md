@@ -24,12 +24,14 @@
 
 > **Actualización 2026-09-03 (2ª tanda SONDA):** al mapa de "qué hay" se suma
 > [`como-publicar.md`](como-publicar.md) — cómo publicar TÚ como particular.
-> **⚠️ CORRECCIÓN (verificado en vivo 2026-09-03): elempleo EXIGE NIT** (campo obligatorio del
-> formulario de alta) → **NO viable como persona física** sin NIT colombiano. Queda descartado como
-> canal de arranque para el operador; el candidato sin NIT es **beBee** (pero eso está **pendiente
-> de verificar en vivo**, no dado por bueno). **OLX prohibido**; **TikTok/Facebook/web propia**
-> gratis. El patrón de presentación sigue siendo **marca ligera de estudio** (decisión del operador).
-> Precios y "webcam en claro" de la tabla = inferencia sin reverificar.
+> **⚠️ CORRECCIÓN (verificado en vivo 2026-09-03):**
+> - **elempleo EXIGE NIT** (campo obligatorio del formulario de alta) → **NO viable como persona
+>   física** sin NIT colombiano. Descartado como canal de arranque para el operador.
+> - **beBee SÍ es viable como persona física [VERIFICADO]:** el alta pide solo nombre+email+contraseña,
+>   **sin NIT**; 1ª oferta gratis; Colombia seleccionable como target. (Pendiente solo: el formulario
+>   de publicar-oferta end-to-end tras crear cuenta.)
+> - **OLX prohibido**; **TikTok/Facebook/web propia** gratis. Patrón de presentación = **marca ligera
+>   de estudio**. Precios exactos y "webcam en claro" de la tabla = inferencia sin reverificar.
 
 ## Resumen por canal (una línea cada uno)
 

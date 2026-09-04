@@ -9,7 +9,7 @@
 | Canal | ¿Publica un particular? | Coste | Veredicto |
 |---|---|---|---|
 | **elempleo.com** | ❌ **NO como persona física** — **[VERIFICADO EN VIVO 2026-09-03]** el formulario de alta de empleador tiene **NIT como campo obligatorio** (`required`), *además* del documento personal (C.C./C.E.). La afirmación previa "acepta C.C., no exige NIT" era **FALSA** (inferida del ToS, no del formulario). [registrar-empresa](https://www.elempleo.com/co/registrar-empresa) | ~30 USD/oferta destacada *(precio SIN reverificar)* | **NO VIABLE** sin NIT colombiano. "webcam en claro" = inferencia SIN verificar. |
-| **beBee / co.trabajo.org** (lo que alimenta a **Jooble**) | **Sí**, self-service. [bebee employers](https://bebee.com/us/employers) | **1ª oferta GRATIS**; más volumen = precio a medida | **VIABLE.** Publicas aquí y **Jooble la agrega solo** (no se publica "en Jooble"). Aquí vive la oferta real de Lions Agency. *(Reputación floja en Trustpilot — CV scraping.)* |
+| **beBee** (global, origen España; alimenta a **Jooble**) | ✅ **Sí, persona física** — **[VERIFICADO EN VIVO 2026-09-03]** el alta ("Create account") pide SOLO **nombre + email + contraseña (+ ciudad opcional)**, **NO NIT** ni tax ID ni razón social. [bebee employers](https://bebee.com/us/employers) | **1ª oferta GRATIS** (FAQ oficial: *"Your first job posting is free… higher volumes, contact sales for custom pricing"*); precio del resto NO publicado | **VIABLE sin NIT.** Colombia está en su lista de *target countries*. GOTCHA: el **formulario de publicar la oferta** (tras crear cuenta) no se recorrió end-to-end; si se paga destacada, podría pedir datos de facturación. *(Reputación floja en Trustpilot.)* |
 | **TikTok** | **Sí**, gratis | 0 | **CANAL FUERTE para captación fría** de principiantas (tu público vive ahí). **Riesgo ToS** (por eso ofuscan: "estud10 de W.C"). |
 | **Facebook** (grupos/páginas/Marketplace) | Sí, gratis | 0 | Secundario, bueno para segmentar por ciudad. |
 | **Web propia mínima** (Jimdo/Webnode gratis) | Sí | 0 | Fachada de "estudio"; puedes decir "webcam" sin moderación; landing para TikTok/WhatsApp. |
@@ -51,7 +51,7 @@
 
 ## Lo que NO se verificó
 - ~~Alta en elempleo como C.C.~~ → **YA VERIFICADO (2026-09-03): elempleo EXIGE NIT** (campo obligatorio) → no viable como persona física. Corregido en la tabla.
-- **beBee: si acepta persona física sin NIT/impuesto — PENDIENTE de verificar en el formulario en vivo** (no dar por bueno; es el mismo tipo de afirmación que falló en elempleo).
+- ~~beBee: si acepta persona física sin NIT~~ → **YA VERIFICADO (2026-09-03): el alta de beBee NO pide NIT** (solo nombre+email+contraseña). Pendiente solo el formulario de publicar-oferta end-to-end (tras crear cuenta) y si la oferta de pago pide facturación.
 - Precios exactos de los planes de pago de Jooble/beBee (ocultos tras registro).
 - Que beBee entregue su feed específicamente a Jooble (inferido de la oferta idéntica, no leído en doc).
 - Si Jooble/portales aceptan el posting directo +18 por su flujo de empleador (no probado; CAPTCHA).
