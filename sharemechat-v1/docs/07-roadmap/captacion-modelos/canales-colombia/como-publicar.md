@@ -1,12 +1,14 @@
 # Cómo publicar el anuncio (Colombia) — feasibility, coste y patrón replicable
 
 > **SONDA N2 · 2026-09-03.** Segunda tanda: no "qué hay" sino **cómo publicar TÚ** un anuncio para captar modelos principiantes, **como persona (con marca ligera), sin gastar capital**. Regla anti-ingenuidad: mirar cómo lo hacen los estudios e **inferir el patrón**, no esperar que un portal diga "acepta adult". Índice: [`00-indice-y-sintesis.md`](00-indice-y-sintesis.md). Marco: [`../../debate-arranque.md`](../../debate-arranque.md) A6-A8.
+>
+> ⚠️ **NOTA DE VERIFICACIÓN (2026-09-03).** Buena parte de la tabla de abajo salió de **inferencia sobre ToS / índice de Google**, NO de completar los formularios reales. Un dato resultó **FALSO** al comprobarlo en vivo: **elempleo SÍ exige NIT** (campo obligatorio en el formulario de alta) → **no viable como persona física** sin NIT colombiano. Trata el resto de la tabla (precios, "webcam en claro", feasibility de cada canal) como **pistas por verificar en fuente viva**, no como hechos.
 
-## 1. Dónde puedes publicar — feasibility + coste (con evidencia)
+## 1. Dónde puedes publicar — feasibility + coste (parcialmente inferido — ver nota)
 
 | Canal | ¿Publica un particular? | Coste | Veredicto |
 |---|---|---|---|
-| **elempleo.com** | **Sí** — el registro de empleador acepta C.C. (no exige NIT de empresa); ToS: "personas naturales o jurídicas". [registrar-empresa](https://www.elempleo.com/co/registrar-empresa), [ToS](https://www.elempleo.com/co/terminos-condiciones) | **1ª GRATIS** (30 días, 15 CVs, una por cuenta); luego Basic ~**118.487 COP** (~30 USD). [precios](https://www.elempleo.com/co/productos-servicios/) | **VIABLE.** "webcam" se publica en claro (ToS solo prohíbe **pornografía**, no webcam). |
+| **elempleo.com** | ❌ **NO como persona física** — **[VERIFICADO EN VIVO 2026-09-03]** el formulario de alta de empleador tiene **NIT como campo obligatorio** (`required`), *además* del documento personal (C.C./C.E.). La afirmación previa "acepta C.C., no exige NIT" era **FALSA** (inferida del ToS, no del formulario). [registrar-empresa](https://www.elempleo.com/co/registrar-empresa) | ~30 USD/oferta destacada *(precio SIN reverificar)* | **NO VIABLE** sin NIT colombiano. "webcam en claro" = inferencia SIN verificar. |
 | **beBee / co.trabajo.org** (lo que alimenta a **Jooble**) | **Sí**, self-service. [bebee employers](https://bebee.com/us/employers) | **1ª oferta GRATIS**; más volumen = precio a medida | **VIABLE.** Publicas aquí y **Jooble la agrega solo** (no se publica "en Jooble"). Aquí vive la oferta real de Lions Agency. *(Reputación floja en Trustpilot — CV scraping.)* |
 | **TikTok** | **Sí**, gratis | 0 | **CANAL FUERTE para captación fría** de principiantas (tu público vive ahí). **Riesgo ToS** (por eso ofuscan: "estud10 de W.C"). |
 | **Facebook** (grupos/páginas/Marketplace) | Sí, gratis | 0 | Secundario, bueno para segmentar por ciudad. |
@@ -14,7 +16,7 @@
 | **WhatsApp** | — | 0 | **Punto de contacto/conversión universal** (lo dan TODOS). No es captación fría, es el cierre. |
 | **OLX Colombia** | Sí, pero **PROHIBIDO** | — | **DESCARTADO.** Veta expresamente "estudios webcam" y ofertas confusas de servicios sexuales. [reglas OLX](https://help.olx.com.co/hc/es-419/articles/360035816392-Productos-no-permitidos-en-OLX) |
 
-**Titular de coste:** arrancar cuesta **~0** (elempleo 1ª gratis, beBee 1ª gratis, TikTok/FB/web propia gratis). Encaja con "sin gastar capital".
+**Titular de coste:** arrancar cuesta **~0** (beBee 1ª gratis, TikTok/FB/web propia gratis). Encaja con "sin gastar capital". *(elempleo queda FUERA para persona física: exige NIT — ver fila.)*
 
 ## 2. El patrón replicable (anti-ingenuidad, de anuncios reales)
 
@@ -48,7 +50,8 @@
 3. **Riesgo ToS de TikTok/FB.** Reclutar +18 en TikTok/FB roza sus ToS (por eso ofuscan → riesgo de baneo). A sopesar antes de replicar el patrón ahí.
 
 ## Lo que NO se verificó
-- Alta end-to-end como C.C. en elempleo (el form ofrece C.C., pero no se completó el registro) → INFERENCIA.
+- ~~Alta en elempleo como C.C.~~ → **YA VERIFICADO (2026-09-03): elempleo EXIGE NIT** (campo obligatorio) → no viable como persona física. Corregido en la tabla.
+- **beBee: si acepta persona física sin NIT/impuesto — PENDIENTE de verificar en el formulario en vivo** (no dar por bueno; es el mismo tipo de afirmación que falló en elempleo).
 - Precios exactos de los planes de pago de Jooble/beBee (ocultos tras registro).
 - Que beBee entregue su feed específicamente a Jooble (inferido de la oferta idéntica, no leído en doc).
 - Si Jooble/portales aceptan el posting directo +18 por su flujo de empleador (no probado; CAPTCHA).

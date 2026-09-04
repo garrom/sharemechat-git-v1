@@ -3,6 +3,8 @@
 > **SONDA N2 · 2026-09-03.** ¿Se puede **pagar** un anuncio (TikTok Ads y alternativas) para reclutar modelos en Colombia, y así **saltarse el problema de geo** (número/ubicación España) que tiene el orgánico? 4 agentes en paralelo. Marco: [`../debate-arranque.md`](../debate-arranque.md) A6/A8. Índice de canales: [`canales-colombia/`](canales-colombia/).
 >
 > Etiquetas: **DATO DURO** (fuente oficial/verificable) · **IMPRESIÓN** (patrón) · **NO VERIFICADO**.
+>
+> ⚠️ **NOTA DE VERIFICACIÓN (2026-09-03).** Esta doc procede de **investigación de subagente** (cita URLs de política oficial pero **no verificadas de primera mano** por el operador/IA). Los **costes** (CPC/CPM/mínimos) son **estimaciones de terceros, no datos**. Dato relacionado ya CORREGIDO en [`canales-colombia/como-publicar.md`](canales-colombia/como-publicar.md): **elempleo exige NIT** (no es "publicable por ti" como persona física). Las políticas de TikTok/Meta conviene **releerlas en su página oficial** antes de darlas por firmes.
 
 ## Veredicto en una línea
 
@@ -46,7 +48,7 @@ Mínimo técnico TikTok Ads: **>20 USD/día** ad group, **>50 USD/día** campañ
 
 ## Implicación estratégica
 
-1. **El pago NO da la independencia buscada** (respecto al amigo). La independencia real viene de: **cuentas orgánicas propias con señales colombianas** (número +57 —virtual, contratable por ti mismo, sin depender de nadie— + VPN) + **bolsas de empleo** (elempleo/beBee, geo-dirigidas por diseño, las publicas tú) + eventualmente **job boards adultos** (LustJobs/sexyjobs).
+1. **El pago NO da la independencia buscada** (respecto al amigo). La independencia real viene de: **cuentas orgánicas propias con señales colombianas** (número +57 —virtual, contratable por ti mismo, sin depender de nadie— + VPN) + **bolsas de empleo** geo-dirigidas por diseño (**beBee** candidato sin NIT *pendiente de verificar*; **elempleo NO** para persona física: exige NIT) + eventualmente **job boards adultos** (LustJobs/sexyjobs).
 2. Esto **valida el plan orgánico + cuenta geo-colombiana** que ya estábamos montando: no es un "apaño", es el camino correcto.
 3. **Guardar** la vía ad-networks-adultas como **plan B para captar CLIENTES** cuando toque atacar la demanda.
 

@@ -23,11 +23,13 @@
 > [`x-social.md`](x-social.md).
 
 > **Actualización 2026-09-03 (2ª tanda SONDA):** al mapa de "qué hay" se suma
-> [`como-publicar.md`](como-publicar.md) — cómo publicar TÚ como particular: **elempleo** (1ª gratis,
-> luego ~30 USD; "webcam" en claro) y **beBee/trabajo.org** (1ª gratis; alimenta a Jooble) son
-> viables; **OLX prohibido**; **TikTok/Facebook/web propia** gratis para captación fría. Coste de
-> arranque ≈ 0. Dato que choca con "persona física, punto": el patrón ganador es **marca ligera de
-> estudio**, no individuo desnudo (decisión del operador).
+> [`como-publicar.md`](como-publicar.md) — cómo publicar TÚ como particular.
+> **⚠️ CORRECCIÓN (verificado en vivo 2026-09-03): elempleo EXIGE NIT** (campo obligatorio del
+> formulario de alta) → **NO viable como persona física** sin NIT colombiano. Queda descartado como
+> canal de arranque para el operador; el candidato sin NIT es **beBee** (pero eso está **pendiente
+> de verificar en vivo**, no dado por bueno). **OLX prohibido**; **TikTok/Facebook/web propia**
+> gratis. El patrón de presentación sigue siendo **marca ligera de estudio** (decisión del operador).
+> Precios y "webcam en claro" de la tabla = inferencia sin reverificar.
 
 ## Resumen por canal (una línea cada uno)
 
