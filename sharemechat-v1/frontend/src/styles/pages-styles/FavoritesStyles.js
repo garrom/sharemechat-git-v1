@@ -106,6 +106,12 @@ export const SearchBox = styled.div`
     color: #eaeef3; font-size: 13.5px;
   }
   input::placeholder { color: #8b94a1; }
+
+  /* #D-61: en móvil el input a 16px evita el auto-zoom de foco de iOS Safari
+     (el resto del flujo de chat ya cumple; StyledChatInput también es 16px). */
+  @media (max-width: 768px) {
+    input { font-size: 16px; }
+  }
 `;
 
 export const GroupLabel = styled.div`

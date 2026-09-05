@@ -1,5 +1,6 @@
 // src/pages/dashboard/DashboardUserClient.jsx
 import React, { useState, useEffect, useRef } from 'react';
+import useMobileKeyboardShell from '../../hooks/useMobileKeyboardShell';
 import i18n from '../../i18n';
 import styled from 'styled-components';
 import NavbarClient from '../../components/navbar/NavbarClient';
@@ -17,6 +18,7 @@ import { getLivenessStatus } from '../../api/livenessApi';
 import { createNowPaymentsCheckout } from '../../api/billingApi';
 import {
   DashboardShell,
+  isAppTab,
   StyledMainContent,
   GlobalBlack,
 } from '../../styles/pages-styles/VideochatStyles';
@@ -53,6 +55,9 @@ const DashboardUserClient = () => {
   const [error, setError] = useState('');
   const [statusText, setStatusText] = useState('');
   const [activeTab, setActiveTab] = useState('videochat');
+  // #D-61: fix teclado móvil (encoge el shell al hueco visible sobre el teclado).
+  const shellRef = useRef(null);
+  useMobileKeyboardShell(shellRef, isAppTab(activeTab));
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
   const [loadingFirstPayment, setLoadingFirstPayment] = useState(false);
   const [resendingVerification, setResendingVerification] = useState(false);
@@ -798,7 +803,7 @@ const DashboardUserClient = () => {
 
   const displayName = userName || t('dashboardUserClient.user.defaultName');
   return (
-    <DashboardShell data-tab={activeTab}>
+    <DashboardShell data-tab={activeTab} ref={shellRef}>
       <GlobalBlack />
 
       {/* ========= INICIO NAVBAR  ======== */}

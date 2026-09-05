@@ -125,6 +125,9 @@ export const GlobalBlack = createGlobalStyle`
  * -------------------------------- */
 
 const IS_APP_TAB = (t) => t === 'videochat' || t === 'favoritos' || t === 'calling';
+// Exportado para gate del hook useMobileKeyboardShell (#D-61): el fix del teclado
+// móvil solo aplica a los tabs app-like (shell de altura fija).
+export const isAppTab = IS_APP_TAB;
 
 // DashboardShell: wrapper de página tipo dashboard (Client/Model/UserClient/
 // UserModel) + subpages KYC/Contract que usan el mismo layout de columnas
@@ -146,15 +149,19 @@ export const DashboardShell = styled.div`
      - Resto (stats, blog, historial, tickets): min-height 100vh + auto →
        el body scrollea globalmente y el Footer aparece al final sin
        solapar el contenido. Navbar sticky top:0 se queda arriba. */
-  height: ${props => IS_APP_TAB(props['data-tab']) ? '100vh' : 'auto'};
-  min-height: 100vh;
+  /* #D-61: en tabs app-like la altura sale de var(--kb-shell-h, 100vh/100dvh).
+     Sin teclado la var no existe → cae al default → CSS IDÉNTICO al de antes.
+     Con teclado abierto en móvil, useMobileKeyboardShell fija --kb-shell-h al
+     hueco visible y el shell (incluido min-height) encoge sobre el teclado. */
+  height: ${props => IS_APP_TAB(props['data-tab']) ? 'var(--kb-shell-h, 100vh)' : 'auto'};
+  min-height: ${props => IS_APP_TAB(props['data-tab']) ? 'var(--kb-shell-h, 100vh)' : '100vh'};
   overflow: ${props => IS_APP_TAB(props['data-tab']) ? 'hidden' : 'visible'};
   background: var(--c-black);
   min-width: 48px;
 
   @supports (height: 100dvh) {
-    height: ${props => IS_APP_TAB(props['data-tab']) ? '100dvh' : 'auto'};
-    min-height: 100dvh;
+    height: ${props => IS_APP_TAB(props['data-tab']) ? 'var(--kb-shell-h, 100dvh)' : 'auto'};
+    min-height: ${props => IS_APP_TAB(props['data-tab']) ? 'var(--kb-shell-h, 100dvh)' : '100dvh'};
   }
 `;
 
