@@ -23,7 +23,11 @@
     <!-- End Google Tag Manager -->
 
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- interactive-widget=resizes-content (#D-61): al abrir el teclado virtual,
+         encoge tambien el layout viewport para que 100dvh se reduzca al hueco
+         visible (Chrome 108+/Firefox 132+). iOS Safari lo ignora -> se cubre con
+         el hook useMobileKeyboardShell (visualViewport). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#000000" />
 
     <!-- SEO core (replica de landing legacy: title/description EN como decision por defecto). -->

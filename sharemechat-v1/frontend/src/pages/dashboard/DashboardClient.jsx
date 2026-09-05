@@ -1,5 +1,6 @@
 // DashboardClient.jsx
 import React, { useState, useRef, useEffect,useLayoutEffect, useCallback } from 'react';
+import useMobileKeyboardShell from '../../hooks/useMobileKeyboardShell';
 import { playSound, startIncomingCall, stopIncomingCall } from '../../utils/sounds';
 import i18n from '../../i18n';
 import { getResolvedLocale } from '../../i18n/localeUtils';
@@ -21,7 +22,7 @@ import ClientTicketsPanel from '../subpages/ClientTicketsPanel';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faVideo, faFilm, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import {
-  DashboardShell,StyledIconWrapper,StyledMainContent,
+  DashboardShell,isAppTab,StyledIconWrapper,StyledMainContent,
   StyledLeftColumn,StyledCenter,StyledRightColumn,
   StyledLocalVideo,StyledRemoteVideo,
   StyledChatContainer,StyledNavGroup,
@@ -122,6 +123,9 @@ const DashboardClient = () => {
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [activeTab, setActiveTab] = useState('videochat');
+  // #D-61: fix teclado móvil (encoge el shell al hueco visible sobre el teclado).
+  const shellRef = useRef(null);
+  useMobileKeyboardShell(shellRef, isAppTab(activeTab));
 
   // Card 1 Fase 2: perfil de modelo como modal grande en favoritos (desktop).
   // Estado elevado desde FavoritesClientList (menú "…") y desde el botón
@@ -3174,7 +3178,7 @@ const DashboardClient = () => {
 
 
   return(
-    <DashboardShell data-tab={activeTab}>
+    <DashboardShell data-tab={activeTab} ref={shellRef}>
       <GlobalBlack/>
       <AuthenticatedConsentModal
         open={consentRequired}

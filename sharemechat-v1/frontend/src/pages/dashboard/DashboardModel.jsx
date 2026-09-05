@@ -1,5 +1,6 @@
 // DashboardModel.jsx
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
+import useMobileKeyboardShell from '../../hooks/useMobileKeyboardShell';
 import { playSound, startIncomingCall, stopIncomingCall } from '../../utils/sounds';
 import i18n from '../../i18n';
 import { getResolvedLocale } from '../../i18n/localeUtils';
@@ -18,7 +19,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartLine } from '@fortawesome/free-solid-svg-icons';
 import { faVideo, faFilm, faArrowLeft, faShieldHalved } from '@fortawesome/free-solid-svg-icons';
 import {
-  DashboardShell,StyledIconWrapper,StyledMainContent,
+  DashboardShell,isAppTab,StyledIconWrapper,StyledMainContent,
   StyledLeftColumn,StyledCenter,StyledRightColumn,
   StyledLocalVideo,StyledRemoteVideo,
   StyledChatContainer,StyledNavGroup,
@@ -169,6 +170,9 @@ const DashboardModel = () => {
   const [activeTab, setActiveTab] = useState(
     () => routerLocation?.state?.activeTab || 'videochat'
   );
+  // #D-61: fix teclado móvil (encoge el shell al hueco visible sobre el teclado).
+  const shellRef = useRef(null);
+  useMobileKeyboardShell(shellRef, isAppTab(activeTab));
   const [saldoModel, setSaldoModel] = useState(null);
   const [loadingSaldoModel, setLoadingSaldoModel] = useState(false);
   // ADR-056 Opcion D (2026-08-01, iter.2 2026-08-02): DTO completo del
@@ -3471,7 +3475,7 @@ const DashboardModel = () => {
 
 
   return (
-    <DashboardShell data-tab={activeTab}>
+    <DashboardShell data-tab={activeTab} ref={shellRef}>
       <GlobalBlack />
       <AuthenticatedConsentModal
         open={consentRequired}
