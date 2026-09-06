@@ -1,5 +1,14 @@
 # Debate vivo: cómo arrancar SharemeChat
 
+> ⏸️ **EN PAUSA POR REVISIÓN DE RUMBO (2026-09-06).** El operador ha decidido, tras
+> análisis en frío, que este vertical (videochat aleatorio 1-a-1 **adult**) tiene
+> muros infranqueables para un fundador solo sin capital, y va a **pivotar** a otra
+> actividad online reutilizando el stack. Todo el debate de abajo (captación de
+> modelos, cold-start del producto adult) queda **congelado como contexto**, no
+> derogado. El nuevo análisis de rumbo vive en
+> [`../01-business/pivote-2026-09.md`](../01-business/pivote-2026-09.md). La empresa
+> (OÜ) **no se cierra**. Reactivar este debate solo si el pivote se descarta.
+
 > **Esto NO es un ADR ni una decisión.** Es un borrador de trabajo que vamos a
 > cambiar mil veces. Aquí discutimos punto por punto, despacio y en lenguaje
 > normal (sin argot). Se dice A hoy y B mañana sin problema. **Solo cuando un
