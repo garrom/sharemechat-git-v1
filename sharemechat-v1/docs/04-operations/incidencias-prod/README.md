@@ -130,7 +130,11 @@ Copiar a `caso-AAAA-MM-DD-<slug>.md`:
 
 ## Índice de casos reales
 
-_(Se irá rellenando. Aún sin fichas de caso propias.)_
+- [**2026-09-06 — "Se dejaron de registrar clientes tras los cambios de finales de agosto"**](caso-2026-09-06-registros-clientes-parados.md)
+  (P3). Síntoma de negocio, no fallo técnico: el registro estaba sano; la causa
+  era colapso del tráfico humano real (GA4: 0–1 sesiones con interacción/día). La
+  correlación con nuestros cambios era espuria. Técnica: mirar `engagedSessions`,
+  no `sessions` (el grueso es bot).
 
 Casos ya documentados en otros sitios, para migrar/enlazar cuando toque:
 - **2026-08-22 — PROD en crash-loop por comentario inline en `config.env`** (systemd
