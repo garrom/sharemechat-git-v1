@@ -40,5 +40,15 @@ Motor de vídeo 1-a-1 · matching · **traductor P2P en vivo** · i18n · sistem
 - **videochat-random** hasta que haya densidad · **tienda** · **integración de idiomas** (= Charla) · **app stores para el modo random**.
 - **Charla** (negocio de idiomas) — no se toca hasta terminar Vibra.
 
+## Arranque técnico y principios de ingeniería (decisión 2026-09-07)
+
+**Método = Opción B: repo NUEVO `vibra` + cosecha disciplinada** del fuente de SharemeChat (referencia de solo lectura). **NO clonar-y-refactorizar** (heredaría el dominio adult —`master/`, `payout/`, `psp/`, `accountingaudit/`, `content/`, tarifas, KYC documental— y 57 migraciones de lastre; 77 entidades/128 servicios en gran parte no aplican). Reutilización ~70% **por módulos levantados a propósito**, no por herencia del monolito. Reparto cosechar/rehacer/tirar detallado en la sección de plataformas y modos de arriba. Stack: **Spring Boot/Java** en backend (maximiza cosecha) + **React Native (iOS+Android) + web** en frontend. Nuevo proyecto/dominio/EC2/BD.
+
+**Principios de ingeniería — criterio de ACEPTACIÓN, no opcional:**
+1. **Backend package-by-DOMAIN desde el día 1.** SharemeChat arrancó *por capas* (top-level `controller/`,`service/`,`entity/`,`repository/`) y solo los frentes tardíos son por dominio. Vibra: **cada dominio es su paquete** (`profile/`, `matching/`, `chat/`, `videosession/`, `identity/`, `moderation/`…) con controller+service+repository+entity+dto dentro. **Nada de paquetes por capa.**
+2. **Código conciso y óptimo.** Preferir lo corto y expresivo —aunque sea algo más complejo— a miles de líneas de boilerplate. DRY, clases/métodos pequeños y enfocados, features modernas del lenguaje. Guardarraíl: mantenible en solitario (óptimo ≠ ilegible).
+3. **Testing desde el día 1** (unit + integración, CI verde como juez; disciplina de ADR-059).
+4. **Best practices por defecto**: arquitectura limpia, inversión de dependencias, validación, manejo de errores, seguridad por defecto, **vendor-agnostic en el dominio** (vendor solo en adapters HTTP + `@ConfigurationProperties`).
+
 ## Estado y siguiente paso
-Análisis de concepto y cold-start **cerrado**. Nombres, modos, núcleo asíncrono, cold-start, plataformas y seguridad decididos. **Siguiente:** diseño de "Vibra por dentro" (modelo de datos, pantallas de social-ligue, plan de desarrollo y arranque cross-platform).
+Concepto, cold-start, plataformas, seguridad y **método de construcción (Opción B) + principios de ingeniería** decididos. **Siguiente:** diseño de "Vibra por dentro" — **modelo de datos por dominios** (User peer, Profile, Interest/filtro, Like, Match, Conversation, VideoSession), estructura de paquetes, pantallas de social-ligue y orden de cosecha.
