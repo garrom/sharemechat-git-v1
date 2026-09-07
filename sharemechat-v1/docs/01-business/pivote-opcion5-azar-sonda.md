@@ -8,7 +8,7 @@
 
 1. **Azar NO es Omegle** (que era anónimo, sin cuentas, sin moderación, y cerró en 2023 por demandas de abuso de menores). Azar tiene cuentas 18+, moderación por IA y **verificación de edad facial**.
 2. **Azar SÍ verifica edad**: escaneo facial antes de cada llamada en todo el mundo + **selfie-check biométrico (Yoti/FaceTec) en UE/UK/US/Australia**. No se cubre con un disclaimer; se cubre **estimando la edad**. Lo que el operador vio en la web ("sin verificación") es la superficie ligera del navegador.
-3. **La Opción 5 es imitable, pero lo imitable es "estimación de edad + ToS de indemnización + moderación", NO "solo teléfono".** Y hay un tope de distribución: **Apple prohíbe el random chat** → se arranca **solo web**.
+3. **La Opción 5 es imitable, pero lo imitable es "estimación de edad + ToS de indemnización + moderación", NO "solo teléfono".** Sobre distribución (**preciso, corregido 2026-09-07**): Apple **restringe** el random chat (Guideline 1.2, endurecido feb-2026), no lo prohíbe de plano — se permite **con moderación proactiva de vídeo en vivo + report/block + age assurance** (Azar y Chatroulette siguen; Monkey/OmeTV expulsados). El modo **perfil-primero (social-ligue) NO cae en la cláusula** → nativo sin problema; el **random en vivo** va web-only al inicio o nativo con moderación en vivo.
 
 ## 1. Qué es Azar (empresa y escala)
 
@@ -61,7 +61,7 @@
 - **Política de privacidad + ToS** claros; **DPA** con cada procesador; **RoPA**; **DPIA** (vídeo + estimación facial = alto riesgo; ya hay precedente en el proyecto).
 - **Micro-empresa exenta** de la capa pesada del DSA (art. 19: reclamaciones formales, transparency reports…). El **art. 28 (menores) NO se exime** → otra razón para ir 18+.
 - **Geobloquear UK** (OSA exige "highly effective age assurance") y **no targetear EE. UU.** al inicio (campo minado estado a estado).
-- **Arrancar SOLO WEB (PWA):** **Apple prohíbe explícitamente** las apps de *random/anonymous chat* (Guideline 1.2); las tiendas añaden moderación exigida + rating 18+ que un fundador solo no sostiene el día 1. Google (más permisivo) primero, si acaso, más adelante.
+- **Distribución (preciso):** Apple **restringe** el *random/anonymous chat* (Guideline 1.2: "may be removed"; endurecido feb-2026) — permitido **solo con moderación proactiva de vídeo en vivo + report/block + age assurance**. El **modo perfil-primero (social-ligue) NO es random chat** → nativo iOS+Android sin problema (como Tinder). El **random en vivo** va **web-only al inicio** o nativo cuando haya moderación en vivo; las tiendas exigen además controles UGC + rating alto que un fundador solo sostiene mejor tras validar.
 
 **Reutilización del stack SharemeChat (alta):** motor de vídeo 1-a-1, matching, **traductor en vivo P2P**, i18n, gifts/emojis (base de la economía de gemas), Didit (age estimation), moderación/report, deploy. La distancia técnica es corta.
 

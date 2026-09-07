@@ -9,7 +9,7 @@ App **social/de citas por vídeo, no-adult**: personas normales conocen a otras 
 
 ## Los dos modos de Vibra
 - **social-ligue** (NÚCLEO, el que lidera y arranca): perfil-primero tipo Tinder, **ASÍNCRONO**. Ves perfiles → like → **match**; la videollamada es el **paso entre dos que ya han hecho match**, por aviso/cita, **no una lotería en vivo**. No necesita a nadie conectado a la vez.
-- **videochat-random** (SECUNDARIO, **apagado al inicio**): vídeo aleatorio en directo estilo Azar. Necesita densidad → se enciende cuando haya masa. **Apple lo prohíbe** (App Store Guideline 1.2, "random/anonymous chat") → este modo va **solo web** al principio.
+- **videochat-random** (SECUNDARIO, **apagado al inicio**): vídeo aleatorio en directo estilo Azar. Necesita densidad → se enciende cuando haya masa. **Apple lo restringe** (App Store Guideline 1.2 lista "Chatroulette-style / random or anonymous chat" como "may be removed"; endurecido feb-2026 con oleada de rechazos): **NO está prohibido de plano** — se permite **solo con moderación proactiva del vídeo en vivo** (IA anti-desnudos/abuso en tiempo real) + report/block + contacto + age assurance (por eso Azar y Chatroulette siguen; Monkey/OmeTV fueron expulsados por no tenerlo). → este modo va **web-only al inicio** (barato) o **nativo más tarde** si montamos la moderación en vivo.
 
 ## Decisión de núcleo: ASÍNCRONO (debate 2026-09-07, resuelto)
 El núcleo asíncrono es lo que hace viable todo lo demás: **registrarse ≠ estar presente**; un producto en vivo puede tener 10.000 registrados y la sala vacía a las 21:00. Con match asíncrono (tipo Tinder), **el valor existe aunque no haya nadie conectado**, así que la "sala vacía" desaparece del bucle principal. Corolario: **no hace falta ventana/horario** (*"si necesitas ventana, tienes un problema"*), y la captura de datos + re-engagement pasan a ser válidas porque hay algo real que notificar (*"tienes un match esperando"*), no un genérico "vuelve".
@@ -24,7 +24,7 @@ El núcleo asíncrono es lo que hace viable todo lo demás: **registrarse ≠ es
 ## Plataformas
 - **iOS + Android nativos en paralelo + web** (decisión del operador 2026-09-07).
 - **Recomendación técnica**: un solo código **cross-platform** (React Native o similar) para sacar iOS+Android sin triplicar trabajo; reutiliza lógica del front React actual.
-- **Caveat Apple (Guideline 1.2)**: **social-ligue** va nativo en ambas tiendas (Tinder está en las dos); **videochat-random** queda **web-only** al inicio.
+- **Caveat Apple (Guideline 1.2), preciso**: **social-ligue** NO es random/anonymous chat (perfil → match → vídeo con un match) → **nativo en ambas tiendas sin problema** (como Tinder/Bumble), solo con los controles UGC estándar (filtrar/reportar/bloquear/contacto). **videochat-random** SÍ cae en la cláusula → **web-only al inicio**, o nativo cuando montemos moderación proactiva de vídeo en vivo.
 - **Nota crítica registrada** (no bloqueante): existe argumento para **validar en web primero** (barato, sin gatekeepers) antes de abrir el frente móvil, dado que el cold-start no está probado. El operador elige **paralelo**; se deja dicho como decisión consciente.
 
 ## Seguridad y edad
