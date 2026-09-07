@@ -75,6 +75,28 @@
 - Evita además el veto de Apple al "random chat" (es descubrimiento + match, no ruleta anónima).
 - **Gratis al arrancar**, con los ganchos de pago tipo gemas **diseñados pero apagados** (filtro de género/país, reconectar, boosts, "quién te dio like", vídeo más largo).
 
+## 8. Fricción del age assurance — cómo igualar el escaneo invisible de Azar (2026-09-07)
+
+Hallazgo a raíz de una observación del operador: hizo una videollamada en la web de Azar y **no percibió ninguna verificación de edad ni pasarela**. Investigado en fuente viva.
+
+**Por qué es invisible en Azar (dos capas distintas, texto oficial):**
+- **Capa global (en todo el mundo) — la invisible:** *"we may review your face when your camera is on, just before a call starts... automated technology... does not create, store, or rely on face maps"*. Es un **escaneo PASIVO de un frame** de la cámara ya encendida, **sin paso, sin selfie, sin pasarela**. Fricción cero. (Azar conserva la imagen 3 meses para auditar/entrenar.)
+- **Capa reforzada (solo UE/UK/US/Australia) — la visible:** un **video-selfie** con Yoti/FaceTec (biométrico, face map efímero borrado ~1 día). Esta **sí** tiene fricción; se dispara por DSA/OSA/SMMA. En la **web** el operador probablemente solo topó con la capa pasiva (la selfie reforzada suele ir en la app o en un gate posterior).
+
+**Fricción que tenemos HOY (ADR-035):** Didit cableado como **flujo alojado con redirección + checkbox de consentimiento biométrico, disparado en la primera recarga (pago)**. Es una **pasarela visible** — más fricción que el escaneo pasivo de Azar. Pero fue diseñado para el producto **adult** (gatear el momento del dinero); **no es una limitación técnica, es cableado**.
+
+**SÍ podemos igualar el escaneo invisible — confirmado en fuente:** Didit ofrece una **API de age estimation "headless"/standalone**: se le manda **una sola imagen** y devuelve JSON con edad estimada + confianza + **liveness pasivo** (sin reto al usuario, sin interfaz alojada), ~0,10 USD/check, ±3,5 años. Es decir: **coger el primer frame del vídeo (cámara ya encendida) → API → pase silencioso**, exactamente la capa global de Azar. Docs: `docs.didit.me/standalone-apis/age-estimation`. Alternativas para el primer filtro pasivo: **AWS Rekognition** (rango de edad por imagen, casi gratis) y **Yoti** (premium certificado).
+
+**Arquitectura recomendada (calcada de Azar y compatible con el patrón "Adaptive" del propio ADR-035):**
+1. **Capa pasiva invisible** (caso común): frame del vídeo → API headless → pase silencioso. Fricción cero.
+2. **Step-up con selfie** (solo el borde: edad dudosa o exigencia UE reforzada): flujo Didit con selfie. Es la **excepción**, no el default → el ~90% de usuarios no ve nada.
+
+**Matiz legal (una vez, no es pega):** aunque sea pasivo, estimar edad desde la cara es **tratamiento biométrico**. Azar lo cubre **declarándolo en ToS/privacidad** (no con pasarela). Réplica: **aviso/consentimiento de una sola vez al registro** (una línea, no un redirect) + **borrado inmediato del frame**. Frictionless pero **declarado** — es lo que separa "pasivo y legal" de "secreto". El ADR-035 ya trata el consentimiento biométrico en serio (SharemeChat controller, Didit processor, checkbox explícito).
+
+**Conclusión:** la brecha de fricción con Azar es **reconfigurable, no un muro**. Es cambiar el cableado (API headless sobre el frame) en vez del redirect alojado. Vale tanto para la Opción 5 como para cualquier producto de vídeo del pivote.
+
+Fuentes §8: [Azar Age Assurance](https://help.azarlive.com/hc/en-us/articles/48317319109529-Age-assurance-at-Azar) · [Didit Age Estimation API](https://docs.didit.me/standalone-apis/age-estimation) · [Didit adaptive estimation+fallback](https://didit.me/blog/adaptive-age-verification-passive-estimation-document-fallback/) · [AWS Rekognition AgeRange](https://docs.aws.amazon.com/rekognition/latest/APIReference/API_AgeRange.html) · [Yoti Facial Age Estimation API](https://developers.yoti.com/facial-age-estimation-api) · interno: [ADR-035](../06-decisions/adr-035-age-and-identity-verification-vendor-consolidation-on-didit.md).
+
 ## Fuentes (primarias/oficiales)
 
 Azar Help Center: Terms of Service (2026-02-01), Privacy Policy (2025-11-08), Age assurance at Azar, Community Guidelines, Notice of Service Cessation UK (2025), Gems & Stars, Plus/Premium/Supreme · App Store (id972558973) · Google Play (com.azarlive.android) · Match Group IR (adquisición, earnings) · Ververica (matchmaking Flink) · EUR-Lex DSA (arts. 11-19, 28) · EDPB Age Assurance Statement (2025-02-11) · Comisión Europea — Guidelines protección de menores (2025-07) · GDPR art. 8 · Ofcom (UK OSA) · Apple App Store Guidelines 1.2 · Google Play UGC. (URLs completas en los informes de los agentes de la sesión.)
