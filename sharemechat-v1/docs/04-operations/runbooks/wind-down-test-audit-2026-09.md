@@ -2,6 +2,15 @@
 
 **Fecha del apagado: 2026-09-10.** Contexto: SharemeChat queda en pausa (pivote a Ritmelo, la OÜ sigue). Se apagan **TEST y AUDIT** para eliminar coste, **sin borrar contenido** (Opción B: snapshot + terminar). **PROD, la zona Route53 de `sharemechat.com` y el correo Microsoft 365 `operations@` NO se tocan.** Todas las operaciones se hicieron/se hacen con el perfil elevado **`sharemechat-provisioner`**, región **`eu-central-1`** (el perfil `sharemechat-deployer` solo tiene read + deploy y NO puede parar/borrar).
 
+## ⚠️ Punta suelta: liberar una EIP obliga a BORRAR su registro DNS (cerrado 2026-09-11)
+
+Al liberar las EIP el 2026-09-10 **no se borraron los registros A** que las apuntaban → quedaron colgando (*dangling DNS*: la IP vuelve al pool de AWS y un tercero puede re-asignársela y servir contenido bajo nuestro subdominio = *subdomain takeover*):
+- `api.audit.sharemechat.com` → 18.195.185.25 · `api.test.sharemechat.com` → 63.180.48.12
+
+Detectado por aviso externo (patrón *beg-bounty*: informe real + petición de pago; **no se paga**, no hay programa de recompensas). **Corregido el 2026-09-11**: ambos registros A borrados de la zona Route53 `sharemechat.com` (`Z054470823PMZQENFZHHZ`) con `change-resource-record-sets`. MX/TXT (correo M365) y registros de PROD intactos.
+
+**Regla para futuros apagados (incluido PROD):** al liberar una Elastic IP, **borrar en la misma pasada** el/los registros DNS que la apuntan. Al restaurar se recrean con la IP nueva (ver §restaurar). Verificación: `list-resource-record-sets` no debe devolver ningún A apuntando a una IP ya liberada.
+
 ## Estado tras el apagado
 
 | Recurso | TEST | AUDIT | PROD (intacto) |
