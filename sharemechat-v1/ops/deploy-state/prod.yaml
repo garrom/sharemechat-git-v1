@@ -1,27 +1,28 @@
 ﻿# Manifest de estado de despliegue - entorno PROD
-# Schema v1. Seccion backend actualizada por update-manifest-backend.ps1
-# (Fase 1 paso 2b, opcion B). El script lo invoca el operador tras un
-# deploy manual del backend (scp + restart). NO se hace commit
-# automatico: el operador commitea cuando le conviene (decision D2).
+# Schema v1. Auto-gestionado por deploy-frontend.ps1 (Fase 1
+# paso 2a). El paso [5.5/N] de cada deploy escribe el bloque
+# correspondiente al surface desplegado tras smoke OK. NO se
+# hace commit automatico: el operador commitea el manifest
+# cuando le conviene (decision D2).
 #
 schema_version: 1
 frontend_product:
-  cloudfront_invalidation_id: I3VK5BA2J5NO01EB40F7BR4LGS
+  cloudfront_invalidation_id: IDFO9EUX25R0BI1KEJLM5ELFEL
   verification:
-    method: deploy-frontend.ps1-live-build_2026-08-28T07:49:33Z
+    method: deploy-frontend.ps1-live-build_2026-10-10T20:00:19Z
     git_commit_provenance: recorded_by_deploy_script
     notes: Actualizado automaticamente por deploy-frontend.ps1 (Fase 1 paso 2a) tras smoke OK del propio script.
-  deployed_at: 2026-08-28T07:49:33Z
-  built_at: 2026-08-28T07:49:33Z
-  bundle_sha256: e163175434fd10f4a395e566721707d2be35250e073449411d66a4a5dbfe3ca9
-  git_commit_short: 692a2401
-  git_commit: 692a24016631027fd13803c1a427633c309a1977
+  deployed_at: 2026-10-10T20:00:19Z
+  built_at: 2026-10-10T20:00:19Z
+  bundle_sha256: 8df6e7556f5c572436791a8c6cadc5e0d292463455399362f05a7df2987cb2d0
+  git_commit_short: e311a8f7
+  git_commit: e311a8f74ca4ef00c638986e1d2f890ed53bee52
   cloudfront_distribution: E2FWNC80D4QDJC
   deployed_by: alain@LAPTOP-8UEIKVUT
-  working_tree_clean: true
+  working_tree_clean: false
   bucket: sharemechat-frontend-prod
-  bundle: main.b1a946ce.js
-last_update_source: update-manifest-backend.ps1-fase1-paso2b
+  bundle: main.ec778797.js
+last_update_source: deploy-frontend.ps1-fase1-paso2a
 last_update_by: alain@LAPTOP-8UEIKVUT
 environment: prod
 backend:
@@ -39,7 +40,7 @@ backend:
   systemd_unit: sharemechat-prod.service
   git_commit: 566301a35656de145ca24ffb38f4f4324f389b55
   git_commit_short: 566301a3
-last_updated_at: 2026-08-29T22:21:46Z
+last_updated_at: 2026-10-10T20:00:19Z
 frontend_admin:
   cloudfront_invalidation_id: I5SPH59FSVK9GLAA8MRC9R9CAI
   verification:
