@@ -1486,3 +1486,13 @@ Reabrir la conversación si Search Console + analítica de tráfico social revel
 **Deuda operativa residual (no cerrada por Fase 1.D)**: cualquier cambio editorial de la BdC vía SQL directo sigue exigiendo `POST /api/admin/knowledge-base/reload` en cada entorno. Fase 2 (no comprometida en fecha) introduciría un CRUD admin con invalidación automática. Hasta entonces, todo cambio editorial debe documentarse en bitácora.
 
 **Prioridad**: baja. No bloquea operación; solo coherencia entre backend y skills.
+
+## 2026-10-10 — Cobro de videochat no atado a salud de la media
+
+**#D-62 — El cobro corre por tiempo de sesión/WS vivo, no por el estado del peer WebRTC — ABIERTA (diagnóstico, sin implementar)**. Síntoma reportado por el operador (test en red hostil, cliente Colombia): la media P2P se congeló (pantalla negra) a ~1 min pero **el contador siguió cobrando** porque el WebSocket seguía vivo. Relacionado con [ADR-064](../06-decisions/adr-064-webrtc-forzar-relay-turn.md) (forzar relay arregla el congelado en sí, no este desacople).
+
+**Causa**: el ciclo de facturación del stream de pago avanza mientras la sesión WS esté activa y nadie cuelgue; no existe un watchdog que observe la salud del `RTCPeerConnection` (ICE `disconnected`/`failed`, o ausencia de media recibida) para cortar la sesión económica. El frontend ya tiene la señal (`onPeerStateChange` con `iceConnectionState` en `matchSocketEngine.js`), pero no se reporta al backend para gatear el cobro.
+
+**Solución propuesta**: el cliente reporta el estado del peer; el backend cierra la sesión de pago (y deja de cobrar) si la media del peer cae `N` segundos sostenidos. Alternativa/complemento: cutoff por ausencia de frames de media recibidos.
+
+**Prioridad**: **bloqueante blando antes de abrir a usuarios reales** (hoy, en PRELAUNCH con cuentas de prueba, el riesgo es sobre dinero propio de test). Con forzado de relay (ADR-064) la probabilidad de congelado baja mucho, pero el desacople cobro↔media sigue siendo real.
