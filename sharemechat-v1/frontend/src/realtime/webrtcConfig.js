@@ -39,7 +39,16 @@ function normalizePeerConfig(rawConfig) {
     throw new Error('ICE configuration is empty');
   }
 
-  return { iceServers: servers };
+  // iceTransportPolicy='relay' (2026-10-10): forzamos que TODA la media vaya
+  // por el TURN en vez de permitir P2P directo. Sin esto (policy por defecto
+  // 'all'), el navegador prioriza candidatos host/srflx (P2P directo); en
+  // redes restrictivas/moviles/CGNAT la ruta directa conecta y se cae a los
+  // ~1 min, y como el par elegido no era el relay, ICE no reconmuta en
+  // caliente -> congelado/pantalla negra mientras la sesion sigue viva. Forzar
+  // relay elimina ese fallo a costa de mas ancho de banda en el TURN. Punto
+  // unico: lo heredan todos los peers (cliente trial/pago y modelo, random y
+  // llamada) porque todos consumen loadWebRtcPeerConfig().
+  return { iceServers: servers, iceTransportPolicy: 'relay' };
 }
 
 export async function loadWebRtcPeerConfig() {

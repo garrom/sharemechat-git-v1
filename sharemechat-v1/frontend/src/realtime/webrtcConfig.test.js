@@ -25,6 +25,14 @@ describe('loadWebRtcPeerConfig', () => {
     expect(cfg.iceServers[0].credential).toBe('pw');
   });
 
+  test('fuerza iceTransportPolicy=relay (toda la media por TURN)', async () => {
+    apiFetchMock.mockResolvedValue({
+      iceServers: [{ urls: 'turns:turn.test:5349', username: 'u', credential: 'pw' }],
+    });
+    const cfg = await loadWebRtcPeerConfig();
+    expect(cfg.iceTransportPolicy).toBe('relay');
+  });
+
   test('lanza si un ICE server no trae urls', async () => {
     apiFetchMock.mockResolvedValue({ iceServers: [{ username: 'u' }] });
     await expect(loadWebRtcPeerConfig()).rejects.toThrow(/urls/);
