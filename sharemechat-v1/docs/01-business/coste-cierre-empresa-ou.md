@@ -3,9 +3,46 @@
 > **2026-09-06.** Estudio del coste y las vías de **cerrar la OÜ estonia** (por si acaso; no es una decisión tomada). Investigación con 3 agentes sobre fuentes oficiales estonias (e-resident.gov.ee, eesti.ee, emta.ee) + proveedores (Companio, Xolo, 1Office…). Orientativo, **no es asesoría fiscal/legal**: confirmar con Companio y e-MTA antes de ejecutar.
 
 ## Caso concreto (datos del operador)
-- Gestión: **Companio** (cuota 90 €/mes → **110 €/mes** actual).
+- Gestión: **Companio**. Cuota real (factura abril-2026): **79 € + 24% IVA = 97,96 €/mes** (≈ **98 €/mes**; no VAT-registered → el IVA es coste real). *(En la versión sept-2026 se estimó 110 €/mes; el dato verificado por factura es 97,96 €.)*
 - Empresa **LIMPIA**: sin deudas, sin activos, **sin dinero**, sin ventas (solo se facturó la cuota de Companio). Capital **1 €**.
 - → El escenario **más barato posible**: **sin impuestos por reparto** (no hay reservas; el capital de 1 € está exento), sin líos de acreedores. e-Residency **intacta** al cerrar de forma voluntaria.
+
+## Actualización 2026-10-12 — cuánto cuesta según CUÁNDO empieces (dos ventanas) + opción híbrida
+
+El coste del cierre en sí no cambia; lo que cambia es **cuántos meses sigues pagando Companio** (≈98 €/mes) hasta el borrado efectivo, más un **informe anual FY2026 extra** si cruzas a 2027. El proceso dura ~6-7 meses, así que el borrado cae en 2027 empieces cuando empieces.
+
+**Dos ventanas de decisión** (lo hace Companio, todo incluido):
+
+| Concepto | **A — iniciar antes 15-dic-2026** | **B — iniciar antes 1-may-2027** |
+|---|---:|---:|
+| Disolución (servicio Companio, una vez) | 614 € | 614 € |
+| Contabilidad de cierre (una vez) | 400 € | 400 € |
+| Tasas de registro (una vez) | 35 € | 35 € |
+| Cuota Companio hasta borrado (98 €/mes) | ~8 meses = 785 € | ~13 meses = 1.275 € |
+| Informe anual FY2026 extra | — (lo evitas al disolver en 2026) | 200 € |
+| **TOTAL aprox.** | **≈ 1.800 €** | **≈ 2.500 €** |
+
+→ Esperar a la ventana B cuesta **~700 € más** sin ninguna ventaja. **Si la decisión está tomada, arrancar en la ventana A es lo más barato.**
+
+**Opción híbrida (más barata, propuesta del operador):** mantener **solo la cuota mensual de Companio** (conserva dirección + persona de contacto en Estonia) y hacer **tú mismo la liquidación** (socio único = puedes nombrarte liquidador, legal):
+
+| Concepto | Companio hace TODO | **Híbrida: Companio solo mensual + tú disuelves** |
+|---|---:|---:|
+| Disolución (servicio Companio) | 614 € | **0 €** (lo haces tú) |
+| Contabilidad de cierre | 400 € | 0–400 € (zona gris, ver abajo) |
+| Aviso a acreedores (boletín Ametlikud Teadaanded) | incluido | ~20 € |
+| Tasas de registro | 35 € | 35 € |
+| Cuota Companio ~8 meses | 785 € | 785 € |
+| **TOTAL** | **≈ 1.834 €** | **≈ 840–1.240 €** |
+
+- El **614 €** te lo ahorras **seguro** (haces el trámite tú).
+- El **400 €** solo en parte: la liquidación exige **informes contables de cierre** (balance de apertura y final de liquidación); para una empresa a 0 € son casi vacíos, pero alguien debe emitirlos en formato correcto y **no suelen ir dentro del paquete mensual** → puede haber un extra o los haces tú.
+- Mantener Companio por la dirección = **seguir pagando la mensual** (no es ahorro extra; es el mismo mensual).
+- **Ahorro neto de la híbrida: ~600–1.000 €.**
+
+**Dos preguntas a confirmar con Companio antes de elegir híbrida:**
+1. ¿Puedo mantener **solo la cuota mensual** (dirección + contacto) **mientras yo mismo hago la liquidación**? (algunos gestores exigen su servicio de cierre).
+2. ¿Los **informes de liquidación** van incluidos en la mensual o cuestan aparte? ¿Cuánto?
 
 ## Las DOS formas de cerrarla
 
