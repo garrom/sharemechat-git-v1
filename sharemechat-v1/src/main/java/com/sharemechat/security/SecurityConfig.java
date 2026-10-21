@@ -101,6 +101,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/health/**").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/actuator/**").hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_ADMIN))
+                        // OpenAPI/Swagger: existe SOLO en el perfil 'test' (springdoc
+                        // deshabilitado por property en el resto de entornos). Acceso
+                        // restringido a admin/backoffice, igual que /actuator (defensa en
+                        // profundidad: aunque se activara por error, solo lo ve staff).
+                        .requestMatchers("/v3/api-docs/**", "/v3/api-docs.yaml", "/swagger-ui/**", "/swagger-ui.html")
+                        .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_ADMIN))
                         // Observabilidad #4: reporte de errores del navegador (tambien
                         // usuarios anonimos). Publico; el controller trunca/sanea.
                         .requestMatchers(HttpMethod.POST, "/api/observability/client-error").permitAll()
