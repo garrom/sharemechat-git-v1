@@ -13,7 +13,7 @@
 
 ### No apto
 
-Segpay, CCBill, QuadraPay, EMS, PayFirmly, MerchantScout, FirmEU — descartados o en reserva por distintas razones. Detalle cerrado en [pagos-descartados.md](pagos-descartados.md). **No se persiguen mientras CardBilling siga vivo.**
+Segpay, CCBill, QuadraPay, EMS, PayFirmly, MerchantScout, FirmEU, Panda Blue (D24) — descartados o en reserva por distintas razones. Detalle cerrado en [pagos-descartados.md](pagos-descartados.md). **No se persiguen mientras CardBilling siga vivo.** (Panda Blue/D24 solo cobraría tarjetas LATAM; en reserva como complemento LATAM, nunca como solución única para audiencia mundial.)
 
 ## PAGO (payout) — cómo sale el dinero a las modelos
 
