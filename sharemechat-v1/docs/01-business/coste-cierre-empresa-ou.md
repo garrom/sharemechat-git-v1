@@ -44,6 +44,30 @@ El coste del cierre en sí no cambia; lo que cambia es **cuántos meses sigues p
 1. ¿Puedo mantener **solo la cuota mensual** (dirección + contacto) **mientras yo mismo hago la liquidación**? (algunos gestores exigen su servicio de cierre).
 2. ¿Los **informes de liquidación** van incluidos en la mensual o cuestan aparte? ¿Cuánto?
 
+## Verificación en el registro mercantil + estado e-Residency (2026-10-26)
+
+Comprobado en el **e-Business Register** (ariregister.rik.ee, ficha pública de la OÜ) con sesión del operador activa, y cruzado con fuentes oficiales. Confirma que el caso es **de manual para cerrar**.
+
+**Snapshot del registro (reg. 17444422, a 26.10.2026):**
+- Estado: **"Entered into the register"** — activa, **sin disolución/liquidación en curso**.
+- **Sin deuda tributaria** (EMTA, a 26.10.2026) ✅ — es uno de los requisitos previos, ya cumplido.
+- Capital **1 €**; ejercicio **01.01–31.12**; sin prendas comerciales; 1 documento archivado (estatutos).
+- **Fundada: 25.02.2026** → el primer informe anual (**FY2026**) vencería ~**30.06.2027**, y **ninguno está presentado aún**. Arrancar el cierre **antes de fin de 2026** es justo lo que evita tener que emitir ese informe (coincide con la "ventana A"). *(La fecha de fundación 25.02.2026 llamó la atención por ser reciente; confirmada en la ficha —board/socio/titular real/estatutos, todos con inicio 25.02.2026—.)*
+- **Socio único (100%), administrador único y titular real** = el operador → puede resolver y firmar todo solo, y **nombrarse liquidador**.
+- Persona de contacto / dirección legal: **legal@companio.email** · Lõõtsa 5, Tallinn.
+
+**e-Residency (relevante para poder FIRMAR el cierre):**
+- La tarjeta del operador (**doc. UB0006404**, certificados válidos hasta **13.01.2031**) **NO está en el lote afectado** por la revocación de certificados del **9-dic-2026** (ese lote = tarjetas emitidas hasta ago-2023, rango UA00510xx–UA00762xx, por eIDAS 2.0 / Reg. UE 2024/1183). → podrá firmar los documentos de liquidación sin bloqueo. Aun así, montar **Smart-ID** como respaldo es gratis y recomendable.
+- `companio.email` **es dominio real de Companio** (consta como contacto oficial en el registro) → el aviso de revocación recibido de `support@companio.email` es legítimo en origen. Aun así, verificar siempre entrando directo a e-resident.gov.ee / politsei.ee, **no por el enlace del correo**.
+- ⚠️ A confirmar: al **borrarse** la empresa, la Policía estonia **podría revocar la e-Residency** (algunas fuentes divergen con la nota de arriba de "e-Residency intacta"; depende de si se mantiene otro vínculo con Estonia). Confirmar con Companio/PPA.
+
+**Las tres vías, por coste (confirmar con Companio/EMTA):**
+1. **Disolución simplificada por petición — §63** (la más barata/rápida, ~2-3 meses): solo si la OÜ **"no inició actividad real"**, sin activos ni deudas, VAT desregistrado, con consentimiento de EMTA. El registro confirma la parte limpia (sin deudas ni activos), pero sigue siendo **zona gris** por los movimientos administrativos (pago a Companio) y las sesiones de prueba del producto → **preguntar explícitamente**. ⚠️ **El correo enviado a Companio (2026-10-26) NO preguntó por la §63** → añadir esa pregunta en el siguiente mensaje (puede saltarse los ~6-7 meses de liquidación y las cuentas de cierre).
+2. **Liquidación voluntaria estándar** (Formas 1/2 de abajo): resolución → liquidador → aviso a acreedores (Ametlikud Teadaanded) → ventana de 4 meses → cuentas finales + reparto → baja. ~6-9 meses. Es lo presupuestado arriba.
+3. **Borrado administrativo por el registro** (desde 2023): el registro puede borrar una empresa sin activos en Estonia, sin procedimientos en curso y con consentimiento de EMTA. Vía pasiva; **no confundir** con el borrado de oficio por impago (ese sí trae multas — ver "Lo que NO conviene").
+
+**Fuentes (2026-10-26):** ariregister.rik.ee (ficha 17444422) · learn.e-resident.gov.ee (§63 / close a company) · eestifirma.ee (simplified deletion) · politsei.ee (revocación de certificados 9-dic-2026).
+
 ## Las DOS formas de cerrarla
 
 ### FORMA 1 — Que lo cierre Companio (cómodo)
