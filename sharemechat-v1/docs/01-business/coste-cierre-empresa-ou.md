@@ -68,6 +68,12 @@ Comprobado en el **e-Business Register** (ariregister.rik.ee, ficha pública de 
 
 **Fuentes (2026-10-26):** ariregister.rik.ee (ficha 17444422) · learn.e-resident.gov.ee (§63 / close a company) · eestifirma.ee (simplified deletion) · politsei.ee (revocación de certificados 9-dic-2026).
 
+### Respuesta de Companio (2026-10-27)
+Tras preguntarles (correo "amable" del 2026-10-26):
+- **Companio NO ofrece servicio de liquidación.** Recomiendan a un socio suyo como liquidador si se quiere — **no es necesario**: el operador puede ser su propio liquidador (socio único).
+- **Los documentos contables finales (último mes del ejercicio) los proporcionan SIN cargo adicional** y, según ellos, "deberían bastar" para la liquidación. → **Resuelve la zona gris de los 400 €: la contabilidad de cierre ≈ 0 € extra.** La vía híbrida queda en: **cuota mensual de Companio durante el proceso + tasas del registro (~35 €) + aviso a acreedores (~20 €)**; sin contable extra ni coste de disolución.
+- **Pendiente de afinar con Companio antes de arrancar:** (a) si esos "documentos finales" equivalen a los **balances de liquidación** (apertura + final) en el formato del registro, o solo a la contabilidad del mes al día (el "deberían bastar" no es un sí rotundo); (b) **elegibilidad §63** (no se preguntó en el correo enviado).
+
 ## Las DOS formas de cerrarla
 
 ### FORMA 1 — Que lo cierre Companio (cómodo)
