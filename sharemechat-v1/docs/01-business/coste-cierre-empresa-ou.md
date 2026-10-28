@@ -72,7 +72,23 @@ Comprobado en el **e-Business Register** (ariregister.rik.ee, ficha pública de 
 Tras preguntarles (correo "amable" del 2026-10-26):
 - **Companio NO ofrece servicio de liquidación.** Recomiendan a un socio suyo como liquidador si se quiere — **no es necesario**: el operador puede ser su propio liquidador (socio único).
 - **Los documentos contables finales (último mes del ejercicio) los proporcionan SIN cargo adicional** y, según ellos, "deberían bastar" para la liquidación. → **Resuelve la zona gris de los 400 €: la contabilidad de cierre ≈ 0 € extra.** La vía híbrida queda en: **cuota mensual de Companio durante el proceso + tasas del registro (~35 €) + aviso a acreedores (~20 €)**; sin contable extra ni coste de disolución.
-- **Pendiente de afinar con Companio antes de arrancar:** (a) si esos "documentos finales" equivalen a los **balances de liquidación** (apertura + final) en el formato del registro, o solo a la contabilidad del mes al día (el "deberían bastar" no es un sí rotundo); (b) **elegibilidad §63** (no se preguntó en el correo enviado).
+- **Se afinaron ambas en el follow-up del 2026-10-27; respuesta abajo.**
+
+### Companio responde a las dos dudas (2026-10-28)
+- **(a) ¿Los documentos finales = balances de liquidación?** **NO automáticamente.** Lo gratis = **los registros contables de la empresa**; "no deben considerarse equivalentes a los balances de liquidación (apertura y final)" que exige la **liquidación estándar**. → Matiz al "≈0 € extra" de arriba: **solo aplica si se va por §63** (que no necesita balances de liquidación); en la **liquidación estándar** esos balances hay que prepararlos aparte (trivial para una empresa a 0 €, pero ni automático ni incluido).
+- **(b) §63 (eliminación simplificada):** Companio confirma que la ley estonia la contempla para empresas **"que no han iniciado actividad comercial"**, con confirmación de todos los administradores y socios. **"Según la info compartida, la empresa PUEDE calificar"**, pero **no lo confirman definitivamente** por los **gastos contables/administrativos** incurridos. **Recomiendan verificarlo directamente con el Registro Mercantil (RIK)** / guía oficial del e-Business Register. Ayudan con la contabilidad, pero **no garantizan que el Registro acepte** la solicitud.
+- **Conclusión:** NO es un "no" → "probablemente sí, lo decide el **Registro Mercantil**, no Companio". Siguiente paso: confirmar/presentar la §63 en el e-Business Register.
+
+### La §63 en la práctica — guía oficial RIK (abiinfo.rik.ee/en/node/308, leída 2026-10-28)
+Es un **flujo self-service por AUTODECLARACIÓN** en el e-Business Register (no hay "aprobación previa de elegibilidad" por nadie; TÚ declaras). Pasos:
+1. Login con ID-card / Smart-ID / Mobile-ID.
+2. **"My dashboard"** → clic en el nombre de la OÜ.
+3. Menú izquierdo → **"Delete legal person"**.
+4. **Confirmar que la OÜ "no ha iniciado operaciones"** (si hubiera iniciado → toca "Start an entry application regarding liquidation", la liquidación estándar).
+5. La parte **"Decision" viene pre-rellenada**; seguir. En **"Documents"**, adjuntar si hiciera falta.
+6. **Firma digital de todos los administradores y socios** (aquí = solo el operador) → **enviar al registro**.
+
+→ Es la vía **AFIRMATIVA** que encaja con el criterio del operador: no se pide permiso, se **declara** "no iniciada" y se presenta; el Registro procesa (requiere consentimiento de **EMTA** — deuda fiscal a cero, ya cumplido). **Caveats:** es una confirmación formal que se firma (cero ventas/clientes/ingresos la sostiene; los gastos contables obligatorios no son "operaciones"); al borrarse, la Policía **puede revocar la e-Residency**; revertir un borrado = proceso judicial caro. Fuente: https://abiinfo.rik.ee/en/node/308/
 
 ## Las DOS formas de cerrarla
 
