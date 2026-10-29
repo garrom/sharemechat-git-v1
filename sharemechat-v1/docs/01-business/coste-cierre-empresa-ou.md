@@ -90,6 +90,12 @@ Es un **flujo self-service por AUTODECLARACIÓN** en el e-Business Register (no 
 
 → Es la vía **AFIRMATIVA** que encaja con el criterio del operador: no se pide permiso, se **declara** "no iniciada" y se presenta; el Registro procesa (requiere consentimiento de **EMTA** — deuda fiscal a cero, ya cumplido). **Caveats:** es una confirmación formal que se firma (cero ventas/clientes/ingresos la sostiene; los gastos contables obligatorios no son "operaciones"); al borrarse, la Policía **puede revocar la e-Residency**; revertir un borrado = proceso judicial caro. Fuente: https://abiinfo.rik.ee/en/node/308/
 
+### Companio — plan mensual y timing (2026-10-29)
+- **Virtual Plan: 39 € + IVA/mes** (≈48 €): dirección registrada + persona de contacto en Estonia, **sin contabilidad**. Más barato que el Pro (~98 €) para el periodo de solo-dirección hasta el borrado. Requisito: haber **cesado toda actividad** antes de cambiarse.
+- **El mes en que Companio prepara los documentos contables de cierre debe estar en Pro Plan** (trabajo contable extra).
+- Leandro pide el **timing exacto** para afinar lo del informe anual FY2026. **Decisión del operador: proceder ANTES de fin de 2026** (ventana A — evita el informe FY2026 y minimiza meses de cuota).
+- ⚠️ Recordatorio: la §63 **cierra SMC bajo esta OÜ de forma irreversible** → cancela la opción SMC-para-Andrés bajo esta empresa (coherente: cero actividad de Andrés).
+
 ## Las DOS formas de cerrarla
 
 ### FORMA 1 — Que lo cierre Companio (cómodo)
