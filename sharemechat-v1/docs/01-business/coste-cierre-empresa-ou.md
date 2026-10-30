@@ -96,6 +96,13 @@ Es un **flujo self-service por AUTODECLARACIÓN** en el e-Business Register (no 
 - Leandro pide el **timing exacto** para afinar lo del informe anual FY2026. **Decisión del operador: proceder ANTES de fin de 2026** (ventana A — evita el informe FY2026 y minimiza meses de cuota).
 - ⚠️ Recordatorio: la §63 **cierra SMC bajo esta OÜ de forma irreversible** → cancela la opción SMC-para-Andrés bajo esta empresa (coherente: cero actividad de Andrés).
 
+### Companio responde timing/plan (Sheila, 2026-10-29) — todo a favor
+- **NO hace falta informe anual FY2026 por separado**: el informe de cierre ("liquidation report") puede **cubrir hasta 18 meses** → un solo informe cubre desde la fundación (feb-2026). Se evita el FY2026.
+- **Se puede pasar al Virtual Plan YA** (sin actividad). → deja de pagarse el Pro (~98 €), se pasa a 39 €+IVA.
+- **Sin declaraciones de IVA** (no VAT-registered).
+- **Matiz:** "liquidation report" = el **informe contable de cierre** (entregable de Companio, vale para cualquier vía); la vía en el **registro sigue siendo la §63 self-service**. El **mes del informe de cierre = Pro** (1 mes); el resto de la espera, Virtual.
+- **Secuencia acordada:** cambiar a Virtual ahora → presentar §63 en el e-Business Register (self-service, "Delete legal person") → poner 1 mes en Pro cuando Companio prepare el informe de cierre → borrado efectivo → cancelar todo.
+
 ## Las DOS formas de cerrarla
 
 ### FORMA 1 — Que lo cierre Companio (cómodo)
