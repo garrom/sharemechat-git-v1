@@ -111,6 +111,9 @@ Solicitud de eliminación simplificada **enviada y aceptada** en el e-Business R
 - Las 4 condiciones §63 pasaron OK (informes anuales: ninguno vencido aún — fundada 25.02.2026, FY no cerrado; sin activos; sin procedimientos; firma del único socio/administrador).
 - Pendiente: esperar resolución (≤09.11); confirmar a Companio que no queda nada por su lado; al borrarse, posible revocación de e-Residency (asumido).
 
+### Dominio y hosting = PERSONALES, sobreviven al cierre (2026-10-30)
+**sharemechat.com está registrado a nombre del operador como PERSONA FÍSICA** (Alain Garmendia Martinez; verificado en Route53 Registrar: `ContactType=PERSON`, `Organization=None`, auto-renovación ON, caduca **22-jul-2027**), **NO a nombre de la OÜ**. El dominio, el DNS (Route53) y el hosting (S3 + CloudFront) viven en la **cuenta AWS personal del operador** (`430118829334`), no en la empresa. → **El cierre de la OÜ NO afecta al dominio ni a la página**: siguen siendo del operador mientras mantenga la cuenta AWS con tarjeta válida (el dominio se auto-renueva). Lo único que apagaría dominio/página sería dejar de pagar esa cuenta AWS, no el cierre de la empresa.
+
 ## Las DOS formas de cerrarla
 
 ### FORMA 1 — Que lo cierre Companio (cómodo)
