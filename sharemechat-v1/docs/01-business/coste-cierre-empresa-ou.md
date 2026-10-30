@@ -103,6 +103,14 @@ Es un **flujo self-service por AUTODECLARACIÓN** en el e-Business Register (no 
 - **Matiz:** "liquidation report" = el **informe contable de cierre** (entregable de Companio, vale para cualquier vía); la vía en el **registro sigue siendo la §63 self-service**. El **mes del informe de cierre = Pro** (1 mes); el resto de la espera, Virtual.
 - **Secuencia acordada:** cambiar a Virtual ahora → presentar §63 en el e-Business Register (self-service, "Delete legal person") → poner 1 mes en Pro cuando Companio prepare el informe de cierre → borrado efectivo → cancelar todo.
 
+### ✅ §63 PRESENTADA (2026-10-30)
+Solicitud de eliminación simplificada **enviada y aceptada** en el e-Business Register (flujo self-service "Delete legal person", guiado paso a paso; el operador firmó con su ID-card/PIN2, confirmando "the private limited company has not commenced its activities"):
+- **Nº de procedimiento: 46399768 (Accepted)** · Presentada 30.10.2026 · **Sin tasa estatal (€0)**.
+- **Plazo del registrador: 09.11.2026** → borra la empresa o notifica deficiencias.
+- **El registro NO exigió ningún documento ni informe** ("The system did not identify the requirement to submit mandatory additional documents") → **NO hace falta el "mes a Pro"** para un informe de cierre. Solo mantener el **Virtual Plan (39 €+IVA)** por la dirección/contacto hasta el borrado efectivo, y luego cancelar.
+- Las 4 condiciones §63 pasaron OK (informes anuales: ninguno vencido aún — fundada 25.02.2026, FY no cerrado; sin activos; sin procedimientos; firma del único socio/administrador).
+- Pendiente: esperar resolución (≤09.11); confirmar a Companio que no queda nada por su lado; al borrarse, posible revocación de e-Residency (asumido).
+
 ## Las DOS formas de cerrarla
 
 ### FORMA 1 — Que lo cierre Companio (cómodo)
