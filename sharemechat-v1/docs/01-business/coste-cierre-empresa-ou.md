@@ -2,6 +2,16 @@
 
 > **2026-09-06.** Estudio del coste y las vías de **cerrar la OÜ estonia** (por si acaso; no es una decisión tomada). Investigación con 3 agentes sobre fuentes oficiales estonias (e-resident.gov.ee, eesti.ee, emta.ee) + proveedores (Companio, Xolo, 1Office…). Orientativo, **no es asesoría fiscal/legal**: confirmar con Companio y e-MTA antes de ejecutar.
 
+## Teardown AWS ejecutado (2026-11-02)
+
+Con el cierre de la OÜ en marcha (§63 presentada 2026-10-30), se **desmanteló toda la infra AWS de PROD** de SharemeChat para llevar el coste de cómputo/almacenamiento a ~0, dejando **copia local íntegra** por si hubiera que restaurar.
+
+- **Archivo local** en `…\EMPRENDIMIENTO\backups-aws\` (`MANIFEST.md`): dump fresco **verificado** de `db1_sharemechat_prod` (83 tablas), `config.env`+`secrets.env` del backend, y 254 MB de S3 (22 buckets SMC).
+- **Borrado de AWS**: EC2 `Server-Prod-Sharemechat` (`i-0e0a3b5fee271592f`) **terminada**; RDS `db1-sharemechat-prod` **borrada** (skip-final, ya hay dump) + snapshot `db1-sharemechat-prod-final-2026-10-14` borrado; **todos** los buckets S3 de SMC borrados; **Elastic IP liberada**.
+- **Queda en pie** (necesario para el correo hasta el borrado de la OÜ): las **2 zonas Route53** (MX/SPF/DKIM de `operations@sharemechat.com`) y la **licencia M365** de `operations@`. SES sin coste fijo.
+- **Restaurar** (improbable): recrear EC2+RDS con los scripts de `ops/` + runbooks, importar el dump (`zcat …sql.gz | mysql … db1_sharemechat_prod`), colocar `config.env`/`secrets.env` en `/opt/sharemechat/`, resync de S3, y actualizar DNS (la EC2 tendría IP nueva: la EIP se liberó).
+- Materializa la **"Opción B / borrado total"** que figuraba como "tras este mes" en el apagado del 2026-10-14. El coste fijo restante es solo Route53 (~$1/mes) + M365 + el dominio anual.
+
 ## Caso concreto (datos del operador)
 - Gestión: **Companio**. Cuota real (factura abril-2026): **79 € + 24% IVA = 97,96 €/mes** (≈ **98 €/mes**; no VAT-registered → el IVA es coste real). *(En la versión sept-2026 se estimó 110 €/mes; el dato verificado por factura es 97,96 €.)*
 - Empresa **LIMPIA**: sin deudas, sin activos, **sin dinero**, sin ventas (solo se facturó la cuota de Companio). Capital **1 €**.
