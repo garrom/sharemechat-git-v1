@@ -8,6 +8,10 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-11-02 — Teardown AWS de PROD: archivo local + borrado (coste de cómputo/almacenamiento → ~0)
+
+Con el cierre de la OÜ en marcha, se desmanteló la infra AWS de PROD (EC2 `i-0e0a3b5fee271592f` terminada, RDS `db1-sharemechat-prod` + snapshot `db1-sharemechat-prod-final-2026-10-14` borrados, **todos** los buckets S3 de SMC borrados, Elastic IP liberada) tras dejar **copia local íntegra y verificada** en `…\EMPRENDIMIENTO\backups-aws\`: dump de la BD (83 tablas) + `config.env`/`secrets.env` + 254 MB de S3; instrucciones de restauración en `MANIFEST.md`. Se conservan las **2 zonas Route53** y la **licencia M365** de `operations@` (correo). Materializa la "Opción B / borrado total" que quedaba diferida del apagado del 2026-10-14. Detalle y pasos de restauración en [`01-business/coste-cierre-empresa-ou.md`](01-business/coste-cierre-empresa-ou.md).
+
 ## 2026-08-30 — Auditoría de cobertura de tests + arranque del backfill (Lote 1)
 
 **Qué:** revisión exhaustiva de la cobertura de tests (5 revisores en paralelo por área: dinero/PSP/Master, auth/seguridad/storage, content/KYC/GDPR, frontend/E2E, y lo añadido desde el 15-ago), cada uno leyendo los tests reales (no name-grep) para descartar falsos positivos.
